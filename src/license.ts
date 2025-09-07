@@ -3,31 +3,28 @@ import { consoleLog } from "./utilities.ts"
 /** Map of license names to license content */
 export const licenses: Map<string,string> = new Map<string,string>()
 
-// ----------------------------------------------------------------------
-//                             License handling
-// ----------------------------------------------------------------------
-
-/** Map of license names to track which have been outout to console.log */
-const licenseLog: Set<string> = new Set<string>()
+/** Represents if the initial set of licenses have been logged */
 let initialSetLogged: boolean = false
+
+/**
+ * Add open source license text to a collection for logging
+ * 
+ * @param key a unique key that represents this license
+ * @param text the text of the license to log
+ */
 export function addLicense(key: string, text: string): void {
     if (!licenses.has(key)) {
         licenses.set(key, text)
-        if (initialSetLogged && !licenseLog.has(key)) {
+        if (initialSetLogged) {
             consoleLog(text)
-            licenseLog.add(key)
         }
     }
 }
 
 // Initial log output of license text
 setTimeout(() => {
-    licenses.entries().forEach(([licenseKey, licenseText]) => {
+    licenses.entries().forEach(([_licenseKey, licenseText]) => {
         consoleLog(licenseText)
-        licenseLog.add(licenseKey)
     })
     initialSetLogged = true
 }, 1000)
-
-// ----------------------------------------------------------------------
-// ----------------------------------------------------------------------

@@ -12,6 +12,9 @@ import { setAttributeHelper } from "./utilities.ts"
 --radialSecondaryAccent: radial-gradient( #c6ff9e, #ff6666);
 */
 
+/**
+ * Options to customizable theme parameters
+ */
 export type ThemeOptions = {
     textLightColor?: string
     backgroundLightColor?: string
@@ -111,56 +114,78 @@ type ColorSchemeType = "light" | "dark" | "default"
 const light = "light"
 const dark = "dark"
 const defaultScheme = "default"
-let colorScheme: ColorSchemeType = light
-export const Theme: {
+let currentColorScheme: ColorSchemeType = light
+
+/**
+ * A collection of functions to manage the Color scheme
+ */
+export const ColorScheme: {
+    /** Get the current color scheme */
     getColorScheme: () => ColorSchemeType
+    /** Set the color scheme */
     setColorScheme: (newScheme: ColorSchemeType) => void
+    /**
+     * Detect the user's preferred color scheme (if set in local storage) and set on the page
+     */
     resetColorScheme: () => void
-    addVelodesignStyles: (options: ThemeOptions | undefined, includeCSSReset: boolean) => void
 } = {
     getColorScheme: function() {
-        return colorScheme
+        return currentColorScheme
     },
     setColorScheme: function(newScheme: ColorSchemeType) {
         localStorage.setItem(localThemeKey, newScheme)
-        Theme.resetColorScheme()
+        ColorScheme.resetColorScheme()
     },
     resetColorScheme: function() {
         const localColorScheme = localStorage.getItem(localThemeKey)
         if (localColorScheme) {
             const prefersColorSchemeLight = globalThis.matchMedia('(prefers-color-scheme: light)').matches
             if (localColorScheme == dark) {
-                colorScheme = dark
+                currentColorScheme = dark
             } else if (localColorScheme == light) {
-                colorScheme = light
+                currentColorScheme = light
             } else if (localColorScheme == defaultScheme) {
                 // Use browser default
                 if (prefersColorSchemeLight) {
-                    colorScheme = light
+                    currentColorScheme = light
                 } else {
-                    colorScheme = dark
+                    currentColorScheme = dark
                 }
             } else {
                 //Invalid value, reset localStorage
                 localStorage.removeItem(localThemeKey)
                 // Use browser default
                 if (prefersColorSchemeLight) {
-                    colorScheme = light
+                    currentColorScheme = light
                 } else {
-                    colorScheme = dark
+                    currentColorScheme = dark
                 }
             }
         }
         // Set theme on the html element
-        if (colorScheme == light) {
+        if (currentColorScheme == light) {
             setTheme(light)
         } else {
             setTheme(dark)
         }
-    },
-    addVelodesignStyles(options?: ThemeOptions, includeCSSReset: boolean = true) {
+    }
+}
+
+/**
+ * A collection of functions to manage the Theme
+ */
+export const Theme: {
+    /**
+     * Inject CSS Styles for the Velotype Theme
+     * 
+     * @param options Customizable options
+     * @param includeCSSReset If a CSS Reset should be included
+     */
+    addStyles: (options?: ThemeOptions | undefined, includeCSSReset?: boolean) => void
+} = {
+    addStyles(options?: ThemeOptions, includeCSSReset: boolean = true) {
         // Optionally add Reset styles
-        if (includeCSSReset) {//1em + 0.5rem
+        if (includeCSSReset) {
             setStylesheet(`*{margin:0;padding:0;line-height:calc(2ex + 4px);box-sizing:border-box;}
 html{-moz-text-size-adjust:none;-webkit-text-size-adjust:none;text-size-adjust:none;scroll-behavior:smooth;}
 body{-webkit-font-smoothing:antialiased;min-width:250px}
@@ -202,6 +227,6 @@ a{color:var(--text)}`,"Velodesign Theme Colors")
         },150)
 
         //Trigger initial color scheme selection
-        Theme.resetColorScheme()
+        ColorScheme.resetColorScheme()
     }
 }
