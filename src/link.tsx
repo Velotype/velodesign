@@ -8,7 +8,7 @@ export type LinkAttrsType = {
     style?: CSSProperties | string
 }
 export class Link extends Component<LinkAttrsType & ChildrenAttr> {
-    override render(attrs: LinkAttrsType, children: RenderableElements ) {
+    override render(attrs: LinkAttrsType, children: RenderableElements): HTMLAnchorElement {
         return <a href={attrs.to} style={attrs.style} onClick={(event: Event) => {
             event.preventDefault()
             History.changeLocation(attrs.to)

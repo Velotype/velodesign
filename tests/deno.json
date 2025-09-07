@@ -13,7 +13,8 @@
     },
     "nodeModulesDir": "auto",
     "imports": {
-        "@velotype/veloserver": "jsr:@velotype/veloserver@^0.0.2"
+        "@velotype/veloserver": "jsr:@velotype/veloserver@^0.0.2",
+        "@velotype/velotype": "jsr:@velotype/velotype@^0.0.19"
     },
     "lint": {
         "rules": {

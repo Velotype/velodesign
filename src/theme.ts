@@ -112,7 +112,12 @@ const light = "light"
 const dark = "dark"
 const defaultScheme = "default"
 let colorScheme: ColorSchemeType = light
-export const Theme = {
+export const Theme: {
+    getColorScheme: () => ColorSchemeType
+    setColorScheme: (newScheme: ColorSchemeType) => void
+    resetColorScheme: () => void
+    addVelodesignStyles: (options: ThemeOptions | undefined, includeCSSReset: boolean) => void
+} = {
     getColorScheme: function() {
         return colorScheme
     },

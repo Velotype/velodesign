@@ -19,7 +19,7 @@ padding:0.5ex 1ex;
 margin-inline-start:1ex;
 }`, "vtd/TextBox")
     }
-    override render(props: TextBoxAttrsType) {
+    override render(props: TextBoxAttrsType): HTMLInputElement {
         let autocomplete = "off"
         if (props.type == "password" || props.type == "new-password") {
             if (props.type == "password") {

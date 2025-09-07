@@ -38,7 +38,8 @@
   "workspace": {
     "dependencies": [
       "jsr:@velotype/veloserver@^0.0.2",
-      "jsr:@velotype/velotype@*"
+      "jsr:@velotype/velotype@*",
+      "jsr:@velotype/velotype@^0.0.19"
     ]
   }
 }
