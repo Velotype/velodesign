@@ -80,7 +80,7 @@ padding:0.5em;
             </div>
         </dialog>
     }
-    override render() {
+    override render(): HTMLDialogElement {
         return this.dialog
     }
 }
@@ -96,7 +96,7 @@ export class ButtonModal extends Component<ButtonModalAttrsType & ChildrenAttr> 
         super(attrs, children)
         this.modal = <Modal {...attrs.modalAttrs}>{children}</Modal>
     }
-    override render(attrs: ButtonModalAttrsType) {
+    override render(attrs: ButtonModalAttrsType): HTMLSpanElement {
         return <span style={{display: "contents"}}>
             {this.modal}
             <Button type={attrs.openButtonType || "secondary"} onClick={()=>{

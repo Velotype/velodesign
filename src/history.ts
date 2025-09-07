@@ -1,7 +1,7 @@
 import { consoleError } from "./utilities.ts"
 
 export const History = {
-    changeLocation: function(newLocation: string ) {
+    changeLocation: function(newLocation: string ): void {
         // TODO, test if iOS still has a limitation at 100 pushState events
         // https://github.com/remix-run/history/issues/291
         // https://jdurand.com/blog/2016/05/03/ember-history-pushstate-dom-exception-18/
@@ -13,10 +13,10 @@ export const History = {
             History.loadNewPageLocation(newLocation)
         }
     },
-    loadNewPageLocation: function(newLocation: string) {
+    loadNewPageLocation: function(newLocation: string): void {
         globalThis.location.href = newLocation
     },
-    replaceState: function(href: string) {
+    replaceState: function(href: string): void {
         globalThis.history.replaceState(null,"",href)
     }
 }

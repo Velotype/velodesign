@@ -56,7 +56,7 @@ transition:color 0.25s ease-in-out, background-color 0.25s ease-in-out, border 0
     }
 
     isLoading = false
-    override render(attrs: ButtonAttrsType, children: RenderableElements[]) {
+    override render(attrs: ButtonAttrsType, children: RenderableElements[]): HTMLButtonElement {
         if (attrs.isLoading) {
             this.isLoading = true
         }
