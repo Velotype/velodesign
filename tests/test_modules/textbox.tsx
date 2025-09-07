@@ -17,7 +17,7 @@ class TextBoxGallery extends Component<EmptyAttrs> {
     }
 }
 
-Theme.addVelodesignStyles()
+Theme.addStyles()
 
 // Place on the page
 const mainPage = document.getElementById("main-page")

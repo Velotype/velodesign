@@ -1,20 +1,36 @@
 import { type ChildrenAttr, Component, type RenderableElements, setStylesheet, type EmptyAttrs, type FunctionComponent } from "jsr:@velotype/velotype"
 import { Button, type ButtonType } from "./button.tsx"
 
+/**
+ * Options to customize `<Modal/>` Component Theme
+ */
 export const ModalThemeOptions: {
     closeSymbol: FunctionComponent<EmptyAttrs>
 } = {
     closeSymbol: function(){return "x"}
 }
 
+/**
+ * Attrs type for `<Modal/>` Component
+ */
 export type ModalAttrsType = {
+    /** Should the confirm button start as disabled? */
     startConfirmDisabled?: boolean
+    /** Callback for when the confirm button is clicked */
     confirmButtonOnClick?: (doneLoading: ()=>void) => void
-    title: string
+    /** Title content (usually a string) */
+    title: RenderableElements
+    /** Confirm button content (usually a string) */
     confirmButtonChildren: RenderableElements
+    /** Cancel button content (usually a string) */
     cancelButtonChildren: RenderableElements
 }
+
+/**
+ * A Modal that renders over top of the page
+ */
 export class Modal extends Component<ModalAttrsType & ChildrenAttr> {
+    /** Mount this Component */
     override mount() {
         setStylesheet(`
 .vtd-modal{
@@ -36,24 +52,34 @@ padding:0.5em;
 `, "vtd/Modal")
     }
 
-    dialog: HTMLDialogElement
-    confirmButton: HTMLElement
+    /** The underlying `<dialog/>` element */
+    #dialog: HTMLDialogElement
+
+    /** A handle for the confirm button element (used for managing disabled state) */
+    #confirmButton: HTMLElement
+
+    /** Close the Modal */
     close() {
-        this.dialog.close()
+        this.#dialog.close()
     }
+    /** Show the Modal */
     showModal() {
-        this.dialog.showModal()
+        this.#dialog.showModal()
     }
+
+    /** Toggles the `disabled` attribute on the `confirmButton` */
     setConfirmDisabled(disabled: boolean) {
         if (disabled) {
-            this.confirmButton.setAttribute("disabled","")
+            this.#confirmButton.setAttribute("disabled","")
         } else {
-            this.confirmButton.removeAttribute("disabled")
+            this.#confirmButton.removeAttribute("disabled")
         }
     }
+
+    /** Create a new `<Modal/>` Component */
     constructor(attrs: ModalAttrsType & ChildrenAttr, children: RenderableElements[]) {
         super(attrs, children)
-        this.confirmButton = <Button type="primary"
+        this.#confirmButton = <Button type="primary"
             disabled={attrs.startConfirmDisabled}
             loadingIcon={!!attrs.confirmButtonOnClick}
             onClick={(doneLoading: () => void) => {
@@ -62,11 +88,11 @@ padding:0.5em;
                 }
             }}>{attrs.confirmButtonChildren}
         </Button>
-        this.dialog = <dialog class="vtd-modal" closedby="any">
+        this.#dialog = <dialog class="vtd-modal" closedby="any">
             <div style={{display: "flex", alignItems: "center"}}>
                 <span style={{marginRight: "auto"}}>{attrs.title}</span>
                 <Button type="secondary" onClick={()=>{
-                    this.dialog.close()
+                    this.#dialog.close()
                 }}><ModalThemeOptions.closeSymbol/></Button>
             </div>
             <hr class="vtd-modal-separator"/>
@@ -74,33 +100,46 @@ padding:0.5em;
             <hr class="vtd-modal-separator"/>
             <div style={{display: "flex", alignItems: "center", justifyContent: "end"}}>
                 <Button type="text" onClick={()=>{
-                    this.dialog.close()
+                    this.#dialog.close()
                 }}>{attrs.cancelButtonChildren}</Button>
-                {this.confirmButton}
+                {this.#confirmButton}
             </div>
         </dialog>
     }
+
+    /** Render this Component */
     override render(): HTMLDialogElement {
-        return this.dialog
+        return this.#dialog
     }
 }
 
+/**
+ * Attrs type for `<ButtonModal/>` Component
+ */
 export type ButtonModalAttrsType = {
     modalAttrs: ModalAttrsType
     openButtonType?: ButtonType
     openButtonText: string
 }
+/**
+ * A basic `<Button/>` that renders a `<Modal/>`
+ */
 export class ButtonModal extends Component<ButtonModalAttrsType & ChildrenAttr> {
-    modal: Modal
+    /** The underlying `<Modal/>` */
+    #modal: Modal
+
+    /** Create a new `<ButtonModal/>` Component */
     constructor(attrs: ButtonModalAttrsType & ChildrenAttr, children: RenderableElements[]) {
         super(attrs, children)
-        this.modal = <Modal {...attrs.modalAttrs}>{children}</Modal>
+        this.#modal = <Modal {...attrs.modalAttrs}>{children}</Modal>
     }
+
+    /** Render this component */
     override render(attrs: ButtonModalAttrsType): HTMLSpanElement {
         return <span style={{display: "contents"}}>
-            {this.modal}
+            {this.#modal}
             <Button type={attrs.openButtonType || "secondary"} onClick={()=>{
-                this.modal.showModal()
+                this.#modal.showModal()
             }}>{attrs.openButtonText}</Button>
         </span>
     }

@@ -16,6 +16,7 @@ export class Icon {
      * Reference: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/d
      */
     d: string
+    /** Create a new Icon */
     constructor(w: number, h: number, d: string) {
         this.w = w
         this.h = h

@@ -10,7 +10,10 @@ export const setAttributeHelper = function(element: Element | SVGSVGElement | SV
     element.setAttribute(qualifiedName, value)
 }
 
+/** Namespace for SVG elements - used for JS minification */
 export const svgNamespace = "http://www.w3.org/2000/svg"
+
+/** Create Element with SVG namespace - used for JS minification */
 export const createElementNSHelper = function(qualifiedName: string) {
     return document.createElementNS(svgNamespace, qualifiedName)
 }

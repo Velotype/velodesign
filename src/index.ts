@@ -3,7 +3,7 @@ import type {ButtonAttrsType, ButtonType} from "./button.tsx"
 import { Icon, I, registerIcon } from "./icon.ts"
 import type {IAttrsType} from "./icon.ts"
 import { licenses, addLicense } from "./license.ts"
-import { Theme } from "./theme.ts"
+import { Theme, type ThemeOptions } from "./theme.ts"
 import { History } from "./history.ts"
 import { Link } from "./link.tsx"
 import type { LinkAttrsType } from "./link.tsx"
@@ -14,35 +14,36 @@ import type { TextBoxAttrsType } from "./textbox.tsx"
 import { ButtonModal, type ButtonModalAttrsType, Modal, type ModalAttrsType, ModalThemeOptions } from "./modal.tsx"
 
 export {
-    Button,
-    type ButtonType,
-    type ButtonAttrsType,
-    ButtonThemeOptions,
+  Button,
+  type ButtonType,
+  type ButtonAttrsType,
+  ButtonThemeOptions,
 
-    Icon,
-    type IAttrsType,
-    I,
-    registerIcon,
+  Icon,
+  type IAttrsType,
+  I,
+  registerIcon,
 
-    TextBox,
-    type TextBoxAttrsType,
+  TextBox,
+  type TextBoxAttrsType,
 
-    Modal,
-    type ModalAttrsType,
-    ModalThemeOptions,
-    ButtonModal,
-    type ButtonModalAttrsType,
+  Modal,
+  type ModalAttrsType,
+  ModalThemeOptions,
+  ButtonModal,
+  type ButtonModalAttrsType,
 
-    Link,
-    type LinkAttrsType,
+  Link,
+  type LinkAttrsType,
 
-    Theme,
-    History,
+  Theme,
+  type ThemeOptions,
+  History,
 
-    type Page,
-    type PageSelectorAttrsType,
-    PageSelector,
-    
-    licenses,
-    addLicense
+  type Page,
+  type PageSelectorAttrsType,
+  PageSelector,
+
+  licenses,
+  addLicense
 }

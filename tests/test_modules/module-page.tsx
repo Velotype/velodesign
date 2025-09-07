@@ -1,20 +1,20 @@
 import { ChildrenAttr, Component, EmptyAttrs, RenderableElements } from "jsr:@velotype/velotype/jsx-runtime"
 import { Button } from "../../src/button.tsx"
-import { Theme } from "../../src/theme.ts"
+import { ColorScheme } from "../../src/theme.ts"
 
 class NavSchemeSelector extends Component<EmptyAttrs> {
     override render() {
         return <div style="display:contents;">
             <Button style={{marginBlock: "0.25rem"}} onClick={()=>{
-                if (Theme.getColorScheme() == "light") {
-                    Theme.setColorScheme("dark")
+                if (ColorScheme.getColorScheme() == "light") {
+                    ColorScheme.setColorScheme("dark")
                 } else {
-                    Theme.setColorScheme("light")
+                    ColorScheme.setColorScheme("light")
                 }
                 globalThis.setTimeout(()=>{
                     this.refresh()
                 },100)
-            }}>Dark mode:{(Theme.getColorScheme() == "light")?'off':'on'}</Button>
+            }}>Dark mode:{(ColorScheme.getColorScheme() == "light")?'off':'on'}</Button>
         </div>
     }
 }

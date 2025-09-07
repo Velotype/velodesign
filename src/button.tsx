@@ -1,13 +1,22 @@
 import {Component, setStylesheet} from "jsr:@velotype/velotype"
 import type {ChildrenAttr, RenderableElements, FunctionComponent, CSSProperties, EmptyAttrs} from "jsr:@velotype/velotype"
 
+/**
+ * Options to customize `<Button/>` Component Theme
+ */
 export const ButtonThemeOptions: {
     spinner: FunctionComponent<EmptyAttrs>
 } = {
     spinner: function(){return "..."}
 }
 
+/**
+ * Various types of `<Button/>`s
+ */
 export type ButtonType = "primary" | "secondary" | "warning" | "danger" | "text"
+/**
+ * Attrs type for `<Button/>` Component
+ */
 export type ButtonAttrsType = {
     isLoading?: boolean,
     disabled?: boolean,
@@ -16,7 +25,11 @@ export type ButtonAttrsType = {
     onClick?: (doneLoading: () => void) => void,
     style?: CSSProperties | string
 }
-export class Button<Spinner> extends Component<ButtonAttrsType & ChildrenAttr> {
+/**
+ * An interactable Button
+ */
+export class Button extends Component<ButtonAttrsType & ChildrenAttr> {
+    /** Mount this Component */
     override mount() {
         setStylesheet(`
 .vtd-btn{
@@ -55,10 +68,13 @@ transition:color 0.25s ease-in-out, background-color 0.25s ease-in-out, border 0
 `, "vtd/Button")
     }
 
-    isLoading = false
+    /** If the Button is in loading state */
+    #isLoading = false
+
+    /** Render this Component */
     override render(attrs: ButtonAttrsType, children: RenderableElements[]): HTMLButtonElement {
         if (attrs.isLoading) {
-            this.isLoading = true
+            this.#isLoading = true
         }
         const spinnerStyle = {
             position: "absolute",
@@ -68,7 +84,7 @@ transition:color 0.25s ease-in-out, background-color 0.25s ease-in-out, border 0
             display: "inline-block",
             visibility: "visible"
         }
-        if (attrs.loadingIcon && !this.isLoading) {
+        if (attrs.loadingIcon && !this.#isLoading) {
             spinnerStyle.visibility = "hidden"
         }
         return <button type="button"
@@ -77,21 +93,21 @@ transition:color 0.25s ease-in-out, background-color 0.25s ease-in-out, border 0
             disabled={attrs.disabled}
             style={attrs.style}
             onClick={()=>{
-                if (attrs.loadingIcon && this.isLoading) {
+                if (attrs.loadingIcon && this.#isLoading) {
                     return
                 }
                 if (attrs.onClick) {
                     attrs.onClick(()=>{
-                        this.isLoading = false
+                        this.#isLoading = false
                         this.refresh()
                     })
                 }
                 if (attrs.loadingIcon) {
-                    this.isLoading = true
+                    this.#isLoading = true
                     this.refresh()
                 }
             }}>
-            <span style={(attrs.loadingIcon && this.isLoading)?{color:"transparent"}:{}}>{children}</span>
+            <span style={(attrs.loadingIcon && this.#isLoading)?{color:"transparent"}:{}}>{children}</span>
             {attrs.loadingIcon && <span style={spinnerStyle}><ButtonThemeOptions.spinner/></span> || null}
         </button>
     }
