@@ -1,0 +1,17 @@
+{
+  "include": [
+    "./"
+  ],
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "jsx": "react-jsx",
+    "jsxImportSource": "jsr:@velotype/velotype",
+    "listEmittedFiles": true,
+    "sourceMap": true,
+    "lib": [ "dom", "esnext" ],
+    "outDir": "./tsbuild",
+    "explainFiles": true,
+    "rewriteRelativeImportExtensions": true
+  }
+}
