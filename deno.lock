@@ -1,0 +1,18 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@velotype/velotype@*": "0.0.19",
+    "jsr:@velotype/velotype@^0.0.19": "0.0.19"
+  },
+  "jsr": {
+    "@velotype/velotype@0.0.19": {
+      "integrity": "07458b00f8cf330758d135fc7e2fad4d100625cc08cb5153dadf92c22b1e3bda"
+    }
+  },
+  "workspace": {
+    "dependencies": [
+      "jsr:@velotype/velotype@*",
+      "jsr:@velotype/velotype@^0.0.19"
+    ]
+  }
+}

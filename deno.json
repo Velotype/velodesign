@@ -1,0 +1,26 @@
+{
+    "name": "@velotype/velodesign",
+    "license": "MIT",
+    "version": "0.0.1",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "publish": {
+        "exclude": [
+            "docs/",
+            "tests/"
+        ]
+    },
+    "tasks": {
+        "test": "cd ./tests/ && deno run 'bundle*' && cd .. && deno test --allow-read --allow-net --allow-sys --allow-env --allow-write --allow-run",
+        "test-manual": "cd ./tests/ && deno run 'bundle*' && cd .. && deno run --allow-read --allow-net --allow-sys ./tests/manual_server.ts"
+    },
+    "compilerOptions": {
+        "jsx": "react-jsx",
+        "jsxImportSource": "jsr:@velotype/velotype",
+        "lib": ["dom", "deno.ns", "esnext"]
+    },
+    "imports": {
+        "@velotype/velotype": "jsr:@velotype/velotype@^0.0.19"
+    }
+  }

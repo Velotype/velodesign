@@ -1,0 +1,202 @@
+import { setStylesheet } from "jsr:@velotype/velotype"
+import { setAttributeHelper } from "./utilities.ts"
+
+//
+// TODO make gradients ?
+/*
+--linearPrimarySecondary: linear-gradient( #66b2ff, #c6ff9e);
+--linearPrimaryAccent: linear-gradient( #66b2ff, #ff6666);
+--linearSecondaryAccent: linear-gradient( #c6ff9e, #ff6666);
+--radialPrimarySecondary: radial-gradient( #66b2ff, #c6ff9e);
+--radialPrimaryAccent: radial-gradient( #66b2ff, #ff6666);
+--radialSecondaryAccent: radial-gradient( #c6ff9e, #ff6666);
+*/
+
+export type ThemeOptions = {
+    textLightColor?: string
+    backgroundLightColor?: string
+    primaryLightColor?: string
+    secondaryLightColor?: string
+    warningLightColor?: string
+    accentLightColor?: string
+
+    textDarkColor?: string
+    backgroundDarkColor?: string
+    primaryDarkColor?: string
+    secondaryDarkColor?: string
+    warningDarkColor?: string
+    accentDarkColor?: string
+}
+
+// Theme generator: https://www.realtimecolors.com/?colors=050505-fafafa-66b2ff-c6ff9e-ff6666&fonts=Inter-Inter
+// Warning color: https://www.realtimecolors.com/?colors=050505-fafafa-66b2ff-ffd666-ff6666&fonts=Inter-Inter
+const defaultTextLightColor = "#050505"
+const defaultBackgroundLightColor = "#fafafa"
+const defaultPrimaryLightColor = "#66b2ff"
+const defaultSecondaryLightColor = "#c6ff9e"
+const defaultWarningLightColor = "#ffd666"
+const defaultAccentLightColor = "#ff6666"
+
+// Theme generator: https://www.realtimecolors.com/?colors=fafafa-202020-004c99-286100-990000&fonts=Inter-Inter
+// Warning color: https://www.realtimecolors.com/?colors=fafafa-202020-004c99-997000-990000&fonts=Inter-Inter
+const defaultTextDarkColor = "#fafafa"
+const defaultBackgroundDarkColor = "#202020"
+const defaultPrimaryDarkColor = "#004c99"
+const defaultSecondaryDarkColor = "#286100"
+const defaultWarningDarkColor = "#997000"
+const defaultAccentDarkColor = "#990000"
+
+const colorMix = ":color-mix(in hsl,"
+
+const middleSpread = [-6,-4,-2,0,2,4,6]
+/**
+ * Creates a spread of colors:
+ * 
+ * 
+ * --{cssColorPrefix}-1 -> 60% mix of color1
+ * --{cssColorPrefix}-2 -> 40% mix of color1
+ * --{cssColorPrefix}-3 -> 20% mix of color1
+ * --{cssColorPrefix}-4 ->   exact color2
+ * --{cssColorPrefix}-5 -> 20% mix of color3
+ * --{cssColorPrefix}-6 -> 40% mix of color3
+ * --{cssColorPrefix}-7 -> 60% mix of color3
+ * 
+ * --{cssColorPrefix}   ->   exact color2
+ * 
+ * 
+ * @param cssColorPrefix the name of the color spread
+ * @param color1 the color for 1-3 mixes
+ * @param color2 the main color
+ * @param color3 the color for 5-7 mixes
+ * @returns 
+ */
+const middleColorSpread = (cssColorPrefix: string, color1: string, color2: string, color3: string) => {
+    return middleSpread.map(e=> {
+        if (e<0) {
+            return `--${cssColorPrefix}-${e/2+4}${colorMix}${color1} ${-1*e}0%,${color2} ${10+e}0%)`
+        } else if (e==0) {
+            return `--${cssColorPrefix}-4:${color2};--${cssColorPrefix}:${color2}`
+        }
+        return `--${cssColorPrefix}-${e/2+4}${colorMix}${color2} ${10-e}0%,${color3} ${e}0%)`
+    }).join(";")+";"
+}
+const gradient = [1,2,3,4,5,8,9]
+/**
+ * Creates a gradient of colors:
+ * 
+ * --{cssColorPrefix}   -> exact color1
+ * --{cssColorPrefix}-1 -> 10% mix of color2
+ * --{cssColorPrefix}-2 -> 20% mix of color2
+ * --{cssColorPrefix}-3 -> 30% mix of color2
+ * --{cssColorPrefix}-4 -> 40% mix of color2
+ * --{cssColorPrefix}-5 -> 50% mix of color2
+ * 
+ * --{cssColorPrefix}-8 -> 80% mix of color2
+ * --{cssColorPrefix}-9 -> 90% mix of color2
+
+ * @param cssColorPrefix
+ * @param color1 the main color
+ * @param color2 
+ * @returns 
+ */
+const colorGradient = (cssColorPrefix: string, color1: string, color2: string) => {
+    return gradient.map(e=>`--${cssColorPrefix}-${e}${colorMix}${color1} ${10-e}0%,${color2} ${e}0%)`).join(";")+`;--${cssColorPrefix}:${color1};`
+}
+
+const setTheme = function(theme: string) {
+    setAttributeHelper(document.getElementsByTagName("html")[0],"data-theme",theme)
+}
+const localThemeKey = "vtd-preferredtheme"
+type ColorSchemeType = "light" | "dark" | "default"
+const light = "light"
+const dark = "dark"
+const defaultScheme = "default"
+let colorScheme: ColorSchemeType = light
+export const Theme = {
+    getColorScheme: function() {
+        return colorScheme
+    },
+    setColorScheme: function(newScheme: ColorSchemeType) {
+        localStorage.setItem(localThemeKey, newScheme)
+        Theme.resetColorScheme()
+    },
+    resetColorScheme: function() {
+        const localColorScheme = localStorage.getItem(localThemeKey)
+        if (localColorScheme) {
+            const prefersColorSchemeLight = globalThis.matchMedia('(prefers-color-scheme: light)').matches
+            if (localColorScheme == dark) {
+                colorScheme = dark
+            } else if (localColorScheme == light) {
+                colorScheme = light
+            } else if (localColorScheme == defaultScheme) {
+                // Use browser default
+                if (prefersColorSchemeLight) {
+                    colorScheme = light
+                } else {
+                    colorScheme = dark
+                }
+            } else {
+                //Invalid value, reset localStorage
+                localStorage.removeItem(localThemeKey)
+                // Use browser default
+                if (prefersColorSchemeLight) {
+                    colorScheme = light
+                } else {
+                    colorScheme = dark
+                }
+            }
+        }
+        // Set theme on the html element
+        if (colorScheme == light) {
+            setTheme(light)
+        } else {
+            setTheme(dark)
+        }
+    },
+    addVelodesignStyles(options?: ThemeOptions, includeCSSReset: boolean = true) {
+        // Optionally add Reset styles
+        if (includeCSSReset) {//1em + 0.5rem
+            setStylesheet(`*{margin:0;padding:0;line-height:calc(2ex + 4px);box-sizing:border-box;}
+html{-moz-text-size-adjust:none;-webkit-text-size-adjust:none;text-size-adjust:none;scroll-behavior:smooth;}
+body{-webkit-font-smoothing:antialiased;min-width:250px}
+img,svg{display:inline-block;max-width:100%;}
+input,button,textarea,select{font:inherit;}
+p,h1,h2,h3{overflow-wrap:break-word;}
+p{text-wrap:pretty;}
+h1,h2,h3{text-wrap:balance;}
+menu,ul,ol{list-style:none;}
+button{color:inherit;border:none;}
+:target{scroll-margin-block:20ex;}`,"Velodesign CSS reset")
+        }
+
+        const white = "#fff"
+        const black = "#000"
+        setStylesheet(`
+:root[data-theme="light"]{
+${colorGradient("text", options?.textLightColor || defaultTextLightColor, white)}
+${colorGradient("background", options?.backgroundLightColor || defaultBackgroundLightColor, black)}
+${middleColorSpread("primary", white, options?.primaryLightColor || defaultPrimaryLightColor, black)}
+${middleColorSpread("secondary", white, options?.secondaryLightColor || defaultSecondaryLightColor, black)}
+${middleColorSpread("warning", white, options?.warningLightColor || defaultWarningLightColor, black)}
+${middleColorSpread("accent", white, options?.accentLightColor || defaultAccentLightColor, black)}
+color-scheme:light;}
+:root[data-theme="dark"]{
+${colorGradient("text", options?.textDarkColor || defaultTextDarkColor, black)}
+${colorGradient("background", options?.backgroundDarkColor || defaultBackgroundDarkColor, white)}
+${middleColorSpread("primary", black, options?.primaryDarkColor || defaultPrimaryDarkColor, white)}
+${middleColorSpread("secondary", black, options?.secondaryDarkColor || defaultSecondaryDarkColor, white)}
+${middleColorSpread("warning", black, options?.warningDarkColor || defaultWarningDarkColor, white)}
+${middleColorSpread("accent", black, options?.accentDarkColor || defaultAccentDarkColor, white)}
+color-scheme:dark;}
+body{color:var(--text);background-color:var(--background);}
+a{color:var(--text)}`,"Velodesign Theme Colors")
+
+        // Delay setting transitions so that the page loads cleanly
+        globalThis.setTimeout(function(){
+            setStylesheet(`body{transition:color 0.25s ease-in-out,background-color 0.25s ease-in-out;}`,"Velodesign Theme Color transitions")
+        },150)
+
+        //Trigger initial color scheme selection
+        Theme.resetColorScheme()
+    }
+}
