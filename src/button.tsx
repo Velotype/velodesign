@@ -18,12 +18,11 @@ export type ButtonType = "primary" | "secondary" | "warning" | "danger" | "text"
  * Attrs type for `<Button/>` Component
  */
 export type ButtonAttrsType = {
-    isLoading?: boolean,
+    style?: CSSProperties | string
     disabled?: boolean,
-    loadingIcon?: boolean,
     type?: ButtonType,
     onClick?: (doneLoading: () => void) => void,
-    style?: CSSProperties | string
+    loadingOnClick?: boolean,
 }
 /**
  * An interactable Button
@@ -73,42 +72,48 @@ transition:color 0.25s ease-in-out, background-color 0.25s ease-in-out, border 0
 
     /** Render this Component */
     override render(attrs: ButtonAttrsType, children: RenderableElements[]): HTMLButtonElement {
-        if (attrs.isLoading) {
-            this.#isLoading = true
+        let spinnerElement: HTMLSpanElement | undefined
+        if (attrs.loadingOnClick) {
+            const spinnerStyle = {
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate3d(-50%, -50%, 0)",
+                display: "inline-block",
+                visibility: "hidden"
+            }
+            spinnerElement = <span style={spinnerStyle}><ButtonThemeOptions.spinner/></span>
         }
-        const spinnerStyle = {
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate3d(-50%, -50%, 0)",
-            display: "inline-block",
-            visibility: "visible"
-        }
-        if (attrs.loadingIcon && !this.#isLoading) {
-            spinnerStyle.visibility = "hidden"
-        }
+        const childrenWrapper: HTMLSpanElement = <span>{children}</span>
         return <button type="button"
             class={`vtd-btn vtd-btn-${attrs.type||"primary"}`}
             tabindex={0}
             disabled={attrs.disabled}
             style={attrs.style}
             onClick={()=>{
-                if (attrs.loadingIcon && this.#isLoading) {
+                if (attrs.loadingOnClick && this.#isLoading) {
+                    // Protect the button from being clicked while still loading
                     return
+                }
+                if (attrs.loadingOnClick) {
+                    this.#isLoading = true
+                    if (spinnerElement) {
+                        spinnerElement.style.visibility = "visible"
+                    }
+                    childrenWrapper.style.visibility = "hidden"
                 }
                 if (attrs.onClick) {
                     attrs.onClick(()=>{
                         this.#isLoading = false
-                        this.refresh()
+                        if (attrs.loadingOnClick && spinnerElement) {
+                            spinnerElement.style.visibility = "hidden"
+                        }
+                        childrenWrapper.style.visibility = "visible"
                     })
                 }
-                if (attrs.loadingIcon) {
-                    this.#isLoading = true
-                    this.refresh()
-                }
             }}>
-            <span style={(attrs.loadingIcon && this.#isLoading)?{color:"transparent"}:{}}>{children}</span>
-            {attrs.loadingIcon && <span style={spinnerStyle}><ButtonThemeOptions.spinner/></span> || null}
+            {childrenWrapper}
+            {spinnerElement}
         </button>
     }
 }

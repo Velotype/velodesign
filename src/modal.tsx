@@ -81,7 +81,7 @@ padding:0.5em;
         super(attrs, children)
         this.#confirmButton = <Button type="primary"
             disabled={attrs.startConfirmDisabled}
-            loadingIcon={!!attrs.confirmButtonOnClick}
+            loadingOnClick={!!attrs.confirmButtonOnClick}
             onClick={(doneLoading: () => void) => {
                 if (attrs.confirmButtonOnClick) {
                     attrs.confirmButtonOnClick(doneLoading)

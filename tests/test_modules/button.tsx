@@ -1,14 +1,18 @@
-import {replaceElementWithRoot, Component} from "jsr:@velotype/velotype"
+import {replaceElementWithRoot, Component, RenderBasic} from "jsr:@velotype/velotype"
 import type {EmptyAttrs} from "jsr:@velotype/velotype"
 
 import {Button, ButtonType, Theme} from "../../src/index.ts"
-import { TestModulePage } from "./module-page.tsx";
+import { TestModulePage } from "./module-page.tsx"
 
 const renderButton = function(btype: ButtonType) {
+    const counter = new RenderBasic<number>(0)
     return <div>
         <Button type={btype}>{btype} button</Button>
         <Button type={btype} disabled>{btype} button (disabled)</Button>
-        <Button type={btype} loadingIcon onClick={(resolve)=>{
+        <Button type={btype} onClick={()=>{
+            counter.value += 1
+        }}>{btype} button (clicked {counter} times)</Button>
+        <Button type={btype} loadingOnClick onClick={(resolve)=>{
             setTimeout(resolve,1000)
         }}>{btype} button (with loader)</Button>
     </div>
