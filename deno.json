@@ -21,7 +21,7 @@
         "lib": ["dom", "deno.ns", "esnext"]
     },
     "imports": {
-        "jsr:@velotype/velotype/jsx-runtime": "jsr:@velotype/velotype@^0.0.19",
-        "jsr:@velotype/velotype": "jsr:@velotype/velotype@^0.0.19"
+        "jsr:@velotype/velotype/jsx-runtime": "jsr:@velotype/velotype@^0.0.22",
+        "jsr:@velotype/velotype": "jsr:@velotype/velotype@^0.0.22"
     }
   }
