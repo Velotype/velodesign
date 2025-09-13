@@ -1,5 +1,5 @@
 import {replaceElementWithRoot, Component, RenderBasic} from "jsr:@velotype/velotype"
-import type {EmptyAttrs} from "jsr:@velotype/velotype"
+import type {EmptyAttrs, TargetedMouseEvent} from "jsr:@velotype/velotype"
 
 import {Button, ButtonType, Theme} from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
@@ -12,15 +12,17 @@ const renderButton = function(btype: ButtonType) {
         <Button type={btype} onClick={()=>{
             counter.value += 1
         }}>{btype} button (clicked {counter} times)</Button>
-        <Button type={btype} loadingOnClick onClick={(resolve)=>{
-            setTimeout(resolve,1000)
+        <Button type={btype} loadingOnClick onClick={function(_event: TargetedMouseEvent<HTMLButtonElement>, resolve?: () => void) {
+            if (resolve) {
+                setTimeout(resolve,1000)
+            }
         }}>{btype} button (with loader)</Button>
     </div>
 }
 class ButtonGallery extends Component<EmptyAttrs> {
     override render() {
         return <div>
-            <div style={{marginTop:"10px"}}><Button>default button</Button></div>
+            <div style={{marginTop:"10px"}}><Button id="default-button">default button</Button></div>
             <div style={{marginTop:"10px"}}>{renderButton("primary")}</div>
             <div style={{marginTop:"10px"}}>{renderButton("secondary")}</div>
             <div style={{marginTop:"10px"}}>{renderButton("warning")}</div>

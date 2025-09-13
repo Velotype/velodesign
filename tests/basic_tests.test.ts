@@ -52,55 +52,8 @@ describe('basic component rendering', () => {
         })
     }
 
-    itWrap("render div with text", "basic-div", "#hello-div",
-        async (selection: ElementHandle) => {
-            const text = await selection.innerHTML()
-            assertEquals(text,`Hello Velotype!`)
-        }
-    )
-
-    itWrap("render div with style string", "basic-div", "#style-string",
-        async (selection: ElementHandle) => {
-            console.log("styleText-start")
-            const styleText = await selection.getAttribute("style")
-            console.log("styleText",styleText)
-            assertEquals(styleText,`display: flex; margin-top: 4px;`)
-        }
-    )
-    itWrap("render div with style object", "basic-div", "#style-object",
-        async (selection: ElementHandle) => {
-            const styleText = await selection.getAttribute("style")
-            console.log("styleText",styleText)
-            assertEquals(styleText,`display: flex; margin-top: 4px;`)
-        }
-    )
-
-    itWrap("render div with boolean attribute default true", "basic-div", "#boolean-attribute-default-true",
-        async (selection: ElementHandle) => {
-            assertEquals(await selection.getAttribute("disabled"),"")
-        }
-    )
-    itWrap("render div with boolean attribute default true", "basic-div", "#boolean-attribute-explicit-true",
-        async (selection: ElementHandle) => {
-            assertEquals(await selection.getAttribute("disabled"),"")
-        }
-    )
-    itWrap("render div with boolean attribute default true", "basic-div", "#boolean-attribute-explicit-false",
-        async (selection: ElementHandle) => {
-            assertEquals(await selection.getAttribute("disabled"),null)
-        }
-    )
-
-    itWrap("button onclick with RenderBasic", "basic-div", "#button-onclick",
-        async (_selection: ElementHandle) => {
-            const text = await (await page.waitForSelector("#button-onclick span")).innerHTML()
-            assertEquals(text,"false")
-            
-            await (await page.waitForSelector("#button-onclick")).click()
-
-            const text2 = await (await page.waitForSelector("#button-onclick span")).innerHTML()
-            assertEquals(text2,"true")
-        }
-    )
+    itWrap("render default button", "button", "#default-button", async (selection: ElementHandle) => {
+        assertEquals(await selection.innerText(),"default button")
+    })
 
 })

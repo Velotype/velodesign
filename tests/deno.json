@@ -4,6 +4,7 @@
         "bundle-page-selector": "deno bundle ./test_modules/page-selector.tsx --output ./build/page-selector.js --sourcemap",
         "bundle-textbox": "deno bundle ./test_modules/textbox.tsx --output ./build/textbox.js --sourcemap",
         "bundle-modal": "deno bundle ./test_modules/modal.tsx --output ./build/modal.js --sourcemap",
+        "bundle-textformfield": "deno bundle ./test_modules/textformfield.tsx --output ./build/textformfield.js --sourcemap",
         "bundle-icon": "deno bundle ./test_modules/icon.tsx --output ./build/icon.js --sourcemap"
     },
     "compilerOptions": {
@@ -14,7 +15,7 @@
     "nodeModulesDir": "auto",
     "imports": {
         "@velotype/veloserver": "jsr:@velotype/veloserver@^0.0.2",
-        "@velotype/velotype": "jsr:@velotype/velotype@^0.0.19"
+        "@velotype/velotype": "jsr:@velotype/velotype@^0.0.22"
     },
     "lint": {
         "rules": {

@@ -12,38 +12,47 @@ import type { Page, PageSelectorAttrsType } from "./page-selector.tsx"
 import { TextBox } from "./textbox.tsx"
 import type { TextBoxAttrsType } from "./textbox.tsx"
 import { ButtonModal, type ButtonModalAttrsType, Modal, type ModalAttrsType, ModalThemeOptions } from "./modal.tsx"
+import { TextFormFieldOptions, type TextNonEditableFieldAttrsType, TextNonEditableField, type TextFormFieldAttrTypes, TextFormField, type TextEditableFieldAttrsType, TextEditableField } from "./textformfield.tsx"
 
 export {
-  Button,
-  type ButtonType,
-  type ButtonAttrsType,
-  ButtonThemeOptions,
+    Button,
+    type ButtonType,
+    type ButtonAttrsType,
+    ButtonThemeOptions,
 
-  Icon,
-  type IAttrsType,
-  I,
-  registerIcon,
+    Icon,
+    type IAttrsType,
+    I,
+    registerIcon,
 
-  TextBox,
-  type TextBoxAttrsType,
+    TextBox,
+    type TextBoxAttrsType,
 
-  Modal,
-  type ModalAttrsType,
-  ModalThemeOptions,
-  ButtonModal,
-  type ButtonModalAttrsType,
+    Modal,
+    type ModalAttrsType,
+    ModalThemeOptions,
+    ButtonModal,
+    type ButtonModalAttrsType,
 
-  Link,
-  type LinkAttrsType,
+    Link,
+    type LinkAttrsType,
 
-  Theme,
-  type ThemeOptions,
-  History,
+    Theme,
+    type ThemeOptions,
+    History,
 
-  type Page,
-  type PageSelectorAttrsType,
-  PageSelector,
+    type Page,
+    type PageSelectorAttrsType,
+    PageSelector,
 
-  licenses,
-  addLicense
+    TextFormFieldOptions,
+    type TextNonEditableFieldAttrsType,
+    TextNonEditableField,
+    type TextFormFieldAttrTypes,
+    TextFormField,
+    type TextEditableFieldAttrsType,
+    TextEditableField,
+
+    licenses,
+    addLicense
 }

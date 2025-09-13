@@ -1,5 +1,5 @@
-import {Component, setStylesheet} from "jsr:@velotype/velotype"
-import type {ChildrenAttr, RenderableElements, FunctionComponent, CSSProperties, EmptyAttrs} from "jsr:@velotype/velotype"
+import {Component, passthroughAttrsToElement, setStylesheet} from "jsr:@velotype/velotype"
+import type {ChildrenAttr, IdAttr, RenderableElements, FunctionComponent, EmptyAttrs, StylePassthroughAttrs, TargetedMouseEvent} from "jsr:@velotype/velotype"
 
 /**
  * Options to customize `<Button/>` Component Theme
@@ -18,16 +18,19 @@ export type ButtonType = "primary" | "secondary" | "warning" | "danger" | "text"
  * Attrs type for `<Button/>` Component
  */
 export type ButtonAttrsType = {
-    style?: CSSProperties | string
+    /** Is the button disabled? */
     disabled?: boolean,
+    /** What type of button is this? (set the color) */
     type?: ButtonType,
-    onClick?: (doneLoading: () => void) => void,
-    loadingOnClick?: boolean,
+    /** onClick event handler */
+    onClick?: (event: TargetedMouseEvent<HTMLButtonElement>, doneLoading?: () => void) => void,
+    /** Should the button trigger a loading icon when clicked? */
+    loadingOnClick?: boolean
 }
 /**
  * An interactable Button
  */
-export class Button extends Component<ButtonAttrsType & ChildrenAttr> {
+export class Button extends Component<ButtonAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr> {
     /** Mount this Component */
     override mount() {
         setStylesheet(`
@@ -64,6 +67,15 @@ transition:color 0.25s ease-in-out, background-color 0.25s ease-in-out, border 0
 
 .vtd-btn:disabled:hover{cursor:not-allowed;}
 .vtd-btn:focus-visible{border:1px solid var(--accent);}
+
+.vtd-btn-spinner{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate3d(-50%, -50%, 0);
+display:inline-block;
+visibility:hidden;
+}
 `, "vtd/Button")
     }
 
@@ -71,49 +83,42 @@ transition:color 0.25s ease-in-out, background-color 0.25s ease-in-out, border 0
     #isLoading = false
 
     /** Render this Component */
-    override render(attrs: ButtonAttrsType, children: RenderableElements[]): HTMLButtonElement {
+    override render(attrs: ButtonAttrsType & IdAttr & StylePassthroughAttrs, children: RenderableElements[]): HTMLButtonElement {
         let spinnerElement: HTMLSpanElement | undefined
         if (attrs.loadingOnClick) {
-            const spinnerStyle = {
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate3d(-50%, -50%, 0)",
-                display: "inline-block",
-                visibility: "hidden"
-            }
-            spinnerElement = <span style={spinnerStyle}><ButtonThemeOptions.spinner/></span>
+            spinnerElement = <span class="vtd-btn-spinner"><ButtonThemeOptions.spinner/></span>
         }
         const childrenWrapper: HTMLSpanElement = <span>{children}</span>
-        return <button type="button"
+        return passthroughAttrsToElement(<button type="button"
             class={`vtd-btn vtd-btn-${attrs.type||"primary"}`}
             tabindex={0}
             disabled={attrs.disabled}
-            style={attrs.style}
-            onClick={()=>{
+            onClick={(event: TargetedMouseEvent<HTMLButtonElement>) => {
                 if (attrs.loadingOnClick && this.#isLoading) {
                     // Protect the button from being clicked while still loading
                     return
                 }
-                if (attrs.loadingOnClick) {
-                    this.#isLoading = true
-                    if (spinnerElement) {
-                        spinnerElement.style.visibility = "visible"
-                    }
-                    childrenWrapper.style.visibility = "hidden"
-                }
                 if (attrs.onClick) {
-                    attrs.onClick(()=>{
-                        this.#isLoading = false
-                        if (attrs.loadingOnClick && spinnerElement) {
-                            spinnerElement.style.visibility = "hidden"
+                    if (attrs.loadingOnClick) {
+                        this.#isLoading = true
+                        if (spinnerElement) {
+                            spinnerElement.style.visibility = "visible"
                         }
-                        childrenWrapper.style.visibility = "visible"
-                    })
+                        childrenWrapper.style.visibility = "hidden"
+                        attrs.onClick(event, () => {
+                            this.#isLoading = false
+                            if (attrs.loadingOnClick && spinnerElement) {
+                                spinnerElement.style.visibility = "hidden"
+                            }
+                            childrenWrapper.style.visibility = "visible"
+                        })
+                    } else {
+                        attrs.onClick(event)
+                    }
                 }
             }}>
             {childrenWrapper}
             {spinnerElement}
-        </button>
+        </button>, attrs) as HTMLButtonElement
     }
 }
