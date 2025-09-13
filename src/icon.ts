@@ -1,5 +1,5 @@
-import { setAttrsOnElement, setStylesheet } from "jsr:@velotype/velotype"
-import type { CSSProperties, FunctionComponent } from "jsr:@velotype/velotype"
+import { passthroughAttrsToElement, setAttrsOnElement, setStylesheet } from "jsr:@velotype/velotype"
+import type { FunctionComponent, IdAttr, StylePassthroughAttrs } from "jsr:@velotype/velotype"
 import { createElementNSHelper, setAttributeHelper, svgNamespace } from "./utilities.ts"
 
 /**
@@ -31,30 +31,25 @@ const icons = new Map<string, Icon>()
 export type IAttrsType = {
     /** The key used to lookup the Icon */
     i: string
-    /** Optional additional styles to apply to the `<svg/>` element */
-    style?: CSSProperties | string
 }
 /**
  * I for Icon
  * 
  * This Component renders an icon.
  */
-export const I: FunctionComponent<IAttrsType> = function(attrs: IAttrsType) {
+export const I: FunctionComponent<IAttrsType & IdAttr & StylePassthroughAttrs> = function(attrs: IAttrsType & IdAttr & StylePassthroughAttrs): SVGSVGElement | null {
     const icon = icons.get(attrs.i)
     if (icon) {
         const svg = createElementNSHelper("svg") as SVGSVGElement
         setAttributeHelper(svg,"xmlns",svgNamespace)
-        setAttributeHelper(svg,"class", "vtd-icon")
+        setAttributeHelper(svg,"class", `vtd-icon ${attrs.class||""}`)
         setAttributeHelper(svg,"role", "img")
         setAttributeHelper(svg,"viewBox",`0 0 ${icon.w} ${icon.h}`)
-        if (attrs.style) {
-            setAttrsOnElement(svg,{style: attrs.style})
-        }
         const path = createElementNSHelper("path") as SVGPathElement
         setAttributeHelper(path,"fill", "currentcolor")
         setAttributeHelper(path,"d", icon.d)
         svg.appendChild(path)
-        return svg
+        return passthroughAttrsToElement(svg, attrs) as SVGSVGElement
     }
     return null
 }

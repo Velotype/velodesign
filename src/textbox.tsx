@@ -1,17 +1,18 @@
-import { Component, setStylesheet, type CSSProperties } from "jsr:@velotype/velotype"
+import { Component, type IdAttr, passthroughAttrsToElement, setStylesheet, type StylePassthroughAttrs } from "jsr:@velotype/velotype"
+
+/**
+ * The various types of TextBox Components
+ */
+export type TextBoxTypeType = "password" | "new-password" | "text" | "email" | "phone"
 
 /**
  * Attrs type for `<TextBox/>` Component
  */
 export type TextBoxAttrsType = {
     /** Type of the input */
-    type: "password" | "new-password" | "text" | "email" | "phone"
-    /** `id` for the `<input/>` tag */
-    id?: string
+    type: TextBoxTypeType
     /** `name` for the `<input/>` tag */
     name?: string
-    /** Pass-through styles */
-    style?: CSSProperties | string
     /** Initial value */
     value?: string | number
     /** Placeholder text */
@@ -27,7 +28,7 @@ export type TextBoxAttrsType = {
 /**
  * An input box accepting text input from the user
  */
-export class TextBox extends Component<TextBoxAttrsType> {
+export class TextBox extends Component<TextBoxAttrsType & IdAttr & StylePassthroughAttrs> {
     /** Mount this Component */
     override mount() {
         setStylesheet(`
@@ -38,47 +39,43 @@ margin-inline-start:1ex;
     }
 
     /** Render this Component */
-    override render(props: TextBoxAttrsType): HTMLInputElement {
+    override render(attrs: TextBoxAttrsType & IdAttr & StylePassthroughAttrs): HTMLInputElement {
         let autocomplete = "off"
-        if (props.type == "password" || props.type == "new-password") {
-            if (props.type == "password") {
+        if (attrs.type == "password" || attrs.type == "new-password") {
+            if (attrs.type == "password") {
                 autocomplete="current-password"
-            } else if (props.type == "new-password") {
+            } else if (attrs.type == "new-password") {
                 autocomplete="new-password"
             }
-            return <input
+            return passthroughAttrsToElement(<input
                 class="vtd-textbox"
-                id={props.id}
-                name={props.name}
+                name={attrs.name}
                 type="password"
-                style={props.style}
-                onInput={props.onInput}
-                onChange={props.onChange}
-                value={props.value}
+                onInput={attrs.onInput}
+                onChange={attrs.onChange}
+                value={attrs.value}
                 autocomplete={autocomplete}
-                placeholder={props.placeholder}
-                required={props.required}/>
+                placeholder={attrs.placeholder}
+                required={attrs.required}/>, attrs) as HTMLInputElement
         }
         let inputType: "text" | "email" | "tel" = "text"
-        if (props.type == "email") {
+        if (attrs.type == "email") {
             inputType = "email"
             autocomplete="email"
-        } else if (props.type == "phone") {
+        } else if (attrs.type == "phone") {
             inputType = "tel"
             autocomplete="tel"
         }
-        return <input
+        return passthroughAttrsToElement(<input
             class="vtd-textbox"
-            id={props.id}
-            name={props.name}
+            name={attrs.name}
             type={inputType}
             role="textbox"
-            style={props.style}
-            onInput={props.onInput}
-            onChange={props.onChange}
-            value={props.value}
+            onInput={attrs.onInput}
+            onChange={attrs.onChange}
+            value={attrs.value}
             autocomplete={autocomplete}
-            placeholder={props.placeholder}
-            required={props.required}/>
+            placeholder={attrs.placeholder}
+            required={attrs.required}/>, attrs) as HTMLInputElement
     }
 }

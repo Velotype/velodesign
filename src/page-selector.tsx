@@ -26,20 +26,16 @@ export type PageSelectorAttrsType = {
  */
 export class PageSelector extends Component<PageSelectorAttrsType> {
 
-    #locationChangeListener = (): void => {
-        this.refresh()
-    }
-
     /** Mount this Component */
     override mount() {
-        globalThis.addEventListener('popstate', this.#locationChangeListener)
-        globalThis.addEventListener('locationchange', this.#locationChangeListener)
+        globalThis.addEventListener('popstate', this.refresh)
+        globalThis.addEventListener('locationchange', this.refresh)
     }
 
     /** Unmount this Component */
     override unmount() {
-        globalThis.removeEventListener('popstate', this.#locationChangeListener)
-        globalThis.removeEventListener('locationchange', this.#locationChangeListener)
+        globalThis.removeEventListener('popstate', this.refresh)
+        globalThis.removeEventListener('locationchange', this.refresh)
     }
 
     /** Render this Component */

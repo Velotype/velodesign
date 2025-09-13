@@ -1,4 +1,4 @@
-import { type ChildrenAttr, Component, type RenderableElements, setStylesheet, type EmptyAttrs, type FunctionComponent } from "jsr:@velotype/velotype"
+import { type ChildrenAttr, Component, type RenderableElements, setStylesheet, type EmptyAttrs, type FunctionComponent, type TargetedMouseEvent, StylePassthroughAttrs, IdAttr, passthroughAttrsToElement } from "jsr:@velotype/velotype"
 import { Button, type ButtonType } from "./button.tsx"
 
 /**
@@ -82,8 +82,8 @@ padding:0.5em;
         this.#confirmButton = <Button type="primary"
             disabled={attrs.startConfirmDisabled}
             loadingOnClick={!!attrs.confirmButtonOnClick}
-            onClick={(doneLoading: () => void) => {
-                if (attrs.confirmButtonOnClick) {
+            onClick={(_event: TargetedMouseEvent<HTMLButtonElement>, doneLoading?: () => void) => {
+                if (attrs.confirmButtonOnClick && doneLoading) {
                     attrs.confirmButtonOnClick(doneLoading)
                 }
             }}>{attrs.confirmButtonChildren}
@@ -121,26 +121,27 @@ export type ButtonModalAttrsType = {
     openButtonType?: ButtonType
     openButtonText: string
 }
+
 /**
  * A basic `<Button/>` that renders a `<Modal/>`
  */
-export class ButtonModal extends Component<ButtonModalAttrsType & ChildrenAttr> {
+export class ButtonModal extends Component<ButtonModalAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr> {
     /** The underlying `<Modal/>` */
     #modal: Modal
 
     /** Create a new `<ButtonModal/>` Component */
-    constructor(attrs: ButtonModalAttrsType & ChildrenAttr, children: RenderableElements[]) {
+    constructor(attrs: ButtonModalAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr, children: RenderableElements[]) {
         super(attrs, children)
         this.#modal = <Modal {...attrs.modalAttrs}>{children}</Modal>
     }
 
     /** Render this component */
-    override render(attrs: ButtonModalAttrsType): HTMLSpanElement {
-        return <span style={{display: "contents"}}>
+    override render(attrs: ButtonModalAttrsType & IdAttr & StylePassthroughAttrs): HTMLSpanElement {
+        return passthroughAttrsToElement(<span style={{display: "contents"}}>
             {this.#modal}
             <Button type={attrs.openButtonType || "secondary"} onClick={()=>{
                 this.#modal.showModal()
             }}>{attrs.openButtonText}</Button>
-        </span>
+        </span>, attrs) as HTMLSpanElement
     }
 }
