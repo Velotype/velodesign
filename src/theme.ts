@@ -55,7 +55,6 @@ const middleSpread = [-6,-4,-2,0,2,4,6]
 /**
  * Creates a spread of colors:
  * 
- * 
  * --{cssColorPrefix}-1 -> 60% mix of color1
  * --{cssColorPrefix}-2 -> 40% mix of color1
  * --{cssColorPrefix}-3 -> 20% mix of color1
@@ -83,7 +82,7 @@ const middleColorSpread = (cssColorPrefix: string, color1: string, color2: strin
         return `--${cssColorPrefix}-${e/2+4}${colorMix}${color2} ${10-e}0%,${color3} ${e}0%)`
     }).join(";")+";"
 }
-const gradient = [1,2,3,4,5,8,9]
+const gradient = [1,2,3,4,5,6,7,8,9]
 /**
  * Creates a gradient of colors:
  * 
@@ -93,17 +92,33 @@ const gradient = [1,2,3,4,5,8,9]
  * --{cssColorPrefix}-3 -> 30% mix of color2
  * --{cssColorPrefix}-4 -> 40% mix of color2
  * --{cssColorPrefix}-5 -> 50% mix of color2
- * 
+ * --{cssColorPrefix}-6 -> 60% mix of color2
+ * --{cssColorPrefix}-7 -> 70% mix of color2
  * --{cssColorPrefix}-8 -> 80% mix of color2
  * --{cssColorPrefix}-9 -> 90% mix of color2
+ * --{cssColorPrefix}-alt   -> exact color2
 
  * @param cssColorPrefix
  * @param color1 the main color
  * @param color2 
  * @returns 
  */
-const colorGradient = (cssColorPrefix: string, color1: string, color2: string) => {
-    return gradient.map(e=>`--${cssColorPrefix}-${e}${colorMix}${color1} ${10-e}0%,${color2} ${e}0%)`).join(";")+`;--${cssColorPrefix}:${color1};`
+const backgroundColorGradient = (cssColorPrefix: string, color1: string, color2: string) => {
+    return gradient.map(e=>`--${cssColorPrefix}-${e}${colorMix}${color1} ${10-e}0%,${color2} ${e}0%)`).join(";")+`;--${cssColorPrefix}:${color1};--${cssColorPrefix}-alt:${color2};`
+}
+/**
+ * Creates a gradient of colors:
+ * 
+ * --{cssColorPrefix}     -> exact color1
+ * --{cssColorPrefix}-alt -> exact color2
+
+ * @param cssColorPrefix
+ * @param color1 the main text color
+ * @param color2 the alternate text color
+ * @returns 
+ */
+const textColors = (cssColorPrefix: string, color1: string, color2: string) => {
+    return `--${cssColorPrefix}:${color1};--${cssColorPrefix}-alt:${color2};`
 }
 
 const setTheme = function(theme: string) {
@@ -172,6 +187,36 @@ export const ColorScheme: {
 }
 
 /**
+ * Injects CSS styles for the Velodesign Theme on the `selector` CSS Selector
+ * 
+ * Note: Selected element(s) need `data-theme="light"` or `data-theme="dark"` for theme to
+ * work properly
+ */
+export function setThemeOnSelector(selector: string, options?: ThemeOptions | undefined): void {
+    const white = "#fff"
+    const black = "#000"
+    setStylesheet(`
+${selector}[data-theme="light"]{
+${textColors("text", options?.textLightColor || defaultTextLightColor, options?.textDarkColor || defaultTextDarkColor)}
+${backgroundColorGradient("background", options?.backgroundLightColor || defaultBackgroundLightColor, options?.backgroundDarkColor || defaultBackgroundDarkColor)}
+${middleColorSpread("primary", white, options?.primaryLightColor || defaultPrimaryLightColor, black)}
+${middleColorSpread("secondary", white, options?.secondaryLightColor || defaultSecondaryLightColor, black)}
+${middleColorSpread("warning", white, options?.warningLightColor || defaultWarningLightColor, black)}
+${middleColorSpread("accent", white, options?.accentLightColor || defaultAccentLightColor, black)}
+color-scheme:light;}
+${selector}[data-theme="dark"]{
+${textColors("text", options?.textDarkColor || defaultTextDarkColor, options?.textLightColor || defaultTextLightColor)}
+${backgroundColorGradient("background", options?.backgroundDarkColor || defaultBackgroundDarkColor, options?.backgroundLightColor || defaultBackgroundLightColor)}
+${middleColorSpread("primary", black, options?.primaryDarkColor || defaultPrimaryDarkColor, white)}
+${middleColorSpread("secondary", black, options?.secondaryDarkColor || defaultSecondaryDarkColor, white)}
+${middleColorSpread("warning", black, options?.warningDarkColor || defaultWarningDarkColor, white)}
+${middleColorSpread("accent", black, options?.accentDarkColor || defaultAccentDarkColor, white)}
+color-scheme:dark;}
+${selector}{color:var(--text);background-color:var(--background);}
+${selector} a{color:var(--text)}`,`vtd/Theme on ${selector}`)
+}
+
+/**
  * A collection of functions to manage the Theme
  */
 export const Theme: {
@@ -199,27 +244,8 @@ button{color:inherit;border:none;}
 :target{scroll-margin-block:20ex;}`,"Velodesign CSS reset")
         }
 
-        const white = "#fff"
-        const black = "#000"
-        setStylesheet(`
-:root[data-theme="light"]{
-${colorGradient("text", options?.textLightColor || defaultTextLightColor, white)}
-${colorGradient("background", options?.backgroundLightColor || defaultBackgroundLightColor, black)}
-${middleColorSpread("primary", white, options?.primaryLightColor || defaultPrimaryLightColor, black)}
-${middleColorSpread("secondary", white, options?.secondaryLightColor || defaultSecondaryLightColor, black)}
-${middleColorSpread("warning", white, options?.warningLightColor || defaultWarningLightColor, black)}
-${middleColorSpread("accent", white, options?.accentLightColor || defaultAccentLightColor, black)}
-color-scheme:light;}
-:root[data-theme="dark"]{
-${colorGradient("text", options?.textDarkColor || defaultTextDarkColor, black)}
-${colorGradient("background", options?.backgroundDarkColor || defaultBackgroundDarkColor, white)}
-${middleColorSpread("primary", black, options?.primaryDarkColor || defaultPrimaryDarkColor, white)}
-${middleColorSpread("secondary", black, options?.secondaryDarkColor || defaultSecondaryDarkColor, white)}
-${middleColorSpread("warning", black, options?.warningDarkColor || defaultWarningDarkColor, white)}
-${middleColorSpread("accent", black, options?.accentDarkColor || defaultAccentDarkColor, white)}
-color-scheme:dark;}
-body{color:var(--text);background-color:var(--background);}
-a{color:var(--text)}`,"Velodesign Theme Colors")
+        // Set Theme on `<html>` element
+        setThemeOnSelector(":root", options)
 
         // Delay setting transitions so that the page loads cleanly
         globalThis.setTimeout(function(){

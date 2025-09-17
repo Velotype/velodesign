@@ -1,4 +1,4 @@
-import { Component, type IdAttr, passthroughAttrsToElement, setStylesheet, type StylePassthroughAttrs } from "jsr:@velotype/velotype"
+import { Component, type IdAttr, passthroughAttrsToElement, setStylesheet, type StylePassthroughAttrs, type TargetedEvent, type TargetedInputEvent } from "jsr:@velotype/velotype"
 
 /**
  * The various types of TextBox Components
@@ -20,9 +20,9 @@ export type TextBoxAttrsType = {
     /** If this field is required in a `<form/>` */
     required?: boolean
     /** Callback for onInput event */
-    onInput?: (event: Event) => void
+    onInput?: (event: TargetedInputEvent<HTMLInputElement>) => void
     /** Callback for onChange event */
-    onChange?: (event: Event) => void
+    onChange?: (event: TargetedEvent<HTMLInputElement, Event>) => void
 }
 
 /**

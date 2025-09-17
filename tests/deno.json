@@ -1,6 +1,8 @@
 {
     "tasks": {
         "bundle-button": "deno bundle ./test_modules/button.tsx --output ./build/button.js --sourcemap",
+        "bundle-showcase": "deno bundle ./test_modules/showcase.tsx --output ./build/showcase.js --sourcemap",
+        "bundle-radiobutton": "deno bundle ./test_modules/radiobutton.tsx --output ./build/radiobutton.js --sourcemap",
         "bundle-page-selector": "deno bundle ./test_modules/page-selector.tsx --output ./build/page-selector.js --sourcemap",
         "bundle-textbox": "deno bundle ./test_modules/textbox.tsx --output ./build/textbox.js --sourcemap",
         "bundle-modal": "deno bundle ./test_modules/modal.tsx --output ./build/modal.js --sourcemap",
@@ -15,7 +17,7 @@
     "nodeModulesDir": "auto",
     "imports": {
         "@velotype/veloserver": "jsr:@velotype/veloserver@^0.0.2",
-        "@velotype/velotype": "jsr:@velotype/velotype@^0.0.22"
+        "@velotype/velotype": "jsr:@velotype/velotype@^0.0.23"
     },
     "lint": {
         "rules": {

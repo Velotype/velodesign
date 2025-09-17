@@ -1,6 +1,6 @@
 
-import { Component, passthroughAttrsToElement } from "jsr:@velotype/velotype"
-import type { ChildrenAttr, IdAttr, RenderableElements, StylePassthroughAttrs } from "jsr:@velotype/velotype"
+import { passthroughAttrsToElement } from "jsr:@velotype/velotype"
+import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "jsr:@velotype/velotype"
 import {History} from "./history.ts"
 
 /**
@@ -16,16 +16,13 @@ export type LinkAttrsType = {
  * For example an SPA app will use `<Link to="/other/spa/page">click here</Link>` to
  * render links to other pages within the SPA app.
  */
-export class Link extends Component<LinkAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr> {
-    /** Render this Component */
-    override render(attrs: LinkAttrsType & IdAttr & StylePassthroughAttrs, children: RenderableElements): HTMLAnchorElement {
-        return passthroughAttrsToElement(<a
-            href={attrs.to}
-            onClick={(event: Event) => {
-                event.preventDefault()
-                History.changeLocation(attrs.to)
-            }}>
-            {children}
-        </a>, attrs) as HTMLAnchorElement
-    }
+export const Link: FunctionComponent<LinkAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr> = function(attrs: LinkAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr, children: RenderableElements[]): HTMLAnchorElement {
+    return passthroughAttrsToElement(<a
+        href={attrs.to}
+        onClick={(event: Event) => {
+            event.preventDefault()
+            History.changeLocation(attrs.to)
+        }}>
+        {children}
+    </a>, attrs) as HTMLAnchorElement
 }

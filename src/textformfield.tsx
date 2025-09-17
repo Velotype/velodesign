@@ -1,6 +1,6 @@
 
 
-import { type RenderBasic, Component, type RenderableElements, type ChildrenAttr, type FunctionComponent, type EmptyAttrs, type AnchorElement, StylePassthroughAttrs, IdAttr, passthroughAttrsToElement } from "jsr:@velotype/velotype"
+import { type RenderBasic, Component, type RenderableElements, type ChildrenAttr, type FunctionComponent, type EmptyAttrs, type AnchorElement, type StylePassthroughAttrs, type IdAttr, passthroughAttrsToElement } from "jsr:@velotype/velotype"
 import { Button } from "./button.tsx"
 import { TextBox, type TextBoxTypeType } from "./textbox.tsx"
 
@@ -52,15 +52,13 @@ export type TextFormFieldAttrTypes = {
 export class TextFormField extends Component<TextFormFieldAttrTypes & IdAttr & StylePassthroughAttrs & ChildrenAttr> {
     /** Render this Component */
     override render(attrs: TextFormFieldAttrTypes & IdAttr & StylePassthroughAttrs, children: RenderableElements[]) {
-        const required = attrs.required
-        const startingValue = attrs.field.get()
         return passthroughAttrsToElement(<div style={{marginBlockStart: "1ex",marginBlockEnd: "1ex",display:"flex",alignItems:"center"}}>
             <label for={`vtd-${this.vtKey}`}>
                 {children}
                 <TextBox
                     id={`vtd-${this.vtKey}`}
                     type={attrs.type || "text"}
-                    value={startingValue}
+                    value={attrs.field.get()}
                     onInput={(event: Event) => {
                         if (event.target && (event.target instanceof HTMLInputElement) && attrs.updateOnInput) {
                             attrs.field.set(event.target?.value)
@@ -71,7 +69,7 @@ export class TextFormField extends Component<TextFormFieldAttrTypes & IdAttr & S
                             attrs.field.set(event.target?.value)
                         }
                     }}
-                    required={required}/>
+                    required={attrs.required}/>
             </label>
         </div>, attrs)
     }

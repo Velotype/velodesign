@@ -6,8 +6,8 @@
     "jsr:@std/media-types@1": "1.1.0",
     "jsr:@velotype/veloserver@*": "0.0.2",
     "jsr:@velotype/veloserver@^0.0.2": "0.0.2",
-    "jsr:@velotype/velotype@*": "0.0.22",
-    "jsr:@velotype/velotype@^0.0.22": "0.0.22"
+    "jsr:@velotype/velotype@*": "0.0.23",
+    "jsr:@velotype/velotype@^0.0.23": "0.0.23"
   },
   "jsr": {
     "@std/encoding@1.0.10": {
@@ -32,15 +32,15 @@
     "@velotype/velotype@0.0.17": {
       "integrity": "799f2b49e2f1802a4fa540d7ca2da9693a9593aee2596249fce3610ecd8dae2d"
     },
-    "@velotype/velotype@0.0.22": {
-      "integrity": "8cac30bf79acc0a4621299845c2378aeacbb295244f9dab24bc50997284cdd1b"
+    "@velotype/velotype@0.0.23": {
+      "integrity": "21177dfff797d274a6218f288fba24374643d5a0094cd84ae21c2b6f3aac2f8c"
     }
   },
   "workspace": {
     "dependencies": [
       "jsr:@velotype/veloserver@^0.0.2",
       "jsr:@velotype/velotype@*",
-      "jsr:@velotype/velotype@^0.0.22"
+      "jsr:@velotype/velotype@^0.0.23"
     ]
   }
 }

@@ -1,4 +1,4 @@
-import { type ChildrenAttr, Component, type RenderableElements, setStylesheet, type EmptyAttrs, type FunctionComponent, type TargetedMouseEvent, StylePassthroughAttrs, IdAttr, passthroughAttrsToElement } from "jsr:@velotype/velotype"
+import { type ChildrenAttr, Component, type RenderableElements, setStylesheet, type EmptyAttrs, type FunctionComponent, type TargetedMouseEvent, type StylePassthroughAttrs, type IdAttr, passthroughAttrsToElement } from "jsr:@velotype/velotype"
 import { Button, type ButtonType } from "./button.tsx"
 
 /**
