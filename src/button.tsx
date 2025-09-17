@@ -1,5 +1,5 @@
-import {Component, passthroughAttrsToElement, setStylesheet} from "jsr:@velotype/velotype"
-import type {ChildrenAttr, IdAttr, RenderableElements, FunctionComponent, EmptyAttrs, StylePassthroughAttrs, TargetedMouseEvent} from "jsr:@velotype/velotype"
+import {passthroughAttrsToElement, setStylesheet} from "jsr:@velotype/velotype"
+import type {IdAttr, RenderableElements, FunctionComponent, EmptyAttrs, StylePassthroughAttrs, TargetedMouseEvent, ChildrenAttr} from "jsr:@velotype/velotype"
 
 /**
  * Options to customize `<Button/>` Component Theme
@@ -27,12 +27,18 @@ export type ButtonAttrsType = {
     /** Should the button trigger a loading icon when clicked? */
     loadingOnClick?: boolean
 }
+
+/**
+ * Keep track of if Button styles are mounted (boolean lookup here is lighter weight than Map check)
+ */
+let areButtonStylesMounted = false
+
 /**
  * An interactable Button
  */
-export class Button extends Component<ButtonAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr> {
-    /** Mount this Component */
-    override mount() {
+export const Button: FunctionComponent<ButtonAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr> = function(attrs: ButtonAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr, children: RenderableElements[]): HTMLButtonElement {
+    if (!areButtonStylesMounted) {
+        areButtonStylesMounted = true
         setStylesheet(`
 .vtd-btn{
 position:relative;
@@ -44,7 +50,6 @@ text-align:center;
 text-decoration:none;
 user-select:none;
 vertical-align:middle;
-margin-inline:0.25rem;
 transition:color 0.25s ease-in-out, background-color 0.25s ease-in-out, border 0.25s ease-in-out;
 }
 
@@ -80,45 +85,42 @@ visibility:hidden;
     }
 
     /** If the Button is in loading state */
-    #isLoading = false
+    let isLoading = false
 
-    /** Render this Component */
-    override render(attrs: ButtonAttrsType & IdAttr & StylePassthroughAttrs, children: RenderableElements[]): HTMLButtonElement {
-        let spinnerElement: HTMLSpanElement | undefined
-        if (attrs.loadingOnClick) {
-            spinnerElement = <span class="vtd-btn-spinner"><ButtonThemeOptions.spinner/></span>
-        }
-        const childrenWrapper: HTMLSpanElement = <span>{children}</span>
-        return passthroughAttrsToElement(<button type="button"
-            class={`vtd-btn vtd-btn-${attrs.type||"primary"}`}
-            tabindex={0}
-            disabled={attrs.disabled}
-            onClick={(event: TargetedMouseEvent<HTMLButtonElement>) => {
-                if (attrs.loadingOnClick && this.#isLoading) {
-                    // Protect the button from being clicked while still loading
-                    return
-                }
-                if (attrs.onClick) {
-                    if (attrs.loadingOnClick) {
-                        this.#isLoading = true
-                        if (spinnerElement) {
-                            spinnerElement.style.visibility = "visible"
-                        }
-                        childrenWrapper.style.visibility = "hidden"
-                        attrs.onClick(event, () => {
-                            this.#isLoading = false
-                            if (attrs.loadingOnClick && spinnerElement) {
-                                spinnerElement.style.visibility = "hidden"
-                            }
-                            childrenWrapper.style.visibility = "visible"
-                        })
-                    } else {
-                        attrs.onClick(event)
-                    }
-                }
-            }}>
-            {childrenWrapper}
-            {spinnerElement}
-        </button>, attrs) as HTMLButtonElement
+    let spinnerElement: HTMLSpanElement | undefined
+    if (attrs.loadingOnClick) {
+        spinnerElement = <span class="vtd-btn-spinner"><ButtonThemeOptions.spinner/></span>
     }
+    const childrenWrapper: HTMLSpanElement = <span>{children}</span>
+    return passthroughAttrsToElement(<button type="button"
+        class={`vtd-btn vtd-btn-${attrs.type||"primary"}`}
+        tabindex={0}
+        disabled={attrs.disabled}
+        onClick={(event: TargetedMouseEvent<HTMLButtonElement>) => {
+            if (attrs.loadingOnClick && isLoading) {
+                // Protect the button from being clicked while still loading
+                return
+            }
+            if (attrs.onClick) {
+                if (attrs.loadingOnClick) {
+                    isLoading = true
+                    if (spinnerElement) {
+                        spinnerElement.style.visibility = "visible"
+                    }
+                    childrenWrapper.style.visibility = "hidden"
+                    attrs.onClick(event, () => {
+                        isLoading = false
+                        if (attrs.loadingOnClick && spinnerElement) {
+                            spinnerElement.style.visibility = "hidden"
+                        }
+                        childrenWrapper.style.visibility = "visible"
+                    })
+                } else {
+                    attrs.onClick(event)
+                }
+            }
+        }}>
+        {childrenWrapper}
+        {spinnerElement}
+    </button>, attrs) as HTMLButtonElement
 }
