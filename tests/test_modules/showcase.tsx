@@ -1,4 +1,4 @@
-import {replaceElementWithRoot, Component, setStylesheet} from "jsr:@velotype/velotype"
+import {replaceElementWithRoot, Component} from "jsr:@velotype/velotype"
 import type {EmptyAttrs} from "jsr:@velotype/velotype"
 
 import { Button, RadioButton, Theme} from "../../src/index.ts"

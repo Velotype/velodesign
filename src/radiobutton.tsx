@@ -1,4 +1,4 @@
-import { type ChildrenAttr, Component, FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, setStylesheet, type StylePassthroughAttrs } from "jsr:@velotype/velotype"
+import { type ChildrenAttr, type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, setStylesheet, type StylePassthroughAttrs } from "jsr:@velotype/velotype"
 
 /**
  * Attrs type for `<RadioButton/>` Component
