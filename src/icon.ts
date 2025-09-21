@@ -42,7 +42,7 @@ export const I: FunctionComponent<IAttrsType & IdAttr & StylePassthroughAttrs> =
     if (icon) {
         const svg = createElementNSHelper("svg") as SVGSVGElement
         setAttributeHelper(svg,"xmlns",svgNamespace)
-        setAttributeHelper(svg,"class", `vtd-icon ${attrs.class||""}`)
+        setAttributeHelper(svg,"class", "vtd-icon")
         setAttributeHelper(svg,"role", "img")
         setAttributeHelper(svg,"viewBox",`0 0 ${icon.w} ${icon.h}`)
         const path = createElementNSHelper("path") as SVGPathElement

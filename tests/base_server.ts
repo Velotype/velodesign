@@ -20,7 +20,7 @@ export async function startAppServer(server_port: number): Promise<App> {
             }
         }
     ))
-    const setOfModules = ['button','icon','page-selector','textbox','modal','textformfield','radiobutton','showcase']
+    const setOfModules = ['button','icon','page-selector','textbox','modal','textformfield','radiobutton','showcase','timeago']
     setOfModules.forEach((module) => {
         router.get(`/${module}`, function() {
             const response = new Response(`<!DOCTYPE html><html><body>

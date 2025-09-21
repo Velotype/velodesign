@@ -14,6 +14,7 @@ import type { TextBoxAttrsType } from "./textbox.tsx"
 import { ButtonModal, type ButtonModalAttrsType, Modal, type ModalAttrsType, ModalThemeOptions } from "./modal.tsx"
 import { TextFormFieldOptions, type TextNonEditableFieldAttrsType, TextNonEditableField, type TextFormFieldAttrTypes, TextFormField, type TextEditableFieldAttrsType, TextEditableField } from "./textformfield.tsx"
 import { RadioButton, type RadioButtonAttrsType } from "./radiobutton.tsx"
+import { TimeAgo, type TimeAgoAttrsType } from "./timeago.ts"
 
 export {
     Button,
@@ -40,6 +41,9 @@ export {
 
     Link,
     type LinkAttrsType,
+
+    TimeAgo,
+    type TimeAgoAttrsType,
 
     Theme,
     type ThemeOptions,
