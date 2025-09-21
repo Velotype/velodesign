@@ -33,7 +33,6 @@ class ShowcaseSide extends Component<EmptyAttrs> {
             return <div style={{marginTop:"12px"}}>
                 <h4>{cssColorPrefix}</h4>
                 {gradient.map((index)=><div style={{margin: "4pm", display: "inline-block", padding: "12px", backgroundColor: `var(--${cssColorPrefix}-${index})`}}>{index}</div>)}
-                <div style={{margin: "4pm", display: "inline-block", padding: "12px", backgroundColor: `var(--${cssColorPrefix})`}}>{cssColorPrefix}</div>
             </div>
         }
         return <div>
@@ -54,7 +53,7 @@ class ShowcaseSide extends Component<EmptyAttrs> {
             {middleColorSpread("secondary")}
             {middleColorSpread("warning")}
             {middleColorSpread("accent")}
-            <hr/>
+            <hr style={{marginTop:"10px"}}/>
         </div>
     }
 }

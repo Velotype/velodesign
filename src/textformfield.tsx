@@ -97,13 +97,12 @@ export class TextEditableField extends Component<TextEditableFieldAttrsType & Id
     /** Render this Component */
     override render(attrs: TextEditableFieldAttrsType & IdAttr & StylePassthroughAttrs, children: RenderableElements[]) {
         const editControls = (): HTMLSpanElement => {
-            return <span>
+            return <span style={{display:"inline-flex",alignItems:"center",gap:"4px"}}>
                 <TextBox
                     id={`vtd-${this.vtKey}`}
                     name={attrs.fieldName}
                     type={attrs.type || "text"}
                     value={this.#editValue}
-                    style={{marginInlineStart: "1em"}}
                     onInput={(event: Event) => {
                         if (event.target && (event.target instanceof HTMLInputElement)) {
                             this.#editValue = event.target?.value
@@ -120,7 +119,7 @@ export class TextEditableField extends Component<TextEditableFieldAttrsType & Id
             </span>
         }
         const viewControls = (): HTMLSpanElement => {
-            return <span>
+            return <span style={{display:"inline-flex",alignItems:"center",gap:"4px"}}>
                 <span style={{marginInlineStart: "1em"}}>{attrs.field}</span>
                 <Button type="secondary" onClick={() => {
                     currentControls = this.replaceChild(currentControls, editControls())

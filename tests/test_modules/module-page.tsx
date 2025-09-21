@@ -1,21 +1,24 @@
-import { ChildrenAttr, Component, EmptyAttrs, RenderableElements } from "jsr:@velotype/velotype/jsx-runtime"
+import { ChildrenAttr, Component, EmptyAttrs, RenderableElements, RenderBasic } from "jsr:@velotype/velotype/jsx-runtime"
 import { Button } from "../../src/button.tsx"
 import { ColorScheme } from "../../src/theme.ts"
 
 class NavSchemeSelector extends Component<EmptyAttrs> {
+    darkMode = new RenderBasic<string>("--")
     override render() {
-        return <div style="display:contents;">
-            <Button style={{marginBlock: "0.25rem"}} onClick={()=>{
-                if (ColorScheme.getColorScheme() == "light") {
-                    ColorScheme.setColorScheme("dark")
-                } else {
-                    ColorScheme.setColorScheme("light")
-                }
-                globalThis.setTimeout(()=>{
-                    this.refresh()
-                },100)
-            }}>Dark mode:{(ColorScheme.getColorScheme() == "light")?'off':'on'}</Button>
-        </div>
+        if (ColorScheme.getColorScheme() == "light") {
+            this.darkMode.value = "off"
+        } else {
+            this.darkMode.value = "on"
+        }
+        return <Button style={{marginBlock: "0.25rem"}} onClick={()=>{
+            if (ColorScheme.getColorScheme() == "light") {
+                ColorScheme.setColorScheme("dark")
+                this.darkMode.value = "on"
+            } else {
+                ColorScheme.setColorScheme("light")
+                this.darkMode.value = "off"
+            }
+        }}>Dark mode:{this.darkMode}</Button>
     }
 }
 

@@ -37,78 +37,72 @@ export const RadioButton: FunctionComponent<RadioButtonAttrsType & IdAttr & Styl
         areButtonStylesMounted = true
         setStylesheet(`
 .vtd-r-btn-container{
-position:relative;
-display:inline-block;
+cursor:pointer;
+display:inline-flex;
+align-items:center;
 margin-inline:0.25em;
 }
 
-.vtd-r-btn-input {
-opacity:0;
-visibility:hidden;
-height:0;
-width:0;
-}
+.vtd-r-btn-input {opacity:0;visibility:hidden;height:0;width:0;}
 
 .vtd-r-btn {
-border-radius:0.75em;
-cursor:pointer;
+position:relative;
+border-radius:1em;
 display:inline-block;
-height:1.5em;
-width:1.5em;
-transition:color 0.25s ease-in-out, background-color 0.25s ease-in-out, border 0.25s ease-in-out;
-
-background-color:var(--primary);border:1px solid var(--primary-5);
+height:calc(1em - 2px);
+width:calc(1em - 2px);
+margin-inline-end:0.5ex;
+transition:background-color 0.2s ease-in, border 0.3s ease-in;
+background-color:var(--background-1);border:1px solid var(--background-5);
 }
 
 .vtd-r-btn:hover{background-color:var(--primary-2);border:1px solid var(--primary-7);}
 .vtd-r-btn:active{background-color:var(--primary-6);}
 
-.vtd-r-btn-container .vtd-r-btn-input:checked ~ .vtd-r-btn {
-background-color: var(--accent);
+.vtd-r-btn-disabled:hover{background-color:var(--background-2);border:1px solid var(--background-5);}
+.vtd-r-btn-disabled:active{background-color:var(--background-2);}
+
+.vtd-r-btn-check{
+visibility:hidden;
+opacity:0;
+transition:opacity 0.4s ease-in;
+position:absolute;
+border-radius:1em;
+margin-left:25%;
+margin-top:25%;
+width:50%;
+height:50%;
+background-color:var(--primary-5);
 }
 
-.vtd-r-btn-check:after {
-content: "";
-position: absolute;
-display: none;
+.vtd-r-btn-input:checked ~ .vtd-r-btn .vtd-r-btn-check{
+visibility:visible;
+opacity:1;
+}
+.vtd-r-btn-input:checked ~ .vtd-r-btn {
+background-color:transparent;
+border-color:var(--background-9);
 }
 
-.vtd-r-btn-container .vtd-r-btn-input:checked ~ .vtd-r-btn:after {
-display: block;
-}
-
-.vtd-r-btn:after {
-left: 9px;
-top: 5px;
-width: 5px;
-height: 10px;
-border: solid white;
-border-width: 0 3px 3px 0;
-transform: rotate(45deg);
-}
-
-.vtd-r-btn-input:disabled + span:hover{cursor:not-allowed;}
+.vtd-r-btn-container:has(> .vtd-r-btn-input:disabled){cursor:not-allowed;}
 .vtd-r-btn:focus-visible{border:1px solid var(--accent);}
 `, "vtd/RadioButton")
     }
 
-    return passthroughAttrsToElement(<span>
-        <label class="vtd-r-btn-container">
-            <input
-                type="radio"
-                name={attrs.name}
-                class="vtd-r-btn-input"
-                disabled={attrs.disabled}
-                checked={attrs.checked}
-                value={attrs.value}
-                onChange={attrs.onChange}/>
-            <span
-                class={`vtd-r-btn`}
-                tabindex={0}
-            />
-            {children}
-        </label>
-    </span>, attrs)
+    return passthroughAttrsToElement(<label class="vtd-r-btn-container">
+        <input
+            type="radio"
+            name={attrs.name}
+            class="vtd-r-btn-input"
+            disabled={attrs.disabled}
+            checked={attrs.checked}
+            value={attrs.value}
+            onChange={attrs.onChange}/>
+        <span class={`vtd-r-btn${attrs.disabled?" vtd-r-btn-disabled":""}`} tabindex={0}>
+            <span class="vtd-r-btn-check"/>
+        </span>
+        {children}
+    </label>, attrs)
 
 /*
                 onKeyUp={(event: KeyboardEvent)=>{

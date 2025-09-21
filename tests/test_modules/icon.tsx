@@ -1,7 +1,7 @@
 import {replaceElementWithRoot, Component} from "jsr:@velotype/velotype"
 import type {EmptyAttrs} from "jsr:@velotype/velotype"
 
-import { addLicense, I, Icon, registerIcon, Theme } from "../../src/index.ts"
+import { addLicense, I, Icon, registerIcon, setThemeOnSelector, Theme } from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx";
 
 addLicense("font-awesome",`// Icon font SVG paths provided by Font Awesome
@@ -15,17 +15,30 @@ class IconGallery extends Component<EmptyAttrs> {
     override render() {
         return <div>
             <div>Example icon: <I i="gear"/></div>
-            <div>Example icon with color: <I i="gear" style={{color: "red"}}/></div>
+            <div>Example icon with absolute color: <I i="gear" style={{color: "red"}}/></div>
+            <div>Example icon with theme variable color: <I i="gear" style={{color: "var(--primary)"}}/></div>
             <div>Example big icon: <I i="gear" style={{height: "2em"}}/></div>
             <div>Example small icon: <I i="gear" style={{height: "0.75em"}}/></div>
         </div>
     }
 }
 
+class IconPage extends Component<EmptyAttrs> {
+    override render() {
+        return <div style={{display: "flex"}}>
+            <div id="showcase-theme-light" data-theme="light" style={{padding:"8px",flexGrow: 1,minHeight: "100vh"}}><IconGallery/></div>
+            <div id="showcase-theme-dark" data-theme="dark" style={{padding:"8px",flexGrow: 1}}><IconGallery/></div>
+        </div>
+    }
+}
+
 Theme.addStyles()
+
+setThemeOnSelector("#showcase-theme-light")
+setThemeOnSelector("#showcase-theme-dark")
 
 // Place on the page
 const mainPage = document.getElementById("main-page")
 if (mainPage) {
-    replaceElementWithRoot(<TestModulePage><IconGallery/></TestModulePage>, mainPage)
+    replaceElementWithRoot(<TestModulePage><IconPage/></TestModulePage>, mainPage)
 }

@@ -13,7 +13,7 @@ import { TextBox } from "./textbox.tsx"
 import type { TextBoxAttrsType } from "./textbox.tsx"
 import { ButtonModal, type ButtonModalAttrsType, Modal, type ModalAttrsType, ModalThemeOptions } from "./modal.tsx"
 import { TextFormFieldOptions, type TextNonEditableFieldAttrsType, TextNonEditableField, type TextFormFieldAttrTypes, TextFormField, type TextEditableFieldAttrsType, TextEditableField } from "./textformfield.tsx"
-import { RadioButton, type RadioButtonAttrsType, type RadioButtonType } from "./radiobutton.tsx"
+import { RadioButton, type RadioButtonAttrsType } from "./radiobutton.tsx"
 
 export {
     Button,
@@ -22,7 +22,6 @@ export {
     ButtonThemeOptions,
 
     RadioButton,
-    type RadioButtonType,
     type RadioButtonAttrsType,
 
     Icon,

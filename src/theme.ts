@@ -18,6 +18,7 @@ import { setAttributeHelper } from "./utilities.ts"
 export type ThemeOptions = {
     textLightColor?: string
     backgroundLightColor?: string
+    backgroundLightAltColor?: string
     primaryLightColor?: string
     secondaryLightColor?: string
     warningLightColor?: string
@@ -25,16 +26,21 @@ export type ThemeOptions = {
 
     textDarkColor?: string
     backgroundDarkColor?: string
+    backgroundDarkAltColor?: string
     primaryDarkColor?: string
     secondaryDarkColor?: string
     warningDarkColor?: string
     accentDarkColor?: string
 }
 
+const white = "#fff"
+const black = "#000"
+
 // Theme generator: https://www.realtimecolors.com/?colors=050505-fafafa-66b2ff-c6ff9e-ff6666&fonts=Inter-Inter
 // Warning color: https://www.realtimecolors.com/?colors=050505-fafafa-66b2ff-ffd666-ff6666&fonts=Inter-Inter
 const defaultTextLightColor = "#050505"
-const defaultBackgroundLightColor = "#fafafa"
+const defaultBackgroundLightColor = white
+const defaultBackgroundLightAltColor = black
 const defaultPrimaryLightColor = "#66b2ff"
 const defaultSecondaryLightColor = "#c6ff9e"
 const defaultWarningLightColor = "#ffd666"
@@ -44,6 +50,7 @@ const defaultAccentLightColor = "#ff6666"
 // Warning color: https://www.realtimecolors.com/?colors=fafafa-202020-004c99-997000-990000&fonts=Inter-Inter
 const defaultTextDarkColor = "#fafafa"
 const defaultBackgroundDarkColor = "#202020"
+const defaultBackgroundDarkAltColor = white
 const defaultPrimaryDarkColor = "#004c99"
 const defaultSecondaryDarkColor = "#286100"
 const defaultWarningDarkColor = "#997000"
@@ -107,7 +114,7 @@ const backgroundColorGradient = (cssColorPrefix: string, color1: string, color2:
     return gradient.map(e=>`--${cssColorPrefix}-${e}${colorMix}${color1} ${10-e}0%,${color2} ${e}0%)`).join(";")+`;--${cssColorPrefix}:${color1};--${cssColorPrefix}-alt:${color2};`
 }
 /**
- * Creates a gradient of colors:
+ * Creates a pair of text colors:
  * 
  * --{cssColorPrefix}     -> exact color1
  * --{cssColorPrefix}-alt -> exact color2
@@ -193,12 +200,10 @@ export const ColorScheme: {
  * work properly
  */
 export function setThemeOnSelector(selector: string, options?: ThemeOptions | undefined): void {
-    const white = "#fff"
-    const black = "#000"
     setStylesheet(`
 ${selector}[data-theme="light"]{
 ${textColors("text", options?.textLightColor || defaultTextLightColor, options?.textDarkColor || defaultTextDarkColor)}
-${backgroundColorGradient("background", options?.backgroundLightColor || defaultBackgroundLightColor, options?.backgroundDarkColor || defaultBackgroundDarkColor)}
+${backgroundColorGradient("background", options?.backgroundLightColor || defaultBackgroundLightColor, options?.backgroundLightAltColor || defaultBackgroundLightAltColor)}
 ${middleColorSpread("primary", white, options?.primaryLightColor || defaultPrimaryLightColor, black)}
 ${middleColorSpread("secondary", white, options?.secondaryLightColor || defaultSecondaryLightColor, black)}
 ${middleColorSpread("warning", white, options?.warningLightColor || defaultWarningLightColor, black)}
@@ -206,7 +211,7 @@ ${middleColorSpread("accent", white, options?.accentLightColor || defaultAccentL
 color-scheme:light;}
 ${selector}[data-theme="dark"]{
 ${textColors("text", options?.textDarkColor || defaultTextDarkColor, options?.textLightColor || defaultTextLightColor)}
-${backgroundColorGradient("background", options?.backgroundDarkColor || defaultBackgroundDarkColor, options?.backgroundLightColor || defaultBackgroundLightColor)}
+${backgroundColorGradient("background", options?.backgroundDarkColor || defaultBackgroundDarkColor, options?.backgroundDarkAltColor || defaultBackgroundDarkAltColor)}
 ${middleColorSpread("primary", black, options?.primaryDarkColor || defaultPrimaryDarkColor, white)}
 ${middleColorSpread("secondary", black, options?.secondaryDarkColor || defaultSecondaryDarkColor, white)}
 ${middleColorSpread("warning", black, options?.warningDarkColor || defaultWarningDarkColor, white)}
@@ -231,7 +236,7 @@ export const Theme: {
     addStyles(options?: ThemeOptions, includeCSSReset: boolean = true) {
         // Optionally add Reset styles
         if (includeCSSReset) {
-            setStylesheet(`*{margin:0;padding:0;line-height:calc(2ex + 4px);box-sizing:border-box;}
+            setStylesheet(`*{margin:0;padding:0;line-height:calc(1em + 4px);box-sizing:border-box;}
 html{-moz-text-size-adjust:none;-webkit-text-size-adjust:none;text-size-adjust:none;scroll-behavior:smooth;}
 body{-webkit-font-smoothing:antialiased;min-width:250px}
 img,svg{display:inline-block;max-width:100%;}
