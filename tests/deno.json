@@ -1,5 +1,6 @@
 {
     "tasks": {
+        "bundle-timeago": "deno bundle ./test_modules/timeago.tsx --output ./build/timeago.js --sourcemap",
         "bundle-button": "deno bundle ./test_modules/button.tsx --output ./build/button.js --sourcemap",
         "bundle-showcase": "deno bundle ./test_modules/showcase.tsx --output ./build/showcase.js --sourcemap",
         "bundle-radiobutton": "deno bundle ./test_modules/radiobutton.tsx --output ./build/radiobutton.js --sourcemap",

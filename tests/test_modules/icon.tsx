@@ -2,7 +2,7 @@ import {replaceElementWithRoot, Component} from "jsr:@velotype/velotype"
 import type {EmptyAttrs} from "jsr:@velotype/velotype"
 
 import { addLicense, I, Icon, registerIcon, setThemeOnSelector, Theme } from "../../src/index.ts"
-import { TestModulePage } from "./module-page.tsx";
+import { TestModulePage } from "./module-page.tsx"
 
 addLicense("font-awesome",`// Icon font SVG paths provided by Font Awesome
 Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com
