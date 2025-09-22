@@ -123,25 +123,14 @@ export type ButtonModalAttrsType = {
 }
 
 /**
- * A basic `<Button/>` that renders a `<Modal/>`
+ * A basic `<Button/>` that renders a simple `<Modal/>`
  */
-export class ButtonModal extends Component<ButtonModalAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr> {
-    /** The underlying `<Modal/>` */
-    #modal: Modal
-
-    /** Create a new `<ButtonModal/>` Component */
-    constructor(attrs: ButtonModalAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr, children: RenderableElements[]) {
-        super(attrs, children)
-        this.#modal = <Modal {...attrs.modalAttrs}>{children}</Modal>
-    }
-
-    /** Render this component */
-    override render(attrs: ButtonModalAttrsType & IdAttr & StylePassthroughAttrs): HTMLSpanElement {
-        return passthroughAttrsToElement(<span style={{display: "contents"}}>
-            {this.#modal}
-            <Button type={attrs.openButtonType || "secondary"} onClick={()=>{
-                this.#modal.showModal()
-            }}>{attrs.openButtonText}</Button>
-        </span>, attrs) as HTMLSpanElement
-    }
+export const ButtonModal: FunctionComponent<ButtonModalAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr> = function(attrs: ButtonModalAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr, children: RenderableElements[]): HTMLSpanElement {
+    const modal = <Modal {...attrs.modalAttrs}>{children}</Modal>
+    return passthroughAttrsToElement(<span style={{display: "contents"}}>
+        {modal}
+        <Button type={attrs.openButtonType || "secondary"} onClick={()=>{
+            modal.showModal()
+        }}>{attrs.openButtonText}</Button>
+    </span>, attrs) as HTMLSpanElement
 }

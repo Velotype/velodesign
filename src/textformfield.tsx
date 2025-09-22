@@ -26,14 +26,11 @@ export type TextNonEditableFieldAttrsType = {
 /**
  * Display a readonly label/value pair in a style consistent way with other TextFormField Components
  */
-export class TextNonEditableField extends Component<TextNonEditableFieldAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr> {
-    /** Render this Component */
-    override render(attrs: TextNonEditableFieldAttrsType & IdAttr & StylePassthroughAttrs, children: RenderableElements[]) {
-        return passthroughAttrsToElement(<div style={{marginBlockStart: "1ex",marginBlockEnd: "1ex",display:"flex",alignItems:"center"}}>
-            <span>{children}</span>
-            <span style={{marginInlineStart: "1em"}}>{attrs.value}</span>
-        </div>, attrs)
-    }
+export const TextNonEditableField: FunctionComponent<TextNonEditableFieldAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr> = function(attrs: TextNonEditableFieldAttrsType & IdAttr & StylePassthroughAttrs, children: RenderableElements[]): HTMLElement {
+    return passthroughAttrsToElement(<div style={{marginBlockStart: "1ex",marginBlockEnd: "1ex",display:"flex",alignItems:"center"}}>
+        <span>{children}</span>
+        <span style={{marginInlineStart: "1em"}}>{attrs.value}</span>
+    </div>, attrs)
 }
 
 /**
@@ -96,33 +93,31 @@ export class TextEditableField extends Component<TextEditableFieldAttrsType & Id
     }
     /** Render this Component */
     override render(attrs: TextEditableFieldAttrsType & IdAttr & StylePassthroughAttrs, children: RenderableElements[]) {
-        const editControls = (): HTMLSpanElement => {
-            return <span style={{display:"inline-flex",alignItems:"center",gap:"4px"}}>
-                <TextBox
-                    id={`vtd-${this.vtKey}`}
-                    name={attrs.fieldName}
-                    type={attrs.type || "text"}
-                    value={this.#editValue}
-                    onInput={(event: Event) => {
-                        if (event.target && (event.target instanceof HTMLInputElement)) {
-                            this.#editValue = event.target?.value
-                        }
-                    }}/>
-                <Button type="secondary" onClick={() => {
-                    attrs.field.value = this.#editValue
-                    currentControls = this.replaceChild(currentControls, viewControls())
-                }}><TextFormFieldOptions.check/></Button>
-                <Button type="secondary" onClick={() => {
-                    this.#editValue = attrs.field.value
-                    currentControls = this.replaceChild(currentControls, viewControls())
-                }}><TextFormFieldOptions.xmark/></Button>
-            </span>
-        }
+        const editControls = <span style={{display:"inline-flex",alignItems:"center",gap:"4px"}}>
+            <TextBox
+                id={`vtd-${this.vtKey}`}
+                name={attrs.fieldName}
+                type={attrs.type || "text"}
+                value={this.#editValue}
+                onInput={(event: Event) => {
+                    if (event.target && (event.target instanceof HTMLInputElement)) {
+                        this.#editValue = event.target?.value
+                    }
+                }}/>
+            <Button type="secondary" onClick={() => {
+                attrs.field.value = this.#editValue
+                currentControls = this.replaceChild(currentControls, viewControls())
+            }}><TextFormFieldOptions.check/></Button>
+            <Button type="secondary" onClick={() => {
+                this.#editValue = attrs.field.value
+                currentControls = this.replaceChild(currentControls, viewControls())
+            }}><TextFormFieldOptions.xmark/></Button>
+        </span>
         const viewControls = (): HTMLSpanElement => {
             return <span style={{display:"inline-flex",alignItems:"center",gap:"4px"}}>
                 <span style={{marginInlineStart: "1em"}}>{attrs.field}</span>
                 <Button type="secondary" onClick={() => {
-                    currentControls = this.replaceChild(currentControls, editControls())
+                    currentControls = this.replaceChild(currentControls, editControls)
                 }}><TextFormFieldOptions.edit/></Button>
             </span>
         }

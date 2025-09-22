@@ -1,4 +1,4 @@
-import { Component, type IdAttr, passthroughAttrsToElement, setStylesheet, type StylePassthroughAttrs, type TargetedEvent, type TargetedInputEvent } from "jsr:@velotype/velotype"
+import { type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, setStylesheet, type StylePassthroughAttrs, type TargetedEvent, type TargetedInputEvent } from "jsr:@velotype/velotype"
 
 /**
  * The various types of TextBox Components
@@ -25,12 +25,13 @@ export type TextBoxAttrsType = {
     onChange?: (event: TargetedEvent<HTMLInputElement, Event>) => void
 }
 
+let areTextBoxStylesMounted = false
 /**
  * An input box accepting text input from the user
  */
-export class TextBox extends Component<TextBoxAttrsType & IdAttr & StylePassthroughAttrs> {
-    /** Mount this Component */
-    override mount() {
+export const TextBox: FunctionComponent<TextBoxAttrsType & IdAttr & StylePassthroughAttrs> = function(attrs: TextBoxAttrsType & IdAttr & StylePassthroughAttrs, _children: RenderableElements[]): HTMLInputElement {
+    if (!areTextBoxStylesMounted) {
+        areTextBoxStylesMounted = true
         setStylesheet(`
 .vtd-textbox{
 padding:0.5ex 1ex;
@@ -38,39 +39,17 @@ margin-inline-start:1ex;
 }`, "vtd/TextBox")
     }
 
-    /** Render this Component */
-    override render(attrs: TextBoxAttrsType & IdAttr & StylePassthroughAttrs): HTMLInputElement {
-        let autocomplete = "off"
-        if (attrs.type == "password" || attrs.type == "new-password") {
-            if (attrs.type == "password") {
-                autocomplete="current-password"
-            } else if (attrs.type == "new-password") {
-                autocomplete="new-password"
-            }
-            return passthroughAttrsToElement(<input
-                class="vtd-textbox"
-                name={attrs.name}
-                type="password"
-                onInput={attrs.onInput}
-                onChange={attrs.onChange}
-                value={attrs.value}
-                autocomplete={autocomplete}
-                placeholder={attrs.placeholder}
-                required={attrs.required}/>, attrs) as HTMLInputElement
-        }
-        let inputType: "text" | "email" | "tel" = "text"
-        if (attrs.type == "email") {
-            inputType = "email"
-            autocomplete="email"
-        } else if (attrs.type == "phone") {
-            inputType = "tel"
-            autocomplete="tel"
+    let autocomplete = "off"
+    if (attrs.type == "password" || attrs.type == "new-password") {
+        if (attrs.type == "password") {
+            autocomplete="current-password"
+        } else if (attrs.type == "new-password") {
+            autocomplete="new-password"
         }
         return passthroughAttrsToElement(<input
             class="vtd-textbox"
             name={attrs.name}
-            type={inputType}
-            role="textbox"
+            type="password"
             onInput={attrs.onInput}
             onChange={attrs.onChange}
             value={attrs.value}
@@ -78,4 +57,23 @@ margin-inline-start:1ex;
             placeholder={attrs.placeholder}
             required={attrs.required}/>, attrs) as HTMLInputElement
     }
+    let inputType: "text" | "email" | "tel" = "text"
+    if (attrs.type == "email") {
+        inputType = "email"
+        autocomplete="email"
+    } else if (attrs.type == "phone") {
+        inputType = "tel"
+        autocomplete="tel"
+    }
+    return passthroughAttrsToElement(<input
+        class="vtd-textbox"
+        name={attrs.name}
+        type={inputType}
+        role="textbox"
+        onInput={attrs.onInput}
+        onChange={attrs.onChange}
+        value={attrs.value}
+        autocomplete={autocomplete}
+        placeholder={attrs.placeholder}
+        required={attrs.required}/>, attrs) as HTMLInputElement
 }
