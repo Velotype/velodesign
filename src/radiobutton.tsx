@@ -41,7 +41,13 @@ cursor:pointer;
 display:inline-flex;
 align-items:center;
 margin-inline:0.25em;
+padding:0.25rem 0.5rem;
+border-radius:0.25rem;
 }
+
+.vtd-r-btn-container:hover{background-color:var(--background-1);}
+
+.vtd-r-btn-container:hover .vtd-r-btn{background-color:var(--primary-2);border:1px solid var(--primary-7);}
 
 .vtd-r-btn-input {opacity:0;visibility:hidden;height:0;width:0;}
 
@@ -56,7 +62,6 @@ transition:background-color 0.2s ease-in, border 0.3s ease-in;
 background-color:var(--background-1);border:1px solid var(--background-5);
 }
 
-.vtd-r-btn:hover{background-color:var(--primary-2);border:1px solid var(--primary-7);}
 .vtd-r-btn:active{background-color:var(--primary-6);}
 
 .vtd-r-btn-disabled:hover{background-color:var(--background-2);border:1px solid var(--background-5);}
@@ -85,7 +90,7 @@ border-color:var(--background-9);
 }
 
 .vtd-r-btn-container:has(> .vtd-r-btn-input:disabled){cursor:not-allowed;}
-.vtd-r-btn:focus-visible{border:1px solid var(--accent);}
+.vtd-r-btn:focus-visible{border:1px solid var(--primary-5);outline-color:var(--primary-5)}
 `, "vtd/RadioButton")
     }
 
