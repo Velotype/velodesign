@@ -26,7 +26,7 @@ export type TextNonEditableFieldAttrsType = {
 /**
  * Display a readonly label/value pair in a style consistent way with other TextFormField Components
  */
-export const TextNonEditableField: FunctionComponent<TextNonEditableFieldAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr> = function(attrs: TextNonEditableFieldAttrsType & IdAttr & StylePassthroughAttrs, children: RenderableElements[]): HTMLElement {
+export const TextNonEditableField: FunctionComponent<TextNonEditableFieldAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr> = function(attrs: TextNonEditableFieldAttrsType & IdAttr & StylePassthroughAttrs, children: RenderableElements[]): HTMLDivElement {
     return passthroughAttrsToElement(<div style={{marginBlockStart: "1ex",marginBlockEnd: "1ex",display:"flex",alignItems:"center"}}>
         <span>{children}</span>
         <span style={{marginInlineStart: "1em"}}>{attrs.value}</span>
@@ -48,7 +48,7 @@ export type TextFormFieldAttrTypes = {
  */
 export class TextFormField extends Component<TextFormFieldAttrTypes & IdAttr & StylePassthroughAttrs & ChildrenAttr> {
     /** Render this Component */
-    override render(attrs: TextFormFieldAttrTypes & IdAttr & StylePassthroughAttrs, children: RenderableElements[]) {
+    override render(attrs: TextFormFieldAttrTypes & IdAttr & StylePassthroughAttrs, children: RenderableElements[]): HTMLDivElement {
         return passthroughAttrsToElement(<div style={{marginBlockStart: "1ex",marginBlockEnd: "1ex",display:"flex",alignItems:"center"}}>
             <label for={`vtd-${this.vtKey}`}>
                 {children}
@@ -92,7 +92,7 @@ export class TextEditableField extends Component<TextEditableFieldAttrsType & Id
         this.#editValue = attrs.field.value
     }
     /** Render this Component */
-    override render(attrs: TextEditableFieldAttrsType & IdAttr & StylePassthroughAttrs, children: RenderableElements[]) {
+    override render(attrs: TextEditableFieldAttrsType & IdAttr & StylePassthroughAttrs, children: RenderableElements[]): HTMLDivElement {
         const editControls = <span style={{display:"inline-flex",alignItems:"center",gap:"4px"}}>
             <TextBox
                 id={`vtd-${this.vtKey}`}
