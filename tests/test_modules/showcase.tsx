@@ -43,8 +43,8 @@ class ShowcaseSide extends Component<EmptyAttrs> {
             <hr style={{marginTop:"10px"}}/>
             Example RadioButton:
             <div style={{marginTop:"10px"}}><RadioButton name="example-radio" checked>one</RadioButton></div>
-            <div style={{marginTop:"10px"}}><RadioButton name="example-radio" checked={false}>two</RadioButton></div>
-            <div style={{marginTop:"10px"}}><RadioButton name="example-radio" checked={false}>three</RadioButton></div>
+            <div><RadioButton name="example-radio" checked={false}>two</RadioButton></div>
+            <div><RadioButton name="example-radio" checked={false}>three</RadioButton></div>
             <hr style={{marginTop:"10px"}}/>
             {textColorGradient}
             {backgroundColorGradient("background")}
