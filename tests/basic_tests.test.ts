@@ -96,7 +96,7 @@ describe('basic component rendering', () => {
             {selector: "#less-160", text: "2 minutes ago"},
             {selector: "#less-4000", text: "1 hour ago"},
             {selector: "#less-40000", text: "11 hours ago"},
-            {selector: "#less-100000", text: "yesterday"},
+            {selector: "#less-100000", text: "1 day ago"},
             {selector: "#less-400000", text: "4 days ago"},
             {selector: "#less-4000000", text: "46 days ago"},
         ]
