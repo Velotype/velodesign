@@ -9,7 +9,7 @@ export class LocalizedString {
         this.value = value
         this.pluralValue = pluralValue
     }
-    resolveString = (num?: number) => {
+    resolveString = (num?: number): string => {
         if (this.pluralValue && num!=undefined) {
             if (num == 1) {
                 return this.value
@@ -36,15 +36,15 @@ const localeStrings = new Map<string,LocalizedString>()
  */
 export const S = {
     /** add a simple string */
-    a: (key: string, value: string) => {
+    a: function(key: string, value: string): void {
         localeStrings.set(key, new LocalizedString(key,value))
     },
     /** add a LocalizedString */
-    aS: (str: LocalizedString) => {
+    aS: function(str: LocalizedString): void {
         localeStrings.set(str.key, str)
     },
     /** get a resolved localized string */
-    g: (key: string, num?: number) => {
+    g: function(key: string, num?: number): string {
         const selectedString: LocalizedString | undefined = localeStrings.get(key)
         if (!selectedString) {
             console.error("Missing key:", key)
