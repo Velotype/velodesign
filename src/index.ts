@@ -3,7 +3,7 @@ import type {ButtonAttrsType, ButtonType} from "./button.tsx"
 import { Icon, I, registerIcon } from "./icon.ts"
 import type {IAttrsType} from "./icon.ts"
 import { licenses, addLicense } from "./license.ts"
-import { setThemeOnSelector, Theme, type ThemeOptions } from "./theme.ts"
+import { setThemeOnSelector, Theme, ColorScheme, type ThemeOptions } from "./theme.ts"
 import { History } from "./history.ts"
 import { Link } from "./link.tsx"
 import type { LinkAttrsType } from "./link.tsx"
@@ -15,6 +15,7 @@ import { ButtonModal, type ButtonModalAttrsType, Modal, type ModalAttrsType, Mod
 import { TextFormFieldOptions, type TextNonEditableFieldAttrsType, TextNonEditableField, type TextFormFieldAttrTypes, TextFormField, type TextEditableFieldAttrsType, TextEditableField } from "./textformfield.tsx"
 import { RadioButton, type RadioButtonAttrsType } from "./radiobutton.tsx"
 import { TimeAgo, type TimeAgoAttrsType } from "./timeago.ts"
+import { LocalizedString, S, T } from "./strings.ts"
 
 export {
     Button,
@@ -29,6 +30,10 @@ export {
     type IAttrsType,
     I,
     registerIcon,
+
+    LocalizedString,
+    T,
+    S,
 
     TextBox,
     type TextBoxAttrsType,
@@ -46,6 +51,7 @@ export {
     type TimeAgoAttrsType,
 
     Theme,
+    ColorScheme,
     type ThemeOptions,
     setThemeOnSelector,
     History,
