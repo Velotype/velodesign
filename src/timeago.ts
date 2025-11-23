@@ -1,4 +1,4 @@
-import type { FunctionComponent, RenderableElements } from "jsr:@velotype/velotype"
+import type { FunctionComponent, RenderableElements } from "@velotype/velotype"
 
 export type TimeAgoAttrsType = {
     timestamp: Date | string

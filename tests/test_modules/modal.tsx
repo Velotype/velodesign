@@ -1,5 +1,5 @@
-import {replaceElementWithRoot, Component, RenderBasic} from "jsr:@velotype/velotype"
-import type {EmptyAttrs} from "jsr:@velotype/velotype"
+import {replaceElementWithRoot, Component, RenderBasic} from "@velotype/velotype"
+import type {EmptyAttrs} from "@velotype/velotype"
 
 import { addLicense, Button, ButtonModal, I, Icon, Modal, registerIcon, Theme } from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
@@ -38,7 +38,7 @@ class ModalGallery extends Component<EmptyAttrs> {
     }
 }
 
-Theme.addStyles()
+Theme.injectStyles()
 
 // Place on the page
 const mainPage = document.getElementById("main-page")

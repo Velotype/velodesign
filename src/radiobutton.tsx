@@ -1,4 +1,4 @@
-import { type ChildrenAttr, type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, setStylesheet, type StylePassthroughAttrs } from "jsr:@velotype/velotype"
+import { type ChildrenAttr, type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, setStylesheet, type StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
  * Attrs type for `<RadioButton/>` Component
@@ -55,9 +55,9 @@ border-radius:0.25rem;
 position:relative;
 border-radius:1em;
 display:inline-block;
-height:calc(1em - 2px);
-width:calc(1em - 2px);
-margin-inline-end:0.5ex;
+height:calc(1.5em);
+width:calc(1.5em);
+margin-inline-end:1ex;
 transition:background-color 0.2s ease-in, border 0.3s ease-in;
 background-color:var(--background-1);border:1px solid var(--background-5);
 }
@@ -73,11 +73,11 @@ opacity:0;
 transition:opacity 0.4s ease-in;
 position:absolute;
 border-radius:1em;
-margin-left:25%;
-margin-top:25%;
-width:50%;
-height:50%;
-background-color:var(--primary-5);
+margin-left:12.5%;
+margin-top:12.5%;
+width:75%;
+height:75%;
+background-color:var(--primary);
 }
 
 .vtd-r-btn-input:checked ~ .vtd-r-btn .vtd-r-btn-check{
@@ -90,7 +90,7 @@ border-color:var(--background-9);
 }
 
 .vtd-r-btn-container:has(> .vtd-r-btn-input:disabled){cursor:not-allowed;}
-.vtd-r-btn:focus-visible{border:1px solid var(--primary-5);outline-color:var(--primary-5)}
+.vtd-r-btn:focus-visible{border:1px solid var(--primary);outline-color:var(--primary)}
 `, "vtd/RadioButton")
     }
 
