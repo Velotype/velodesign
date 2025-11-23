@@ -1,5 +1,5 @@
-import {replaceElementWithRoot, Component, RenderBasic} from "jsr:@velotype/velotype"
-import type {EmptyAttrs} from "jsr:@velotype/velotype"
+import {replaceElementWithRoot, Component, RenderBasic} from "@velotype/velotype"
+import type {EmptyAttrs} from "@velotype/velotype"
 
 import { Link, PageSelector, Theme } from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx";
@@ -32,7 +32,7 @@ class PageSelectorGallery extends Component<EmptyAttrs> {
     }
 }
 
-Theme.addStyles()
+Theme.injectStyles()
 
 // Place on the page
 const mainPage = document.getElementById("main-page")

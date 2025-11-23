@@ -1,5 +1,5 @@
-import {replaceElementWithRoot, Component, RenderBasic} from "jsr:@velotype/velotype"
-import type {EmptyAttrs} from "jsr:@velotype/velotype"
+import {replaceElementWithRoot, Component, RenderBasic} from "@velotype/velotype"
+import type {EmptyAttrs} from "@velotype/velotype"
 
 import { setThemeOnSelector, TextBox, Theme } from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
@@ -26,7 +26,7 @@ class TextBoxPage extends Component<EmptyAttrs> {
     }
 }
 
-Theme.addStyles()
+Theme.injectStyles()
 
 setThemeOnSelector("#showcase-theme-light")
 setThemeOnSelector("#showcase-theme-dark")

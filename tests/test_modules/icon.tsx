@@ -1,5 +1,5 @@
-import {replaceElementWithRoot, Component} from "jsr:@velotype/velotype"
-import type {EmptyAttrs} from "jsr:@velotype/velotype"
+import {replaceElementWithRoot, Component} from "@velotype/velotype"
+import type {EmptyAttrs} from "@velotype/velotype"
 
 import { addLicense, I, Icon, registerIcon, setThemeOnSelector, Theme } from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
@@ -32,7 +32,7 @@ class IconPage extends Component<EmptyAttrs> {
     }
 }
 
-Theme.addStyles()
+Theme.injectStyles()
 
 setThemeOnSelector("#showcase-theme-light")
 setThemeOnSelector("#showcase-theme-dark")

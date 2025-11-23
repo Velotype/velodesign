@@ -1,5 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "jsr:@velotype/velotype"
-import type { FunctionComponent, IdAttr, StylePassthroughAttrs } from "jsr:@velotype/velotype"
+import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import type { FunctionComponent, IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
 import { createElementNSHelper, setAttributeHelper, svgNamespace } from "./utilities.ts"
 
 /**

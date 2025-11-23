@@ -2,9 +2,8 @@
   "version": "5",
   "specifiers": {
     "jsr:@std/encoding@^1.0.10": "1.0.10",
-    "jsr:@std/http@1": "1.0.20",
+    "jsr:@std/http@1": "1.0.22",
     "jsr:@std/media-types@1": "1.1.0",
-    "jsr:@velotype/veloserver@*": "0.0.2",
     "jsr:@velotype/veloserver@^0.0.2": "0.0.2",
     "jsr:@velotype/velotype@*": "0.0.23",
     "jsr:@velotype/velotype@^0.0.23": "0.0.23"
@@ -13,8 +12,8 @@
     "@std/encoding@1.0.10": {
       "integrity": "8783c6384a2d13abd5e9e87a7ae0520a30e9f56aeeaa3bdf910a3eaaf5c811a1"
     },
-    "@std/http@1.0.20": {
-      "integrity": "b5cc33fc001bccce65ed4c51815668c9891c69ccd908295997e983d8f56070a1",
+    "@std/http@1.0.22": {
+      "integrity": "53f0bb70e23a2eec3e17c4240a85bb23d185b2e20635adb37ce0f03cc4ca012a",
       "dependencies": [
         "jsr:@std/encoding"
       ]

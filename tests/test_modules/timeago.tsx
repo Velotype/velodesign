@@ -1,5 +1,5 @@
-import {replaceElementWithRoot, Component} from "jsr:@velotype/velotype"
-import type {EmptyAttrs} from "jsr:@velotype/velotype"
+import {replaceElementWithRoot, Component} from "@velotype/velotype"
+import type {EmptyAttrs} from "@velotype/velotype"
 
 import { setThemeOnSelector, Theme, TimeAgo } from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
@@ -39,7 +39,7 @@ class TimeAgoPage extends Component<EmptyAttrs> {
     }
 }
 
-Theme.addStyles()
+Theme.injectStyles()
 
 setThemeOnSelector("#showcase-theme-light")
 setThemeOnSelector("#showcase-theme-dark")

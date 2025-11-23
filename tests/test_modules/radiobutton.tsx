@@ -1,5 +1,5 @@
-import {replaceElementWithRoot, Component} from "jsr:@velotype/velotype"
-import type {EmptyAttrs} from "jsr:@velotype/velotype"
+import {replaceElementWithRoot, Component} from "@velotype/velotype"
+import type {EmptyAttrs} from "@velotype/velotype"
 
 import { RadioButton, Theme} from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
@@ -17,7 +17,7 @@ class ButtonGallery extends Component<EmptyAttrs> {
     }
 }
 
-Theme.addStyles()
+Theme.injectStyles()
 
 // Place on the page
 const mainPage = document.getElementById("main-page")

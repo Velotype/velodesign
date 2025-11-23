@@ -1,4 +1,4 @@
-import { setStylesheet } from "jsr:@velotype/velotype"
+import { setStylesheet } from "@velotype/velotype"
 import { setAttributeHelper } from "./utilities.ts"
 
 //
@@ -49,7 +49,7 @@ const defaultAccentLightColor = "#ff6666"
 // Theme generator: https://www.realtimecolors.com/?colors=fafafa-202020-004c99-286100-990000&fonts=Inter-Inter
 // Warning color: https://www.realtimecolors.com/?colors=fafafa-202020-004c99-997000-990000&fonts=Inter-Inter
 const defaultTextDarkColor = "#fafafa"
-const defaultBackgroundDarkColor = "#202020"
+const defaultBackgroundDarkColor = "#151515"
 const defaultBackgroundDarkAltColor = white
 const defaultPrimaryDarkColor = "#004c99"
 const defaultSecondaryDarkColor = "#286100"
@@ -58,17 +58,19 @@ const defaultAccentDarkColor = "#990000"
 
 const colorMix = ":color-mix(in hsl,"
 
-const middleSpread = [-6,-4,-2,0,2,4,6]
+const middleSpread = [-8,-6,-4,-2,0,2,4,6,8]
 /**
  * Creates a spread of colors:
  * 
- * --{cssColorPrefix}-1 -> 60% mix of color1
- * --{cssColorPrefix}-2 -> 40% mix of color1
- * --{cssColorPrefix}-3 -> 20% mix of color1
- * --{cssColorPrefix}-4 ->   exact color2
- * --{cssColorPrefix}-5 -> 20% mix of color3
- * --{cssColorPrefix}-6 -> 40% mix of color3
- * --{cssColorPrefix}-7 -> 60% mix of color3
+ * --{cssColorPrefix}-1 -> 80% mix of color1
+ * --{cssColorPrefix}-2 -> 60% mix of color1
+ * --{cssColorPrefix}-3 -> 40% mix of color1
+ * --{cssColorPrefix}-4 -> 20% mix of color1
+ * --{cssColorPrefix}-5 ->   exact color2
+ * --{cssColorPrefix}-6 -> 20% mix of color3
+ * --{cssColorPrefix}-7 -> 40% mix of color3
+ * --{cssColorPrefix}-8 -> 60% mix of color3
+ * --{cssColorPrefix}-9 -> 80% mix of color3
  * 
  * --{cssColorPrefix}   ->   exact color2
  * 
@@ -82,11 +84,11 @@ const middleSpread = [-6,-4,-2,0,2,4,6]
 const middleColorSpread = (cssColorPrefix: string, color1: string, color2: string, color3: string) => {
     return middleSpread.map(e=> {
         if (e<0) {
-            return `--${cssColorPrefix}-${e/2+4}${colorMix}${color1} ${-1*e}0%,${color2} ${10+e}0%)`
+            return `--${cssColorPrefix}-${e/2+5}${colorMix}${color1} ${-1*e}0%,${color2} ${10+e}0%)`
         } else if (e==0) {
-            return `--${cssColorPrefix}-4:${color2};--${cssColorPrefix}:${color2}`
+            return `--${cssColorPrefix}-5:${color2};--${cssColorPrefix}:${color2}`
         }
-        return `--${cssColorPrefix}-${e/2+4}${colorMix}${color2} ${10-e}0%,${color3} ${e}0%)`
+        return `--${cssColorPrefix}-${e/2+5}${colorMix}${color2} ${10-e}0%,${color3} ${e}0%)`
     }).join(";")+";"
 }
 const gradient = [1,2,3,4,5,6,7,8,9]
@@ -231,13 +233,17 @@ export const Theme: {
      * @param options Customizable options
      * @param includeCSSReset If a CSS Reset should be included
      */
-    addStyles: (options?: ThemeOptions | undefined, includeCSSReset?: boolean) => void
+    injectStyles: (options?: ThemeOptions | undefined, includeCSSReset?: boolean) => void
 } = {
-    addStyles(options?: ThemeOptions, includeCSSReset: boolean = true) {
+    injectStyles(options?: ThemeOptions, includeCSSReset: boolean = true) {
         // Optionally add Reset styles
         if (includeCSSReset) {
+            // References:
+            // -- https://www.joshwcomeau.com/css/custom-css-reset/
+            // -- https://www.joshwcomeau.com/snippets/html/interpolate-size/
+            // -- https://piccalil.li/blog/a-more-modern-css-reset/
             setStylesheet(`*{margin:0;padding:0;line-height:calc(1em + 4px);box-sizing:border-box;}
-html{-moz-text-size-adjust:none;-webkit-text-size-adjust:none;text-size-adjust:none;scroll-behavior:smooth;}
+html{-moz-text-size-adjust:none;-webkit-text-size-adjust:none;text-size-adjust:none;scroll-behavior:smooth;interpolate-size:allow-keywords;}
 body{-webkit-font-smoothing:antialiased;min-width:250px}
 img,svg{display:inline-block;max-width:100%;}
 input,button,textarea,select{font:inherit;}

@@ -1,5 +1,5 @@
-import {passthroughAttrsToElement, setStylesheet} from "jsr:@velotype/velotype"
-import type {IdAttr, RenderableElements, FunctionComponent, EmptyAttrs, StylePassthroughAttrs, TargetedMouseEvent, ChildrenAttr} from "jsr:@velotype/velotype"
+import {passthroughAttrsToElement, setStylesheet} from "@velotype/velotype"
+import type {IdAttr, RenderableElements, FunctionComponent, EmptyAttrs, StylePassthroughAttrs, TargetedMouseEvent, ChildrenAttr} from "@velotype/velotype"
 
 /**
  * Options to customize `<Button/>` Component Theme

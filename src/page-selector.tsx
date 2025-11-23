@@ -1,5 +1,5 @@
-import { Component } from "jsr:@velotype/velotype"
-import type { FunctionComponent, EmptyAttrs, RenderableElements } from "jsr:@velotype/velotype"
+import { Component } from "@velotype/velotype"
+import type { FunctionComponent, EmptyAttrs, RenderableElements } from "@velotype/velotype"
 
 /**
  * A potential Page for rendering in a `<PageSelector pages={[<Page/>]}/>`

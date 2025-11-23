@@ -1,5 +1,5 @@
-import {replaceElementWithRoot, Component, RenderBasic} from "jsr:@velotype/velotype"
-import type {EmptyAttrs, TargetedMouseEvent} from "jsr:@velotype/velotype"
+import {replaceElementWithRoot, Component, RenderBasic} from "@velotype/velotype"
+import type {EmptyAttrs, TargetedMouseEvent} from "@velotype/velotype"
 
 import {Button, ButtonType, setThemeOnSelector, Theme} from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
@@ -41,7 +41,7 @@ class ButtonGalleryPage extends Component<EmptyAttrs> {
     }
 }
 
-Theme.addStyles()
+Theme.injectStyles()
 
 setThemeOnSelector("#showcase-theme-light")
 setThemeOnSelector("#showcase-theme-dark")
