@@ -17,7 +17,7 @@
     },
     "compilerOptions": {
         "jsx": "react-jsx",
-        "jsxImportSource": "jsr:@velotype/velotype",
+        "jsxImportSource": "@velotype/velotype",
         "lib": ["dom", "deno.ns", "esnext"]
     },
     "imports": {
