@@ -35,7 +35,7 @@
     "jsr:@std/testing@^1.0.16": "1.0.16",
     "jsr:@velotype/veloserver@*": "0.0.2",
     "jsr:@velotype/veloserver@^0.0.2": "0.0.2",
-    "jsr:@velotype/velotype@^0.0.24": "0.0.24",
+    "jsr:@velotype/velotype@^0.0.25": "0.0.25",
     "jsr:@zip-js/zip-js@^2.7.52": "2.7.72",
     "npm:@types/node@*": "24.2.0"
   },
@@ -166,8 +166,8 @@
         "jsr:@std/media-types"
       ]
     },
-    "@velotype/velotype@0.0.24": {
-      "integrity": "221f86a4f8a35ebb34920e58ebd18d99f96bdef204306a7d1a9f47ac7594b633"
+    "@velotype/velotype@0.0.25": {
+      "integrity": "91fd52127f453f291062b826e58b8641056fd217b7707299cf7c8991ced3e4f4"
     },
     "@zip-js/zip-js@2.7.72": {
       "integrity": "b72877f90aaefa1f1bd265d51f354bb58b6dd0d0e2799c865584acf49eae9115"
@@ -190,7 +190,7 @@
       "jsr:@std/assert@^1.0.16",
       "jsr:@std/testing@^1.0.16",
       "jsr:@velotype/veloserver@^0.0.2",
-      "jsr:@velotype/velotype@^0.0.24"
+      "jsr:@velotype/velotype@^0.0.25"
     ]
   }
 }
