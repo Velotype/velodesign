@@ -40,7 +40,9 @@ export type TextFormFieldAttrTypes = {
     type?: TextBoxTypeType
     required?: boolean
     field: RenderBasic<string>
-    updateOnInput: boolean
+    /** If the `field` should have it's value updated each time onInput triggers (default: `true`) */
+    updateOnInput?: boolean
+    /** If the `field` should have it's value updated each time onChange triggers (default: `false`) */
     updateOnChange?: boolean
 }
 /**
@@ -49,6 +51,7 @@ export type TextFormFieldAttrTypes = {
 export class TextFormField extends Component<TextFormFieldAttrTypes & IdAttr & StylePassthroughAttrs & ChildrenAttr> {
     /** Render this Component */
     override render(attrs: TextFormFieldAttrTypes & IdAttr & StylePassthroughAttrs, children: RenderableElements[]): HTMLDivElement {
+        const updateOnInput = (attrs.updateOnInput === undefined) ? true : attrs.updateOnInput
         return passthroughAttrsToElement(<div style={{marginBlockStart: "1ex",marginBlockEnd: "1ex",display:"flex",alignItems:"center"}}>
             <label for={`vtd-${this.vtKey}`}>
                 {children}
@@ -57,7 +60,7 @@ export class TextFormField extends Component<TextFormFieldAttrTypes & IdAttr & S
                     type={attrs.type || "text"}
                     value={attrs.field.get()}
                     onInput={(event: Event) => {
-                        if (event.target && (event.target instanceof HTMLInputElement) && attrs.updateOnInput) {
+                        if (event.target && (event.target instanceof HTMLInputElement) && updateOnInput) {
                             attrs.field.set(event.target?.value)
                         }
                     }}

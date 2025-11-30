@@ -22,8 +22,8 @@ export type ModalAttrsType = {
     title: RenderableElements
     /** Confirm button content (usually a string) */
     confirmButtonChildren: RenderableElements
-    /** Cancel button content (usually a string) */
-    cancelButtonChildren: RenderableElements
+    /** Cancel button content (usually a string) defaults to `"cancel"` */
+    cancelButtonChildren?: RenderableElements
 }
 
 /**
@@ -101,7 +101,7 @@ padding:0.5em;
             <div style={{display: "flex", alignItems: "center", justifyContent: "end"}}>
                 <Button type="text" onClick={()=>{
                     this.#dialog.close()
-                }}>{attrs.cancelButtonChildren}</Button>
+                }}>{attrs.cancelButtonChildren || "cancel"}</Button>
                 {this.#confirmButton}
             </div>
         </dialog>

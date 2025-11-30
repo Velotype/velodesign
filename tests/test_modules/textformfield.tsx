@@ -12,7 +12,7 @@ class TextFormFieldGallery extends Component<EmptyAttrs> {
             <div style={{marginTop:"10px"}}><TextNonEditableField value="Sample NonEditable value">Sample NonEditable label</TextNonEditableField></div>
             <hr/>
             <div style={{marginTop:"10px"}}>Live value of RenderBasic for formField: {this.formField}</div>
-            <div style={{marginTop:"10px"}}><TextFormField field={this.formField} updateOnInput>Sample FormField label</TextFormField></div>
+            <div style={{marginTop:"10px"}}><TextFormField field={this.formField}>Sample FormField label</TextFormField></div>
             <hr/>
             <div style={{marginTop:"10px"}}>Live value of RenderBasic for formEditableField: {this.formEditableField}</div>
             <div style={{marginTop:"10px"}}><TextEditableField field={this.formEditableField}>Sample EditableField label</TextEditableField></div>
