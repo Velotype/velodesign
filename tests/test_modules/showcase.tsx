@@ -1,7 +1,7 @@
 import {replaceElementWithRoot, Component} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
-import { Button, RadioButton, Theme} from "../../src/index.ts"
+import { Alert, Badge, Button, Card, Checkbox, Divider, RadioButton, Select, Spinner, Tabs, Theme, Toggle, Tooltip} from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 import { setThemeOnSelector } from "../../src/theme.ts"
 
@@ -36,6 +36,35 @@ class ShowcaseSide extends Component<EmptyAttrs> {
             <div style={{marginTop:"10px"}}><RadioButton name="example-radio" checked>one</RadioButton></div>
             <div><RadioButton name="example-radio" checked={false}>two</RadioButton></div>
             <div><RadioButton name="example-radio" checked={false}>three</RadioButton></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Checkbox and Toggle:
+            <div style={{marginTop:"10px"}}><Checkbox checked>a checkbox</Checkbox><Toggle checked>a toggle</Toggle></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Badge:
+            <div style={{marginTop:"10px"}}>
+                <Badge type="primary">primary</Badge> <Badge type="secondary">secondary</Badge> <Badge type="warning">warning</Badge> <Badge type="danger">danger</Badge> <Badge type="neutral">neutral</Badge>
+            </div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Spinner:
+            <div style={{marginTop:"10px"}}><Spinner/></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Divider:
+            <div style={{marginTop:"10px"}}><Divider/></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Tooltip:
+            <div style={{marginTop:"40px"}}><Tooltip content="Hello from a tooltip"><Button type="secondary">hover me</Button></Tooltip></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Select:
+            <div style={{marginTop:"10px"}}><Select options={[{value:"a",label:"Option A"},{value:"b",label:"Option B"}]} placeholder="Choose one"/></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Alert:
+            <div style={{marginTop:"10px"}}><Alert type="success" title="Success">Everything worked.</Alert></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Card:
+            <div style={{marginTop:"10px", maxWidth:"320px"}}><Card header="A card">Some card content.</Card></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Tabs:
+            <div style={{marginTop:"10px", maxWidth:"320px"}}><Tabs tabs={[{key:"a",label:"A",content:"Panel A"},{key:"b",label:"B",content:"Panel B"}]}/></div>
             <hr style={{marginTop:"10px"}}/>
             {textColorGradient}
             {textAndBackground}

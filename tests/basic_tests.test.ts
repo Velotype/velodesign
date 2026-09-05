@@ -103,4 +103,30 @@ describe('basic component rendering', () => {
         await testVariations(setOfVariations)
     })
 
+    itWrap("checkbox click toggles change count", "checkbox", "#clickable-checkbox", async (selection: ElementHandle) => {
+        assertEquals(await selection.innerText(), "clickable checkbox (changed 0 times)")
+        await selection.click()
+        assertEquals(await selection.innerText(), "clickable checkbox (changed 1 times)")
+    })
+
+    itWrap("toggle click toggles change count", "toggle", "#clickable-toggle", async (selection: ElementHandle) => {
+        assertEquals(await selection.innerText(), "clickable toggle (changed 0 times)")
+        await selection.click()
+        assertEquals(await selection.innerText(), "clickable toggle (changed 1 times)")
+    })
+
+    itWrap("tabs switches panel on click", "tabs", "#default-tabs", async (_pageLoadSelection: ElementHandle) => {
+        const panel = await page.waitForSelector("#default-tabs [role='tabpanel']")
+        if (!panel) {fail("ERROR: tab panel not found")}
+        assertEquals(await panel.innerText(), "Content of the first tab.")
+
+        const secondTabButton = await page.$("#default-tabs .vtd-tabs-tab:nth-child(2)")
+        if (!secondTabButton) {fail("ERROR: second tab button not found")}
+        await secondTabButton.click()
+
+        const updatedPanel = await page.waitForSelector("#default-tabs [role='tabpanel']")
+        if (!updatedPanel) {fail("ERROR: updated tab panel not found")}
+        assertEquals(await updatedPanel.innerText(), "Content of the second tab.")
+    })
+
 })
