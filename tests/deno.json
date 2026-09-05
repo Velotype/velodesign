@@ -19,7 +19,13 @@
         "bundle-tooltip": "deno bundle ./test_modules/tooltip.tsx --output ./build/tooltip.js --sourcemap=linked",
         "bundle-spinner": "deno bundle ./test_modules/spinner.tsx --output ./build/spinner.js --sourcemap=linked",
         "bundle-tabs": "deno bundle ./test_modules/tabs.tsx --output ./build/tabs.js --sourcemap=linked",
-        "bundle-divider": "deno bundle ./test_modules/divider.tsx --output ./build/divider.js --sourcemap=linked"
+        "bundle-divider": "deno bundle ./test_modules/divider.tsx --output ./build/divider.js --sourcemap=linked",
+        "bundle-navlink": "deno bundle ./test_modules/navlink.tsx --output ./build/navlink.js --sourcemap=linked",
+        "bundle-breadcrumbs": "deno bundle ./test_modules/breadcrumbs.tsx --output ./build/breadcrumbs.js --sourcemap=linked",
+        "bundle-pagination": "deno bundle ./test_modules/pagination.tsx --output ./build/pagination.js --sourcemap=linked",
+        "bundle-navbar": "deno bundle ./test_modules/navbar.tsx --output ./build/navbar.js --sourcemap=linked",
+        "bundle-sidebar": "deno bundle ./test_modules/sidebar.tsx --output ./build/sidebar.js --sourcemap=linked",
+        "bundle-menu": "deno bundle ./test_modules/menu.tsx --output ./build/menu.js --sourcemap=linked"
     },
     "compilerOptions": {
         "jsx": "react-jsx",
