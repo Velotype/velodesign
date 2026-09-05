@@ -1,5 +1,6 @@
 import {passthroughAttrsToElement, setStylesheet} from "@velotype/velotype"
 import type {IdAttr, RenderableElements, FunctionComponent, EmptyAttrs, StylePassthroughAttrs, TargetedMouseEvent, ChildrenAttr} from "@velotype/velotype"
+import { Spinner } from "./spinner.tsx"
 
 /**
  * Options to customize `<Button/>` Component Theme
@@ -7,7 +8,7 @@ import type {IdAttr, RenderableElements, FunctionComponent, EmptyAttrs, StylePas
 export const ButtonThemeOptions: {
     spinner: FunctionComponent<EmptyAttrs>
 } = {
-    spinner: function(){return "..."}
+    spinner: function(){return <Spinner size="1em"/>}
 }
 
 /**
