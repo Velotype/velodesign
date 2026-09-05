@@ -36,7 +36,8 @@ export async function startAppServer(server_port: number): Promise<App> {
     })
     router.get('/', function() {
         const response = new Response(`<!DOCTYPE html><html><body>
-${setOfModules.map(module => `<div><a href="/${module}">${module}</a></div>`).join('')}
+<div id="main-page"></div>
+<script src="/build/explorer.js" type="module" ></script>
 </body></html>`,{status:200})
         response.headers.set("content-type", "text/html; charset=utf-8")
         return response

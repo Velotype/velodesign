@@ -28,7 +28,8 @@
         "bundle-menu": "deno bundle ./test_modules/menu.tsx --output ./build/menu.js --sourcemap=linked",
         "bundle-toast": "deno bundle ./test_modules/toast.tsx --output ./build/toast.js --sourcemap=linked",
         "bundle-accordion": "deno bundle ./test_modules/accordion.tsx --output ./build/accordion.js --sourcemap=linked",
-        "bundle-avatar": "deno bundle ./test_modules/avatar.tsx --output ./build/avatar.js --sourcemap=linked"
+        "bundle-avatar": "deno bundle ./test_modules/avatar.tsx --output ./build/avatar.js --sourcemap=linked",
+        "bundle-explorer": "deno bundle ./test_modules/explorer.tsx --output ./build/explorer.js --sourcemap=linked"
     },
     "compilerOptions": {
         "jsx": "react-jsx",
