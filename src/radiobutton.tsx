@@ -22,7 +22,7 @@ export type RadioButtonAttrsType = {
     value?: string | number,
     /** onChange event handler */
     onChange?: (event: Event) => void
-}
+} & IdAttr & StylePassthroughAttrs & ChildrenAttr
 
 /**
  * Keep track of if RadioButton styles are mounted (boolean lookup here is lighter weight than Map check)
@@ -31,8 +31,10 @@ let areButtonStylesMounted = false
 
 /**
  * An interactable RadioButton
+ * 
+ * `<RadioButton name="group-name"/>Some option</RadioButton>`
  */
-export const RadioButton: FunctionComponent<RadioButtonAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr> = function(attrs: RadioButtonAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr, children: RenderableElements[]): HTMLSpanElement {
+export const RadioButton: FunctionComponent<RadioButtonAttrsType> = function(attrs: RadioButtonAttrsType, children: RenderableElements[]): HTMLLabelElement {
     if (!areButtonStylesMounted) {
         areButtonStylesMounted = true
         setStylesheet(`
@@ -58,6 +60,9 @@ display:inline-block;
 height:calc(1.5em);
 width:calc(1.5em);
 margin-inline-end:1ex;
+display:inline-flex;
+align-items:center;
+justify-content:center;
 transition:background-color 0.2s ease-in, border 0.3s ease-in;
 background-color:var(--background-1);border:1px solid var(--background-5);
 }
@@ -71,12 +76,9 @@ background-color:var(--background-1);border:1px solid var(--background-5);
 visibility:hidden;
 opacity:0;
 transition:opacity 0.4s ease-in;
-position:absolute;
 border-radius:1em;
-margin-left:12.5%;
-margin-top:12.5%;
-width:75%;
-height:75%;
+width:calc(1em);
+height:calc(1em);
 background-color:var(--primary);
 }
 
@@ -94,7 +96,7 @@ border-color:var(--background-9);
 `, "vtd/RadioButton")
     }
 
-    return passthroughAttrsToElement(<label class="vtd-r-btn-container">
+    return passthroughAttrsToElement<HTMLLabelElement>(<label class="vtd-r-btn-container">
         <input
             type="radio"
             name={attrs.name}

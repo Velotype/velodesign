@@ -31,13 +31,13 @@ const icons = new Map<string, Icon>()
 export type IAttrsType = {
     /** The key used to lookup the Icon */
     i: string
-}
+} & IdAttr & StylePassthroughAttrs
 /**
  * I for Icon
- * 
+ *
  * This Component renders an icon.
  */
-export const I: FunctionComponent<IAttrsType & IdAttr & StylePassthroughAttrs> = function(attrs: IAttrsType & IdAttr & StylePassthroughAttrs): SVGSVGElement | null {
+export const I: FunctionComponent<IAttrsType> = function(attrs: IAttrsType): SVGSVGElement | null {
     const icon = icons.get(attrs.i)
     if (icon) {
         const svg = createElementNSHelper("svg") as SVGSVGElement
@@ -49,7 +49,7 @@ export const I: FunctionComponent<IAttrsType & IdAttr & StylePassthroughAttrs> =
         setAttributeHelper(path,"fill", "currentcolor")
         setAttributeHelper(path,"d", icon.d)
         svg.appendChild(path)
-        return passthroughAttrsToElement(svg, attrs) as SVGSVGElement
+        return passthroughAttrsToElement<SVGSVGElement>(svg, attrs)
     }
     return null
 }

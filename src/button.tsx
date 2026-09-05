@@ -27,7 +27,7 @@ export type ButtonAttrsType = {
     onClick?: (event: TargetedMouseEvent<HTMLButtonElement>, doneLoading?: () => void) => void,
     /** Should the button trigger a loading icon when clicked? */
     loadingOnClick?: boolean
-}
+} & IdAttr & StylePassthroughAttrs & ChildrenAttr
 
 /**
  * Keep track of if Button styles are mounted (boolean lookup here is lighter weight than Map check)
@@ -37,7 +37,7 @@ let areButtonStylesMounted = false
 /**
  * An interactable Button
  */
-export const Button: FunctionComponent<ButtonAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr> = function(attrs: ButtonAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr, children: RenderableElements[]): HTMLButtonElement {
+export const Button: FunctionComponent<ButtonAttrsType> = function(attrs: ButtonAttrsType, children: RenderableElements[]): HTMLButtonElement {
     if (!areButtonStylesMounted) {
         areButtonStylesMounted = true
         setStylesheet(`
@@ -93,7 +93,7 @@ visibility:hidden;
         spinnerElement = <span class="vtd-btn-spinner"><ButtonThemeOptions.spinner/></span>
     }
     const childrenWrapper: HTMLSpanElement = <span>{children}</span>
-    return passthroughAttrsToElement(<button type="button"
+    return passthroughAttrsToElement<HTMLButtonElement>(<button type="button"
         class={`vtd-btn vtd-btn-${attrs.type||"primary"}`}
         tabindex={0}
         disabled={attrs.disabled}
@@ -123,5 +123,5 @@ visibility:hidden;
         }}>
         {childrenWrapper}
         {spinnerElement}
-    </button>, attrs) as HTMLButtonElement
+    </button>, attrs)
 }

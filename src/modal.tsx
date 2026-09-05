@@ -24,12 +24,12 @@ export type ModalAttrsType = {
     confirmButtonChildren: RenderableElements
     /** Cancel button content (usually a string) defaults to `"cancel"` */
     cancelButtonChildren?: RenderableElements
-}
+} & ChildrenAttr
 
 /**
  * A Modal that renders over top of the page
  */
-export class Modal extends Component<ModalAttrsType & ChildrenAttr> {
+export class Modal extends Component<ModalAttrsType> {
     /** Mount this Component */
     override mount() {
         setStylesheet(`
@@ -77,7 +77,7 @@ padding:0.5em;
     }
 
     /** Create a new `<Modal/>` Component */
-    constructor(attrs: ModalAttrsType & ChildrenAttr, children: RenderableElements[]) {
+    constructor(attrs: ModalAttrsType, children: RenderableElements[]) {
         super(attrs, children)
         this.#confirmButton = <Button type="primary"
             disabled={attrs.startConfirmDisabled}
@@ -120,17 +120,17 @@ export type ButtonModalAttrsType = {
     modalAttrs: ModalAttrsType
     openButtonType?: ButtonType
     openButtonText: string
-}
+} & IdAttr & StylePassthroughAttrs & ChildrenAttr
 
 /**
  * A basic `<Button/>` that renders a simple `<Modal/>`
  */
-export const ButtonModal: FunctionComponent<ButtonModalAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr> = function(attrs: ButtonModalAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr, children: RenderableElements[]): HTMLSpanElement {
+export const ButtonModal: FunctionComponent<ButtonModalAttrsType> = function(attrs: ButtonModalAttrsType, children: RenderableElements[]): HTMLSpanElement {
     const modal = <Modal {...attrs.modalAttrs}>{children}</Modal>
-    return passthroughAttrsToElement(<span style={{display: "contents"}}>
+    return passthroughAttrsToElement<HTMLSpanElement>(<span style={{display: "contents"}}>
         {modal}
         <Button type={attrs.openButtonType || "secondary"} onClick={()=>{
             modal.showModal()
         }}>{attrs.openButtonText}</Button>
-    </span>, attrs) as HTMLSpanElement
+    </span>, attrs)
 }
