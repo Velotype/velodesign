@@ -1,7 +1,7 @@
 import {replaceElementWithRoot, Component} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
-import { Alert, Badge, Button, Card, Checkbox, Divider, RadioButton, Select, Spinner, Tabs, Theme, Toggle, Tooltip} from "../../src/index.ts"
+import { Alert, Badge, Breadcrumbs, Button, Card, Checkbox, Divider, Menu, Navbar, NavLink, Pagination, RadioButton, Select, Sidebar, Spinner, Tabs, Theme, Toggle, Tooltip} from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 import { setThemeOnSelector } from "../../src/theme.ts"
 
@@ -65,6 +65,26 @@ class ShowcaseSide extends Component<EmptyAttrs> {
             <hr style={{marginTop:"10px"}}/>
             Example Tabs:
             <div style={{marginTop:"10px", maxWidth:"320px"}}><Tabs tabs={[{key:"a",label:"A",content:"Panel A"},{key:"b",label:"B",content:"Panel B"}]}/></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Breadcrumbs:
+            <div style={{marginTop:"10px"}}><Breadcrumbs items={[{label:"Home",to:"/showcase"},{label:"Section",to:"/showcase#s"},{label:"Current"}]}/></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Pagination:
+            <div style={{marginTop:"10px"}}><Pagination page={4} totalPages={10} onPageChange={()=>{}}/></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Navbar (with NavLink items):
+            <div style={{marginTop:"10px"}}>
+                <Navbar brand="My App">
+                    <NavLink to="/showcase">Home</NavLink>
+                    <NavLink to="/showcase/docs">Docs</NavLink>
+                </Navbar>
+            </div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Sidebar:
+            <div style={{marginTop:"10px"}}><Sidebar header="Sections" items={[{label:"Overview",to:"/showcase"},{label:"Settings",to:"/showcase/settings"}]}/></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Menu:
+            <div style={{marginTop:"40px"}}><Menu trigger="Actions" items={[{label:"Do a thing",onClick:()=>{}},{label:"Disabled",disabled:true}]}/></div>
             <hr style={{marginTop:"10px"}}/>
             {textColorGradient}
             {textAndBackground}

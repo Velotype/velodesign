@@ -27,6 +27,12 @@ import { Tooltip, type TooltipAttrsType, type TooltipPlacement } from "./tooltip
 import { Spinner, type SpinnerAttrsType } from "./spinner.tsx"
 import { Tabs, type TabsAttrsType, type TabType } from "./tabs.tsx"
 import { Divider, type DividerAttrsType } from "./divider.tsx"
+import { NavLink, type NavLinkAttrsType } from "./navlink.tsx"
+import { Breadcrumbs, type BreadcrumbItemType, type BreadcrumbsAttrsType } from "./breadcrumbs.tsx"
+import { Pagination, type PaginationAttrsType } from "./pagination.tsx"
+import { Navbar, type NavbarAttrsType } from "./navbar.tsx"
+import { Sidebar, type SidebarAttrsType, type SidebarItemType } from "./sidebar.tsx"
+import { Menu, type MenuAttrsType, type MenuItemType } from "./menu.tsx"
 
 export {
     Button,
@@ -119,6 +125,27 @@ export {
 
     Divider,
     type DividerAttrsType,
+
+    NavLink,
+    type NavLinkAttrsType,
+
+    Breadcrumbs,
+    type BreadcrumbItemType,
+    type BreadcrumbsAttrsType,
+
+    Pagination,
+    type PaginationAttrsType,
+
+    Navbar,
+    type NavbarAttrsType,
+
+    Sidebar,
+    type SidebarAttrsType,
+    type SidebarItemType,
+
+    Menu,
+    type MenuAttrsType,
+    type MenuItemType,
 
     licenses,
     addLicense

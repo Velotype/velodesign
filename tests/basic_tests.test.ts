@@ -129,4 +129,87 @@ describe('basic component rendering', () => {
         assertEquals(await updatedPanel.innerText(), "Content of the second tab.")
     })
 
+    itWrap("navlink highlights the active route and updates on navigation", "navlink", "#navlink-home", async (selection: ElementHandle) => {
+        const initialClass = await selection.getAttribute("class")
+        if (!initialClass?.includes("vtd-navlink-active")) {
+            fail(`ERROR: expected home NavLink to start active, class was: ${initialClass}`)
+        }
+
+        const otherLink = await page.$("a[href='/navlink/other']")
+        if (!otherLink) {fail("ERROR: other navlink not found")}
+        await otherLink.click()
+
+        const updatedHome = await page.waitForSelector("#navlink-home")
+        if (!updatedHome) {fail("ERROR: home navlink not found after navigation")}
+        const updatedClass = await updatedHome.getAttribute("class")
+        if (updatedClass?.includes("vtd-navlink-active")) {
+            fail(`ERROR: expected home NavLink to no longer be active, class was: ${updatedClass}`)
+        }
+
+        const updatedOtherLink = await page.$("a[href='/navlink/other']")
+        if (!updatedOtherLink) {fail("ERROR: other navlink not found after navigation")}
+        const otherClass = await updatedOtherLink.getAttribute("class")
+        if (!otherClass?.includes("vtd-navlink-active")) {
+            fail(`ERROR: expected other NavLink to become active, class was: ${otherClass}`)
+        }
+    })
+
+    itWrap("pagination clicking a page number updates current page", "pagination", "#pagination-current-3", async (selection: ElementHandle) => {
+        assertEquals(await selection.innerText(), "Current page: 1")
+
+        const pageThreeButton = await page.$("#default-pagination .vtd-pagination button:nth-child(4)")
+        if (!pageThreeButton) {fail("ERROR: page 3 button not found")}
+        assertEquals(await pageThreeButton.innerText(), "3")
+        await pageThreeButton.click()
+
+        const updated = await page.waitForSelector("#pagination-current-3")
+        if (!updated) {fail("ERROR: current-page display not found after click")}
+        assertEquals(await updated.innerText(), "Current page: 3")
+    })
+
+    itWrap("menu opens on trigger click and closes after picking an item", "menu", "#actions-menu", async (selection: ElementHandle) => {
+        const initialOpen = await selection.getAttribute("open")
+        if (initialOpen !== null) {fail(`ERROR: expected menu to start closed, open was: ${initialOpen}`)}
+
+        const summary = await page.$("#actions-menu summary")
+        if (!summary) {fail("ERROR: summary not found")}
+        await summary.click()
+
+        const openedMenu = await page.waitForSelector("#actions-menu[open]")
+        if (!openedMenu) {fail("ERROR: menu did not open after clicking trigger")}
+
+        const firstItem = await page.$("#actions-menu .vtd-menu-item")
+        if (!firstItem) {fail("ERROR: menu item not found")}
+        await firstItem.click()
+
+        const closedMenu = await page.waitForSelector("#actions-menu")
+        if (!closedMenu) {fail("ERROR: menu not found after clicking item")}
+        const openAfterClick = await closedMenu.getAttribute("open")
+        if (openAfterClick !== null) {fail(`ERROR: expected menu to close after picking an item, open was: ${openAfterClick}`)}
+
+        const clickCount = await page.waitForSelector("#menu-click-count")
+        if (!clickCount) {fail("ERROR: click count element not found")}
+        assertEquals(await clickCount.innerText(), "clicked 1 times")
+    })
+
+    itWrap("menu closes when clicking outside of it", "menu", "#actions-menu", async (selection: ElementHandle) => {
+        const summary = await page.$("#actions-menu summary")
+        if (!summary) {fail("ERROR: summary not found")}
+        await summary.click()
+
+        const openedMenu = await page.waitForSelector("#actions-menu[open]")
+        if (!openedMenu) {fail("ERROR: menu did not open after clicking trigger")}
+
+        const outsideElement = await page.$("#menu-click-count")
+        if (!outsideElement) {fail("ERROR: outside element not found")}
+        await outsideElement.click()
+
+        const closedMenu = await page.waitForSelector("#actions-menu")
+        if (!closedMenu) {fail("ERROR: menu not found after outside click")}
+        const openAfterOutsideClick = await closedMenu.getAttribute("open")
+        if (openAfterOutsideClick !== null) {
+            fail(`ERROR: expected menu to close after an outside click, open was: ${openAfterOutsideClick}`)
+        }
+    })
+
 })
