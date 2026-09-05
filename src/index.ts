@@ -33,6 +33,9 @@ import { Pagination, type PaginationAttrsType } from "./pagination.tsx"
 import { Navbar, type NavbarAttrsType } from "./navbar.tsx"
 import { Sidebar, type SidebarAttrsType, type SidebarItemType } from "./sidebar.tsx"
 import { Menu, type MenuAttrsType, type MenuItemType } from "./menu.tsx"
+import { showToast, ToastThemeOptions, type ToastOptions, type ToastType } from "./toast.tsx"
+import { Accordion, type AccordionAttrsType, type AccordionItemType } from "./accordion.tsx"
+import { Avatar, type AvatarAttrsType } from "./avatar.tsx"
 
 export {
     Button,
@@ -146,6 +149,18 @@ export {
     Menu,
     type MenuAttrsType,
     type MenuItemType,
+
+    showToast,
+    ToastThemeOptions,
+    type ToastOptions,
+    type ToastType,
+
+    Accordion,
+    type AccordionAttrsType,
+    type AccordionItemType,
+
+    Avatar,
+    type AvatarAttrsType,
 
     licenses,
     addLicense
