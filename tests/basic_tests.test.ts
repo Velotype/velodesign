@@ -212,4 +212,45 @@ describe('basic component rendering', () => {
         }
     })
 
+    itWrap("toast appears on trigger click and auto-dismisses after its duration", "toast", "#toast-quick-btn", async (selection: ElementHandle) => {
+        await selection.click()
+
+        const toast = await page.waitForSelector(".vtd-toast")
+        if (!toast) {fail("ERROR: toast did not appear after clicking trigger")}
+        assertEquals(await toast.innerText(), "Gone in a flash\nx")
+
+        await new Promise(resolve => setTimeout(resolve, 800))
+        const stillThere = await page.$(".vtd-toast")
+        if (stillThere) {fail("ERROR: expected toast to have auto-dismissed after its duration elapsed")}
+    })
+
+    itWrap("accordion exclusive group closes the other section when one is opened", "accordion", "#exclusive-accordion", async (_selection: ElementHandle) => {
+        // Everything here runs through page.evaluate() rather than holding onto
+        // ElementHandles across the clicks: querying/clicking via ElementHandle intermittently
+        // throws here ("unable to get stable box model" / a destroyed remote object) later in
+        // this suite's run, even though the same element is clickable via ElementHandle in
+        // isolation - a plain in-page evaluate sidesteps whatever that Astral/Deno-test
+        // interaction is, since it never keeps a handle alive across a click.
+        const readOpenStates = () => page.evaluate(() => {
+            const details = document.querySelectorAll("#exclusive-accordion details")
+            return {first: (details[0] as HTMLDetailsElement | undefined)?.open, second: (details[1] as HTMLDetailsElement | undefined)?.open}
+        })
+        const clickSummary = (index: number) => page.evaluate((i: number) => {
+            const summaries = document.querySelectorAll("#exclusive-accordion summary")
+            ;(summaries[i] as HTMLElement | undefined)?.click()
+        }, {args: [index]})
+
+        const beforeClicks = await readOpenStates()
+        if (beforeClicks.first) {fail("ERROR: expected first section to start closed")}
+
+        await clickSummary(0)
+        const afterFirstClick = await readOpenStates()
+        if (!afterFirstClick.first) {fail("ERROR: expected first section to open after clicking its summary")}
+
+        await clickSummary(1)
+        const afterSecondClick = await readOpenStates()
+        if (!afterSecondClick.second) {fail("ERROR: expected second section to open after clicking its summary")}
+        if (afterSecondClick.first) {fail("ERROR: expected first section to close once a sibling in the exclusive group opened")}
+    })
+
 })

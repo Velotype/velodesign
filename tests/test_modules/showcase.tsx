@@ -1,7 +1,7 @@
 import {replaceElementWithRoot, Component} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
-import { Alert, Badge, Breadcrumbs, Button, Card, Checkbox, Divider, Menu, Navbar, NavLink, Pagination, RadioButton, Select, Sidebar, Spinner, Tabs, Theme, Toggle, Tooltip} from "../../src/index.ts"
+import { Accordion, Alert, Avatar, Badge, Breadcrumbs, Button, Card, Checkbox, Divider, Menu, Navbar, NavLink, Pagination, RadioButton, Select, showToast, Sidebar, Spinner, Tabs, Theme, Toggle, Tooltip} from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 import { setThemeOnSelector } from "../../src/theme.ts"
 
@@ -85,6 +85,15 @@ class ShowcaseSide extends Component<EmptyAttrs> {
             <hr style={{marginTop:"10px"}}/>
             Example Menu:
             <div style={{marginTop:"40px"}}><Menu trigger="Actions" items={[{label:"Do a thing",onClick:()=>{}},{label:"Disabled",disabled:true}]}/></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Toast:
+            <div style={{marginTop:"10px"}}><Button type="secondary" onClick={()=>{showToast("Hello from a toast", {type: "success"})}}>Show a toast</Button></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Accordion:
+            <div style={{marginTop:"10px", maxWidth:"320px"}}><Accordion items={[{header:"Section one",content:"Panel one",defaultOpen:true},{header:"Section two",content:"Panel two"}]}/></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Avatar:
+            <div style={{marginTop:"10px", display:"flex", gap:"10px"}}><Avatar initials="JW"/><Avatar initials="AB" size="1.5em"/></div>
             <hr style={{marginTop:"10px"}}/>
             {textColorGradient}
             {textAndBackground}

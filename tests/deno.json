@@ -25,7 +25,10 @@
         "bundle-pagination": "deno bundle ./test_modules/pagination.tsx --output ./build/pagination.js --sourcemap=linked",
         "bundle-navbar": "deno bundle ./test_modules/navbar.tsx --output ./build/navbar.js --sourcemap=linked",
         "bundle-sidebar": "deno bundle ./test_modules/sidebar.tsx --output ./build/sidebar.js --sourcemap=linked",
-        "bundle-menu": "deno bundle ./test_modules/menu.tsx --output ./build/menu.js --sourcemap=linked"
+        "bundle-menu": "deno bundle ./test_modules/menu.tsx --output ./build/menu.js --sourcemap=linked",
+        "bundle-toast": "deno bundle ./test_modules/toast.tsx --output ./build/toast.js --sourcemap=linked",
+        "bundle-accordion": "deno bundle ./test_modules/accordion.tsx --output ./build/accordion.js --sourcemap=linked",
+        "bundle-avatar": "deno bundle ./test_modules/avatar.tsx --output ./build/avatar.js --sourcemap=linked"
     },
     "compilerOptions": {
         "jsx": "react-jsx",
