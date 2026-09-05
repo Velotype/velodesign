@@ -22,12 +22,12 @@ export const TextFormFieldOptions: {
  */
 export type TextNonEditableFieldAttrsType = {
     value: string
-}
+} & IdAttr & StylePassthroughAttrs & ChildrenAttr
 /**
  * Display a readonly label/value pair in a style consistent way with other TextFormField Components
  */
-export const TextNonEditableField: FunctionComponent<TextNonEditableFieldAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr> = function(attrs: TextNonEditableFieldAttrsType & IdAttr & StylePassthroughAttrs, children: RenderableElements[]): HTMLDivElement {
-    return passthroughAttrsToElement(<div style={{marginBlockStart: "1ex",marginBlockEnd: "1ex",display:"flex",alignItems:"center"}}>
+export const TextNonEditableField: FunctionComponent<TextNonEditableFieldAttrsType> = function(attrs: TextNonEditableFieldAttrsType, children: RenderableElements[]): HTMLDivElement {
+    return passthroughAttrsToElement<HTMLDivElement>(<div style={{marginBlockStart: "1ex",marginBlockEnd: "1ex",display:"flex",alignItems:"center"}}>
         <span>{children}</span>
         <span style={{marginInlineStart: "1em"}}>{attrs.value}</span>
     </div>, attrs)
@@ -44,13 +44,13 @@ export type TextFormFieldAttrTypes = {
     updateOnInput?: boolean
     /** If the `field` should have it's value updated each time onChange triggers (default: `false`) */
     updateOnChange?: boolean
-}
+} & IdAttr & StylePassthroughAttrs & ChildrenAttr
 /**
  * Display a label/value pair where the value is a `<TextBox/>` with value to be provided by the user
  */
-export class TextFormField extends Component<TextFormFieldAttrTypes & IdAttr & StylePassthroughAttrs & ChildrenAttr> {
+export class TextFormField extends Component<TextFormFieldAttrTypes> {
     /** Render this Component */
-    override render(attrs: TextFormFieldAttrTypes & IdAttr & StylePassthroughAttrs, children: RenderableElements[]): HTMLDivElement {
+    override render(attrs: TextFormFieldAttrTypes, children: RenderableElements[]): HTMLDivElement {
         const updateOnInput = (attrs.updateOnInput === undefined) ? true : attrs.updateOnInput
         return passthroughAttrsToElement(<div style={{marginBlockStart: "1ex",marginBlockEnd: "1ex",display:"flex",alignItems:"center"}}>
             <label for={`vtd-${this.vtKey}`}>
@@ -82,20 +82,20 @@ export type TextEditableFieldAttrsType = {
     fieldName?: string
     type?: TextBoxTypeType
     field: RenderBasic<string>
-}
+} & IdAttr & StylePassthroughAttrs & ChildrenAttr
 /**
  * Display a label/value pair where the value has an 'edit' icon next to it,
  * then turning into a `<TextBox/>` with a 'confirm' or 'cancel' pair of icons
  * to save the value as changed (then reverting back to the read view)
  */
-export class TextEditableField extends Component<TextEditableFieldAttrsType & IdAttr & StylePassthroughAttrs & ChildrenAttr> {
+export class TextEditableField extends Component<TextEditableFieldAttrsType> {
     #editValue: string
-    constructor(attrs: TextEditableFieldAttrsType & ChildrenAttr, children: RenderableElements[]){
+    constructor(attrs: TextEditableFieldAttrsType, children: RenderableElements[]){
         super(attrs, children)
         this.#editValue = attrs.field.value
     }
     /** Render this Component */
-    override render(attrs: TextEditableFieldAttrsType & IdAttr & StylePassthroughAttrs, children: RenderableElements[]): HTMLDivElement {
+    override render(attrs: TextEditableFieldAttrsType, children: RenderableElements[]): HTMLDivElement {
         const editControls = <span style={{display:"inline-flex",alignItems:"center",gap:"4px"}}>
             <TextBox
                 id={`vtd-${this.vtKey}`}

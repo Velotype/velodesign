@@ -23,13 +23,13 @@ export type TextBoxAttrsType = {
     onInput?: (event: TargetedInputEvent<HTMLInputElement>) => void
     /** Callback for onChange event */
     onChange?: (event: TargetedEvent<HTMLInputElement, Event>) => void
-}
+} & IdAttr & StylePassthroughAttrs
 
 let areTextBoxStylesMounted = false
 /**
  * An input box accepting text input from the user
  */
-export const TextBox: FunctionComponent<TextBoxAttrsType & IdAttr & StylePassthroughAttrs> = function(attrs: TextBoxAttrsType & IdAttr & StylePassthroughAttrs, _children: RenderableElements[]): HTMLInputElement {
+export const TextBox: FunctionComponent<TextBoxAttrsType> = function(attrs: TextBoxAttrsType, _children: RenderableElements[]): HTMLInputElement {
     if (!areTextBoxStylesMounted) {
         areTextBoxStylesMounted = true
         setStylesheet(`
@@ -46,7 +46,7 @@ margin-inline-start:1ex;
         } else if (attrs.type == "new-password") {
             autocomplete="new-password"
         }
-        return passthroughAttrsToElement(<input
+        return passthroughAttrsToElement<HTMLInputElement>(<input
             class="vtd-textbox"
             name={attrs.name}
             type="password"
@@ -55,7 +55,7 @@ margin-inline-start:1ex;
             value={attrs.value}
             autocomplete={autocomplete}
             placeholder={attrs.placeholder}
-            required={attrs.required}/>, attrs) as HTMLInputElement
+            required={attrs.required}/>, attrs)
     }
     let inputType: "text" | "email" | "tel" = "text"
     if (attrs.type == "email") {
@@ -65,7 +65,7 @@ margin-inline-start:1ex;
         inputType = "tel"
         autocomplete="tel"
     }
-    return passthroughAttrsToElement(<input
+    return passthroughAttrsToElement<HTMLInputElement>(<input
         class="vtd-textbox"
         name={attrs.name}
         type={inputType}
@@ -75,5 +75,5 @@ margin-inline-start:1ex;
         value={attrs.value}
         autocomplete={autocomplete}
         placeholder={attrs.placeholder}
-        required={attrs.required}/>, attrs) as HTMLInputElement
+        required={attrs.required}/>, attrs)
 }
