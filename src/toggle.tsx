@@ -78,7 +78,7 @@ border-color:var(--primary-7);
 }
 .vtd-tg-input:checked ~ .vtd-tg-track .vtd-tg-thumb{
 left:calc(100% - 1.15em);
-background-color:var(--background-1);
+background-color:var(--background);
 }
 
 .vtd-tg-disabled{opacity:0.5;cursor:not-allowed;}
