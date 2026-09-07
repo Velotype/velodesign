@@ -56,14 +56,14 @@ border-radius:0.25rem;
 .vtd-r-btn {
 position:relative;
 border-radius:1em;
-display:inline-block;
-height:calc(1.5em);
-width:calc(1.5em);
-margin-inline-end:1ex;
 display:inline-flex;
 align-items:center;
 justify-content:center;
-transition:background-color 0.2s ease-in, border 0.3s ease-in;
+height:1.5em;
+width:1.5em;
+margin-inline-end:1ex;
+flex-shrink:0;
+transition:background-color 0.2s ease-in, border-color 0.2s ease-in;
 background-color:var(--background-1);border:1px solid var(--background-5);
 }
 
@@ -73,22 +73,22 @@ background-color:var(--background-1);border:1px solid var(--background-5);
 .vtd-r-btn-disabled:active{background-color:var(--background-2);}
 
 .vtd-r-btn-check{
-visibility:hidden;
 opacity:0;
-transition:opacity 0.4s ease-in;
+transform:scale(0.4);
+transition:opacity 0.15s ease-in, transform 0.15s cubic-bezier(0.34,1.56,0.64,1);
 border-radius:1em;
-width:calc(1em);
-height:calc(1em);
+width:0.65em;
+height:0.65em;
 background-color:var(--primary);
 }
 
 .vtd-r-btn-input:checked ~ .vtd-r-btn .vtd-r-btn-check{
-visibility:visible;
 opacity:1;
+transform:scale(1);
 }
 .vtd-r-btn-input:checked ~ .vtd-r-btn {
-background-color:transparent;
-border-color:var(--background-9);
+background-color:var(--primary-3);
+border-color:var(--primary-7);
 }
 
 .vtd-r-btn-container:has(> .vtd-r-btn-input:disabled){cursor:not-allowed;}
