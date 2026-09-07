@@ -347,4 +347,70 @@ describe('basic component rendering', () => {
         if (stillOpen) {fail("ERROR: expected command palette to close after picking an item")}
     })
 
+    itWrap("data-table sorts on header click through the asc/desc/cleared cycle", "data-table", "#default-data-table", async (_selection: ElementHandle) => {
+        const firstColumnValues = () => page.evaluate(() => {
+            const root = document.getElementById("default-data-table") as HTMLElement
+            return Array.from(root.querySelectorAll("tbody tr")).map(row => row.querySelector("td")?.textContent)
+        })
+        const clickFirstHeader = () => page.evaluate(() => {
+            const root = document.getElementById("default-data-table") as HTMLElement
+            ;(root.querySelector("th") as HTMLElement).click()
+        })
+
+        const unsorted = await firstColumnValues()
+        await clickFirstHeader()
+        const ascending = await firstColumnValues()
+        if (JSON.stringify(ascending) == JSON.stringify(unsorted)) {fail("ERROR: expected row order to change after clicking a sortable header")}
+        if (JSON.stringify(ascending) != JSON.stringify([...ascending].sort())) {fail(`ERROR: expected ascending order, got: ${JSON.stringify(ascending)}`)}
+
+        await clickFirstHeader()
+        const descending = await firstColumnValues()
+        // Page 1 of the full 27-row sort, not just a reversal of page 1 of the ascending sort
+        // (this is a different, larger-valued subset once pagination only shows 5 of 27 rows) -
+        // so check descending's own internal order rather than comparing it against `ascending`.
+        if (JSON.stringify(descending) != JSON.stringify([...descending].sort().reverse())) {fail(`ERROR: expected descending order, got: ${JSON.stringify(descending)}`)}
+
+        await clickFirstHeader()
+        const cleared = await firstColumnValues()
+        if (JSON.stringify(cleared) != JSON.stringify(unsorted)) {fail("ERROR: expected a 3rd header click to clear sorting back to original row order")}
+    })
+
+    itWrap("data-table column-visibility menu stays open across a checkbox click and closes on an outside click", "data-table", "#default-data-table", async (_selection: ElementHandle) => {
+        // Regression test: the "Columns" button used to call a full refresh() to open the menu,
+        // which tore down and rebuilt the wrapper element *while its own click event was still
+        // bubbling* to the outside-click listener - so the listener compared the click's
+        // (now-disconnected) target against the *new* wrapper, read that as "outside", and
+        // closed the menu immediately after opening it.
+        await page.evaluate(() => {
+            const root = document.getElementById("default-data-table") as HTMLElement
+            const columnsButton = Array.from(root.querySelectorAll("button")).find(b => b.textContent?.trim() == "Columns") as HTMLElement | undefined
+            columnsButton?.click()
+        })
+        const openRightAfterClick = await page.evaluate(() => {
+            const root = document.getElementById("default-data-table") as HTMLElement
+            return root.querySelector(".vtd-datatable-column-menu")?.classList.contains("vtd-datatable-column-menu-open")
+        })
+        if (!openRightAfterClick) {fail("ERROR: expected the column menu to stay open immediately after clicking its trigger")}
+
+        const headerCountBefore = await page.evaluate(() => document.getElementById("default-data-table")!.querySelectorAll("th").length)
+        await page.evaluate(() => {
+            const root = document.getElementById("default-data-table") as HTMLElement
+            ;(root.querySelector(".vtd-datatable-column-menu input[type=checkbox]") as HTMLInputElement).click()
+        })
+        const headerCountAfter = await page.evaluate(() => document.getElementById("default-data-table")!.querySelectorAll("th").length)
+        if (headerCountAfter >= headerCountBefore) {fail(`ERROR: expected unchecking a hideable column to remove a header, was ${headerCountBefore} -> ${headerCountAfter}`)}
+        const stillOpenAfterCheckbox = await page.evaluate(() => {
+            const root = document.getElementById("default-data-table") as HTMLElement
+            return root.querySelector(".vtd-datatable-column-menu")?.classList.contains("vtd-datatable-column-menu-open")
+        })
+        if (!stillOpenAfterCheckbox) {fail("ERROR: expected the column menu to stay open after toggling a column checkbox")}
+
+        await page.evaluate(() => { document.body.click() })
+        const openAfterOutsideClick = await page.evaluate(() => {
+            const root = document.getElementById("default-data-table") as HTMLElement
+            return root.querySelector(".vtd-datatable-column-menu")?.classList.contains("vtd-datatable-column-menu-open")
+        })
+        if (openAfterOutsideClick) {fail("ERROR: expected the column menu to close on an outside click")}
+    })
+
 })

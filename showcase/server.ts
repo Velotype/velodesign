@@ -25,13 +25,18 @@ function shellHandler() {
 
 const router = new Router()
 
-// The app does its own client-side routing (History.changeLocation + popstate/locationchange,
-// same mechanism `PageSelector`/`NavLink` use), so every app route serves the same shell and
-// the client picks the right page from `location.pathname` once it boots.
-router.get("/", shellHandler)
-router.get("/components/:name", shellHandler)
-
+// Mount the static build output FIRST: this Router resolves sibling routes at each node in
+// registration order (first match wins, wildcard included) rather than by specificity, so the
+// exact /build/main.js route has to be registered before the catch-all below or the wildcard
+// would win and the browser would get index.html back when it asked for the JS bundle.
 await router.mountFiles("/build/", `${Deno.cwd()}/build/`)
+
+// The app does its own client-side routing (History.changeLocation + popstate/locationchange,
+// same mechanism `PageSelector`/`NavLink` use), so every other route serves the same shell and
+// the client picks the right page from `location.pathname` once it boots. A single splat
+// catch-all - rather than enumerating each client route here too - means a new page added to
+// the client router (src/app-shell.tsx's ContentArea) never needs a matching change here.
+router.get("/*", shellHandler)
 
 const app = new App(router)
 app.addServerListenCallback(() => {

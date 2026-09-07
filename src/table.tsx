@@ -40,7 +40,9 @@ let areTableStylesMounted = false
  * the same shape as every other `FunctionComponent` in this package.
  *
  * Sorting/pagination/filtering are the caller's responsibility (pass already-sorted `rows`,
- * pair with `Pagination` for paging) - this Component only renders what it's given.
+ * pair with `Pagination` for paging) - this Component only renders what it's given. For sort/
+ * page/search/column-visibility/resize to just work without wiring that state up yourself,
+ * use `DataTable` instead.
  */
 export function Table<RowType>(attrs: TableAttrsType<RowType>, _children: RenderableElements[]): HTMLTableElement {
     if (!areTableStylesMounted) {

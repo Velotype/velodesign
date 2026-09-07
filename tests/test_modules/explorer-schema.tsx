@@ -10,6 +10,7 @@ import {
     Badge, type BadgeType,
     Breadcrumbs,
     Button, type ButtonType,
+    ButtonGroup,
     ButtonModal,
     Calendar,
     Card,
@@ -50,6 +51,7 @@ import {
     Statistic,
     Steps,
     Table,
+    DataTable,
     Tabs,
     Tag, type TagType,
     TextBox, type TextBoxTypeType,
@@ -116,6 +118,18 @@ export const stories: ComponentStory[] = [
             disabled={props.disabled as boolean}
             loadingOnClick={props.loadingOnClick as boolean}
             onClick={(_event, doneLoading) => { if (doneLoading) { globalThis.setTimeout(doneLoading, 1200) } }}>{props.children as string}</Button>,
+    },
+    {
+        name: "ButtonGroup", group: "Form",
+        defaultProps: {orientation: "horizontal"},
+        controls: {
+            orientation: {kind: "select", label: "orientation", options: ["horizontal", "vertical"]},
+        },
+        render: (props) => <ButtonGroup orientation={props.orientation as "horizontal" | "vertical"}>
+            <Button type="secondary">Left</Button>
+            <Button type="secondary">Middle</Button>
+            <Button type="secondary">Right</Button>
+        </ButtonGroup>,
     },
     {
         name: "RadioButton", group: "Form",
@@ -717,6 +731,27 @@ export const stories: ComponentStory[] = [
                 {key: "role", header: "Role", render: (row: {name: string, role: string}) => row.role},
             ]}
             rows={[{name: "Jonathan Word", role: "Engineer"}, {name: "Alex Baker", role: "Designer"}]}/>,
+    },
+    {
+        name: "DataTable", group: "Data Display",
+        defaultProps: {},
+        controls: {},
+        render: () => <DataTable
+            searchable
+            pageSize={5}
+            columns={[
+                {key: "name", header: "Name", render: (row: {name: string, role: string, status: string}) => row.name, sortValue: (row) => row.name, filterValue: (row) => row.name},
+                {key: "role", header: "Role", render: (row: {name: string, role: string, status: string}) => row.role, sortValue: (row) => row.role, filterValue: (row) => row.role},
+                {key: "status", header: "Status", render: (row: {name: string, role: string, status: string}) => row.status, align: "end"},
+            ]}
+            rows={[
+                {name: "Jonathan Word", role: "Engineer", status: "active"},
+                {name: "Alex Baker", role: "Designer", status: "active"},
+                {name: "Casey Diaz", role: "Support", status: "inactive"},
+                {name: "Morgan Lee", role: "Manager", status: "active"},
+                {name: "Riley Chen", role: "Analyst", status: "active"},
+                {name: "Jordan Smith", role: "Engineer", status: "inactive"},
+            ]}/>,
     },
     {
         name: "Carousel", group: "Data Display",

@@ -1,5 +1,7 @@
 import {Button, ButtonThemeOptions} from "./button.tsx"
 import type {ButtonAttrsType, ButtonType} from "./button.tsx"
+import { ButtonGroup } from "./button-group.tsx"
+import type { ButtonGroupAttrsType } from "./button-group.tsx"
 import { Icon, I, registerIcon } from "./icon.ts"
 import type {IAttrsType} from "./icon.ts"
 import { licenses, addLicense } from "./license.ts"
@@ -58,6 +60,7 @@ import { Popconfirm, type PopconfirmAttrsType } from "./popconfirm.tsx"
 import { Steps, type StepsAttrsType, type StepType } from "./steps.tsx"
 import { Rate, type RateAttrsType } from "./rate.tsx"
 import { Table, type TableAttrsType, type TableColumnType } from "./table.tsx"
+import { DataTable, type DataTableAttrsType, type DataTableColumnType } from "./data-table.tsx"
 import { Form, type FormAttrsType, FormField, type FormFieldAttrsType } from "./form.tsx"
 import { ContextMenu, type ContextMenuAttrsType, type ContextMenuItemType } from "./context-menu.tsx"
 import { Resizable, type ResizableAttrsType } from "./resizable.tsx"
@@ -71,6 +74,9 @@ export {
     type ButtonType,
     type ButtonAttrsType,
     ButtonThemeOptions,
+
+    ButtonGroup,
+    type ButtonGroupAttrsType,
 
     RadioButton,
     type RadioButtonAttrsType,
@@ -269,6 +275,10 @@ export {
     Table,
     type TableAttrsType,
     type TableColumnType,
+
+    DataTable,
+    type DataTableAttrsType,
+    type DataTableColumnType,
 
     Form,
     type FormAttrsType,

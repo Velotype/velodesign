@@ -197,11 +197,16 @@ export const ColorScheme: {
 
 /**
  * Injects CSS styles for the Velodesign Theme on the `selector` CSS Selector
- * 
+ *
  * Note: Selected element(s) need `data-theme="light"` or `data-theme="dark"` for theme to
  * work properly
+ *
+ * `setStylesheet` only applies the styles for a given `selector` once by default - calling
+ * this again for the same `selector` with different `options` is a no-op unless `resetSheet`
+ * is `true`, which replaces the previously-injected stylesheet with one built from the new
+ * `options` (e.g. for a live theme editor letting a user preview color changes in real time).
  */
-export function setThemeOnSelector(selector: string, options?: ThemeOptions | undefined): void {
+export function setThemeOnSelector(selector: string, options?: ThemeOptions | undefined, resetSheet: boolean = false): void {
     setStylesheet(`
 ${selector}[data-theme="light"]{
 ${textColors("text", options?.textLightColor || defaultTextLightColor, options?.textDarkColor || defaultTextDarkColor)}
@@ -220,7 +225,7 @@ ${middleColorSpread("warning", black, options?.warningDarkColor || defaultWarnin
 ${middleColorSpread("accent", black, options?.accentDarkColor || defaultAccentDarkColor, white)}
 color-scheme:dark;}
 ${selector}{color:var(--text);background-color:var(--background);}
-${selector} a{color:var(--text)}`,`vtd/Theme on ${selector}`)
+${selector} a{color:var(--text)}`,`vtd/Theme on ${selector}`, resetSheet)
 }
 
 /**

@@ -16,6 +16,8 @@ export type PopoverAttrsType = {
     content: RenderableElements
     /** Which side of the trigger to show the bubble on (default: `"bottom"`) */
     placement?: PopoverPlacement
+    /** Closes the popover when the user clicks anywhere outside of it (default: `true`) */
+    closeOnOutsideClick?: boolean
 } & IdAttr & StylePassthroughAttrs
 
 let arePopoverStylesMounted = false
@@ -40,6 +42,8 @@ export class Popover extends Component<PopoverAttrsType> {
     #wrapper: HTMLSpanElement
     /** The positioned content bubble */
     #bubble: HTMLDivElement
+    /** Attrs captured at construction, read by `#handleDocumentClick` (see the `Command` doc note on why this can't just close over the constructor's `attrs` parameter) */
+    #attrs: PopoverAttrsType
 
     /** Close the popover */
     #close = () => {
@@ -51,8 +55,11 @@ export class Popover extends Component<PopoverAttrsType> {
         this.#bubble.classList.toggle("vtd-popover-open")
     }
 
-    /** Close the popover if it's open and the click landed outside of it */
+    /** Close the popover if it's open, outside-click closing is enabled, and the click landed outside of it */
     #handleDocumentClick = (event: MouseEvent) => {
+        if (this.#attrs.closeOnOutsideClick === false) {
+            return
+        }
         if (!this.#bubble.classList.contains("vtd-popover-open")) {
             return
         }
@@ -75,6 +82,7 @@ export class Popover extends Component<PopoverAttrsType> {
     /** Create a new `<Popover/>` Component */
     constructor(attrs: PopoverAttrsType, children: RenderableElements[]) {
         super(attrs, children)
+        this.#attrs = attrs
         if (!arePopoverStylesMounted) {
             arePopoverStylesMounted = true
             setStylesheet(`

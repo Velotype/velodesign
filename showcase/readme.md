@@ -2,7 +2,8 @@
 
 A component showcase website for `velodesign`, in the spirit of the Ant Design / shadcn/ui
 component sites: a searchable, categorized sidebar, a live interactive preview and prop
-reference for every component, and a landing page introducing the library.
+reference for every component, a landing page introducing the library, and a theme builder
+(`/theme`) for customizing its color palette live.
 
 It's its own small Velotype/veloserver app living inside the `velodesign` repo - a real
 consumer of the library, not part of the published `@velotype/velodesign` package. It reuses
@@ -64,9 +65,28 @@ showcase/
     pages/
       home.tsx               landing page: hero, stats, category grid
       component-page.tsx      one component's live preview + prop table + prev/next nav
+      theme-builder.tsx        color-palette editor: edits apply live to the whole site and
+                               persist to localStorage; exports a Theme.injectStyles() snippet
       not-found.tsx           404 page
   build/                  bundled output (gitignored, produced by `deno task bundle`)
 ```
+
+## Theme builder
+
+`/theme` lets a visitor pick every color role `ThemeOptions` (from `../src/theme.ts`) exposes,
+independently for light and dark mode. Every edit:
+
+- applies immediately across the whole site (`:root`) and to a light/dark preview strip on the
+  page itself, using `setThemeOnSelector(selector, options, resetSheet: true)` - the
+  `resetSheet` flag (added to `../src/theme.ts` alongside this feature) is needed because
+  `setStylesheet` only applies a given selector's styles once by default, so re-theming live
+  requires explicitly asking it to replace the previous stylesheet
+- is saved to `localStorage` (`vtd-showcase-custom-theme`) and reloaded on boot (`main.tsx`
+  calls `loadSavedTheme()` before `Theme.injectStyles()`), so a customization survives a refresh
+- is copyable as a ready-to-paste `Theme.injectStyles({...})` call, for taking the palette into
+  your own app
+
+"Reset to defaults" clears both the live theme and the saved copy.
 
 Routing is client-side (`History.changeLocation` + `popstate`/`locationchange`, the same
 mechanism `NavLink`/`PageSelector` use elsewhere in `velodesign`) - the server always returns

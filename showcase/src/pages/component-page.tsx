@@ -2,7 +2,7 @@ import { Component, setStylesheet } from "@velotype/velotype"
 import type { RenderableElements } from "@velotype/velotype"
 
 import { Breadcrumbs, History, Table } from "../../../src/index.ts"
-import { componentDocs, type ComponentDoc, type PropDoc } from "../data/docs.ts"
+import { componentDocs, type ComponentDoc, type PropDoc } from "../data/docs.tsx"
 
 export type ComponentPageAttrsType = {
     doc: ComponentDoc
@@ -11,36 +11,33 @@ export type ComponentPageAttrsType = {
 let areComponentPageStylesMounted = false
 
 /**
- * A single component's documentation page: breadcrumb, title, description, a live preview
- * (rendered from the same `story.render` the Explorer uses - interactive stories like
- * Pagination/Slider/Rate/Calendar stay interactive here too, via the same `props`/`setProp`
- * pair), a prop reference table, and prev/next navigation through the full component list.
+ * A single component's documentation page: breadcrumb, title, description, a gallery of
+ * labeled example variants (the different common states/uses of the component - e.g. Button's
+ * "Types" and "Disabled" examples), a prop reference table, and prev/next navigation through
+ * the full component list.
  */
 export class ComponentPage extends Component<ComponentPageAttrsType> {
-    #props: Record<string, unknown>
-
     constructor(attrs: ComponentPageAttrsType, children: RenderableElements[]) {
         super(attrs, children)
-        this.#props = {...attrs.doc.defaultProps}
         if (!areComponentPageStylesMounted) {
             areComponentPageStylesMounted = true
             setStylesheet(`
 .vtd-showcase-doc{padding:2em;max-width:56em;}
 .vtd-showcase-doc h1{margin-block:0.4em 0.2em;}
 .vtd-showcase-doc-description{color:var(--background-9);font-size:1.05em;margin-block-end:1.5em;}
-.vtd-showcase-preview{
+.vtd-showcase-doc h2{margin-block-end:0.75em;}
+.vtd-showcase-examples{display:flex;flex-direction:column;gap:1.25em;margin-block-end:2em;}
+.vtd-showcase-example-label{font-size:0.85em;font-weight:bold;color:var(--background-9);margin-block-end:0.5em;}
+.vtd-showcase-example-preview{
 border:1px solid var(--background-4);
 border-radius:0.5rem;
-padding:3em 2em;
+padding:2em;
 display:flex;
 align-items:center;
-justify-content:center;
-min-height:6em;
-margin-block-end:2em;
+min-height:3em;
 background-image:radial-gradient(var(--background-4) 1px, transparent 1px);
 background-size:16px 16px;
 }
-.vtd-showcase-doc h2{margin-block-end:0.75em;}
 .vtd-showcase-props{margin-block-end:2em;}
 .vtd-showcase-page-nav{
 display:flex;
@@ -54,11 +51,6 @@ padding-block-start:1.5em;
         }
     }
 
-    #setProp = (key: string, value: unknown) => {
-        this.#props = {...this.#props, [key]: value}
-        this.refresh()
-    }
-
     override render(attrs: ComponentPageAttrsType): RenderableElements {
         const doc = attrs.doc
         const index = componentDocs.findIndex(candidate => candidate.slug == doc.slug)
@@ -70,7 +62,12 @@ padding-block-start:1.5em;
             <h1>{doc.name}</h1>
             <p class="vtd-showcase-doc-description">{doc.description}</p>
 
-            <div class="vtd-showcase-preview">{doc.render(this.#props, this.#setProp)}</div>
+            {doc.examples.length > 0 ? <div class="vtd-showcase-examples">
+                {doc.examples.map(example => <div>
+                    <div class="vtd-showcase-example-label">{example.label}</div>
+                    <div class="vtd-showcase-example-preview">{example.node}</div>
+                </div>)}
+            </div> : <div class="vtd-showcase-example-preview" style={{marginBlockEnd: "2em"}}>{doc.render(doc.defaultProps, () => {})}</div>}
 
             {doc.props.length > 0 ? <div class="vtd-showcase-props">
                 <h2>Props</h2>

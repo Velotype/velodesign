@@ -2,7 +2,7 @@ import { Component, setStylesheet } from "@velotype/velotype"
 import type { EmptyAttrs } from "@velotype/velotype"
 
 import { Badge, Button, Card, History, Statistic } from "../../../src/index.ts"
-import { componentDocs, groupedDocs } from "../data/docs.ts"
+import { componentDocs, groupedDocs } from "../data/docs.tsx"
 
 let areHomeStylesMounted = false
 
@@ -51,7 +51,7 @@ gap:1em;
                     with zero JavaScript UI framework dependency.</p>
                 <div class="vtd-showcase-hero-actions">
                     <Button type="primary" onClick={() => History.changeLocation(`/components/${componentDocs[0].slug}`)}>Browse components</Button>
-                    <Button type="secondary" onClick={() => History.changeLocation(`/components/${groups[0].docs[0].slug}`)}>Get started</Button>
+                    <Button type="secondary" onClick={() => History.changeLocation("/theme")}>Customize theme</Button>
                 </div>
             </section>
 
