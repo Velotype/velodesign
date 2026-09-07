@@ -1,7 +1,7 @@
 import {replaceElementWithRoot, Component} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
-import { Accordion, Alert, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, Calendar, Card, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu, DataTable, DatePicker, Divider, Drawer, Empty, Form, FormField, InputNumber, List, Menu, Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, Resizable, ScrollArea, Select, showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, Tabs, Tag, TextBox, Theme, Timeline, Toggle, Tooltip, Tree, Upload} from "../../src/index.ts"
+import { Accordion, Alert, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, Calendar, Card, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu, DataTable, DatePicker, Divider, Drawer, Empty, Form, FormField, InputNumber, List, Menu, Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, Resizable, ScrollArea, Select, SelectMenu, showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, Tabs, Tag, TextBox, Theme, Timeline, Toggle, Tooltip, Tree, Upload} from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 import { setThemeOnSelector } from "../../src/theme.ts"
 
@@ -64,6 +64,13 @@ class ShowcaseSide extends Component<EmptyAttrs> {
             Example Select:
             <div style={{marginTop:"10px"}}><Select options={[{value:"a",label:"Option A"},{value:"b",label:"Option B"}]} placeholder="Choose one"/></div>
             <hr style={{marginTop:"10px"}}/>
+            Example SelectMenu:
+            <div style={{marginTop:"10px"}}><SelectMenu
+                options={[{id:"a",name:"Option A"},{id:"b",name:"Option B"}]}
+                getValue={option => option.id}
+                renderOption={option => <span style={{display:"flex",alignItems:"center",gap:"0.5em"}}><Avatar initials={option.name[0]} size="1.5em"/>{option.name}</span>}
+                placeholder="Choose one"/></div>
+            <hr style={{marginTop:"10px"}}/>
             Example Alert:
             <div style={{marginTop:"10px"}}><Alert type="success" title="Success">Everything worked.</Alert></div>
             <hr style={{marginTop:"10px"}}/>
@@ -100,7 +107,7 @@ class ShowcaseSide extends Component<EmptyAttrs> {
             <div style={{marginTop:"10px", maxWidth:"320px"}}><Accordion items={[{header:"Section one",content:"Panel one",defaultOpen:true},{header:"Section two",content:"Panel two"}]}/></div>
             <hr style={{marginTop:"10px"}}/>
             Example Avatar:
-            <div style={{marginTop:"10px", display:"flex", gap:"10px"}}><Avatar initials="JW"/><Avatar initials="AB" size="1.5em"/></div>
+            <div style={{marginTop:"10px", display:"flex", gap:"10px"}}><Avatar initials="JR"/><Avatar initials="AB" size="1.5em"/></div>
             <hr style={{marginTop:"10px"}}/>
             Example Progress:
             <div style={{marginTop:"10px", maxWidth:"320px"}}><Progress value={65} showLabel/></div>
@@ -160,7 +167,7 @@ class ShowcaseSide extends Component<EmptyAttrs> {
             <div style={{marginTop:"10px"}}><Rate value={3}/></div>
             <hr style={{marginTop:"10px"}}/>
             Example Table:
-            <div style={{marginTop:"10px", maxWidth:"420px"}}><Table columns={[{key:"name",header:"Name",render:(row: {name: string})=>row.name}]} rows={[{name:"Jonathan"},{name:"Alex"}]}/></div>
+            <div style={{marginTop:"10px", maxWidth:"420px"}}><Table columns={[{key:"name",header:"Name",render:(row: {name: string})=>row.name}]} rows={[{name:"Jamie"},{name:"Alex"}]}/></div>
             <hr style={{marginTop:"10px"}}/>
             Example DataTable:
             <div style={{marginTop:"10px", maxWidth:"420px"}}><DataTable
@@ -170,7 +177,7 @@ class ShowcaseSide extends Component<EmptyAttrs> {
                     {key:"name",header:"Name",render:(row: {name: string, role: string})=>row.name, sortValue:(row)=>row.name, filterValue:(row)=>row.name},
                     {key:"role",header:"Role",render:(row: {name: string, role: string})=>row.role, sortValue:(row)=>row.role, filterValue:(row)=>row.role},
                 ]}
-                rows={[{name:"Jonathan",role:"Engineer"},{name:"Alex",role:"Designer"},{name:"Casey",role:"Support"},{name:"Morgan",role:"Manager"}]}/></div>
+                rows={[{name:"Jamie",role:"Engineer"},{name:"Alex",role:"Designer"},{name:"Casey",role:"Support"},{name:"Morgan",role:"Manager"}]}/></div>
             <hr style={{marginTop:"10px"}}/>
             Example Form:
             <div style={{marginTop:"10px", maxWidth:"320px"}}><Form><FormField label="Name" required><TextBox type="text"/></FormField></Form></div>

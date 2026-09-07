@@ -28,6 +28,10 @@ class PaginationGallery extends Component<EmptyAttrs> {
             <div id="default-pagination"><PaginationDemo totalPages={3}/></div>
             <hr style={{marginTop:"10px"}}/>
             <div id="many-pages-pagination"><PaginationDemo totalPages={20}/></div>
+            <hr style={{marginTop:"10px"}}/>
+            <div id="two-pages-pagination"><PaginationDemo totalPages={2}/></div>
+            <hr style={{marginTop:"10px"}}/>
+            <div id="one-page-pagination"><PaginationDemo totalPages={1}/></div>
         </div>
     }
 }

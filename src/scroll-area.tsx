@@ -20,6 +20,8 @@ export const ScrollArea: FunctionComponent<ScrollAreaAttrsType> = function(attrs
         areScrollAreaStylesMounted = true
         setStylesheet(`
 .vtd-scroll-area{
+width:100%;
+box-sizing:border-box;
 overflow:auto;
 scrollbar-width:thin;
 scrollbar-color:var(--background-6) transparent;

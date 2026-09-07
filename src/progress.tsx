@@ -29,7 +29,7 @@ export const Progress: FunctionComponent<ProgressAttrsType> = function(attrs: Pr
     if (!areProgressStylesMounted) {
         areProgressStylesMounted = true
         setStylesheet(`
-.vtd-progress-wrapper{display:flex;align-items:center;gap:0.75em;}
+.vtd-progress-wrapper{width:100%;box-sizing:border-box;display:flex;align-items:center;gap:0.75em;}
 .vtd-progress{
 appearance:none;
 -webkit-appearance:none;

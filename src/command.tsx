@@ -125,7 +125,7 @@ font:inherit;
         this.#input = <input
             type="text"
             class="vtd-command-input"
-            placeholder={attrs.placeholder || "Type a command..."}
+            placeholder={attrs.placeholder}
             onInput={(event: Event) => {
                 if (event.target instanceof HTMLInputElement) {
                     this.#query = event.target.value

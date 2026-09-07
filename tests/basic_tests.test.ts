@@ -116,17 +116,64 @@ describe('basic component rendering', () => {
     })
 
     itWrap("tabs switches panel on click", "tabs", "#default-tabs", async (_pageLoadSelection: ElementHandle) => {
-        const panel = await page.waitForSelector("#default-tabs [role='tabpanel']")
+        const panel = await page.waitForSelector("#default-tabs .vtd-tabs-panel-active")
         if (!panel) {fail("ERROR: tab panel not found")}
-        assertEquals(await panel.innerText(), "Content of the first tab.")
+        assertEquals(await panel.innerText(), "High-level summary content goes here.")
 
         const secondTabButton = await page.$("#default-tabs .vtd-tabs-tab:nth-child(2)")
         if (!secondTabButton) {fail("ERROR: second tab button not found")}
         await secondTabButton.click()
 
-        const updatedPanel = await page.waitForSelector("#default-tabs [role='tabpanel']")
+        // Re-query rather than reusing `panel` - switching tabs doesn't tear down and rebuild
+        // any panel anymore (that's the whole point), but the *previously active* panel is now
+        // the inactive one, so the active-panel selector needs to be re-evaluated regardless.
+        const updatedPanel = await page.waitForSelector("#default-tabs .vtd-tabs-panel-active")
         if (!updatedPanel) {fail("ERROR: updated tab panel not found")}
-        assertEquals(await updatedPanel.innerText(), "Content of the second tab.")
+        const hasTeamInput = await page.evaluate(() => !!document.querySelector("#default-tabs .vtd-tabs-panel-active #team-tab-input"))
+        if (!hasTeamInput) {fail("ERROR: expected the visible panel to be the Team Members tab (containing #team-tab-input)")}
+    })
+
+    itWrap("tabs label text position doesn't shift when a tab becomes active", "tabs", "#default-tabs", async (_pageLoadSelection: ElementHandle) => {
+        const firstTabLeftBefore = await page.evaluate(() => document.querySelector("#default-tabs .vtd-tabs-tab:nth-child(1)")!.getBoundingClientRect().left)
+
+        const secondTabButton = await page.$("#default-tabs .vtd-tabs-tab:nth-child(2)")
+        if (!secondTabButton) {fail("ERROR: second tab button not found")}
+        await secondTabButton.click()
+        await page.waitForSelector("#default-tabs .vtd-tabs-panel-active")
+
+        const firstTabLeftAfter = await page.evaluate(() => document.querySelector("#default-tabs .vtd-tabs-tab:nth-child(1)")!.getBoundingClientRect().left)
+        const secondTabLeftAfter = await page.evaluate(() => document.querySelector("#default-tabs .vtd-tabs-tab:nth-child(2)")!.getBoundingClientRect().left)
+        if (firstTabLeftBefore != firstTabLeftAfter) {fail(`ERROR: expected the first tab's position to stay put when a later tab becomes active, was ${firstTabLeftBefore} -> ${firstTabLeftAfter}`)}
+
+        // Re-select the first tab and confirm the second tab (now inactive again) also lands back where it started
+        const firstTabButton = await page.$("#default-tabs .vtd-tabs-tab:nth-child(1)")
+        if (!firstTabButton) {fail("ERROR: first tab button not found")}
+        await firstTabButton.click()
+        await page.waitForSelector("#default-tabs .vtd-tabs-panel-active")
+        const secondTabLeftInactive = await page.evaluate(() => document.querySelector("#default-tabs .vtd-tabs-tab:nth-child(2)")!.getBoundingClientRect().left)
+        if (secondTabLeftAfter != secondTabLeftInactive) {fail(`ERROR: expected the second tab's position to be the same whether active or not, was ${secondTabLeftAfter} (active) vs ${secondTabLeftInactive} (inactive)`)}
+    })
+
+    itWrap("tabs keep an inactive panel's content (and its state) mounted instead of rebuilding it", "tabs", "#default-tabs", async (_selection: ElementHandle) => {
+        // Switch to the "Team Members" tab (which holds a real TextBox) and type into it.
+        await page.evaluate(() => (document.querySelector("#default-tabs .vtd-tabs-tab:nth-child(2)") as HTMLElement)?.click())
+        await page.evaluate(() => {
+            const input = document.querySelector("#team-tab-input") as HTMLInputElement
+            input.value = "typed value"
+            input.dispatchEvent(new Event("input", {bubbles: true}))
+        })
+
+        // Switch away to another tab and back.
+        await page.evaluate(() => (document.querySelector("#default-tabs .vtd-tabs-tab:nth-child(1)") as HTMLElement)?.click())
+        const stillMountedButInactive = await page.evaluate(() => {
+            const panel = document.getElementById("team-tab-input")?.closest(".vtd-tabs-panel")
+            return !!panel && !panel.classList.contains("vtd-tabs-panel-active")
+        })
+        if (!stillMountedButInactive) {fail("ERROR: expected the inactive panel to still be mounted (just not active), not removed")}
+        await page.evaluate(() => (document.querySelector("#default-tabs .vtd-tabs-tab:nth-child(2)") as HTMLElement)?.click())
+
+        const valueAfterSwitchingBack = await page.evaluate(() => (document.getElementById("team-tab-input") as HTMLInputElement)?.value)
+        if (valueAfterSwitchingBack != "typed value") {fail(`ERROR: expected the typed value to survive switching tabs away and back, got: ${valueAfterSwitchingBack}`)}
     })
 
     itWrap("navlink highlights the active route and updates on navigation", "navlink", "#navlink-home", async (selection: ElementHandle) => {
@@ -165,6 +212,14 @@ describe('basic component rendering', () => {
         const updated = await page.waitForSelector("#pagination-current-3")
         if (!updated) {fail("ERROR: current-page display not found after click")}
         assertEquals(await updated.innerText(), "Current page: 3")
+    })
+
+    itWrap("pagination doesn't duplicate a page number when totalPages is small", "pagination", "#two-pages-pagination", async (_selection: ElementHandle) => {
+        const twoPageLabels = await page.evaluate(() => Array.from(document.getElementById("two-pages-pagination")!.querySelectorAll(".vtd-pagination button")).map(b => b.textContent))
+        if (JSON.stringify(twoPageLabels) != JSON.stringify(["‹", "1", "2", "›"])) {fail(`ERROR: expected exactly one "2" button with totalPages=2, got: ${JSON.stringify(twoPageLabels)}`)}
+
+        const onePageLabels = await page.evaluate(() => Array.from(document.getElementById("one-page-pagination")!.querySelectorAll(".vtd-pagination button")).map(b => b.textContent))
+        if (JSON.stringify(onePageLabels) != JSON.stringify(["‹", "1", "›"])) {fail(`ERROR: expected no page-2 button at all with totalPages=1, got: ${JSON.stringify(onePageLabels)}`)}
     })
 
     itWrap("menu opens on trigger click and closes after picking an item", "menu", "#actions-menu", async (selection: ElementHandle) => {
@@ -210,6 +265,20 @@ describe('basic component rendering', () => {
         if (openAfterOutsideClick !== null) {
             fail(`ERROR: expected menu to close after an outside click, open was: ${openAfterOutsideClick}`)
         }
+    })
+
+    itWrap("menu with closeOnOutsideClick={false} stays open on an outside click", "menu", "#stays-open-menu", async (_selection: ElementHandle) => {
+        const summary = await page.$("#stays-open-menu summary")
+        if (!summary) {fail("ERROR: summary not found")}
+        await summary.click()
+
+        const openedMenu = await page.waitForSelector("#stays-open-menu[open]")
+        if (!openedMenu) {fail("ERROR: menu did not open after clicking trigger")}
+
+        await page.evaluate(() => { document.body.click() })
+
+        const stillOpen = await page.$("#stays-open-menu[open]")
+        if (!stillOpen) {fail("ERROR: expected menu with closeOnOutsideClick={false} to stay open after an outside click")}
     })
 
     itWrap("toast appears on trigger click and auto-dismisses after its duration", "toast", "#toast-quick-btn", async (selection: ElementHandle) => {
@@ -268,6 +337,21 @@ describe('basic component rendering', () => {
         if (!closed) {fail("ERROR: expected drawer to close after clicking its close button")}
     })
 
+    itWrap("drawer placement and enterFrom apply independently", "drawer", "#open-bottom-drawer-btn", async (selection: ElementHandle) => {
+        await selection.click()
+        await page.waitForSelector(".vtd-drawer[open]")
+
+        const classInfo = await page.evaluate(() => {
+            const dialog = Array.from(document.querySelectorAll(".vtd-drawer[open]"))[0] as HTMLDialogElement
+            return {
+                hasPosition: dialog.classList.contains("vtd-drawer-position-bottom"),
+                hasEnter: dialog.classList.contains("vtd-drawer-enter-right"),
+            }
+        })
+        if (!classInfo.hasPosition) {fail("ERROR: expected placement=\"bottom\" to apply the vtd-drawer-position-bottom class")}
+        if (!classInfo.hasEnter) {fail("ERROR: expected enterFrom=\"right\" to apply the vtd-drawer-enter-right class, independent of placement")}
+    })
+
     itWrap("popover opens on trigger click and closes on an outside click", "popover", "#default-popover", async (_selection: ElementHandle) => {
         const trigger = await page.$("#default-popover .vtd-popover-trigger")
         if (!trigger) {fail("ERROR: trigger not found")}
@@ -309,7 +393,7 @@ describe('basic component rendering', () => {
     })
 
     itWrap("carousel advances to the next slide on the next-arrow click", "carousel", "#default-carousel", async (_selection: ElementHandle) => {
-        const slideText = () => page.evaluate(() => document.querySelector("#default-carousel .vtd-carousel-slide")?.textContent)
+        const slideText = () => page.evaluate(() => document.querySelector("#default-carousel .vtd-carousel-slide:not([hidden])")?.textContent)
         const clickNext = () => page.evaluate(() => (document.querySelector("#default-carousel .vtd-carousel-nav-next") as HTMLElement | null)?.click())
 
         const before = await slideText()
@@ -317,6 +401,34 @@ describe('basic component rendering', () => {
         await clickNext()
         const after = await slideText()
         if (after != "Slide 2") {fail(`ERROR: expected carousel to advance to Slide 2, was: ${after}`)}
+    })
+
+    itWrap("carousel keeps an off-screen slide's content (and its state) mounted instead of rebuilding it", "carousel", "#default-carousel", async (_selection: ElementHandle) => {
+        // Navigate to the 4th slide (index 3, which holds a real TextBox) and type into it.
+        await page.evaluate(() => {
+            const dots = document.querySelectorAll("#default-carousel .vtd-carousel-dot")
+            ;(dots[3] as HTMLElement)?.click()
+        })
+        await page.evaluate(() => {
+            const input = document.querySelector("#slide-4-input") as HTMLInputElement
+            input.value = "typed value"
+            input.dispatchEvent(new Event("input", {bubbles: true}))
+        })
+
+        // Navigate away and back.
+        await page.evaluate(() => {
+            const dots = document.querySelectorAll("#default-carousel .vtd-carousel-dot")
+            ;(dots[0] as HTMLElement)?.click()
+        })
+        const hiddenWhileOffScreen = await page.evaluate(() => document.getElementById("slide-4-input")?.closest(".vtd-carousel-slide")?.hasAttribute("hidden"))
+        if (!hiddenWhileOffScreen) {fail("ERROR: expected the off-screen slide to be hidden, not removed")}
+        await page.evaluate(() => {
+            const dots = document.querySelectorAll("#default-carousel .vtd-carousel-dot")
+            ;(dots[3] as HTMLElement)?.click()
+        })
+
+        const valueAfterNavigatingBack = await page.evaluate(() => (document.getElementById("slide-4-input") as HTMLInputElement)?.value)
+        if (valueAfterNavigatingBack != "typed value") {fail(`ERROR: expected the typed value to survive navigating away and back, got: ${valueAfterNavigatingBack}`)}
     })
 
     itWrap("command palette filters by search and selects the highlighted item on Enter", "command", "#open-command-btn", async (selection: ElementHandle) => {
@@ -395,7 +507,9 @@ describe('basic component rendering', () => {
         const headerCountBefore = await page.evaluate(() => document.getElementById("default-data-table")!.querySelectorAll("th").length)
         await page.evaluate(() => {
             const root = document.getElementById("default-data-table") as HTMLElement
-            ;(root.querySelector(".vtd-datatable-column-menu input[type=checkbox]") as HTMLInputElement).click()
+            // The first column ("Name") is non-hideable and renders a disabled, always-checked
+            // entry here - so target the first *toggleable* checkbox instead of just the first one.
+            ;(root.querySelector(".vtd-datatable-column-menu input[type=checkbox]:not(:disabled)") as HTMLInputElement).click()
         })
         const headerCountAfter = await page.evaluate(() => document.getElementById("default-data-table")!.querySelectorAll("th").length)
         if (headerCountAfter >= headerCountBefore) {fail(`ERROR: expected unchecking a hideable column to remove a header, was ${headerCountBefore} -> ${headerCountAfter}`)}
@@ -411,6 +525,103 @@ describe('basic component rendering', () => {
             return root.querySelector(".vtd-datatable-column-menu")?.classList.contains("vtd-datatable-column-menu-open")
         })
         if (openAfterOutsideClick) {fail("ERROR: expected the column menu to close on an outside click")}
+    })
+
+    itWrap("data-table non-hideable column shows as a disabled, checked entry that can't be unchecked", "data-table", "#default-data-table", async (_selection: ElementHandle) => {
+        await page.evaluate(() => {
+            const root = document.getElementById("default-data-table") as HTMLElement
+            const columnsButton = Array.from(root.querySelectorAll("button")).find(b => b.textContent?.trim() == "Columns") as HTMLElement | undefined
+            columnsButton?.click()
+        })
+        const firstCheckboxState = await page.evaluate(() => {
+            const root = document.getElementById("default-data-table") as HTMLElement
+            const checkbox = root.querySelector(".vtd-datatable-column-menu input[type=checkbox]") as HTMLInputElement
+            return {checked: checkbox.checked, disabled: checkbox.disabled}
+        })
+        if (!firstCheckboxState.checked || !firstCheckboxState.disabled) {fail(`ERROR: expected the non-hideable column's entry to be checked and disabled, got: ${JSON.stringify(firstCheckboxState)}`)}
+
+        const headerCountBefore = await page.evaluate(() => document.getElementById("default-data-table")!.querySelectorAll("th").length)
+        await page.evaluate(() => {
+            const root = document.getElementById("default-data-table") as HTMLElement
+            ;(root.querySelector(".vtd-datatable-column-menu input[type=checkbox]") as HTMLInputElement).click()
+        })
+        const headerCountAfter = await page.evaluate(() => document.getElementById("default-data-table")!.querySelectorAll("th").length)
+        if (headerCountAfter != headerCountBefore) {fail(`ERROR: expected clicking the disabled entry to leave the header count unchanged, was ${headerCountBefore} -> ${headerCountAfter}`)}
+    })
+
+    itWrap("data-table page-size control changes how many rows are displayed per page", "data-table", "#default-data-table", async (_selection: ElementHandle) => {
+        const bodyRowCount = () => page.evaluate(() => document.getElementById("default-data-table")!.querySelectorAll("tbody tr").length)
+
+        const initialRowCount = await bodyRowCount()
+        if (initialRowCount != 5) {fail(`ERROR: expected the initial pageSize of 5 to show 5 rows, got ${initialRowCount}`)}
+
+        await page.evaluate(() => {
+            const root = document.getElementById("default-data-table") as HTMLElement
+            const select = root.querySelector(".vtd-datatable-page-size select") as HTMLSelectElement
+            select.value = "10"
+            select.dispatchEvent(new Event("change", {bubbles: true}))
+        })
+        const updatedRowCount = await bodyRowCount()
+        if (updatedRowCount != 10) {fail(`ERROR: expected choosing a page size of 10 to show 10 rows, got ${updatedRowCount}`)}
+    })
+
+    itWrap("select-menu opens on trigger click, selects a rich option by click, and closes", "select-menu", "#default-select-menu .vtd-select-menu-trigger", async (selection: ElementHandle) => {
+        await selection.click()
+        const isOpen = await page.evaluate(() => document.querySelector("#default-select-menu .vtd-select-menu-panel")?.classList.contains("vtd-select-menu-panel-open"))
+        if (!isOpen) {fail("ERROR: expected panel to open after clicking trigger")}
+
+        await page.evaluate(() => {
+            const options = Array.from(document.querySelectorAll("#default-select-menu .vtd-select-menu-option"))
+            const casey = options.find(el => el.textContent?.includes("Casey Diaz")) as HTMLElement | undefined
+            casey?.click()
+        })
+
+        const valueText = await page.evaluate(() => document.querySelector("#default-select-menu .vtd-select-menu-value")?.textContent)
+        if (!valueText?.includes("Casey Diaz")) {fail(`ERROR: expected the trigger to show the selected option's rendered content, got: ${valueText}`)}
+
+        const stillOpen = await page.evaluate(() => document.querySelector("#default-select-menu .vtd-select-menu-panel")?.classList.contains("vtd-select-menu-panel-open"))
+        if (stillOpen) {fail("ERROR: expected panel to close after selecting an option")}
+    })
+
+    itWrap("select-menu keyboard navigation (ArrowDown + Enter) changes selection", "select-menu", "#preselected-select-menu .vtd-select-menu-trigger", async (selection: ElementHandle) => {
+        await selection.click()
+
+        await page.evaluate(() => {
+            const trigger = document.querySelector("#preselected-select-menu .vtd-select-menu-trigger") as HTMLElement
+            trigger.dispatchEvent(new KeyboardEvent("keydown", {key: "ArrowDown", bubbles: true}))
+        })
+        await page.evaluate(() => {
+            const trigger = document.querySelector("#preselected-select-menu .vtd-select-menu-trigger") as HTMLElement
+            trigger.dispatchEvent(new KeyboardEvent("keydown", {key: "Enter", bubbles: true}))
+        })
+
+        const valueText = await page.evaluate(() => document.querySelector("#preselected-select-menu .vtd-select-menu-value")?.textContent)
+        if (!valueText?.includes("Casey Diaz")) {fail(`ERROR: expected ArrowDown+Enter from the preselected "Alex Baker" to select "Casey Diaz", got: ${valueText}`)}
+    })
+
+    itWrap("select-menu disabled option can't be selected by click", "select-menu", "#default-select-menu .vtd-select-menu-trigger", async (selection: ElementHandle) => {
+        await selection.click()
+        await page.evaluate(() => {
+            const options = Array.from(document.querySelectorAll("#default-select-menu .vtd-select-menu-option"))
+            const morgan = options.find(el => el.textContent?.includes("Morgan Lee")) as HTMLElement | undefined
+            morgan?.click()
+        })
+
+        const valueText = await page.evaluate(() => document.querySelector("#default-select-menu .vtd-select-menu-value")?.textContent)
+        if (valueText?.includes("Morgan Lee")) {fail("ERROR: expected clicking a disabled option not to select it")}
+
+        const stillOpen = await page.evaluate(() => document.querySelector("#default-select-menu .vtd-select-menu-panel")?.classList.contains("vtd-select-menu-panel-open"))
+        if (!stillOpen) {fail("ERROR: expected the panel to remain open after clicking a disabled option")}
+    })
+
+    itWrap("select-menu closes on an outside click", "select-menu", "#default-select-menu .vtd-select-menu-trigger", async (selection: ElementHandle) => {
+        await selection.click()
+        const openedRightAfterClick = await page.evaluate(() => document.querySelector("#default-select-menu .vtd-select-menu-panel")?.classList.contains("vtd-select-menu-panel-open"))
+        if (!openedRightAfterClick) {fail("ERROR: expected panel to open after clicking trigger")}
+
+        await page.evaluate(() => { document.body.click() })
+        const openAfterOutsideClick = await page.evaluate(() => document.querySelector("#default-select-menu .vtd-select-menu-panel")?.classList.contains("vtd-select-menu-panel-open"))
+        if (openAfterOutsideClick) {fail("ERROR: expected panel to close on an outside click")}
     })
 
 })

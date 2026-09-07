@@ -19,6 +19,8 @@ export const Divider: FunctionComponent<DividerAttrsType> = function(attrs: Divi
         areDividerStylesMounted = true
         setStylesheet(`
 .vtd-divider-horizontal{
+width:100%;
+box-sizing:border-box;
 border:none;
 border-block-start:1px solid var(--background-5);
 margin-block:0.5em;

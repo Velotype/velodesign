@@ -28,6 +28,8 @@ export const Upload: FunctionComponent<UploadAttrsType> = function(attrs: Upload
         areUploadStylesMounted = true
         setStylesheet(`
 .vtd-upload{
+width:100%;
+box-sizing:border-box;
 display:flex;
 flex-direction:column;
 align-items:center;

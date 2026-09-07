@@ -22,6 +22,8 @@ export type ToastOptions = {
     type?: ToastType
     /** Milliseconds before this toast auto-dismisses. `0` disables auto-dismiss (default: `4000`) */
     duration?: number
+    /** Accessible label for the dismiss button. No default - the library doesn't assume a language; set this (e.g. to "Dismiss") to give screen reader users a description */
+    dismissLabel?: string
 }
 
 let areToastStylesMounted = false
@@ -99,7 +101,7 @@ export function showToast(message: RenderableElements, options?: ToastOptions): 
 
     const toastElement: HTMLDivElement = <div class={`vtd-toast vtd-toast-${type}`} role="status">
         <div class="vtd-toast-body">{message}</div>
-        <button type="button" class="vtd-toast-dismiss" aria-label="Dismiss" onClick={() => {
+        <button type="button" class="vtd-toast-dismiss" aria-label={options?.dismissLabel} onClick={() => {
             toastElement.remove()
         }}><ToastThemeOptions.dismissSymbol/></button>
     </div>

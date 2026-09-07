@@ -18,6 +18,10 @@ class MenuGallery extends Component<EmptyAttrs> {
                 {label: "Widgets", href: "/menu/widgets"},
                 {label: "Gadgets", href: "/menu/gadgets"}
             ]}/>
+            <Menu id="stays-open-menu" trigger="Stays open" closeOnOutsideClick={false} items={[
+                {label: "Widgets", href: "/menu/widgets"},
+                {label: "Gadgets", href: "/menu/gadgets"}
+            ]}/>
         </div>
     }
 }

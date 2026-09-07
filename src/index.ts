@@ -22,6 +22,7 @@ import { Checkbox, type CheckboxAttrsType } from "./checkbox.tsx"
 import { Toggle, type ToggleAttrsType } from "./toggle.tsx"
 import { Textarea, type TextareaAttrsType } from "./textarea.tsx"
 import { Select, type SelectAttrsType, type SelectOptionType } from "./select.tsx"
+import { SelectMenu, type SelectMenuAttrsType } from "./select-menu.tsx"
 import { Badge, type BadgeAttrsType, type BadgeType } from "./badge.tsx"
 import { Card, type CardAttrsType } from "./card.tsx"
 import { Alert, AlertThemeOptions, type AlertAttrsType, type AlertType } from "./alert.tsx"
@@ -31,7 +32,7 @@ import { Tabs, type TabsAttrsType, type TabType } from "./tabs.tsx"
 import { Divider, type DividerAttrsType } from "./divider.tsx"
 import { NavLink, type NavLinkAttrsType } from "./navlink.tsx"
 import { Breadcrumbs, type BreadcrumbItemType, type BreadcrumbsAttrsType } from "./breadcrumbs.tsx"
-import { Pagination, type PaginationAttrsType } from "./pagination.tsx"
+import { Pagination, PaginationThemeOptions, type PaginationAttrsType } from "./pagination.tsx"
 import { Navbar, type NavbarAttrsType } from "./navbar.tsx"
 import { Sidebar, type SidebarAttrsType, type SidebarItemType } from "./sidebar.tsx"
 import { Menu, type MenuAttrsType, type MenuItemType } from "./menu.tsx"
@@ -56,9 +57,9 @@ import { Combobox, type ComboboxAttrsType, type ComboboxOptionType } from "./com
 import { Upload, type UploadAttrsType } from "./upload.tsx"
 import { Drawer, DrawerThemeOptions, type DrawerAttrsType, type DrawerPlacement } from "./drawer.tsx"
 import { Popover, type PopoverAttrsType, type PopoverPlacement } from "./popover.tsx"
-import { Popconfirm, type PopconfirmAttrsType } from "./popconfirm.tsx"
+import { Popconfirm, PopconfirmThemeOptions, type PopconfirmAttrsType } from "./popconfirm.tsx"
 import { Steps, type StepsAttrsType, type StepType } from "./steps.tsx"
-import { Rate, type RateAttrsType } from "./rate.tsx"
+import { Rate, type RateAttrsType, type RateType } from "./rate.tsx"
 import { Table, type TableAttrsType, type TableColumnType } from "./table.tsx"
 import { DataTable, type DataTableAttrsType, type DataTableColumnType } from "./data-table.tsx"
 import { Form, type FormAttrsType, FormField, type FormFieldAttrsType } from "./form.tsx"
@@ -107,6 +108,9 @@ export {
     Select,
     type SelectAttrsType,
     type SelectOptionType,
+
+    SelectMenu,
+    type SelectMenuAttrsType,
 
     Modal,
     type ModalAttrsType,
@@ -172,6 +176,7 @@ export {
     type BreadcrumbsAttrsType,
 
     Pagination,
+    PaginationThemeOptions,
     type PaginationAttrsType,
 
     Navbar,
@@ -263,6 +268,7 @@ export {
     type PopoverPlacement,
 
     Popconfirm,
+    PopconfirmThemeOptions,
     type PopconfirmAttrsType,
 
     Steps,
@@ -271,6 +277,7 @@ export {
 
     Rate,
     type RateAttrsType,
+    type RateType,
 
     Table,
     type TableAttrsType,

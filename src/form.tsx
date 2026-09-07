@@ -20,7 +20,7 @@ export const Form: FunctionComponent<FormAttrsType> = function(attrs: FormAttrsT
     if (!areFormStylesMounted) {
         areFormStylesMounted = true
         setStylesheet(`
-.vtd-form{display:flex;flex-direction:column;gap:1em;}
+.vtd-form{width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:1em;}
 `, "vtd/Form")
     }
 
@@ -54,7 +54,7 @@ export const FormField: FunctionComponent<FormFieldAttrsType> = function(attrs: 
     if (!areFormFieldStylesMounted) {
         areFormFieldStylesMounted = true
         setStylesheet(`
-.vtd-form-field{display:flex;flex-direction:column;gap:0.35em;}
+.vtd-form-field{width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:0.35em;}
 .vtd-form-field-label{font-weight:bold;font-size:0.9em;}
 .vtd-form-field-required{color:var(--accent);margin-inline-start:0.2em;}
 .vtd-form-field-error{color:var(--accent-8);font-size:0.85em;}

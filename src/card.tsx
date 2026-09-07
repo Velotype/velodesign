@@ -21,6 +21,8 @@ export const Card: FunctionComponent<CardAttrsType> = function(attrs: CardAttrsT
         areCardStylesMounted = true
         setStylesheet(`
 .vtd-card{
+width:100%;
+box-sizing:border-box;
 border-radius:0.5rem;
 border:1px solid var(--background-4);
 background-color:var(--background-1);
@@ -35,6 +37,10 @@ font-weight:bold;
 padding:1em;
 }
 .vtd-card-footer{
+display:flex;
+align-items:center;
+justify-content:flex-end;
+gap:0.5em;
 padding:0.75em 1em;
 border-block-start:1px solid var(--background-4);
 }

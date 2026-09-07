@@ -6,8 +6,8 @@ import { TestModulePage } from "./module-page.tsx"
 
 class TreeGallery extends Component<EmptyAttrs> {
     override render() {
-        return <div style={{marginTop:"10px", maxWidth: "320px"}}>
-            <div id="default-tree"><Tree nodes={[
+        return <div style={{marginTop:"10px", maxWidth: "320px", display:"flex", border:"1px dashed var(--background-5)"}}>
+            <Tree id="default-tree" nodes={[
                 {key: "src", label: "src", defaultOpen: true, children: [
                     {key: "components", label: "components", children: [
                         {key: "button", label: "button.tsx"},
@@ -16,7 +16,7 @@ class TreeGallery extends Component<EmptyAttrs> {
                     {key: "index", label: "index.ts"},
                 ]},
                 {key: "readme", label: "readme.md"},
-            ]}/></div>
+            ]}/>
         </div>
     }
 }

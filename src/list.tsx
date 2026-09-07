@@ -34,7 +34,7 @@ export const List: FunctionComponent<ListAttrsType> = function(attrs: ListAttrsT
     if (!areListStylesMounted) {
         areListStylesMounted = true
         setStylesheet(`
-.vtd-list{list-style:none;padding:0;margin:0;}
+.vtd-list{width:100%;box-sizing:border-box;list-style:none;padding:0;margin:0;}
 .vtd-list-item{
 display:flex;
 align-items:center;

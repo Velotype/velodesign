@@ -8,7 +8,7 @@ class ListGallery extends Component<EmptyAttrs> {
     override render() {
         return <div style={{marginTop:"10px", maxWidth: "360px"}}>
             <div id="default-list"><List items={[
-                {key: "1", leading: <Avatar initials="JW"/>, title: "Jonathan Word", description: "jonathan@example.com", trailing: <Badge type="secondary">online</Badge>},
+                {key: "1", leading: <Avatar initials="JR"/>, title: "Jamie Rivera", description: "jamie@example.com", trailing: <Badge type="secondary">online</Badge>},
                 {key: "2", leading: <Avatar initials="AB"/>, title: "Alex Baker", description: "alex@example.com"},
                 {key: "3", leading: <Avatar initials="CD"/>, title: "Casey Diaz", description: "casey@example.com"},
             ]}/></div>

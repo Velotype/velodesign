@@ -33,7 +33,7 @@ export const Steps: FunctionComponent<StepsAttrsType> = function(attrs: StepsAtt
     if (!areStepsStylesMounted) {
         areStepsStylesMounted = true
         setStylesheet(`
-.vtd-steps{display:flex;list-style:none;padding:0;margin:0;}
+.vtd-steps{width:100%;box-sizing:border-box;display:flex;list-style:none;padding:0;margin:0;}
 .vtd-steps-item{
 position:relative;
 flex:1;

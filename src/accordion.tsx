@@ -55,6 +55,8 @@ export const Accordion: FunctionComponent<AccordionAttrsType> = function(attrs: 
         areAccordionStylesMounted = true
         setStylesheet(`
 .vtd-accordion-item{
+width:100%;
+box-sizing:border-box;
 border:1px solid var(--background-4);
 border-radius:0.25rem;
 margin-block-end:0.5em;
@@ -65,6 +67,7 @@ overflow:hidden;
 cursor:pointer;
 display:flex;
 align-items:center;
+gap:0.75em;
 list-style:none;
 padding:0.6em 0.9em;
 user-select:none;
@@ -96,12 +99,13 @@ visibility:visible;
 transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0s;
 }
 .vtd-accordion-content-inner{overflow:hidden;min-height:0;padding:0 0.9em 0.9em 0.9em;}
+.vtd-accordion{width:100%;box-sizing:border-box;}
 `, "vtd/Accordion")
     }
 
     const groupName = attrs.exclusive ? `vtd-accordion-group-${accordionInstanceCounter++}` : undefined
 
-    return passthroughAttrsToElement<HTMLDivElement>(<div>
+    return passthroughAttrsToElement<HTMLDivElement>(<div class="vtd-accordion">
         {attrs.items.map(item => <details class="vtd-accordion-item" open={item.defaultOpen} name={groupName}>
             <summary class="vtd-accordion-header">{item.header}<span class="vtd-accordion-chevron"/></summary>
             <div class="vtd-accordion-content"><div class="vtd-accordion-content-inner">{item.content}</div></div>

@@ -13,6 +13,7 @@
         "bundle-toggle": "deno bundle ./test_modules/toggle.tsx --output ./build/toggle.js --sourcemap=linked",
         "bundle-textarea": "deno bundle ./test_modules/textarea.tsx --output ./build/textarea.js --sourcemap=linked",
         "bundle-select": "deno bundle ./test_modules/select.tsx --output ./build/select.js --sourcemap=linked",
+        "bundle-select-menu": "deno bundle ./test_modules/select-menu.tsx --output ./build/select-menu.js --sourcemap=linked",
         "bundle-badge": "deno bundle ./test_modules/badge.tsx --output ./build/badge.js --sourcemap=linked",
         "bundle-card": "deno bundle ./test_modules/card.tsx --output ./build/card.js --sourcemap=linked",
         "bundle-alert": "deno bundle ./test_modules/alert.tsx --output ./build/alert.js --sourcemap=linked",

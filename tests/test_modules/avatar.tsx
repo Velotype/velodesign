@@ -7,7 +7,7 @@ import { TestModulePage } from "./module-page.tsx"
 class AvatarGallery extends Component<EmptyAttrs> {
     override render() {
         return <div style={{marginTop:"10px", display: "flex", alignItems: "center", gap: "16px"}}>
-            <Avatar id="avatar-initials" initials="JW"/>
+            <Avatar id="avatar-initials" initials="JR"/>
             <Avatar initials="AB" size="1.5em"/>
             <Avatar initials="CD" size="4em"/>
             <Avatar id="avatar-broken-src" src="/this-image-does-not-exist.png" initials="EF"/>

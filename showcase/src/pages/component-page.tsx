@@ -35,7 +35,7 @@ padding:2em;
 display:flex;
 align-items:center;
 min-height:3em;
-background-image:radial-gradient(var(--background-4) 1px, transparent 1px);
+background-image:radial-gradient(color-mix(in srgb, var(--background-4) 35%, transparent) 1px, transparent 1px);
 background-size:16px 16px;
 }
 .vtd-showcase-props{margin-block-end:2em;}
@@ -65,7 +65,7 @@ padding-block-start:1.5em;
             {doc.examples.length > 0 ? <div class="vtd-showcase-examples">
                 {doc.examples.map(example => <div>
                     <div class="vtd-showcase-example-label">{example.label}</div>
-                    <div class="vtd-showcase-example-preview">{example.node}</div>
+                    <div class="vtd-showcase-example-preview">{example.node()}</div>
                 </div>)}
             </div> : <div class="vtd-showcase-example-preview" style={{marginBlockEnd: "2em"}}>{doc.render(doc.defaultProps, () => {})}</div>}
 

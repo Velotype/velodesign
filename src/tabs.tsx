@@ -26,11 +26,42 @@ export type TabsAttrsType = {
 let areTabsStylesMounted = false
 
 /**
- * A set of labeled panels where only one panel is shown at a time
+ * A set of labeled panels where only one panel is shown at a time.
+ *
+ * Every panel stays mounted in the DOM permanently (hidden via a CSS class rather than only
+ * the active one being present, or being added/removed) - switching tabs just toggles classes
+ * directly, it never calls `this.refresh()`. `content` is consumer-supplied and can be
+ * arbitrary components with their own state; a `refresh()`-based rebuild on every tab switch
+ * would tear all of that down and reconstruct it from scratch each time, losing whatever state
+ * an inactive tab's content held. Panel visibility is toggled with a class rather than the
+ * native `hidden` attribute - verified directly that a panel starting out `hidden` never
+ * actually renders its (consumer-supplied) content at all, even after `hidden` is later
+ * removed, so `hidden` can't be used here the way `Popover`/`SelectMenu`/`DataTable`'s column
+ * menu already use a CSS-class toggle for exactly this kind of "stays mounted, becomes visible
+ * later" case.
  */
 export class Tabs extends Component<TabsAttrsType> {
     /** Key of the currently active tab */
     #activeKey: string
+    /** Tab buttons, keyed by tab key */
+    #tabButtons: Record<string, HTMLButtonElement> = {}
+    /** Panels, keyed by tab key */
+    #panels: Record<string, HTMLDivElement> = {}
+    #root: HTMLDivElement
+
+    /** Switch to `key`, toggling classes directly on the already-built elements */
+    #activate(key: string) {
+        if (key == this.#activeKey) {
+            return
+        }
+        this.#tabButtons[this.#activeKey]?.classList.remove("vtd-tabs-tab-active")
+        this.#tabButtons[this.#activeKey]?.setAttribute("aria-selected", "false")
+        this.#panels[this.#activeKey]?.classList.remove("vtd-tabs-panel-active")
+        this.#activeKey = key
+        this.#tabButtons[key]?.classList.add("vtd-tabs-tab-active")
+        this.#tabButtons[key]?.setAttribute("aria-selected", "true")
+        this.#panels[key]?.classList.add("vtd-tabs-panel-active")
+    }
 
     /** Create a new `<Tabs/>` Component */
     constructor(attrs: TabsAttrsType, children: RenderableElements[]) {
@@ -39,6 +70,10 @@ export class Tabs extends Component<TabsAttrsType> {
         if (!areTabsStylesMounted) {
             areTabsStylesMounted = true
             setStylesheet(`
+.vtd-tabs{
+width:100%;
+box-sizing:border-box;
+}
 .vtd-tabs-list{
 display:flex;
 gap:0.25em;
@@ -57,33 +92,48 @@ margin-block-end:-1px;
 .vtd-tabs-tab:hover{background-color:var(--background-1);}
 .vtd-tabs-tab-active{
 border-block-end:2px solid var(--primary);
-font-weight:bold;
+/*
+ * A real font-weight:bold here would widen the label text and shift every tab after it -
+ * text-shadow fakes a bolder stroke by drawing the glyphs twice, offset by under a pixel,
+ * without touching text metrics/layout at all.
+ */
+text-shadow:-0.4px 0 currentColor, 0.4px 0 currentColor;
 }
 .vtd-tabs-panel{
+display:none;
 padding:1em 0;
 }
+.vtd-tabs-panel-active{display:block;}
 `, "vtd/Tabs")
         }
+
+        this.#root = <div class="vtd-tabs">
+            <div class="vtd-tabs-list" role="tablist">
+                {attrs.tabs.map(tab => {
+                    const button: HTMLButtonElement = <button
+                        type="button"
+                        role="tab"
+                        aria-selected={tab.key == this.#activeKey}
+                        class={`vtd-tabs-tab${tab.key == this.#activeKey ? " vtd-tabs-tab-active" : ""}`}
+                        onClick={() => this.#activate(tab.key)}>{tab.label}</button>
+                    this.#tabButtons[tab.key] = button
+                    return button
+                })}
+            </div>
+            <div class="vtd-tabs-panels">
+                {attrs.tabs.map(tab => {
+                    const panel: HTMLDivElement = <div class={`vtd-tabs-panel${tab.key == this.#activeKey ? " vtd-tabs-panel-active" : ""}`} role="tabpanel">{tab.content}</div>
+                    this.#panels[tab.key] = panel
+                    return panel
+                })}
+            </div>
+        </div>
+
+        passthroughAttrsToElement<HTMLDivElement>(this.#root, attrs)
     }
 
     /** Render this Component */
-    override render(attrs: TabsAttrsType): RenderableElements {
-        const activeTab = attrs.tabs.find(tab => tab.key == this.#activeKey)
-        return passthroughAttrsToElement(<div class="vtd-tabs">
-            <div class="vtd-tabs-list" role="tablist">
-                {attrs.tabs.map(tab => <button
-                    type="button"
-                    role="tab"
-                    aria-selected={tab.key == this.#activeKey}
-                    class={`vtd-tabs-tab${tab.key == this.#activeKey ? " vtd-tabs-tab-active" : ""}`}
-                    onClick={() => {
-                        if (tab.key != this.#activeKey) {
-                            this.#activeKey = tab.key
-                            this.refresh()
-                        }
-                    }}>{tab.label}</button>)}
-            </div>
-            <div class="vtd-tabs-panel" role="tabpanel">{activeTab?.content}</div>
-        </div>, attrs)
+    override render(): HTMLDivElement {
+        return this.#root
     }
 }

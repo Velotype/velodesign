@@ -16,6 +16,8 @@ class SelectGallery extends Component<EmptyAttrs> {
         return <div>
             <div style={{marginTop:"10px"}}><Select id="default-select" options={fruitOptions} placeholder="Choose a fruit"/></div>
             <div style={{marginTop:"10px"}}><Select options={fruitOptions} value="banana"/></div>
+            <div style={{marginTop:"10px"}}><Select id="clearable-select" options={fruitOptions} value="banana" placeholder="Choose a fruit"/></div>
+            <div style={{marginTop:"10px"}}><Select options={fruitOptions} value="banana" placeholder="Choose a fruit" placeholderDisabled/></div>
             <div style={{marginTop:"10px"}}><Select options={fruitOptions} disabled placeholder="Disabled"/></div>
         </div>
     }

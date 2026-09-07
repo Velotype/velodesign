@@ -7,11 +7,13 @@ import { TestModulePage } from "./module-page.tsx"
 class SidebarGallery extends Component<EmptyAttrs> {
     override render() {
         return <div style={{marginTop:"10px"}}>
-            <Sidebar header="Sections" items={[
-                {label: "Overview", to: "/sidebar"},
-                {label: "Settings", to: "/sidebar/settings"},
-                {label: "Billing", to: "/sidebar/billing"}
-            ]}/>
+            <div id="default-sidebar" style={{display:"flex", border:"1px dashed var(--background-5)", maxWidth:"280px"}}>
+                <Sidebar header="Sections" items={[
+                    {label: "Overview", to: "/sidebar"},
+                    {label: "Settings", to: "/sidebar/settings"},
+                    {label: "Billing", to: "/sidebar/billing"}
+                ]}/>
+            </div>
         </div>
     }
 }

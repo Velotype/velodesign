@@ -107,7 +107,7 @@ opacity:1;
 }
 .vtd-cb-input:checked ~ .vtd-cb,
 .vtd-cb-input:indeterminate ~ .vtd-cb {
-background-color:var(--primary);
+background-color:var(--primary-3);
 border-color:var(--primary-5);
 }
 

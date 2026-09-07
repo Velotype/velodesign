@@ -11,7 +11,7 @@ type PersonRow = {
 }
 
 const rows: PersonRow[] = [
-    {name: "Jonathan Word", role: "Engineer", status: "active"},
+    {name: "Jamie Rivera", role: "Engineer", status: "active"},
     {name: "Alex Baker", role: "Designer", status: "active"},
     {name: "Casey Diaz", role: "Support", status: "inactive"},
 ]

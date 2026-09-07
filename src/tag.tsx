@@ -23,6 +23,8 @@ export type TagAttrsType = {
     type?: TagType
     /** If set, a remove button is shown; called when it's clicked, just before the Tag removes itself from the DOM */
     onRemove?: () => void
+    /** Accessible label for the remove button, when shown. No default - the library doesn't assume a language; set this (e.g. to "Remove") to give screen reader users a description */
+    removeLabel?: string
 } & IdAttr & StylePassthroughAttrs & ChildrenAttr
 
 let areTagStylesMounted = false
@@ -67,7 +69,7 @@ opacity:0.7;
 
     const tagElement: HTMLSpanElement = <span class={`vtd-tag vtd-tag-${attrs.type||"neutral"}`}>
         {children}
-        {attrs.onRemove && <button type="button" class="vtd-tag-remove" aria-label="Remove" onClick={() => {
+        {attrs.onRemove && <button type="button" class="vtd-tag-remove" aria-label={attrs.removeLabel} onClick={() => {
             attrs.onRemove?.()
             tagElement.remove()
         }}><TagThemeOptions.removeSymbol/></button>}
