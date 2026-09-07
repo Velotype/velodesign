@@ -6,9 +6,12 @@ import { TestModulePage } from "./module-page.tsx"
 
 class PopconfirmGallery extends Component<EmptyAttrs> {
     override render() {
-        return <div style={{marginTop:"40px"}}>
+        return <div style={{marginTop:"40px", display:"flex", gap:"40px"}}>
             <Popconfirm id="default-popconfirm" title="Delete this item?" onConfirm={()=>{}}>
                 <Button type="danger">Delete</Button>
+            </Popconfirm>
+            <Popconfirm id="no-outside-close-popconfirm" title="Only closes via Cancel/Confirm." onConfirm={()=>{}} closeOnOutsideClick={false}>
+                <Button type="danger">Stays open</Button>
             </Popconfirm>
         </div>
     }

@@ -1,7 +1,7 @@
 import {replaceElementWithRoot, Component} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
-import { Accordion, Alert, Avatar, Badge, Breadcrumbs, Button, Calendar, Card, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu, DatePicker, Divider, Drawer, Empty, Form, FormField, InputNumber, List, Menu, Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, Resizable, ScrollArea, Select, showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, Tabs, Tag, TextBox, Theme, Timeline, Toggle, Tooltip, Tree, Upload} from "../../src/index.ts"
+import { Accordion, Alert, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, Calendar, Card, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu, DataTable, DatePicker, Divider, Drawer, Empty, Form, FormField, InputNumber, List, Menu, Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, Resizable, ScrollArea, Select, showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, Tabs, Tag, TextBox, Theme, Timeline, Toggle, Tooltip, Tree, Upload} from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 import { setThemeOnSelector } from "../../src/theme.ts"
 
@@ -31,6 +31,13 @@ class ShowcaseSide extends Component<EmptyAttrs> {
             <hr/>
             Example Button:
             <div style={{marginTop:"10px"}}><Button type="primary">Example button</Button></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example ButtonGroup:
+            <div style={{marginTop:"10px"}}><ButtonGroup>
+                <Button type="secondary">Left</Button>
+                <Button type="secondary">Middle</Button>
+                <Button type="secondary">Right</Button>
+            </ButtonGroup></div>
             <hr style={{marginTop:"10px"}}/>
             Example RadioButton:
             <div style={{marginTop:"10px"}}><RadioButton name="example-radio" checked>one</RadioButton></div>
@@ -154,6 +161,16 @@ class ShowcaseSide extends Component<EmptyAttrs> {
             <hr style={{marginTop:"10px"}}/>
             Example Table:
             <div style={{marginTop:"10px", maxWidth:"420px"}}><Table columns={[{key:"name",header:"Name",render:(row: {name: string})=>row.name}]} rows={[{name:"Jonathan"},{name:"Alex"}]}/></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example DataTable:
+            <div style={{marginTop:"10px", maxWidth:"420px"}}><DataTable
+                searchable
+                pageSize={3}
+                columns={[
+                    {key:"name",header:"Name",render:(row: {name: string, role: string})=>row.name, sortValue:(row)=>row.name, filterValue:(row)=>row.name},
+                    {key:"role",header:"Role",render:(row: {name: string, role: string})=>row.role, sortValue:(row)=>row.role, filterValue:(row)=>row.role},
+                ]}
+                rows={[{name:"Jonathan",role:"Engineer"},{name:"Alex",role:"Designer"},{name:"Casey",role:"Support"},{name:"Morgan",role:"Manager"}]}/></div>
             <hr style={{marginTop:"10px"}}/>
             Example Form:
             <div style={{marginTop:"10px", maxWidth:"320px"}}><Form><FormField label="Name" required><TextBox type="text"/></FormField></Form></div>

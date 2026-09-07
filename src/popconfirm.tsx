@@ -14,6 +14,8 @@ export type PopconfirmAttrsType = {
     cancelButtonChildren?: RenderableElements
     /** Called when the confirm button is clicked, just before the bubble closes */
     onConfirm: () => void
+    /** Closes the bubble when the user clicks anywhere outside of it (default: `true`) */
+    closeOnOutsideClick?: boolean
 } & IdAttr & StylePassthroughAttrs & ChildrenAttr
 
 let arePopconfirmStylesMounted = false
@@ -34,6 +36,8 @@ export class Popconfirm extends Component<PopconfirmAttrsType> {
     #wrapper: HTMLSpanElement
     /** The positioned confirmation bubble */
     #bubble: HTMLDivElement
+    /** Attrs captured at construction, read by `#handleDocumentClick` */
+    #attrs: PopconfirmAttrsType
 
     /** Close the bubble */
     #close = () => {
@@ -45,8 +49,11 @@ export class Popconfirm extends Component<PopconfirmAttrsType> {
         this.#bubble.classList.toggle("vtd-popconfirm-open")
     }
 
-    /** Close the bubble if it's open and the click landed outside of it */
+    /** Close the bubble if it's open, outside-click closing is enabled, and the click landed outside of it */
     #handleDocumentClick = (event: MouseEvent) => {
+        if (this.#attrs.closeOnOutsideClick === false) {
+            return
+        }
         if (!this.#bubble.classList.contains("vtd-popconfirm-open")) {
             return
         }
@@ -69,6 +76,7 @@ export class Popconfirm extends Component<PopconfirmAttrsType> {
     /** Create a new `<Popconfirm/>` Component */
     constructor(attrs: PopconfirmAttrsType, children: RenderableElements[]) {
         super(attrs, children)
+        this.#attrs = attrs
         if (!arePopconfirmStylesMounted) {
             arePopconfirmStylesMounted = true
             setStylesheet(`

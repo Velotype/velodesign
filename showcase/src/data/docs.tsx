@@ -1,11 +1,30 @@
+import type { RenderableElements } from "@velotype/velotype"
+import { RenderBasic } from "@velotype/velotype"
+
 import { stories } from "../../../tests/test_modules/explorer-schema.tsx"
 import type { ComponentStory } from "../../../tests/test_modules/explorer-schema.tsx"
+
+import {
+    Accordion, Alert, AspectRatio, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, ButtonModal,
+    Calendar, Card, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu,
+    DatePicker, Divider, Drawer, Empty, Form, FormField, I, InputNumber, Link, List, Menu, Modal,
+    Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, ScrollArea, Select,
+    showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, DataTable, Tabs, Tag, TextBox,
+    Textarea, TextEditableField, TextFormField, TextNonEditableField, TimeAgo, Timeline, Toggle,
+    Tooltip, Tree, Upload,
+} from "../../../src/index.ts"
 
 /** One row in a component's prop reference table */
 export type PropDoc = {
     name: string
     type: string
     description: string
+}
+
+/** One labeled variant shown on a component's page, e.g. {label: "Disabled", node: <Button disabled>...} */
+export type ExampleDoc = {
+    label: string
+    node: RenderableElements
 }
 
 /** A `ComponentStory` (from the Explorer) augmented with showcase-only documentation */
@@ -16,11 +35,14 @@ export type ComponentDoc = ComponentStory & {
     description: string
     /** Prop reference table rows */
     props: PropDoc[]
+    /** Labeled variants demonstrating the component's common states, shown on its page */
+    examples: ExampleDoc[]
 }
 
 const descriptions: Record<string, string> = {
     // Form
     Button: "A clickable action trigger with themed color variants and an optional loading state.",
+    ButtonGroup: "Visually joins a row (or column) of Buttons into a single connected control, sharing borders instead of each having its own.",
     RadioButton: "A single option in a mutually-exclusive group, wrapping a native radio input.",
     Checkbox: "A tri-state (checked/unchecked/indeterminate) toggle, wrapping a native checkbox input.",
     Toggle: "A switch-style boolean control, wrapping a native checkbox input styled as a track and thumb.",
@@ -70,6 +92,7 @@ const descriptions: Record<string, string> = {
     AspectRatio: "Constrains its children to a fixed width:height ratio, via pure CSS.",
     ScrollArea: "A scrollable container with a themed thin scrollbar.",
     Table: "A themed data table wrapping a native <table>, generic over the row type.",
+    DataTable: "A batteries-included data table: sortable and resizable columns, user-toggleable column visibility, an optional search box, and built-in pagination via Pagination.",
     Carousel: "A single-slide-at-a-time carousel with prev/next arrows and optional dot indicators.",
     Calendar: "A month-grid date picker with prev/next month navigation and a selectable day.",
     Tree: "A hierarchical, expandable/collapsible list built on nested native details/summary pairs.",
@@ -93,6 +116,10 @@ const propTables: Record<string, PropDoc[]> = {
         {name: "loadingOnClick", type: "boolean", description: "Shows a spinner and blocks re-clicks until onClick calls doneLoading()."},
         {name: "onClick", type: "(event, doneLoading?) => void", description: "Click handler."},
         {name: "children", type: "RenderableElements", description: "Button content."},
+    ],
+    ButtonGroup: [
+        {name: "orientation", type: '"horizontal" | "vertical"', description: "Direction to lay out the buttons (default: horizontal)."},
+        {name: "children", type: "RenderableElements", description: "The Buttons to join together."},
     ],
     RadioButton: [
         {name: "name", type: "string", description: "Name of the radio group this button participates in (required)."},
@@ -247,11 +274,13 @@ const propTables: Record<string, PropDoc[]> = {
         {name: "trigger", type: "RenderableElements", description: "Content that opens the popover when clicked (required) - can be a real Button."},
         {name: "content", type: "RenderableElements", description: "Content shown inside the bubble (required)."},
         {name: "placement", type: '"top" | "bottom" | "left" | "right"', description: "Side of the trigger (default: bottom)."},
+        {name: "closeOnOutsideClick", type: "boolean", description: "Closes the popover on an outside click (default: true)."},
     ],
     Popconfirm: [
         {name: "title", type: "RenderableElements", description: "Confirmation message (required)."},
         {name: "onConfirm", type: "() => void", description: "Called when confirmed (required)."},
         {name: "confirmButtonChildren / cancelButtonChildren", type: "RenderableElements", description: 'Defaults: "Confirm" / "Cancel".'},
+        {name: "closeOnOutsideClick", type: "boolean", description: "Closes the bubble on an outside click (default: true)."},
         {name: "children", type: "RenderableElements", description: "The trigger, typically a Button."},
     ],
     ContextMenu: [
@@ -326,6 +355,13 @@ const propTables: Record<string, PropDoc[]> = {
         {name: "columns", type: "TableColumnType<RowType>[]", description: "Column definitions, each with a render(row) function (required)."},
         {name: "rows", type: "RowType[]", description: "The rows to display (required)."},
     ],
+    DataTable: [
+        {name: "columns", type: "DataTableColumnType<RowType>[]", description: "Column definitions - add sortValue/filterValue/width/hideable to opt each column into those features (required)."},
+        {name: "rows", type: "RowType[]", description: "The full set of rows; filtering/sorting/pagination all happen client-side over this set (required)."},
+        {name: "pageSize", type: "number", description: "Rows per page. 0 disables pagination (default: 10)."},
+        {name: "searchable", type: "boolean", description: "Shows a search box filtering rows via each column's filterValue (default: false)."},
+        {name: "searchPlaceholder", type: "string", description: 'Placeholder for the search input (default: "Search...").'},
+    ],
     Carousel: [
         {name: "slides", type: "RenderableElements[]", description: "The slides to cycle through (required)."},
         {name: "showDots", type: "boolean", description: "Shows numbered dot indicators (default: true)."},
@@ -391,6 +427,374 @@ const propTables: Record<string, PropDoc[]> = {
     ],
 }
 
+const row = {display: "flex", gap: "0.75em", flexWrap: "wrap", alignItems: "center"} as const
+const col = {display: "flex", flexDirection: "column", gap: "0.75em"} as const
+
+const textFormFieldValue = new RenderBasic<string>("editable value")
+const textEditableFieldValue = new RenderBasic<string>("click edit to change me")
+
+/**
+ * Labeled variants shown on each component's page - a spread of the states a real app would
+ * actually use, not an exhaustive combination of every prop. A component missing here just
+ * gets no "Examples" section (falls back to an empty array below).
+ */
+const examplesByName: Record<string, ExampleDoc[]> = {
+    // --- Form ---
+    Button: [
+        {label: "Types", node: <div style={row}>
+            <Button type="primary">Primary</Button>
+            <Button type="secondary">Secondary</Button>
+            <Button type="warning">Warning</Button>
+            <Button type="danger">Danger</Button>
+            <Button type="text">Text</Button>
+        </div>},
+        {label: "Disabled", node: <Button type="primary" disabled>Disabled</Button>},
+    ],
+    ButtonGroup: [
+        {label: "Horizontal", node: <ButtonGroup>
+            <Button type="secondary">Left</Button>
+            <Button type="secondary">Middle</Button>
+            <Button type="secondary">Right</Button>
+        </ButtonGroup>},
+        {label: "Mixed types", node: <ButtonGroup>
+            <Button type="primary">Save</Button>
+            <Button type="danger">Delete</Button>
+        </ButtonGroup>},
+        {label: "Vertical", node: <ButtonGroup orientation="vertical">
+            <Button type="secondary">Top</Button>
+            <Button type="secondary">Middle</Button>
+            <Button type="secondary">Bottom</Button>
+        </ButtonGroup>},
+    ],
+    RadioButton: [
+        {label: "Group", node: <div style={row}>
+            <RadioButton name="doc-radio" checked>One</RadioButton>
+            <RadioButton name="doc-radio">Two</RadioButton>
+            <RadioButton name="doc-radio">Three</RadioButton>
+        </div>},
+        {label: "Disabled", node: <RadioButton name="doc-radio-disabled" disabled>Disabled</RadioButton>},
+    ],
+    Checkbox: [
+        {label: "States", node: <div style={row}>
+            <Checkbox>Unchecked</Checkbox>
+            <Checkbox checked>Checked</Checkbox>
+            <Checkbox indeterminate>Indeterminate</Checkbox>
+            <Checkbox disabled>Disabled</Checkbox>
+        </div>},
+    ],
+    Toggle: [
+        {label: "States", node: <div style={row}>
+            <Toggle>Off</Toggle>
+            <Toggle checked>On</Toggle>
+            <Toggle disabled>Disabled</Toggle>
+        </div>},
+    ],
+    TextBox: [
+        {label: "Types", node: <div style={col}>
+            <TextBox type="text" placeholder="Text"/>
+            <TextBox type="email" placeholder="Email"/>
+            <TextBox type="phone" placeholder="Phone"/>
+            <TextBox type="password" placeholder="Password"/>
+        </div>},
+    ],
+    Textarea: [
+        {label: "Default", node: <Textarea placeholder="Type something..." rows={3}/>},
+    ],
+    Select: [
+        {label: "Default", node: <Select value="a" options={[{value: "a", label: "Option A"}, {value: "b", label: "Option B"}, {value: "c", label: "Option C"}]}/>},
+        {label: "Placeholder", node: <Select placeholder="Choose one" options={[{value: "a", label: "Option A"}, {value: "b", label: "Option B"}]}/>},
+        {label: "Disabled", node: <Select value="a" disabled options={[{value: "a", label: "Option A"}]}/>},
+    ],
+    TextNonEditableField: [
+        {label: "Default", node: <TextNonEditableField value="example value">Label:</TextNonEditableField>},
+    ],
+    TextFormField: [
+        {label: "Default", node: <TextFormField field={textFormFieldValue}>Label:</TextFormField>},
+    ],
+    TextEditableField: [
+        {label: "Default", node: <TextEditableField field={textEditableFieldValue}>Label:</TextEditableField>},
+    ],
+    Form: [
+        {label: "Basic form", node: <Form onSubmit={() => {}}>
+            <FormField label="Name" required><TextBox type="text"/></FormField>
+            <FormField label="Email" error="Enter a valid email address"><TextBox type="email"/></FormField>
+            <Button type="primary">Submit</Button>
+        </Form>},
+    ],
+
+    // --- Navigation ---
+    NavLink: [
+        {label: "Default", node: <div style={row}><NavLink to="/">Home</NavLink><NavLink to="/docs">Docs</NavLink></div>},
+    ],
+    Link: [
+        {label: "Default", node: <Link to="/somewhere">Click me</Link>},
+    ],
+    Breadcrumbs: [
+        {label: "Default", node: <Breadcrumbs items={[{label: "Home", to: "/"}, {label: "Library", to: "/library"}, {label: "Current page"}]}/>},
+    ],
+    Pagination: [
+        {label: "First page", node: <Pagination page={1} totalPages={10} onPageChange={() => {}}/>},
+        {label: "Middle page", node: <Pagination page={5} totalPages={10} onPageChange={() => {}}/>},
+        {label: "Last page", node: <Pagination page={10} totalPages={10} onPageChange={() => {}}/>},
+    ],
+    Navbar: [
+        {label: "Default", node: <Navbar brand="My App"><NavLink to="/">Home</NavLink><NavLink to="/docs">Docs</NavLink></Navbar>},
+    ],
+    Sidebar: [
+        {label: "Default", node: <Sidebar header="Sections" items={[{label: "Overview", to: "/"}, {label: "Settings", to: "/settings"}]}/>},
+    ],
+    Menu: [
+        {label: "Default", node: <Menu trigger="Actions" items={[{label: "Do a thing", onClick: () => {}}, {label: "Disabled", disabled: true}]}/>},
+    ],
+    Steps: [
+        {label: "Just started", node: <Steps current={0} steps={[{key: "a", title: "Account"}, {key: "b", title: "Profile"}, {key: "c", title: "Confirm"}]}/>},
+        {label: "In progress", node: <Steps current={1} steps={[{key: "a", title: "Account"}, {key: "b", title: "Profile"}, {key: "c", title: "Confirm"}]}/>},
+        {label: "Complete", node: <Steps current={2} steps={[{key: "a", title: "Account"}, {key: "b", title: "Profile"}, {key: "c", title: "Confirm"}]}/>},
+    ],
+
+    // --- Feedback ---
+    Alert: [
+        {label: "Types", node: <div style={col}>
+            <Alert type="info" title="Info">Heads up, this is informational.</Alert>
+            <Alert type="success" title="Success">Everything worked.</Alert>
+            <Alert type="warning" title="Warning">Double check this.</Alert>
+            <Alert type="danger" title="Danger">Something went wrong.</Alert>
+        </div>},
+        {label: "Dismissible", node: <Alert type="info" onDismiss={() => {}}>Click the x to dismiss.</Alert>},
+    ],
+    Toast: [
+        {label: "Trigger", node: <Button type="secondary" onClick={() => showToast("Hello from a toast", {type: "success"})}>Show toast</Button>},
+    ],
+    Tooltip: [
+        {label: "Default", node: <Tooltip content="More info"><Button type="secondary">Hover me</Button></Tooltip>},
+    ],
+    Spinner: [
+        {label: "Sizes", node: <div style={row}><Spinner size="1em"/><Spinner size="2em"/><Spinner size="3em"/></div>},
+    ],
+    Progress: [
+        {label: "Values", node: <div style={col}>
+            <Progress value={25} showLabel/>
+            <Progress value={65} showLabel/>
+            <Progress value={100} showLabel/>
+        </div>},
+        {label: "Types", node: <div style={col}>
+            <Progress value={60} type="primary"/>
+            <Progress value={60} type="secondary"/>
+            <Progress value={60} type="warning"/>
+            <Progress value={60} type="danger"/>
+        </div>},
+    ],
+    Skeleton: [
+        {label: "Text", node: <Skeleton lines={3}/>},
+        {label: "Circular / rectangular", node: <div style={row}><Skeleton variant="circular"/><Skeleton variant="rectangular" width="10em" height="4em"/></div>},
+    ],
+    Empty: [
+        {label: "Default", node: <Empty/>},
+        {label: "With action", node: <Empty description="Try adjusting your filters"><Button type="secondary">Create one</Button></Empty>},
+    ],
+
+    // --- Overlays ---
+    Modal: [
+        {label: "Trigger", node: <ButtonModal
+            openButtonText="Open modal"
+            modalAttrs={{title: "Confirm action", confirmButtonChildren: "Confirm", cancelButtonChildren: "Cancel", confirmButtonOnClick: (doneLoading) => doneLoading()}}>
+            Modal body content goes here.
+        </ButtonModal>},
+    ],
+    Drawer: [
+        {label: "Trigger", node: (() => {
+            const drawer = <Drawer title="Settings">Drawer body content goes here.</Drawer>
+            return <span style={{display: "contents"}}>{drawer}<Button type="secondary" onClick={() => drawer.showModal()}>Open drawer</Button></span>
+        })()},
+    ],
+    Popover: [
+        {label: "Trigger", node: <Popover trigger={<Button type="secondary">Click me</Button>} content="Rich popover content, shown on click."/>},
+    ],
+    Popconfirm: [
+        {label: "Trigger", node: <Popconfirm title="Delete this item?" onConfirm={() => {}}><Button type="danger">Delete</Button></Popconfirm>},
+    ],
+    ContextMenu: [
+        {label: "Trigger area", node: <ContextMenu items={[{label: "Copy", onClick: () => {}}, {label: "Paste", onClick: () => {}}, {label: "Delete", disabled: true}]}>
+            <div style={{padding: "2em", border: "1px dashed var(--background-5)", borderRadius: "0.25rem"}}>Right-click here</div>
+        </ContextMenu>},
+    ],
+    Command: [
+        {label: "Trigger", node: (() => {
+            const command = <Command placeholder="Search commands..." items={[
+                {key: "new-file", label: "New file", searchText: "new file create", onSelect: () => {}},
+                {key: "open-settings", label: "Open settings", searchText: "open settings preferences", onSelect: () => {}},
+            ]}/>
+            return <span style={{display: "contents"}}>{command}<Button type="secondary" onClick={() => command.showModal()}>Open command palette</Button></span>
+        })()},
+    ],
+
+    // --- Data Display ---
+    Badge: [
+        {label: "Types", node: <div style={row}>
+            <Badge type="primary">primary</Badge>
+            <Badge type="secondary">secondary</Badge>
+            <Badge type="warning">warning</Badge>
+            <Badge type="danger">danger</Badge>
+            <Badge type="neutral">neutral</Badge>
+        </div>},
+    ],
+    Card: [
+        {label: "Default", node: <Card header="Card title">Some card body content.</Card>},
+        {label: "With footer", node: <Card header="Card title" footer={<Button type="secondary">Action</Button>}>Some card body content.</Card>},
+    ],
+    Avatar: [
+        {label: "Sizes", node: <div style={row}><Avatar initials="JW" size="1.5em"/><Avatar initials="JW"/><Avatar initials="JW" size="3.5em"/></div>},
+        {label: "Image (falls back to initials if it fails to load)", node: <Avatar src="https://placehold.co/64x64" alt="Placeholder" initials="JW"/>},
+    ],
+    TimeAgo: [
+        {label: "Various times", node: <div style={col}>
+            <div><TimeAgo timestamp={new Date(Date.now() - 30 * 1000)}/></div>
+            <div><TimeAgo timestamp={new Date(Date.now() - 5 * 60000)}/></div>
+            <div><TimeAgo timestamp={new Date(Date.now() - 3 * 3600000)}/></div>
+            <div><TimeAgo timestamp={new Date(Date.now() - 2 * 86400000)}/></div>
+        </div>},
+    ],
+    Divider: [
+        {label: "Horizontal", node: <div>Above<Divider/>Below</div>},
+        {label: "Vertical", node: <div style={{display: "flex", height: "2em", alignItems: "center"}}>Left<Divider orientation="vertical"/>Right</div>},
+    ],
+    Tabs: [
+        {label: "Default", node: <Tabs tabs={[{key: "a", label: "A", content: "Panel A content."}, {key: "b", label: "B", content: "Panel B content."}]}/>},
+    ],
+    Accordion: [
+        {label: "Independent", node: <Accordion items={[{header: "Section one", content: "Content one.", defaultOpen: true}, {header: "Section two", content: "Content two."}]}/>},
+        {label: "Exclusive", node: <Accordion exclusive items={[{header: "Section one", content: "Content one.", defaultOpen: true}, {header: "Section two", content: "Content two."}]}/>},
+    ],
+    Tag: [
+        {label: "Types", node: <div style={row}>
+            <Tag type="primary">primary</Tag>
+            <Tag type="secondary">secondary</Tag>
+            <Tag type="warning">warning</Tag>
+            <Tag type="danger">danger</Tag>
+        </div>},
+        {label: "Removable", node: <Tag type="primary" onRemove={() => {}}>removable</Tag>},
+    ],
+    Collapse: [
+        {label: "Default", node: <Collapse header="Click to expand">Hidden content revealed on expand.</Collapse>},
+    ],
+    Statistic: [
+        {label: "Examples", node: <div style={row}>
+            <Statistic title="Active users" value={1284}/>
+            <Statistic title="Revenue" value="12,480" prefix="$"/>
+            <Statistic title="Uptime" value="99.98" suffix="%"/>
+        </div>},
+    ],
+    List: [
+        {label: "Default", node: <List items={[
+            {key: "1", leading: <Avatar initials="JW"/>, title: "Jonathan Word", description: "jonathan@example.com"},
+            {key: "2", leading: <Avatar initials="AB"/>, title: "Alex Baker", description: "alex@example.com"},
+        ]}/>},
+    ],
+    Timeline: [
+        {label: "Default", node: <Timeline items={[
+            {key: "1", title: "Order placed", type: "secondary"},
+            {key: "2", title: "Shipped", type: "primary"},
+            {key: "3", title: "Delivered"},
+        ]}/>},
+    ],
+    AspectRatio: [
+        {label: "16:9", node: <AspectRatio ratio={16 / 9} style={{maxWidth: "280px"}}>
+            <div style={{background: "var(--primary-3)", display: "flex", alignItems: "center", justifyContent: "center"}}>16:9</div>
+        </AspectRatio>},
+    ],
+    ScrollArea: [
+        {label: "Default", node: <ScrollArea maxHeight="8em" style={{maxWidth: "260px", border: "1px solid var(--background-4)", borderRadius: "0.25rem", padding: "8px"}}>
+            {Array.from({length: 12}).map((_, i) => <div style={{padding: "4px 0"}}>Row {i + 1}</div>)}
+        </ScrollArea>},
+    ],
+    Table: [
+        {label: "Default", node: <Table
+            columns={[
+                {key: "name", header: "Name", render: (row: {name: string, role: string}) => row.name},
+                {key: "role", header: "Role", render: (row: {name: string, role: string}) => row.role},
+            ]}
+            rows={[{name: "Jonathan Word", role: "Engineer"}, {name: "Alex Baker", role: "Designer"}]}/>},
+    ],
+    DataTable: [
+        {label: "Sortable, searchable, paginated, resizable, with hideable columns", node: <DataTable
+            searchable
+            searchPlaceholder="Search people..."
+            pageSize={4}
+            columns={[
+                {key: "name", header: "Name", render: (row: {name: string, role: string, department: string, status: string}) => row.name, sortValue: (row) => row.name, filterValue: (row) => row.name},
+                {key: "role", header: "Role", render: (row: {name: string, role: string, department: string, status: string}) => row.role, sortValue: (row) => row.role, filterValue: (row) => row.role},
+                {key: "department", header: "Department", render: (row: {name: string, role: string, department: string, status: string}) => row.department, sortValue: (row) => row.department, filterValue: (row) => row.department},
+                {key: "status", header: "Status", render: (row: {name: string, role: string, department: string, status: string}) => row.status, align: "end", width: 110, minWidth: 90},
+            ]}
+            rows={[
+                {name: "Jonathan Word", role: "Engineer", department: "Platform", status: "active"},
+                {name: "Alex Baker", role: "Designer", department: "Growth", status: "active"},
+                {name: "Casey Diaz", role: "Support", department: "Success", status: "inactive"},
+                {name: "Morgan Lee", role: "Manager", department: "Infra", status: "active"},
+                {name: "Riley Chen", role: "Analyst", department: "Growth", status: "active"},
+                {name: "Jordan Smith", role: "Engineer", department: "Platform", status: "inactive"},
+                {name: "Taylor Kim", role: "Designer", department: "Design", status: "active"},
+                {name: "Sam Patel", role: "Support", department: "Success", status: "active"},
+                {name: "Drew Nguyen", role: "Manager", department: "Infra", status: "active"},
+            ]}/>},
+    ],
+    Carousel: [
+        {label: "Default", node: <Carousel slides={[
+            <div style={{padding: "2.5em", textAlign: "center", background: "var(--primary-3)"}}>Slide 1</div>,
+            <div style={{padding: "2.5em", textAlign: "center", background: "var(--secondary-3)"}}>Slide 2</div>,
+            <div style={{padding: "2.5em", textAlign: "center", background: "var(--warning-3)"}}>Slide 3</div>,
+        ]}/>},
+    ],
+    Calendar: [
+        {label: "Default", node: <Calendar value={new Date()} onSelectDate={() => {}}/>},
+    ],
+    Tree: [
+        {label: "Default", node: <Tree nodes={[
+            {key: "src", label: "src", defaultOpen: true, children: [
+                {key: "components", label: "components", children: [{key: "button", label: "button.tsx"}]},
+                {key: "index", label: "index.ts"},
+            ]},
+            {key: "readme", label: "readme.md"},
+        ]}/>},
+    ],
+
+    // --- Data Entry ---
+    DatePicker: [
+        {label: "Default", node: <DatePicker value="2026-01-15"/>},
+        {label: "Disabled", node: <DatePicker value="2026-01-15" disabled/>},
+    ],
+    Slider: [
+        {label: "Values", node: <div style={col}>
+            <Slider value={20} style={{width: "12em"}}/>
+            <Slider value={60} style={{width: "12em"}}/>
+            <Slider value={90} style={{width: "12em"}}/>
+        </div>},
+    ],
+    InputNumber: [
+        {label: "Default", node: <InputNumber value={5}/>},
+        {label: "With bounds", node: <InputNumber value={5} min={0} max={10} step={1}/>},
+    ],
+    ColorPicker: [
+        {label: "Values", node: <div style={row}><ColorPicker value="#66b2ff"/><ColorPicker value="#c6ff9e"/><ColorPicker value="#ff6666"/></div>},
+    ],
+    Combobox: [
+        {label: "Default", node: <Combobox placeholder="Choose a fruit" options={[{value: "Apple"}, {value: "Banana"}, {value: "Cherry"}]}/>},
+    ],
+    Upload: [
+        {label: "Default", node: <Upload accept="image/*">Click or drag a file here</Upload>},
+        {label: "Disabled", node: <Upload disabled>Disabled</Upload>},
+    ],
+    Rate: [
+        {label: "Values", node: <div style={col}><Rate value={2}/><Rate value={4}/></div>},
+        {label: "Disabled", node: <Rate value={3} disabled/>},
+    ],
+
+    // --- Utility ---
+    Icon: [
+        {label: "Default", node: <I i="gear" style={{height: "2em"}}/>},
+    ],
+}
+
 /** Converts a PascalCase story name to a kebab-case URL slug, e.g. "ContextMenu" -> "context-menu" */
 function slugify(name: string): string {
     return name.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase()
@@ -402,6 +806,7 @@ export const componentDocs: ComponentDoc[] = stories.map(story => ({
     slug: slugify(story.name),
     description: descriptions[story.name] ?? "",
     props: propTables[story.name] ?? [],
+    examples: examplesByName[story.name] ?? [],
 }))
 
 /** Display order for sidebar/nav groups */

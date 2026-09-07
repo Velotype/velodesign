@@ -9,6 +9,7 @@ class PopoverGallery extends Component<EmptyAttrs> {
         return <div style={{marginTop:"40px", display:"flex", gap:"40px"}}>
             <Popover id="default-popover" trigger={<Button type="secondary">Click me</Button>} content="Rich popover content, shown on click."/>
             <Popover trigger={<Button type="secondary">Right side</Button>} placement="right" content="A popover to the right."/>
+            <Popover id="no-outside-close-popover" trigger={<Button type="secondary">Stays open</Button>} content="Only closes via its own trigger - closeOnOutsideClick={false}." closeOnOutsideClick={false}/>
         </div>
     }
 }
