@@ -5,34 +5,64 @@ import {
     Accordion,
     addLicense,
     Alert, type AlertType,
+    AspectRatio,
     Avatar,
     Badge, type BadgeType,
     Breadcrumbs,
     Button, type ButtonType,
     ButtonModal,
+    Calendar,
     Card,
+    Carousel,
     Checkbox,
+    Collapse,
+    ColorPicker,
+    Combobox,
+    Command,
+    ContextMenu,
+    DatePicker,
     Divider,
+    Drawer,
+    Empty,
+    Form,
+    FormField,
     I, Icon, registerIcon,
+    InputNumber,
     Link,
+    List,
     Menu,
     Navbar,
     NavLink,
     Pagination,
+    Popconfirm,
+    Popover, type PopoverPlacement,
+    Progress, type ProgressType,
     RadioButton,
+    Rate,
+    Resizable,
+    ScrollArea,
     Select,
-    Sidebar,
     showToast, type ToastType,
+    Sidebar,
+    Skeleton,
+    Slider,
     Spinner,
+    Statistic,
+    Steps,
+    Table,
     Tabs,
+    Tag, type TagType,
     TextBox, type TextBoxTypeType,
     Textarea,
     TextEditableField,
     TextFormField,
     TextNonEditableField,
     TimeAgo,
+    Timeline,
     Toggle,
     Tooltip, type TooltipPlacement,
+    Tree,
+    Upload,
 } from "../../src/index.ts"
 
 /** A single editable control shown in the Explorer's Controls panel */
@@ -68,6 +98,7 @@ registerIcon("gear", new Icon(512, 512, "M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-
 
 const textFormFieldValue = new RenderBasic<string>("editable value")
 const textEditableFieldValue = new RenderBasic<string>("click edit to change me")
+const commandLastPicked = new RenderBasic<string>("none")
 
 export const stories: ComponentStory[] = [
     // --- Form ---
@@ -415,6 +446,312 @@ export const stories: ComponentStory[] = [
                 {header: "Section two", content: "Content two."},
                 {header: "Section three", content: "Content three."},
             ]}/>,
+    },
+
+    // --- Data Entry ---
+    {
+        name: "DatePicker", group: "Data Entry",
+        defaultProps: {value: "2026-01-15", disabled: false},
+        controls: {
+            value: {kind: "text", label: "value"},
+            disabled: {kind: "boolean", label: "disabled"},
+        },
+        render: (props) => <DatePicker value={props.value as string} disabled={props.disabled as boolean}/>,
+    },
+    {
+        name: "Slider", group: "Data Entry",
+        defaultProps: {value: 40, min: 0, max: 100, step: 1, disabled: false},
+        controls: {
+            min: {kind: "number", label: "min"},
+            max: {kind: "number", label: "max"},
+            step: {kind: "number", label: "step"},
+            disabled: {kind: "boolean", label: "disabled"},
+        },
+        render: (props, setProp) => <Slider
+            value={props.value as number}
+            min={props.min as number}
+            max={props.max as number}
+            step={props.step as number}
+            disabled={props.disabled as boolean}
+            onInput={(event) => setProp("value", Number((event.target as HTMLInputElement).value))}/>,
+    },
+    {
+        name: "InputNumber", group: "Data Entry",
+        defaultProps: {value: 5, disabled: false},
+        controls: {
+            disabled: {kind: "boolean", label: "disabled"},
+        },
+        render: (props) => <InputNumber value={props.value as number} disabled={props.disabled as boolean}/>,
+    },
+    {
+        name: "ColorPicker", group: "Data Entry",
+        defaultProps: {value: "#66b2ff", disabled: false},
+        controls: {
+            value: {kind: "text", label: "value"},
+            disabled: {kind: "boolean", label: "disabled"},
+        },
+        render: (props) => <ColorPicker value={props.value as string} disabled={props.disabled as boolean}/>,
+    },
+    {
+        name: "Combobox", group: "Data Entry",
+        defaultProps: {placeholder: "Choose a fruit", disabled: false},
+        controls: {
+            placeholder: {kind: "text", label: "placeholder"},
+            disabled: {kind: "boolean", label: "disabled"},
+        },
+        render: (props) => <Combobox
+            placeholder={props.placeholder as string}
+            disabled={props.disabled as boolean}
+            options={[{value: "Apple"}, {value: "Banana"}, {value: "Cherry"}]}/>,
+    },
+    {
+        name: "Upload", group: "Data Entry",
+        defaultProps: {disabled: false, children: "Click or drag a file here"},
+        controls: {
+            disabled: {kind: "boolean", label: "disabled"},
+            children: {kind: "text", label: "children"},
+        },
+        render: (props) => <Upload disabled={props.disabled as boolean}>{props.children as string}</Upload>,
+    },
+    {
+        name: "Rate", group: "Data Entry",
+        defaultProps: {value: 3, count: 5, disabled: false},
+        controls: {
+            count: {kind: "number", label: "count"},
+            disabled: {kind: "boolean", label: "disabled"},
+        },
+        render: (props, setProp) => <Rate
+            value={props.value as number}
+            count={props.count as number}
+            disabled={props.disabled as boolean}
+            onChange={(event) => setProp("value", Number((event.target as HTMLInputElement).value))}/>,
+    },
+    {
+        name: "Form", group: "Data Entry",
+        defaultProps: {},
+        controls: {},
+        render: () => <Form onSubmit={() => {}}>
+            <FormField label="Name" required><TextBox type="text"/></FormField>
+            <FormField label="Email" error="Enter a valid email address"><TextBox type="email"/></FormField>
+            <Button type="primary">Submit</Button>
+        </Form>,
+    },
+
+    // --- Navigation ---
+    {
+        name: "Steps", group: "Navigation",
+        defaultProps: {current: 1},
+        controls: {
+            current: {kind: "number", label: "current"},
+        },
+        render: (props) => <Steps
+            current={props.current as number}
+            steps={[{key: "a", title: "Account"}, {key: "b", title: "Profile"}, {key: "c", title: "Confirm"}]}/>,
+    },
+
+    // --- Feedback ---
+    {
+        name: "Progress", group: "Feedback",
+        defaultProps: {value: 65, type: "primary", showLabel: true},
+        controls: {
+            value: {kind: "number", label: "value"},
+            type: {kind: "select", label: "type", options: ["primary", "secondary", "warning", "danger"]},
+            showLabel: {kind: "boolean", label: "showLabel"},
+        },
+        render: (props) => <Progress value={props.value as number} type={props.type as ProgressType} showLabel={props.showLabel as boolean}/>,
+    },
+    {
+        name: "Skeleton", group: "Feedback",
+        defaultProps: {variant: "text", lines: 2},
+        controls: {
+            variant: {kind: "select", label: "variant", options: ["text", "circular", "rectangular"]},
+            lines: {kind: "number", label: "lines"},
+        },
+        render: (props) => <Skeleton variant={props.variant as "text" | "circular" | "rectangular"} lines={props.lines as number}/>,
+    },
+    {
+        name: "Empty", group: "Feedback",
+        defaultProps: {title: "No data", description: "Try adjusting your filters"},
+        controls: {
+            title: {kind: "text", label: "title"},
+            description: {kind: "text", label: "description"},
+        },
+        render: (props) => <Empty title={props.title as string} description={props.description as string}/>,
+    },
+
+    // --- Overlays ---
+    {
+        name: "Drawer", group: "Overlays",
+        defaultProps: {title: "Settings", placement: "right"},
+        controls: {
+            title: {kind: "text", label: "title"},
+            placement: {kind: "select", label: "placement", options: ["left", "right", "top", "bottom"]},
+        },
+        render: (props) => {
+            const drawer = <Drawer title={props.title as string} placement={props.placement as "left" | "right" | "top" | "bottom"}>Drawer body content goes here.</Drawer>
+            return <span style={{display: "contents"}}>{drawer}<Button type="secondary" onClick={() => drawer.showModal()}>Open drawer</Button></span>
+        },
+    },
+    {
+        name: "Popover", group: "Overlays",
+        defaultProps: {content: "Rich popover content, shown on click.", placement: "bottom"},
+        controls: {
+            content: {kind: "text", label: "content"},
+            placement: {kind: "select", label: "placement", options: ["top", "bottom", "left", "right"]},
+        },
+        render: (props) => <Popover
+            trigger={<Button type="secondary">Click me</Button>}
+            content={props.content as string}
+            placement={props.placement as PopoverPlacement}/>,
+    },
+    {
+        name: "Popconfirm", group: "Overlays",
+        defaultProps: {title: "Delete this item?"},
+        controls: {
+            title: {kind: "text", label: "title"},
+        },
+        render: (props) => <Popconfirm title={props.title as string} onConfirm={() => {}}><Button type="danger">Delete</Button></Popconfirm>,
+    },
+    {
+        name: "ContextMenu", group: "Overlays",
+        defaultProps: {},
+        controls: {},
+        render: () => <ContextMenu items={[{label: "Copy", onClick: () => {}}, {label: "Paste", onClick: () => {}}, {label: "Delete", disabled: true}]}>
+            <div style={{padding: "2em", border: "1px dashed var(--background-5)", borderRadius: "0.25rem"}}>Right-click here</div>
+        </ContextMenu>,
+    },
+    {
+        name: "Command", group: "Overlays",
+        defaultProps: {},
+        controls: {},
+        render: () => {
+            const command = <Command placeholder="Search commands..." items={[
+                {key: "new-file", label: "New file", searchText: "new file create", onSelect: () => { commandLastPicked.value = "New file" }},
+                {key: "open-settings", label: "Open settings", searchText: "open settings preferences", onSelect: () => { commandLastPicked.value = "Open settings" }},
+            ]}/>
+            return <span style={{display: "contents"}}>
+                {command}
+                <Button type="secondary" onClick={() => command.showModal()}>Open command palette</Button>
+                <span style={{marginInlineStart: "1em"}}>Last picked: {commandLastPicked}</span>
+            </span>
+        },
+    },
+
+    // --- Data Display ---
+    {
+        name: "Tag", group: "Data Display",
+        defaultProps: {type: "primary", children: "Tag", removable: false},
+        controls: {
+            type: {kind: "select", label: "type", options: ["primary", "secondary", "warning", "danger", "neutral"]},
+            children: {kind: "text", label: "children"},
+            removable: {kind: "boolean", label: "removable"},
+        },
+        render: (props) => <Tag type={props.type as TagType} onRemove={props.removable ? () => {} : undefined}>{props.children as string}</Tag>,
+    },
+    {
+        name: "Collapse", group: "Data Display",
+        defaultProps: {header: "Click to expand", defaultOpen: false},
+        controls: {
+            header: {kind: "text", label: "header"},
+            defaultOpen: {kind: "boolean", label: "defaultOpen"},
+        },
+        render: (props) => <Collapse header={props.header as string} defaultOpen={props.defaultOpen as boolean}>Hidden content revealed on expand.</Collapse>,
+    },
+    {
+        name: "Statistic", group: "Data Display",
+        defaultProps: {title: "Active users", value: 1284, prefix: "", suffix: ""},
+        controls: {
+            title: {kind: "text", label: "title"},
+            value: {kind: "text", label: "value"},
+            prefix: {kind: "text", label: "prefix"},
+            suffix: {kind: "text", label: "suffix"},
+        },
+        render: (props) => <Statistic title={props.title as string} value={props.value as string} prefix={(props.prefix as string) || undefined} suffix={(props.suffix as string) || undefined}/>,
+    },
+    {
+        name: "List", group: "Data Display",
+        defaultProps: {},
+        controls: {},
+        render: () => <List items={[
+            {key: "1", leading: <Avatar initials="JW"/>, title: "Jonathan Word", description: "jonathan@example.com"},
+            {key: "2", leading: <Avatar initials="AB"/>, title: "Alex Baker", description: "alex@example.com"},
+        ]}/>,
+    },
+    {
+        name: "Timeline", group: "Data Display",
+        defaultProps: {},
+        controls: {},
+        render: () => <Timeline items={[
+            {key: "1", title: "Order placed", type: "secondary"},
+            {key: "2", title: "Shipped", type: "primary"},
+            {key: "3", title: "Delivered"},
+        ]}/>,
+    },
+    {
+        name: "AspectRatio", group: "Data Display",
+        defaultProps: {ratio: 16 / 9},
+        controls: {
+            ratio: {kind: "number", label: "ratio"},
+        },
+        render: (props) => <AspectRatio ratio={props.ratio as number} style={{maxWidth: "320px"}}>
+            <div style={{background: "var(--primary-3)", display: "flex", alignItems: "center", justifyContent: "center"}}>{(props.ratio as number).toFixed(2)}</div>
+        </AspectRatio>,
+    },
+    {
+        name: "ScrollArea", group: "Data Display",
+        defaultProps: {maxHeight: "8em"},
+        controls: {
+            maxHeight: {kind: "text", label: "maxHeight"},
+        },
+        render: (props) => <ScrollArea maxHeight={props.maxHeight as string} style={{maxWidth: "260px", border: "1px solid var(--background-4)", borderRadius: "0.25rem", padding: "8px"}}>
+            {Array.from({length: 20}).map((_, i) => <div style={{padding: "4px 0"}}>Row {i + 1}</div>)}
+        </ScrollArea>,
+    },
+    {
+        name: "Table", group: "Data Display",
+        defaultProps: {},
+        controls: {},
+        render: () => <Table
+            columns={[
+                {key: "name", header: "Name", render: (row: {name: string, role: string}) => row.name},
+                {key: "role", header: "Role", render: (row: {name: string, role: string}) => row.role},
+            ]}
+            rows={[{name: "Jonathan Word", role: "Engineer"}, {name: "Alex Baker", role: "Designer"}]}/>,
+    },
+    {
+        name: "Carousel", group: "Data Display",
+        defaultProps: {showDots: true},
+        controls: {
+            showDots: {kind: "boolean", label: "showDots"},
+        },
+        render: (props) => <Carousel
+            showDots={props.showDots as boolean}
+            slides={[
+                <div style={{padding: "2.5em", textAlign: "center", background: "var(--primary-3)"}}>Slide 1</div>,
+                <div style={{padding: "2.5em", textAlign: "center", background: "var(--secondary-3)"}}>Slide 2</div>,
+                <div style={{padding: "2.5em", textAlign: "center", background: "var(--warning-3)"}}>Slide 3</div>,
+            ]}/>,
+    },
+    {
+        name: "Calendar", group: "Data Display",
+        defaultProps: {},
+        controls: {},
+        render: (_props, setProp) => <Calendar value={new Date(2026, 0, 15)} onSelectDate={(date) => setProp("selected", date.toDateString())}/>,
+    },
+    {
+        name: "Tree", group: "Data Display",
+        defaultProps: {},
+        controls: {},
+        render: () => <Tree nodes={[
+            {key: "src", label: "src", defaultOpen: true, children: [
+                {key: "components", label: "components", children: [
+                    {key: "button", label: "button.tsx"},
+                    {key: "card", label: "card.tsx"},
+                ]},
+                {key: "index", label: "index.ts"},
+            ]},
+            {key: "readme", label: "readme.md"},
+        ]}/>,
     },
 
     // --- Utility ---

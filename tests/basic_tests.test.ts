@@ -253,4 +253,98 @@ describe('basic component rendering', () => {
         if (afterSecondClick.first) {fail("ERROR: expected first section to close once a sibling in the exclusive group opened")}
     })
 
+    itWrap("drawer opens on trigger click and closes on its close button", "drawer", "#open-drawer-btn", async (selection: ElementHandle) => {
+        await selection.click()
+
+        const openedDrawer = await page.waitForSelector(".vtd-drawer[open]")
+        if (!openedDrawer) {fail("ERROR: drawer did not open after clicking trigger")}
+
+        const closed = await page.evaluate(() => {
+            const dialog = document.querySelector(".vtd-drawer") as HTMLDialogElement | null
+            const closeButton = dialog?.querySelector("button") as HTMLElement | undefined
+            closeButton?.click()
+            return !dialog?.open
+        })
+        if (!closed) {fail("ERROR: expected drawer to close after clicking its close button")}
+    })
+
+    itWrap("popover opens on trigger click and closes on an outside click", "popover", "#default-popover", async (_selection: ElementHandle) => {
+        const trigger = await page.$("#default-popover .vtd-popover-trigger")
+        if (!trigger) {fail("ERROR: trigger not found")}
+        await trigger.click()
+
+        const opened = await page.waitForSelector("#default-popover .vtd-popover-content.vtd-popover-open")
+        if (!opened) {fail("ERROR: popover did not open after clicking trigger")}
+
+        await page.evaluate(() => { document.body.click() })
+
+        const stillOpen = await page.$("#default-popover .vtd-popover-content.vtd-popover-open")
+        if (stillOpen) {fail("ERROR: expected popover to close after an outside click")}
+    })
+
+    itWrap("popconfirm opens on trigger click and calls onConfirm when confirmed", "popconfirm", "#default-popconfirm", async (_selection: ElementHandle) => {
+        const trigger = await page.$("#default-popconfirm .vtd-popconfirm-trigger")
+        if (!trigger) {fail("ERROR: trigger not found")}
+        await trigger.click()
+
+        const opened = await page.waitForSelector("#default-popconfirm .vtd-popconfirm-content.vtd-popconfirm-open")
+        if (!opened) {fail("ERROR: popconfirm did not open after clicking trigger")}
+
+        const confirmClosed = await page.evaluate(() => {
+            const buttons = document.querySelectorAll("#default-popconfirm .vtd-popconfirm-actions button")
+            const confirmButton = buttons[buttons.length - 1] as HTMLElement | undefined
+            confirmButton?.click()
+            return !document.querySelector("#default-popconfirm .vtd-popconfirm-content.vtd-popconfirm-open")
+        })
+        if (!confirmClosed) {fail("ERROR: expected popconfirm to close after clicking confirm")}
+    })
+
+    itWrap("collapse toggles open on its header click", "collapse", "#default-collapse", async (_selection: ElementHandle) => {
+        const isOpen = () => page.evaluate(() => (document.querySelector("#default-collapse details") as HTMLDetailsElement | null)?.open)
+        const clickHeader = () => page.evaluate(() => (document.querySelector("#default-collapse summary") as HTMLElement | null)?.click())
+
+        if (await isOpen()) {fail("ERROR: expected collapse to start closed")}
+        await clickHeader()
+        if (!(await isOpen())) {fail("ERROR: expected collapse to open after clicking its header")}
+    })
+
+    itWrap("carousel advances to the next slide on the next-arrow click", "carousel", "#default-carousel", async (_selection: ElementHandle) => {
+        const slideText = () => page.evaluate(() => document.querySelector("#default-carousel .vtd-carousel-slide")?.textContent)
+        const clickNext = () => page.evaluate(() => (document.querySelector("#default-carousel .vtd-carousel-nav-next") as HTMLElement | null)?.click())
+
+        const before = await slideText()
+        if (before != "Slide 1") {fail(`ERROR: expected carousel to start on Slide 1, was: ${before}`)}
+        await clickNext()
+        const after = await slideText()
+        if (after != "Slide 2") {fail(`ERROR: expected carousel to advance to Slide 2, was: ${after}`)}
+    })
+
+    itWrap("command palette filters by search and selects the highlighted item on Enter", "command", "#open-command-btn", async (selection: ElementHandle) => {
+        await selection.click()
+
+        const opened = await page.waitForSelector(".vtd-command[open]")
+        if (!opened) {fail("ERROR: command palette did not open after clicking trigger")}
+
+        await page.evaluate(() => {
+            const input = document.querySelector(".vtd-command-input") as HTMLInputElement
+            input.value = "settings"
+            input.dispatchEvent(new Event("input", {bubbles: true}))
+        })
+
+        const filteredCount = await page.evaluate(() => document.querySelectorAll(".vtd-command-item").length)
+        if (filteredCount != 1) {fail(`ERROR: expected search for "settings" to filter to 1 item, got: ${filteredCount}`)}
+
+        await page.evaluate(() => {
+            const input = document.querySelector(".vtd-command-input") as HTMLInputElement
+            input.dispatchEvent(new KeyboardEvent("keydown", {key: "Enter", bubbles: true}))
+        })
+
+        const lastPicked = await page.waitForSelector("#last-picked-command")
+        if (!lastPicked) {fail("ERROR: last-picked-command element not found")}
+        assertEquals(await lastPicked.innerText(), "Last picked: Open settings")
+
+        const stillOpen = await page.$(".vtd-command[open]")
+        if (stillOpen) {fail("ERROR: expected command palette to close after picking an item")}
+    })
+
 })

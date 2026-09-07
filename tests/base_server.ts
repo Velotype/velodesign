@@ -23,7 +23,11 @@ export async function startAppServer(server_port: number): Promise<App> {
     const setOfModules = ['button','icon','page-selector','textbox','modal','textformfield','radiobutton','showcase','timeago',
         'checkbox','toggle','textarea','select','badge','card','alert','tooltip','spinner','tabs','divider',
         'navlink','breadcrumbs','pagination','navbar','sidebar','menu',
-        'toast','accordion','avatar']
+        'toast','accordion','avatar',
+        'progress','skeleton','tag','empty','collapse','statistic','list','timeline','aspect-ratio','scroll-area',
+        'datepicker','slider','input-number','colorpicker','combobox','upload',
+        'drawer','popover','popconfirm','steps','rate',
+        'table','form','context-menu','resizable','carousel','calendar','tree','command']
     setOfModules.forEach((module) => {
         router.get(`/${module}`, function() {
             const response = new Response(`<!DOCTYPE html><html><body>
