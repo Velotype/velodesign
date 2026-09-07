@@ -29,6 +29,26 @@ let accordionInstanceCounter = 0
  * A list of collapsible sections, built on native `<details>`/`<summary>` pairs - the browser
  * handles opening/closing (and, when `exclusive` is set, restricting to one open section at a
  * time via the native `name` grouping) with no JS state.
+ *
+ * The open/close transition is pure CSS, no JS. Three non-obvious pieces make it work:
+ * - `.vtd-accordion-content` overrides the browser's default `display:none` on a closed
+ *   `<details>`'s body (author styles win over that UA default), replacing it with
+ *   `display:grid; grid-template-rows:minmax(0,0fr)` / `minmax(0,1fr)` when open - the
+ *   "animate to auto height" trick, since `grid-template-rows` accepts fraction units as an
+ *   actually-transitionable value. (A `height:0`/`auto` transition looks simpler but silently
+ *   doesn't animate at all without `interpolate-size:allow-keywords`, which - checked directly
+ *   - isn't supported by Safari or Firefox and only shipped in Chrome 129+, too narrow a base
+ *   to build this on.)
+ * - The `minmax(0, ...)` matters, not just `0fr`/`1fr` alone: a lone `fr` track still has an
+ *   implicit automatic minimum driven by its content's min-content size, so without wrapping
+ *   it the "closed" track measured ~14px (one line of text) instead of 0 in testing, even
+ *   with `min-height:0` set on the content wrapper.
+ *   `.vtd-accordion-content-inner` still needs `overflow:hidden` (to clip content while the
+ *   row is shrunk) and `min-height:0` (grid items default to `min-height:auto`, which would
+ *   otherwise also push the row back open regardless of the track's own sizing).
+ * - `visibility` flips at the *end* of the closing transition (via a transition-delay) so
+ *   closed content still leaves the tab order immediately, same as it did under the browser's
+ *   native `display:none`.
  */
 export const Accordion: FunctionComponent<AccordionAttrsType> = function(attrs: AccordionAttrsType, _children: RenderableElements[]): HTMLDivElement {
     if (!areAccordionStylesMounted) {
@@ -63,7 +83,19 @@ transition:transform 0.15s ease-in-out;
 flex-shrink:0;
 }
 .vtd-accordion-item[open] .vtd-accordion-chevron{transform:rotate(-135deg);}
-.vtd-accordion-content{padding:0 0.9em 0.9em 0.9em;}
+.vtd-accordion-content{
+display:grid;
+content-visibility:visible;
+grid-template-rows:minmax(0,0fr);
+visibility:hidden;
+transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0.2s;
+}
+.vtd-accordion-item[open] .vtd-accordion-content{
+grid-template-rows:minmax(0,1fr);
+visibility:visible;
+transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0s;
+}
+.vtd-accordion-content-inner{overflow:hidden;min-height:0;padding:0 0.9em 0.9em 0.9em;}
 `, "vtd/Accordion")
     }
 
@@ -72,7 +104,7 @@ flex-shrink:0;
     return passthroughAttrsToElement<HTMLDivElement>(<div>
         {attrs.items.map(item => <details class="vtd-accordion-item" open={item.defaultOpen} name={groupName}>
             <summary class="vtd-accordion-header">{item.header}<span class="vtd-accordion-chevron"/></summary>
-            <div class="vtd-accordion-content">{item.content}</div>
+            <div class="vtd-accordion-content"><div class="vtd-accordion-content-inner">{item.content}</div></div>
         </details>)}
     </div>, attrs)
 }
