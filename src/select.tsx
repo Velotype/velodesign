@@ -22,8 +22,10 @@ export type SelectAttrsType = {
     options: SelectOptionType[]
     /** Currently selected value */
     value?: string
-    /** If set, renders as a disabled, hidden first option with this label (until a real option is chosen) */
+    /** If set, renders as a hidden first option with this label (until a real option is chosen) */
     placeholder?: string
+    /** If `true`, the placeholder option can't be re-selected once a real option is chosen - i.e. there's no way back to "nothing selected" through the UI (default: `false`, so the user can pick the placeholder again to clear their selection) */
+    placeholderDisabled?: boolean
     /** Is the select disabled? */
     disabled?: boolean
     /** If this field is required in a `<form/>` */
@@ -81,7 +83,7 @@ pointer-events:none;
             disabled={attrs.disabled}
             required={attrs.required}
             onChange={attrs.onChange}>
-            {attrs.placeholder && <option value="" disabled selected={!attrs.value}>{attrs.placeholder}</option>}
+            {attrs.placeholder && <option value="" disabled={attrs.placeholderDisabled} selected={!attrs.value}>{attrs.placeholder}</option>}
             {attrs.options.map(option => <option value={option.value} disabled={option.disabled} selected={option.value == attrs.value}>{option.label}</option>)}
         </select>
         <span class="vtd-select-chevron"/>

@@ -21,6 +21,8 @@ export const Navbar: FunctionComponent<NavbarAttrsType> = function(attrs: Navbar
         areNavbarStylesMounted = true
         setStylesheet(`
 .vtd-navbar{
+width:100%;
+box-sizing:border-box;
 display:flex;
 flex-wrap:wrap;
 align-items:center;

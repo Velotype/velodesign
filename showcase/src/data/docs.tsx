@@ -8,7 +8,7 @@ import {
     Accordion, Alert, AspectRatio, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, ButtonModal,
     Calendar, Card, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu,
     DatePicker, Divider, Drawer, Empty, Form, FormField, I, InputNumber, Link, List, Menu, Modal,
-    Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, ScrollArea, Select,
+    Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, ScrollArea, Select, SelectMenu,
     showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, DataTable, Tabs, Tag, TextBox,
     Textarea, TextEditableField, TextFormField, TextNonEditableField, TimeAgo, Timeline, Toggle,
     Tooltip, Tree, Upload,
@@ -21,10 +21,26 @@ export type PropDoc = {
     description: string
 }
 
-/** One labeled variant shown on a component's page, e.g. {label: "Disabled", node: <Button disabled>...} */
+/**
+ * One labeled variant shown on a component's page, e.g. {label: "Disabled", node: () => <Button disabled>...}
+ *
+ * `node` is a factory, not a precomputed value, so every place that shows an example (a
+ * component's own page, a category overview page, potentially more than one of either across a
+ * session) gets its own freshly-constructed instance. A precomputed `RenderableElements` value
+ * is itself a real DOM node/Component instance built exactly once, at module load - embedding
+ * that same object in a second location doesn't clone it, it just relocates it, and this
+ * framework's `mount()`/`unmount()` lifecycle (where interactive components add/remove their
+ * event listeners) isn't guaranteed to re-run just because a pre-built node gets re-inserted
+ * elsewhere. A shared instance whose subtree gets unmounted once (any navigation away from
+ * whichever page currently holds it) can end up permanently non-interactive everywhere
+ * afterward - this is what made `SelectMenu`'s category-page preview stop responding to clicks,
+ * and is suspected of causing `ContextMenu`'s inconsistent behavior between its own page and
+ * the Overlays category page. Calling `node()` fresh each render sidesteps the whole class of
+ * bug instead of relying on the mount lifecycle firing correctly for a relocated node.
+ */
 export type ExampleDoc = {
     label: string
-    node: RenderableElements
+    node: () => RenderableElements
 }
 
 /** A `ComponentStory` (from the Explorer) augmented with showcase-only documentation */
@@ -49,6 +65,7 @@ const descriptions: Record<string, string> = {
     TextBox: "A single-line text input supporting text, email, phone, and password variants.",
     Textarea: "A multi-line text input with a configurable row count and resize behavior.",
     Select: "A themed dropdown for choosing one of a fixed set of options, wrapping a native select.",
+    SelectMenu: "A Select-alike with fully custom rendering of each option (and of the trigger's current value), for options that need icons, avatars, or other rich content a native select can't display.",
     TextNonEditableField: "A read-only label/value pair, styled consistently with the other form-field components.",
     TextFormField: "A label paired with a TextBox, bound to a RenderBasic field value.",
     TextEditableField: "A label/value pair that swaps between a read view and an inline-editable TextBox with confirm/cancel.",
@@ -163,10 +180,23 @@ const propTables: Record<string, PropDoc[]> = {
     Select: [
         {name: "options", type: "SelectOptionType[]", description: "The selectable options (required)."},
         {name: "value", type: "string", description: "Currently selected value."},
-        {name: "placeholder", type: "string", description: "Disabled first option shown until a value is chosen."},
+        {name: "placeholder", type: "string", description: "First option shown until a value is chosen."},
+        {name: "placeholderDisabled", type: "boolean", description: "Prevents re-selecting the placeholder once a real option is chosen, so the selection can't be cleared through the UI (default: false)."},
         {name: "disabled", type: "boolean", description: "Disables the select."},
         {name: "required", type: "boolean", description: "Marks the field required in a <form>."},
         {name: "onChange", type: "(event) => void", description: "Change handler."},
+    ],
+    SelectMenu: [
+        {name: "options", type: "OptionType[]", description: "The selectable options, in display order (required)."},
+        {name: "getValue", type: "(option: OptionType) => string", description: "Extracts the value used to identify, select, and submit each option; must be unique per option (required)."},
+        {name: "renderOption", type: "(option: OptionType) => RenderableElements", description: "Renders one option's content - used for each entry in the open panel, and (unless renderValue is given) the trigger's display of the current selection too (required)."},
+        {name: "renderValue", type: "(option: OptionType) => RenderableElements", description: "Renders the trigger's display of the current selection, when it should differ from renderOption's full content."},
+        {name: "value", type: "string", description: "Value of the initially-selected option."},
+        {name: "placeholder", type: "RenderableElements", description: "Content shown in the trigger when no option is selected."},
+        {name: "isOptionDisabled", type: "(option: OptionType) => boolean", description: "Marks an option as unselectable."},
+        {name: "disabled", type: "boolean", description: "Disables the whole control."},
+        {name: "name", type: "string", description: "Name for a hidden <input> mirroring the selected value, for <form> submission."},
+        {name: "onChange", type: "(option: OptionType, value: string) => void", description: "Called with the newly selected option whenever the user picks one."},
     ],
     TextNonEditableField: [
         {name: "value", type: "string", description: "The read-only value shown (required)."},
@@ -198,12 +228,15 @@ const propTables: Record<string, PropDoc[]> = {
     Breadcrumbs: [
         {name: "items", type: "BreadcrumbItemType[]", description: "The trail of crumbs, root to current (required)."},
         {name: "separator", type: "RenderableElements", description: 'Content shown between crumbs (default: "/").'},
+        {name: "ariaLabel", type: "string", description: "Accessible label for the nav landmark. No default text."},
     ],
     Pagination: [
         {name: "page", type: "number", description: "Currently selected page, 1-indexed (required)."},
         {name: "totalPages", type: "number", description: "Total number of pages (required)."},
         {name: "onPageChange", type: "(page) => void", description: "Called with the newly selected page (required)."},
         {name: "siblingCount", type: "number", description: "Pages shown on each side of the current page (default: 2)."},
+        {name: "prevButtonChildren / nextButtonChildren", type: "RenderableElements", description: "Prev/next button content (default: PaginationThemeOptions.prevSymbol/nextSymbol - plain ‹ / › glyphs, not English text)."},
+        {name: "ariaLabel", type: "string", description: "Accessible label for the nav landmark. No default text."},
     ],
     Navbar: [
         {name: "brand", type: "RenderableElements", description: "Content shown on the left."},
@@ -212,10 +245,12 @@ const propTables: Record<string, PropDoc[]> = {
     Sidebar: [
         {name: "items", type: "SidebarItemType[]", description: "The entries to list (required)."},
         {name: "header", type: "RenderableElements", description: "Content shown above the list."},
+        {name: "ariaLabel", type: "string", description: "Accessible label for the nav landmark. No default text."},
     ],
     Menu: [
         {name: "trigger", type: "RenderableElements", description: "Content that opens the menu when clicked (required)."},
         {name: "items", type: "MenuItemType[]", description: "The entries to show (required)."},
+        {name: "closeOnOutsideClick", type: "boolean", description: "Closes the menu on an outside click (default: true)."},
     ],
     Steps: [
         {name: "steps", type: "StepType[]", description: "The steps, in order (required)."},
@@ -225,12 +260,14 @@ const propTables: Record<string, PropDoc[]> = {
         {name: "type", type: '"info" | "success" | "warning" | "danger"', description: "Sets the color (default: info)."},
         {name: "title", type: "RenderableElements", description: "Optional title shown above the body."},
         {name: "onDismiss", type: "() => void", description: "If set, shows a dismiss button."},
+        {name: "dismissLabel", type: "string", description: "Accessible label for the dismiss button, when shown. No default text."},
         {name: "children", type: "RenderableElements", description: "Body content."},
     ],
     Toast: [
         {name: "showToast(message, options)", type: "function", description: "Imperative call - not placed in your JSX tree."},
         {name: "options.type", type: '"info" | "success" | "warning" | "danger"', description: "Sets the color (default: info)."},
         {name: "options.duration", type: "number", description: "Milliseconds before auto-dismiss; 0 disables it (default: 4000)."},
+        {name: "options.dismissLabel", type: "string", description: "Accessible label for the dismiss button. No default text."},
     ],
     Tooltip: [
         {name: "content", type: "RenderableElements", description: "Content shown inside the bubble (required)."},
@@ -239,6 +276,7 @@ const propTables: Record<string, PropDoc[]> = {
     ],
     Spinner: [
         {name: "size", type: "string", description: 'CSS size (default: "1em").'},
+        {name: "label", type: "string", description: "Accessible label announced by screen readers. No default text."},
     ],
     Progress: [
         {name: "value", type: "number", description: "Current value (required)."},
@@ -252,21 +290,22 @@ const propTables: Record<string, PropDoc[]> = {
         {name: "lines", type: "number", description: "Number of lines for the text variant (default: 1)."},
     ],
     Empty: [
-        {name: "title", type: "RenderableElements", description: 'Main message (default: "No data").'},
+        {name: "title", type: "RenderableElements", description: "Main message. No default text - only the ∅ icon shows unless you set one."},
         {name: "description", type: "RenderableElements", description: "Smaller supporting text."},
         {name: "children", type: "RenderableElements", description: "A follow-up action, e.g. a Button."},
     ],
     Modal: [
         {name: "title", type: "RenderableElements", description: "Title content (required)."},
         {name: "confirmButtonChildren", type: "RenderableElements", description: "Confirm button content (required)."},
-        {name: "cancelButtonChildren", type: "RenderableElements", description: 'Cancel button content (default: "cancel").'},
+        {name: "cancelButtonChildren", type: "RenderableElements", description: "Cancel button content (default: ModalThemeOptions.cancelSymbol - a plain \"x\", not English text)."},
         {name: "confirmButtonOnClick", type: "(doneLoading) => void", description: "Called when confirm is clicked."},
         {name: "startConfirmDisabled", type: "boolean", description: "Starts the confirm button disabled."},
         {name: "showModal() / close()", type: "method", description: "Imperative open/close (the <dialog>'s own native methods)."},
     ],
     Drawer: [
         {name: "title", type: "RenderableElements", description: "Title content."},
-        {name: "placement", type: '"left" | "right" | "top" | "bottom"', description: "Edge to slide in from (default: right)."},
+        {name: "placement", type: '"left" | "right" | "top" | "bottom"', description: "Which edge of the viewport the drawer is anchored to (default: left)."},
+        {name: "enterFrom", type: '"left" | "right" | "top" | "bottom"', description: "Which direction the entrance animation slides in from (default: same as placement)."},
         {name: "children", type: "RenderableElements", description: "Body content."},
         {name: "showModal() / close()", type: "method", description: "Imperative open/close."},
     ],
@@ -279,7 +318,7 @@ const propTables: Record<string, PropDoc[]> = {
     Popconfirm: [
         {name: "title", type: "RenderableElements", description: "Confirmation message (required)."},
         {name: "onConfirm", type: "() => void", description: "Called when confirmed (required)."},
-        {name: "confirmButtonChildren / cancelButtonChildren", type: "RenderableElements", description: 'Defaults: "Confirm" / "Cancel".'},
+        {name: "confirmButtonChildren / cancelButtonChildren", type: "RenderableElements", description: "Defaults: PopconfirmThemeOptions.confirmSymbol/cancelSymbol - plain ✓ / ✕ glyphs, not English text."},
         {name: "closeOnOutsideClick", type: "boolean", description: "Closes the bubble on an outside click (default: true)."},
         {name: "children", type: "RenderableElements", description: "The trigger, typically a Button."},
     ],
@@ -289,7 +328,7 @@ const propTables: Record<string, PropDoc[]> = {
     ],
     Command: [
         {name: "items", type: "CommandItemType[]", description: "The full set of items, filtered client-side (required)."},
-        {name: "placeholder", type: "string", description: "Placeholder for the search input."},
+        {name: "placeholder", type: "string", description: "Placeholder for the search input. No default text."},
         {name: "showModal() / close()", type: "method", description: "Imperative open/close."},
     ],
     Badge: [
@@ -325,6 +364,7 @@ const propTables: Record<string, PropDoc[]> = {
     Tag: [
         {name: "type", type: '"primary" | "secondary" | "warning" | "danger" | "neutral"', description: "Sets the color (default: neutral)."},
         {name: "onRemove", type: "() => void", description: "If set, shows a remove button."},
+        {name: "removeLabel", type: "string", description: "Accessible label for the remove button, when shown. No default text."},
         {name: "children", type: "RenderableElements", description: "Tag content."},
     ],
     Collapse: [
@@ -356,15 +396,20 @@ const propTables: Record<string, PropDoc[]> = {
         {name: "rows", type: "RowType[]", description: "The rows to display (required)."},
     ],
     DataTable: [
-        {name: "columns", type: "DataTableColumnType<RowType>[]", description: "Column definitions - add sortValue/filterValue/width/hideable to opt each column into those features (required)."},
+        {name: "columns", type: "DataTableColumnType<RowType>[]", description: "Column definitions - add sortValue/filterValue/width/hideable/resizable to opt each column into those features (required)."},
         {name: "rows", type: "RowType[]", description: "The full set of rows; filtering/sorting/pagination all happen client-side over this set (required)."},
         {name: "pageSize", type: "number", description: "Rows per page. 0 disables pagination (default: 10)."},
+        {name: "pageSizeOptions", type: "number[]", description: "Options offered by the page-size control, when shown (default: [10, 25, 50, 100])."},
+        {name: "showPageSizeControl", type: "boolean", description: "Shows a control letting the user change how many rows are displayed per page (default: false)."},
+        {name: "resizableColumns", type: "boolean", description: "Whether columns can be resized by dragging, unless overridden per-column via resizable (default: true)."},
+        {name: "showColumnToggle", type: "boolean", description: "Shows the column-visibility customizer button (default: true)."},
         {name: "searchable", type: "boolean", description: "Shows a search box filtering rows via each column's filterValue (default: false)."},
-        {name: "searchPlaceholder", type: "string", description: 'Placeholder for the search input (default: "Search...").'},
+        {name: "searchPlaceholder", type: "string", description: "Placeholder for the search input. No default text."},
     ],
     Carousel: [
         {name: "slides", type: "RenderableElements[]", description: "The slides to cycle through (required)."},
         {name: "showDots", type: "boolean", description: "Shows numbered dot indicators (default: true)."},
+        {name: "getDotLabel", type: "(index) => string", description: "Builds a dot's accessible label from its 0-indexed slide index. No default text."},
     ],
     Calendar: [
         {name: "value", type: "Date", description: "Currently selected date."},
@@ -413,7 +458,9 @@ const propTables: Record<string, PropDoc[]> = {
     Rate: [
         {name: "value", type: "number", description: "Currently selected value."},
         {name: "count", type: "number", description: "Number of stars (default: 5)."},
+        {name: "type", type: '"primary" | "secondary" | "warning" | "danger"', description: "Sets the filled-star color (default: warning)."},
         {name: "disabled", type: "boolean", description: "Disables the control."},
+        {name: "getStarLabel", type: "(value, count) => string", description: "Builds one star's accessible label. No default text."},
         {name: "onChange", type: "(event) => void", description: "Change handler."},
     ],
     Form: [
@@ -432,6 +479,17 @@ const col = {display: "flex", flexDirection: "column", gap: "0.75em"} as const
 
 const textFormFieldValue = new RenderBasic<string>("editable value")
 const textEditableFieldValue = new RenderBasic<string>("click edit to change me")
+const selectMenuSelection = new RenderBasic<string>("Jamie Rivera")
+
+/** A long option list for Combobox, so its search/filter behavior actually has something to filter */
+const comboboxCountryOptions = [
+    "Argentina", "Australia", "Austria", "Belgium", "Brazil", "Canada", "Chile", "China", "Colombia",
+    "Denmark", "Egypt", "Finland", "France", "Germany", "Greece", "India", "Indonesia", "Ireland",
+    "Israel", "Italy", "Japan", "Kenya", "Malaysia", "Mexico", "Morocco", "Netherlands", "New Zealand",
+    "Nigeria", "Norway", "Peru", "Philippines", "Poland", "Portugal", "Singapore", "South Africa",
+    "South Korea", "Spain", "Sweden", "Switzerland", "Thailand", "Turkey", "Ukraine",
+    "United Kingdom", "United States", "Vietnam",
+].map(name => ({value: name}))
 
 /**
  * Labeled variants shown on each component's page - a spread of the states a real app would
@@ -441,41 +499,41 @@ const textEditableFieldValue = new RenderBasic<string>("click edit to change me"
 const examplesByName: Record<string, ExampleDoc[]> = {
     // --- Form ---
     Button: [
-        {label: "Types", node: <div style={row}>
+        {label: "Types", node: () => <div style={row}>
             <Button type="primary">Primary</Button>
             <Button type="secondary">Secondary</Button>
             <Button type="warning">Warning</Button>
             <Button type="danger">Danger</Button>
             <Button type="text">Text</Button>
         </div>},
-        {label: "Disabled", node: <Button type="primary" disabled>Disabled</Button>},
+        {label: "Disabled", node: () => <Button type="primary" disabled>Disabled</Button>},
     ],
     ButtonGroup: [
-        {label: "Horizontal", node: <ButtonGroup>
+        {label: "Horizontal", node: () => <ButtonGroup>
             <Button type="secondary">Left</Button>
             <Button type="secondary">Middle</Button>
             <Button type="secondary">Right</Button>
         </ButtonGroup>},
-        {label: "Mixed types", node: <ButtonGroup>
+        {label: "Mixed types", node: () => <ButtonGroup>
             <Button type="primary">Save</Button>
             <Button type="danger">Delete</Button>
         </ButtonGroup>},
-        {label: "Vertical", node: <ButtonGroup orientation="vertical">
+        {label: "Vertical", node: () => <ButtonGroup orientation="vertical">
             <Button type="secondary">Top</Button>
             <Button type="secondary">Middle</Button>
             <Button type="secondary">Bottom</Button>
         </ButtonGroup>},
     ],
     RadioButton: [
-        {label: "Group", node: <div style={row}>
+        {label: "Group", node: () => <div style={row}>
             <RadioButton name="doc-radio" checked>One</RadioButton>
             <RadioButton name="doc-radio">Two</RadioButton>
             <RadioButton name="doc-radio">Three</RadioButton>
         </div>},
-        {label: "Disabled", node: <RadioButton name="doc-radio-disabled" disabled>Disabled</RadioButton>},
+        {label: "Disabled", node: () => <RadioButton name="doc-radio-disabled" disabled>Disabled</RadioButton>},
     ],
     Checkbox: [
-        {label: "States", node: <div style={row}>
+        {label: "States", node: () => <div style={row}>
             <Checkbox>Unchecked</Checkbox>
             <Checkbox checked>Checked</Checkbox>
             <Checkbox indeterminate>Indeterminate</Checkbox>
@@ -483,14 +541,14 @@ const examplesByName: Record<string, ExampleDoc[]> = {
         </div>},
     ],
     Toggle: [
-        {label: "States", node: <div style={row}>
+        {label: "States", node: () => <div style={row}>
             <Toggle>Off</Toggle>
             <Toggle checked>On</Toggle>
             <Toggle disabled>Disabled</Toggle>
         </div>},
     ],
     TextBox: [
-        {label: "Types", node: <div style={col}>
+        {label: "Types", node: () => <div style={col}>
             <TextBox type="text" placeholder="Text"/>
             <TextBox type="email" placeholder="Email"/>
             <TextBox type="phone" placeholder="Phone"/>
@@ -498,24 +556,57 @@ const examplesByName: Record<string, ExampleDoc[]> = {
         </div>},
     ],
     Textarea: [
-        {label: "Default", node: <Textarea placeholder="Type something..." rows={3}/>},
+        {label: "Default", node: () => <Textarea placeholder="Type something..." rows={3}/>},
     ],
     Select: [
-        {label: "Default", node: <Select value="a" options={[{value: "a", label: "Option A"}, {value: "b", label: "Option B"}, {value: "c", label: "Option C"}]}/>},
-        {label: "Placeholder", node: <Select placeholder="Choose one" options={[{value: "a", label: "Option A"}, {value: "b", label: "Option B"}]}/>},
-        {label: "Disabled", node: <Select value="a" disabled options={[{value: "a", label: "Option A"}]}/>},
+        {label: "Default", node: () => <Select value="a" options={[{value: "a", label: "Option A"}, {value: "b", label: "Option B"}, {value: "c", label: "Option C"}]}/>},
+        {label: "Placeholder", node: () => <Select placeholder="Choose one" options={[{value: "a", label: "Option A"}, {value: "b", label: "Option B"}]}/>},
+        {label: "Clearable (placeholder stays selectable)", node: () => <Select value="a" placeholder="Choose one" options={[{value: "a", label: "Option A"}, {value: "b", label: "Option B"}]}/>},
+        {label: "Disabled", node: () => <Select value="a" disabled options={[{value: "a", label: "Option A"}]}/>},
+    ],
+    SelectMenu: [
+        {label: "Rich options (avatar + role) - pick one to update the selection below", node: () => <span style={{display: "flex", flexDirection: "column", gap: "0.5em", alignItems: "flex-start"}}>
+            <SelectMenu<{id: string, name: string, role: string}>
+                value="jamie"
+                options={[
+                    {id: "jamie", name: "Jamie Rivera", role: "Engineer"},
+                    {id: "alex", name: "Alex Baker", role: "Designer"},
+                    {id: "casey", name: "Casey Diaz", role: "Support"},
+                ]}
+                getValue={option => option.id}
+                renderOption={option => <span style={{display: "flex", alignItems: "center", gap: "0.6em"}}>
+                    <Avatar initials={option.name.split(" ").map(part => part[0]).join("")} size="1.75em"/>
+                    <span style={{display: "flex", flexDirection: "column", lineHeight: "1.2"}}>
+                        <span>{option.name}</span>
+                        <span style={{fontSize: "0.8em", opacity: "0.65"}}>{option.role}</span>
+                    </span>
+                </span>}
+                onChange={option => { selectMenuSelection.value = option.name }}/>
+            <span style={{fontSize: "0.85em", opacity: "0.7"}}>Selected: {selectMenuSelection}</span>
+        </span>},
+        {label: "Placeholder", node: () => <SelectMenu<{id: string, name: string}>
+            placeholder="Assign to..."
+            options={[{id: "a", name: "Jamie Rivera"}, {id: "b", name: "Alex Baker"}]}
+            getValue={option => option.id}
+            renderOption={option => <span style={{display: "flex", alignItems: "center", gap: "0.5em"}}><Avatar initials={option.name[0]} size="1.5em"/>{option.name}</span>}/>},
+        {label: "Disabled", node: () => <SelectMenu<{id: string, name: string}>
+            value="a"
+            disabled
+            options={[{id: "a", name: "Jamie Rivera"}]}
+            getValue={option => option.id}
+            renderOption={option => <span style={{display: "flex", alignItems: "center", gap: "0.5em"}}><Avatar initials={option.name[0]} size="1.5em"/>{option.name}</span>}/>},
     ],
     TextNonEditableField: [
-        {label: "Default", node: <TextNonEditableField value="example value">Label:</TextNonEditableField>},
+        {label: "Default", node: () => <TextNonEditableField value="example value">Label:</TextNonEditableField>},
     ],
     TextFormField: [
-        {label: "Default", node: <TextFormField field={textFormFieldValue}>Label:</TextFormField>},
+        {label: "Default", node: () => <TextFormField field={textFormFieldValue}>Label:</TextFormField>},
     ],
     TextEditableField: [
-        {label: "Default", node: <TextEditableField field={textEditableFieldValue}>Label:</TextEditableField>},
+        {label: "Default", node: () => <TextEditableField field={textEditableFieldValue}>Label:</TextEditableField>},
     ],
     Form: [
-        {label: "Basic form", node: <Form onSubmit={() => {}}>
+        {label: "Basic form", node: () => <Form onSubmit={() => {}}>
             <FormField label="Name" required><TextBox type="text"/></FormField>
             <FormField label="Email" error="Enter a valid email address"><TextBox type="email"/></FormField>
             <Button type="primary">Submit</Button>
@@ -524,60 +615,60 @@ const examplesByName: Record<string, ExampleDoc[]> = {
 
     // --- Navigation ---
     NavLink: [
-        {label: "Default", node: <div style={row}><NavLink to="/">Home</NavLink><NavLink to="/docs">Docs</NavLink></div>},
+        {label: "Default", node: () => <div style={row}><NavLink to="/">Home</NavLink><NavLink to="/docs">Docs</NavLink></div>},
     ],
     Link: [
-        {label: "Default", node: <Link to="/somewhere">Click me</Link>},
+        {label: "Default", node: () => <Link to="/somewhere">Click me</Link>},
     ],
     Breadcrumbs: [
-        {label: "Default", node: <Breadcrumbs items={[{label: "Home", to: "/"}, {label: "Library", to: "/library"}, {label: "Current page"}]}/>},
+        {label: "Default", node: () => <Breadcrumbs items={[{label: "Home", to: "/"}, {label: "Library", to: "/library"}, {label: "Current page"}]}/>},
     ],
     Pagination: [
-        {label: "First page", node: <Pagination page={1} totalPages={10} onPageChange={() => {}}/>},
-        {label: "Middle page", node: <Pagination page={5} totalPages={10} onPageChange={() => {}}/>},
-        {label: "Last page", node: <Pagination page={10} totalPages={10} onPageChange={() => {}}/>},
+        {label: "First page", node: () => <Pagination page={1} totalPages={10} onPageChange={() => {}}/>},
+        {label: "Middle page", node: () => <Pagination page={5} totalPages={10} onPageChange={() => {}}/>},
+        {label: "Last page", node: () => <Pagination page={10} totalPages={10} onPageChange={() => {}}/>},
     ],
     Navbar: [
-        {label: "Default", node: <Navbar brand="My App"><NavLink to="/">Home</NavLink><NavLink to="/docs">Docs</NavLink></Navbar>},
+        {label: "Default", node: () => <Navbar brand="My App"><NavLink to="/">Home</NavLink><NavLink to="/docs">Docs</NavLink></Navbar>},
     ],
     Sidebar: [
-        {label: "Default", node: <Sidebar header="Sections" items={[{label: "Overview", to: "/"}, {label: "Settings", to: "/settings"}]}/>},
+        {label: "Default", node: () => <Sidebar header="Sections" items={[{label: "Overview", to: "/"}, {label: "Settings", to: "/settings"}]}/>},
     ],
     Menu: [
-        {label: "Default", node: <Menu trigger="Actions" items={[{label: "Do a thing", onClick: () => {}}, {label: "Disabled", disabled: true}]}/>},
+        {label: "Default", node: () => <Menu trigger="Actions" items={[{label: "Do a thing", onClick: () => {}}, {label: "Disabled", disabled: true}]}/>},
     ],
     Steps: [
-        {label: "Just started", node: <Steps current={0} steps={[{key: "a", title: "Account"}, {key: "b", title: "Profile"}, {key: "c", title: "Confirm"}]}/>},
-        {label: "In progress", node: <Steps current={1} steps={[{key: "a", title: "Account"}, {key: "b", title: "Profile"}, {key: "c", title: "Confirm"}]}/>},
-        {label: "Complete", node: <Steps current={2} steps={[{key: "a", title: "Account"}, {key: "b", title: "Profile"}, {key: "c", title: "Confirm"}]}/>},
+        {label: "Just started", node: () => <Steps current={0} steps={[{key: "a", title: "Account"}, {key: "b", title: "Profile"}, {key: "c", title: "Confirm"}]}/>},
+        {label: "In progress", node: () => <Steps current={1} steps={[{key: "a", title: "Account"}, {key: "b", title: "Profile"}, {key: "c", title: "Confirm"}]}/>},
+        {label: "Complete", node: () => <Steps current={2} steps={[{key: "a", title: "Account"}, {key: "b", title: "Profile"}, {key: "c", title: "Confirm"}]}/>},
     ],
 
     // --- Feedback ---
     Alert: [
-        {label: "Types", node: <div style={col}>
+        {label: "Types", node: () => <div style={col}>
             <Alert type="info" title="Info">Heads up, this is informational.</Alert>
             <Alert type="success" title="Success">Everything worked.</Alert>
             <Alert type="warning" title="Warning">Double check this.</Alert>
             <Alert type="danger" title="Danger">Something went wrong.</Alert>
         </div>},
-        {label: "Dismissible", node: <Alert type="info" onDismiss={() => {}}>Click the x to dismiss.</Alert>},
+        {label: "Dismissible", node: () => <Alert type="info" onDismiss={() => {}}>Click the x to dismiss.</Alert>},
     ],
     Toast: [
-        {label: "Trigger", node: <Button type="secondary" onClick={() => showToast("Hello from a toast", {type: "success"})}>Show toast</Button>},
+        {label: "Trigger", node: () => <Button type="secondary" onClick={() => showToast("Hello from a toast", {type: "success"})}>Show toast</Button>},
     ],
     Tooltip: [
-        {label: "Default", node: <Tooltip content="More info"><Button type="secondary">Hover me</Button></Tooltip>},
+        {label: "Default", node: () => <Tooltip content="More info"><Button type="secondary">Hover me</Button></Tooltip>},
     ],
     Spinner: [
-        {label: "Sizes", node: <div style={row}><Spinner size="1em"/><Spinner size="2em"/><Spinner size="3em"/></div>},
+        {label: "Sizes", node: () => <div style={row}><Spinner size="1em"/><Spinner size="2em"/><Spinner size="3em"/></div>},
     ],
     Progress: [
-        {label: "Values", node: <div style={col}>
+        {label: "Values", node: () => <div style={col}>
             <Progress value={25} showLabel/>
             <Progress value={65} showLabel/>
             <Progress value={100} showLabel/>
         </div>},
-        {label: "Types", node: <div style={col}>
+        {label: "Types", node: () => <div style={col}>
             <Progress value={60} type="primary"/>
             <Progress value={60} type="secondary"/>
             <Progress value={60} type="warning"/>
@@ -585,52 +676,57 @@ const examplesByName: Record<string, ExampleDoc[]> = {
         </div>},
     ],
     Skeleton: [
-        {label: "Text", node: <Skeleton lines={3}/>},
-        {label: "Circular / rectangular", node: <div style={row}><Skeleton variant="circular"/><Skeleton variant="rectangular" width="10em" height="4em"/></div>},
+        {label: "Text", node: () => <Skeleton lines={3}/>},
+        {label: "Circular / rectangular", node: () => <div style={row}><Skeleton variant="circular"/><Skeleton variant="rectangular" width="10em" height="4em"/></div>},
     ],
     Empty: [
-        {label: "Default", node: <Empty/>},
-        {label: "With action", node: <Empty description="Try adjusting your filters"><Button type="secondary">Create one</Button></Empty>},
+        {label: "Default (icon only - no default text)", node: () => <Empty/>},
+        {label: "With title", node: () => <Empty title="No data"/>},
+        {label: "With action", node: () => <Empty title="No results" description="Try adjusting your filters"><Button type="secondary">Create one</Button></Empty>},
     ],
 
     // --- Overlays ---
     Modal: [
-        {label: "Trigger", node: <ButtonModal
+        {label: "Trigger", node: () => <ButtonModal
             openButtonText="Open modal"
             modalAttrs={{title: "Confirm action", confirmButtonChildren: "Confirm", cancelButtonChildren: "Cancel", confirmButtonOnClick: (doneLoading) => doneLoading()}}>
             Modal body content goes here.
         </ButtonModal>},
     ],
     Drawer: [
-        {label: "Trigger", node: (() => {
+        {label: "Trigger", node: () => {
             const drawer = <Drawer title="Settings">Drawer body content goes here.</Drawer>
             return <span style={{display: "contents"}}>{drawer}<Button type="secondary" onClick={() => drawer.showModal()}>Open drawer</Button></span>
-        })()},
+        }},
+        {label: "Placed on one edge, entering from another", node: () => {
+            const drawer = <Drawer title="Notifications" placement="bottom" enterFrom="right">Anchored to the bottom edge, but slides in from the right.</Drawer>
+            return <span style={{display: "contents"}}>{drawer}<Button type="secondary" onClick={() => drawer.showModal()}>Open drawer</Button></span>
+        }},
     ],
     Popover: [
-        {label: "Trigger", node: <Popover trigger={<Button type="secondary">Click me</Button>} content="Rich popover content, shown on click."/>},
+        {label: "Trigger", node: () => <Popover trigger={<Button type="secondary">Click me</Button>} content="Rich popover content, shown on click."/>},
     ],
     Popconfirm: [
-        {label: "Trigger", node: <Popconfirm title="Delete this item?" onConfirm={() => {}}><Button type="danger">Delete</Button></Popconfirm>},
+        {label: "Trigger", node: () => <Popconfirm title="Delete this item?" onConfirm={() => {}}><Button type="danger">Delete</Button></Popconfirm>},
     ],
     ContextMenu: [
-        {label: "Trigger area", node: <ContextMenu items={[{label: "Copy", onClick: () => {}}, {label: "Paste", onClick: () => {}}, {label: "Delete", disabled: true}]}>
+        {label: "Trigger area", node: () => <ContextMenu items={[{label: "Copy", onClick: () => {}}, {label: "Paste", onClick: () => {}}, {label: "Delete", disabled: true}]}>
             <div style={{padding: "2em", border: "1px dashed var(--background-5)", borderRadius: "0.25rem"}}>Right-click here</div>
         </ContextMenu>},
     ],
     Command: [
-        {label: "Trigger", node: (() => {
+        {label: "Trigger", node: () => {
             const command = <Command placeholder="Search commands..." items={[
                 {key: "new-file", label: "New file", searchText: "new file create", onSelect: () => {}},
                 {key: "open-settings", label: "Open settings", searchText: "open settings preferences", onSelect: () => {}},
             ]}/>
             return <span style={{display: "contents"}}>{command}<Button type="secondary" onClick={() => command.showModal()}>Open command palette</Button></span>
-        })()},
+        }},
     ],
 
     // --- Data Display ---
     Badge: [
-        {label: "Types", node: <div style={row}>
+        {label: "Types", node: () => <div style={row}>
             <Badge type="primary">primary</Badge>
             <Badge type="secondary">secondary</Badge>
             <Badge type="warning">warning</Badge>
@@ -639,15 +735,18 @@ const examplesByName: Record<string, ExampleDoc[]> = {
         </div>},
     ],
     Card: [
-        {label: "Default", node: <Card header="Card title">Some card body content.</Card>},
-        {label: "With footer", node: <Card header="Card title" footer={<Button type="secondary">Action</Button>}>Some card body content.</Card>},
+        {label: "Default", node: () => <Card header="Card title">Some card body content.</Card>},
+        {label: "With footer (defaults flush right)", node: () => <Card header="Card title" footer={<span style={{display: "contents"}}>
+            <Button type="secondary">Cancel</Button>
+            <Button type="primary">Confirm</Button>
+        </span>}>Some card body content.</Card>},
     ],
     Avatar: [
-        {label: "Sizes", node: <div style={row}><Avatar initials="JW" size="1.5em"/><Avatar initials="JW"/><Avatar initials="JW" size="3.5em"/></div>},
-        {label: "Image (falls back to initials if it fails to load)", node: <Avatar src="https://placehold.co/64x64" alt="Placeholder" initials="JW"/>},
+        {label: "Sizes", node: () => <div style={row}><Avatar initials="JR" size="1.5em"/><Avatar initials="JR"/><Avatar initials="JR" size="3.5em"/></div>},
+        {label: "Image (falls back to initials if it fails to load)", node: () => <Avatar src="https://placehold.co/64x64" alt="Placeholder" initials="JR"/>},
     ],
     TimeAgo: [
-        {label: "Various times", node: <div style={col}>
+        {label: "Various times", node: () => <div style={col}>
             <div><TimeAgo timestamp={new Date(Date.now() - 30 * 1000)}/></div>
             <div><TimeAgo timestamp={new Date(Date.now() - 5 * 60000)}/></div>
             <div><TimeAgo timestamp={new Date(Date.now() - 3 * 3600000)}/></div>
@@ -655,79 +754,88 @@ const examplesByName: Record<string, ExampleDoc[]> = {
         </div>},
     ],
     Divider: [
-        {label: "Horizontal", node: <div>Above<Divider/>Below</div>},
-        {label: "Vertical", node: <div style={{display: "flex", height: "2em", alignItems: "center"}}>Left<Divider orientation="vertical"/>Right</div>},
+        {label: "Horizontal", node: () => <div>Above<Divider/>Below</div>},
+        {label: "Vertical", node: () => <div style={{display: "flex", height: "2em", alignItems: "center"}}>Left<Divider orientation="vertical"/>Right</div>},
     ],
     Tabs: [
-        {label: "Default", node: <Tabs tabs={[{key: "a", label: "A", content: "Panel A content."}, {key: "b", label: "B", content: "Panel B content."}]}/>},
+        {label: "Default", node: () => <Tabs tabs={[
+            {key: "overview", label: "Overview", content: "High-level summary content goes here."},
+            {key: "team", label: "Team Members", content: "Manage who has access to this project."},
+            {key: "billing", label: "Billing & Invoices", content: "Payment history and upcoming charges."},
+            {key: "notifications", label: "Notification Settings", content: "Choose what you get notified about."},
+            {key: "danger", label: "Danger Zone", content: "Irreversible and destructive actions."},
+        ]}/>},
     ],
     Accordion: [
-        {label: "Independent", node: <Accordion items={[{header: "Section one", content: "Content one.", defaultOpen: true}, {header: "Section two", content: "Content two."}]}/>},
-        {label: "Exclusive", node: <Accordion exclusive items={[{header: "Section one", content: "Content one.", defaultOpen: true}, {header: "Section two", content: "Content two."}]}/>},
+        {label: "Independent", node: () => <Accordion items={[{header: "Section one", content: "Content one.", defaultOpen: true}, {header: "Section two", content: "Content two."}]}/>},
+        {label: "Exclusive", node: () => <Accordion exclusive items={[{header: "Section one", content: "Content one.", defaultOpen: true}, {header: "Section two", content: "Content two."}]}/>},
     ],
     Tag: [
-        {label: "Types", node: <div style={row}>
+        {label: "Types", node: () => <div style={row}>
             <Tag type="primary">primary</Tag>
             <Tag type="secondary">secondary</Tag>
             <Tag type="warning">warning</Tag>
             <Tag type="danger">danger</Tag>
+            <Tag type="neutral">neutral</Tag>
         </div>},
-        {label: "Removable", node: <Tag type="primary" onRemove={() => {}}>removable</Tag>},
+        {label: "Removable", node: () => <Tag type="primary" onRemove={() => {}}>removable</Tag>},
     ],
     Collapse: [
-        {label: "Default", node: <Collapse header="Click to expand">Hidden content revealed on expand.</Collapse>},
+        {label: "Default", node: () => <Collapse header="Click to expand">Hidden content revealed on expand.</Collapse>},
     ],
     Statistic: [
-        {label: "Examples", node: <div style={row}>
+        {label: "Examples", node: () => <div style={row}>
             <Statistic title="Active users" value={1284}/>
             <Statistic title="Revenue" value="12,480" prefix="$"/>
             <Statistic title="Uptime" value="99.98" suffix="%"/>
         </div>},
     ],
     List: [
-        {label: "Default", node: <List items={[
-            {key: "1", leading: <Avatar initials="JW"/>, title: "Jonathan Word", description: "jonathan@example.com"},
+        {label: "Default", node: () => <List items={[
+            {key: "1", leading: <Avatar initials="JR"/>, title: "Jamie Rivera", description: "jamie@example.com"},
             {key: "2", leading: <Avatar initials="AB"/>, title: "Alex Baker", description: "alex@example.com"},
         ]}/>},
     ],
     Timeline: [
-        {label: "Default", node: <Timeline items={[
+        {label: "Default", node: () => <Timeline items={[
             {key: "1", title: "Order placed", type: "secondary"},
             {key: "2", title: "Shipped", type: "primary"},
             {key: "3", title: "Delivered"},
         ]}/>},
     ],
     AspectRatio: [
-        {label: "16:9", node: <AspectRatio ratio={16 / 9} style={{maxWidth: "280px"}}>
+        {label: "16:9", node: () => <AspectRatio ratio={16 / 9} style={{maxWidth: "280px"}}>
             <div style={{background: "var(--primary-3)", display: "flex", alignItems: "center", justifyContent: "center"}}>16:9</div>
         </AspectRatio>},
     ],
     ScrollArea: [
-        {label: "Default", node: <ScrollArea maxHeight="8em" style={{maxWidth: "260px", border: "1px solid var(--background-4)", borderRadius: "0.25rem", padding: "8px"}}>
+        {label: "Default", node: () => <ScrollArea maxHeight="8em" style={{maxWidth: "260px", border: "1px solid var(--background-4)", borderRadius: "0.25rem", padding: "8px"}}>
             {Array.from({length: 12}).map((_, i) => <div style={{padding: "4px 0"}}>Row {i + 1}</div>)}
         </ScrollArea>},
     ],
     Table: [
-        {label: "Default", node: <Table
+        {label: "Default", node: () => <Table
             columns={[
                 {key: "name", header: "Name", render: (row: {name: string, role: string}) => row.name},
                 {key: "role", header: "Role", render: (row: {name: string, role: string}) => row.role},
             ]}
-            rows={[{name: "Jonathan Word", role: "Engineer"}, {name: "Alex Baker", role: "Designer"}]}/>},
+            rows={[{name: "Jamie Rivera", role: "Engineer"}, {name: "Alex Baker", role: "Designer"}]}/>},
     ],
     DataTable: [
-        {label: "Sortable, searchable, paginated, resizable, with hideable columns", node: <DataTable
+        {label: "Sortable, searchable, paginated, resizable, with hideable columns", node: () => <DataTable
             searchable
             searchPlaceholder="Search people..."
             pageSize={4}
+            showPageSizeControl
+            pageSizeOptions={[4, 8, 16]}
             columns={[
-                {key: "name", header: "Name", render: (row: {name: string, role: string, department: string, status: string}) => row.name, sortValue: (row) => row.name, filterValue: (row) => row.name},
+                {key: "name", header: "Name", render: (row: {name: string, role: string, department: string, status: string}) => row.name, sortValue: (row) => row.name, filterValue: (row) => row.name, hideable: false},
                 {key: "role", header: "Role", render: (row: {name: string, role: string, department: string, status: string}) => row.role, sortValue: (row) => row.role, filterValue: (row) => row.role},
                 {key: "department", header: "Department", render: (row: {name: string, role: string, department: string, status: string}) => row.department, sortValue: (row) => row.department, filterValue: (row) => row.department},
-                {key: "status", header: "Status", render: (row: {name: string, role: string, department: string, status: string}) => row.status, align: "end", width: 110, minWidth: 90},
+                {key: "status", header: "Status", render: (row: {name: string, role: string, department: string, status: string}) => row.status, align: "end", width: 110, minWidth: 90, resizable: false},
             ]}
             rows={[
-                {name: "Jonathan Word", role: "Engineer", department: "Platform", status: "active"},
+                {name: "Jamie Rivera", role: "Engineer", department: "Platform", status: "active"},
                 {name: "Alex Baker", role: "Designer", department: "Growth", status: "active"},
                 {name: "Casey Diaz", role: "Support", department: "Success", status: "inactive"},
                 {name: "Morgan Lee", role: "Manager", department: "Infra", status: "active"},
@@ -739,17 +847,17 @@ const examplesByName: Record<string, ExampleDoc[]> = {
             ]}/>},
     ],
     Carousel: [
-        {label: "Default", node: <Carousel slides={[
+        {label: "Default", node: () => <Carousel slides={[
             <div style={{padding: "2.5em", textAlign: "center", background: "var(--primary-3)"}}>Slide 1</div>,
             <div style={{padding: "2.5em", textAlign: "center", background: "var(--secondary-3)"}}>Slide 2</div>,
             <div style={{padding: "2.5em", textAlign: "center", background: "var(--warning-3)"}}>Slide 3</div>,
         ]}/>},
     ],
     Calendar: [
-        {label: "Default", node: <Calendar value={new Date()} onSelectDate={() => {}}/>},
+        {label: "Default", node: () => <Calendar value={new Date()} onSelectDate={() => {}}/>},
     ],
     Tree: [
-        {label: "Default", node: <Tree nodes={[
+        {label: "Default", node: () => <Tree nodes={[
             {key: "src", label: "src", defaultOpen: true, children: [
                 {key: "components", label: "components", children: [{key: "button", label: "button.tsx"}]},
                 {key: "index", label: "index.ts"},
@@ -760,38 +868,44 @@ const examplesByName: Record<string, ExampleDoc[]> = {
 
     // --- Data Entry ---
     DatePicker: [
-        {label: "Default", node: <DatePicker value="2026-01-15"/>},
-        {label: "Disabled", node: <DatePicker value="2026-01-15" disabled/>},
+        {label: "Default", node: () => <DatePicker value="2026-01-15"/>},
+        {label: "Disabled", node: () => <DatePicker value="2026-01-15" disabled/>},
     ],
     Slider: [
-        {label: "Values", node: <div style={col}>
+        {label: "Values", node: () => <div style={col}>
             <Slider value={20} style={{width: "12em"}}/>
             <Slider value={60} style={{width: "12em"}}/>
             <Slider value={90} style={{width: "12em"}}/>
         </div>},
     ],
     InputNumber: [
-        {label: "Default", node: <InputNumber value={5}/>},
-        {label: "With bounds", node: <InputNumber value={5} min={0} max={10} step={1}/>},
+        {label: "Default", node: () => <InputNumber value={5}/>},
+        {label: "With bounds", node: () => <InputNumber value={5} min={0} max={10} step={1}/>},
     ],
     ColorPicker: [
-        {label: "Values", node: <div style={row}><ColorPicker value="#66b2ff"/><ColorPicker value="#c6ff9e"/><ColorPicker value="#ff6666"/></div>},
+        {label: "Values", node: () => <div style={row}><ColorPicker value="#66b2ff"/><ColorPicker value="#c6ff9e"/><ColorPicker value="#ff6666"/></div>},
     ],
     Combobox: [
-        {label: "Default", node: <Combobox placeholder="Choose a fruit" options={[{value: "Apple"}, {value: "Banana"}, {value: "Cherry"}]}/>},
+        {label: "Default (44 options - try typing to search)", node: () => <Combobox placeholder="Choose a country" options={comboboxCountryOptions}/>},
     ],
     Upload: [
-        {label: "Default", node: <Upload accept="image/*">Click or drag a file here</Upload>},
-        {label: "Disabled", node: <Upload disabled>Disabled</Upload>},
+        {label: "Default", node: () => <Upload accept="image/*">Click or drag a file here</Upload>},
+        {label: "Disabled", node: () => <Upload disabled>Disabled</Upload>},
     ],
     Rate: [
-        {label: "Values", node: <div style={col}><Rate value={2}/><Rate value={4}/></div>},
-        {label: "Disabled", node: <Rate value={3} disabled/>},
+        {label: "Values", node: () => <div style={col}><Rate value={2}/><Rate value={4}/></div>},
+        {label: "Types", node: () => <div style={col}>
+            <Rate value={4} type="primary"/>
+            <Rate value={4} type="secondary"/>
+            <Rate value={4} type="warning"/>
+            <Rate value={4} type="danger"/>
+        </div>},
+        {label: "Disabled", node: () => <Rate value={3} disabled/>},
     ],
 
     // --- Utility ---
     Icon: [
-        {label: "Default", node: <I i="gear" style={{height: "2em"}}/>},
+        {label: "Default", node: () => <I i="gear" style={{height: "2em"}}/>},
     ],
 }
 
@@ -822,4 +936,14 @@ export function groupedDocs(): {group: string, docs: ComponentDoc[]}[] {
 /** Looks up a single component's doc by its URL slug */
 export function docBySlug(slug: string): ComponentDoc | undefined {
     return componentDocs.find(doc => doc.slug == slug)
+}
+
+/** Converts a group name to a URL-safe slug, e.g. "Data Display" -> "data-display" */
+export function groupSlug(group: string): string {
+    return group.toLowerCase().replace(/\s+/g, "-")
+}
+
+/** Looks up a single group's bucket by its URL slug */
+export function groupByGroupSlug(slug: string): {group: string, docs: ComponentDoc[]} | undefined {
+    return groupedDocs().find(bucket => groupSlug(bucket.group) == slug)
 }

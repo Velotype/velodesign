@@ -20,6 +20,8 @@ export type BreadcrumbsAttrsType = {
     items: BreadcrumbItemType[]
     /** Content shown between crumbs (default: `"/"`) */
     separator?: RenderableElements
+    /** Accessible label for the navigation landmark. No default - the library doesn't assume a language; set this (e.g. to "Breadcrumb") to give screen reader users a description */
+    ariaLabel?: string
 } & IdAttr & StylePassthroughAttrs
 
 let areBreadcrumbsStylesMounted = false
@@ -52,7 +54,7 @@ color:var(--background-6);
 `, "vtd/Breadcrumbs")
     }
 
-    return passthroughAttrsToElement<HTMLElement>(<nav aria-label="Breadcrumb" class="vtd-breadcrumbs">
+    return passthroughAttrsToElement<HTMLElement>(<nav aria-label={attrs.ariaLabel} class="vtd-breadcrumbs">
         <ol class="vtd-breadcrumbs-list">
             {attrs.items.map((item, index) => <li class="vtd-breadcrumbs-item" aria-current={item.to ? undefined : "page"}>
                 {item.to ? <Link to={item.to}>{item.label}</Link> : <span>{item.label}</span>}

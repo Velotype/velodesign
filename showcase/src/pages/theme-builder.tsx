@@ -174,7 +174,7 @@ background-color:var(--background);
             <Alert type="info" title="Heads up">This alert reflects your custom theme.</Alert>
             <Card header="Example card">
                 <div style={{display: "flex", alignItems: "center", gap: "0.75em"}}>
-                    <Avatar initials="JW"/>
+                    <Avatar initials="JR"/>
                     <span>Card body content with an Avatar.</span>
                 </div>
             </Card>

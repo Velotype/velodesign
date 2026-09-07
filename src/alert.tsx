@@ -25,6 +25,8 @@ export type AlertAttrsType = {
     title?: RenderableElements
     /** If set, a dismiss button is shown; called when it's clicked, just before the Alert removes itself from the DOM */
     onDismiss?: () => void
+    /** Accessible label for the dismiss button, when shown. No default - the library doesn't assume a language; set this (e.g. to "Dismiss") to give screen reader users a description */
+    dismissLabel?: string
 } & IdAttr & StylePassthroughAttrs & ChildrenAttr
 
 let areAlertStylesMounted = false
@@ -37,6 +39,8 @@ export const Alert: FunctionComponent<AlertAttrsType> = function(attrs: AlertAtt
         areAlertStylesMounted = true
         setStylesheet(`
 .vtd-alert{
+width:100%;
+box-sizing:border-box;
 display:flex;
 align-items:flex-start;
 gap:0.75em;
@@ -71,7 +75,7 @@ border-radius:0.25rem;
             {attrs.title && <div class="vtd-alert-title">{attrs.title}</div>}
             <div>{children}</div>
         </div>
-        {attrs.onDismiss && <button type="button" class="vtd-alert-dismiss" aria-label="Dismiss" onClick={() => {
+        {attrs.onDismiss && <button type="button" class="vtd-alert-dismiss" aria-label={attrs.dismissLabel} onClick={() => {
             attrs.onDismiss?.()
             alertElement.remove()
         }}><AlertThemeOptions.dismissSymbol/></button>}

@@ -1,6 +1,17 @@
-import { type ChildrenAttr, Component, passthroughAttrsToElement, type RenderableElements, setStylesheet } from "@velotype/velotype"
+import { type ChildrenAttr, Component, type EmptyAttrs, type FunctionComponent, passthroughAttrsToElement, type RenderableElements, setStylesheet } from "@velotype/velotype"
 import type { IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
 import { Button } from "./button.tsx"
+
+/**
+ * Options to customize `<Popconfirm/>` Component Theme
+ */
+export const PopconfirmThemeOptions: {
+    confirmSymbol: FunctionComponent<EmptyAttrs>
+    cancelSymbol: FunctionComponent<EmptyAttrs>
+} = {
+    confirmSymbol: function(){return "✓"},
+    cancelSymbol: function(){return "✕"}
+}
 
 /**
  * Attrs type for `<Popconfirm/>` Component
@@ -8,9 +19,9 @@ import { Button } from "./button.tsx"
 export type PopconfirmAttrsType = {
     /** Message shown inside the confirmation bubble */
     title: RenderableElements
-    /** Confirm button content (default: `"Confirm"`) */
+    /** Confirm button content (default: `PopconfirmThemeOptions.confirmSymbol` - a plain checkmark, not English text, so the library doesn't assume a language) */
     confirmButtonChildren?: RenderableElements
-    /** Cancel button content (default: `"Cancel"`) */
+    /** Cancel button content (default: `PopconfirmThemeOptions.cancelSymbol` - a plain "x", not English text, so the library doesn't assume a language) */
     cancelButtonChildren?: RenderableElements
     /** Called when the confirm button is clicked, just before the bubble closes */
     onConfirm: () => void
@@ -105,8 +116,8 @@ box-shadow:0 2px 8px rgba(0,0,0,0.15);
         this.#bubble = <div class="vtd-popconfirm-content">
             <div class="vtd-popconfirm-title">{attrs.title}</div>
             <div class="vtd-popconfirm-actions">
-                <Button type="text" onClick={() => { this.#close() }}>{attrs.cancelButtonChildren || "Cancel"}</Button>
-                <Button type="danger" onClick={() => { attrs.onConfirm(); this.#close() }}>{attrs.confirmButtonChildren || "Confirm"}</Button>
+                <Button type="text" onClick={() => { this.#close() }}>{attrs.cancelButtonChildren || <PopconfirmThemeOptions.cancelSymbol/>}</Button>
+                <Button type="danger" onClick={() => { attrs.onConfirm(); this.#close() }}>{attrs.confirmButtonChildren || <PopconfirmThemeOptions.confirmSymbol/>}</Button>
             </div>
         </div>
 

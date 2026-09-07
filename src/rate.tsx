@@ -2,6 +2,11 @@ import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
 import type { IdAttr, RenderableElements, FunctionComponent, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
+ * Various types of `<Rate/>`s
+ */
+export type RateType = "primary" | "secondary" | "warning" | "danger"
+
+/**
  * Attrs type for `<Rate/>` Component
  */
 export type RateAttrsType = {
@@ -11,10 +16,19 @@ export type RateAttrsType = {
     value?: number
     /** Number of stars (default: `5`) */
     count?: number
+    /** What type of rate is this? (sets the filled-star color) (default: `"warning"`) */
+    type?: RateType
     /** Is the rate control disabled? */
     disabled?: boolean
     /** onChange event handler, fired with the native radio `change` event */
     onChange?: (event: Event) => void
+    /**
+     * Builds the accessible label for one star, given its value and the total `count`
+     * (e.g. `(value, count) => `${value} of ${count} stars``). No default - the library
+     * doesn't assume a language; without this, each star's accessible name falls back to its
+     * "★" label content, which doesn't convey position.
+     */
+    getStarLabel?: (starValue: number, count: number) => string
 } & IdAttr & StylePassthroughAttrs
 
 let areRateStylesMounted = false
@@ -40,12 +54,21 @@ cursor:pointer;
 font-size:1.5em;
 line-height:1;
 padding:0 0.05em;
-color:var(--background-5);
+color:var(--background-4);
 transition:color 0.1s ease-in;
 }
-.vtd-rate-input:checked ~ .vtd-rate-star,
-.vtd-rate-star:hover,
-.vtd-rate-star:hover ~ .vtd-rate-star{color:var(--warning-8);}
+.vtd-rate-primary .vtd-rate-input:checked ~ .vtd-rate-star,
+.vtd-rate-primary .vtd-rate-star:hover,
+.vtd-rate-primary .vtd-rate-star:hover ~ .vtd-rate-star{color:var(--primary-6);}
+.vtd-rate-secondary .vtd-rate-input:checked ~ .vtd-rate-star,
+.vtd-rate-secondary .vtd-rate-star:hover,
+.vtd-rate-secondary .vtd-rate-star:hover ~ .vtd-rate-star{color:var(--secondary-6);}
+.vtd-rate-warning .vtd-rate-input:checked ~ .vtd-rate-star,
+.vtd-rate-warning .vtd-rate-star:hover,
+.vtd-rate-warning .vtd-rate-star:hover ~ .vtd-rate-star{color:var(--warning-6);}
+.vtd-rate-danger .vtd-rate-input:checked ~ .vtd-rate-star,
+.vtd-rate-danger .vtd-rate-star:hover,
+.vtd-rate-danger .vtd-rate-star:hover ~ .vtd-rate-star{color:var(--accent-6);}
 .vtd-rate-disabled .vtd-rate-star{cursor:not-allowed;}
 .vtd-rate-input:focus-visible ~ .vtd-rate-star{outline:1px solid var(--primary);outline-offset:2px;}
 `, "vtd/Rate")
@@ -69,10 +92,10 @@ transition:color 0.1s ease-in;
             checked={attrs.value == starValue}
             disabled={attrs.disabled}
             onChange={attrs.onChange}/>)
-        inputsAndLabels.push(<label class="vtd-rate-star" for={inputId} aria-label={`${starValue} star${starValue==1?"":"s"}`}>★</label>)
+        inputsAndLabels.push(<label class="vtd-rate-star" for={inputId} aria-label={attrs.getStarLabel?.(starValue, count)}>★</label>)
     }
 
-    return passthroughAttrsToElement<HTMLSpanElement>(<span class={`vtd-rate${attrs.disabled?" vtd-rate-disabled":""}`} role="radiogroup">
+    return passthroughAttrsToElement<HTMLSpanElement>(<span class={`vtd-rate vtd-rate-${attrs.type||"warning"}${attrs.disabled?" vtd-rate-disabled":""}`} role="radiogroup">
         {inputsAndLabels}
     </span>, attrs)
 }

@@ -7,6 +7,8 @@ import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAtt
 export type SpinnerAttrsType = {
     /** CSS size of the spinner (default: `"1em"`) */
     size?: string
+    /** Accessible label announced by screen readers. No default - the library doesn't assume a language; set this (e.g. to "Loading") if the spinner isn't already described by surrounding text */
+    label?: string
 } & IdAttr & StylePassthroughAttrs
 
 let areSpinnerStylesMounted = false
@@ -34,6 +36,6 @@ animation:vtd-spinner-rotate 0.6s linear infinite;
     return passthroughAttrsToElement<HTMLSpanElement>(<span
         class="vtd-spinner"
         role="status"
-        aria-label="Loading"
+        aria-label={attrs.label}
         style={{width: size, height: size}}/>, attrs)
 }

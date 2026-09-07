@@ -20,6 +20,8 @@ export type SidebarAttrsType = {
     items: SidebarItemType[]
     /** Optional content shown above the list (e.g. a section title) */
     header?: RenderableElements
+    /** Accessible label for the navigation landmark. No default - the library doesn't assume a language; set this (e.g. to "Sidebar") to give screen reader users a description */
+    ariaLabel?: string
 } & IdAttr & StylePassthroughAttrs
 
 let areSidebarStylesMounted = false
@@ -32,7 +34,9 @@ export const Sidebar: FunctionComponent<SidebarAttrsType> = function(attrs: Side
         areSidebarStylesMounted = true
         setStylesheet(`
 .vtd-sidebar{
+width:100%;
 min-width:12em;
+box-sizing:border-box;
 }
 .vtd-sidebar-header{
 font-weight:bold;
@@ -53,7 +57,7 @@ border-radius:0.25rem;
 `, "vtd/Sidebar")
     }
 
-    return passthroughAttrsToElement<HTMLElement>(<nav aria-label="Sidebar" class="vtd-sidebar">
+    return passthroughAttrsToElement<HTMLElement>(<nav aria-label={attrs.ariaLabel} class="vtd-sidebar">
         {attrs.header && <div class="vtd-sidebar-header">{attrs.header}</div>}
         <ul class="vtd-sidebar-list">
             {attrs.items.map(item => <li><NavLink to={item.to} class="vtd-sidebar-link">{item.label}</NavLink></li>)}

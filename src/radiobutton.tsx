@@ -87,7 +87,7 @@ opacity:1;
 transform:scale(1);
 }
 .vtd-r-btn-input:checked ~ .vtd-r-btn {
-background-color:var(--primary-3);
+background-color:var(--primary-2);
 border-color:var(--primary-7);
 }
 

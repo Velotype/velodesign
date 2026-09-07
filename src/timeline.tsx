@@ -32,7 +32,7 @@ export const Timeline: FunctionComponent<TimelineAttrsType> = function(attrs: Ti
     if (!areTimelineStylesMounted) {
         areTimelineStylesMounted = true
         setStylesheet(`
-.vtd-timeline{list-style:none;padding:0;margin:0;}
+.vtd-timeline{width:100%;box-sizing:border-box;list-style:none;padding:0;margin:0;}
 .vtd-timeline-item{
 position:relative;
 display:flex;

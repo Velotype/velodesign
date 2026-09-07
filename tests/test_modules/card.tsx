@@ -13,6 +13,14 @@ class CardGallery extends Component<EmptyAttrs> {
                     Card body content goes here.
                 </Card>
             </div>
+            <div id="card-multi-footer" style={{marginTop:"10px", maxWidth: "320px"}}>
+                <Card header="Card title" footer={<span style={{display:"contents"}}>
+                    <Button type="secondary">Cancel</Button>
+                    <Button type="primary">Confirm</Button>
+                </span>}>
+                    Footer actions default to flush right.
+                </Card>
+            </div>
         </div>
     }
 }

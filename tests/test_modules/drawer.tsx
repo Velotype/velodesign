@@ -6,10 +6,13 @@ import { TestModulePage } from "./module-page.tsx"
 
 class DrawerGallery extends Component<EmptyAttrs> {
     override render() {
-        const drawer = <Drawer title="Settings" placement="right">Drawer body content goes here.</Drawer>
-        return <div style={{marginTop:"10px"}}>
+        const drawer = <Drawer title="Settings">Drawer body content goes here.</Drawer>
+        const bottomDrawer = <Drawer title="Notifications" placement="bottom" enterFrom="right">Placed on the bottom edge, but enters from the right - placement and enterFrom are independent.</Drawer>
+        return <div style={{marginTop:"10px", display: "flex", gap: "0.5em"}}>
             {drawer}
+            {bottomDrawer}
             <Button id="open-drawer-btn" type="secondary" onClick={()=>{ drawer.showModal() }}>Open drawer</Button>
+            <Button id="open-bottom-drawer-btn" type="secondary" onClick={()=>{ bottomDrawer.showModal() }}>Open bottom drawer (enters from right)</Button>
         </div>
     }
 }

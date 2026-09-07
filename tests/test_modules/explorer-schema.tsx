@@ -39,10 +39,11 @@ import {
     Popover, type PopoverPlacement,
     Progress, type ProgressType,
     RadioButton,
-    Rate,
+    Rate, type RateType,
     Resizable,
     ScrollArea,
     Select,
+    SelectMenu,
     showToast, type ToastType,
     Sidebar,
     Skeleton,
@@ -100,6 +101,15 @@ registerIcon("gear", new Icon(512, 512, "M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-
 
 const textFormFieldValue = new RenderBasic<string>("editable value")
 const textEditableFieldValue = new RenderBasic<string>("click edit to change me")
+
+const comboboxCountryOptions = [
+    "Argentina", "Australia", "Austria", "Belgium", "Brazil", "Canada", "Chile", "China", "Colombia",
+    "Denmark", "Egypt", "Finland", "France", "Germany", "Greece", "India", "Indonesia", "Ireland",
+    "Israel", "Italy", "Japan", "Kenya", "Malaysia", "Mexico", "Morocco", "Netherlands", "New Zealand",
+    "Nigeria", "Norway", "Peru", "Philippines", "Poland", "Portugal", "Singapore", "South Africa",
+    "South Korea", "Spain", "Sweden", "Switzerland", "Thailand", "Turkey", "Ukraine",
+    "United Kingdom", "United States", "Vietnam",
+].map(name => ({value: name}))
 const commandLastPicked = new RenderBasic<string>("none")
 
 export const stories: ComponentStory[] = [
@@ -185,10 +195,11 @@ export const stories: ComponentStory[] = [
     },
     {
         name: "Select", group: "Form",
-        defaultProps: {value: "a", placeholder: "Choose one", disabled: false, required: false},
+        defaultProps: {value: "a", placeholder: "Choose one", placeholderDisabled: false, disabled: false, required: false},
         controls: {
             value: {kind: "select", label: "value", options: ["a", "b", "c"]},
             placeholder: {kind: "text", label: "placeholder"},
+            placeholderDisabled: {kind: "boolean", label: "placeholderDisabled"},
             disabled: {kind: "boolean", label: "disabled"},
             required: {kind: "boolean", label: "required"},
         },
@@ -196,8 +207,25 @@ export const stories: ComponentStory[] = [
             options={[{value: "a", label: "Option A"}, {value: "b", label: "Option B"}, {value: "c", label: "Option C"}]}
             value={props.value as string}
             placeholder={props.placeholder as string}
+            placeholderDisabled={props.placeholderDisabled as boolean}
             disabled={props.disabled as boolean}
             required={props.required as boolean}/>,
+    },
+    {
+        name: "SelectMenu", group: "Form",
+        defaultProps: {value: "a", placeholder: "Assign to...", disabled: false},
+        controls: {
+            value: {kind: "select", label: "value", options: ["a", "b", "c"]},
+            placeholder: {kind: "text", label: "placeholder"},
+            disabled: {kind: "boolean", label: "disabled"},
+        },
+        render: (props) => <SelectMenu<{id: string, name: string}>
+            options={[{id: "a", name: "Jamie Rivera"}, {id: "b", name: "Alex Baker"}, {id: "c", name: "Casey Diaz"}]}
+            getValue={option => option.id}
+            renderOption={option => <span style={{display: "flex", alignItems: "center", gap: "0.5em"}}><Avatar initials={option.name[0]} size="1.5em"/>{option.name}</span>}
+            value={props.value as string}
+            placeholder={props.placeholder as string}
+            disabled={props.disabled as boolean}/>,
     },
     {
         name: "TextNonEditableField", group: "Form",
@@ -294,14 +322,15 @@ export const stories: ComponentStory[] = [
     },
     {
         name: "Menu", group: "Navigation",
-        defaultProps: {trigger: "Actions", clicks: 0},
+        defaultProps: {trigger: "Actions", clicks: 0, closeOnOutsideClick: true},
         controls: {
             trigger: {kind: "text", label: "trigger"},
+            closeOnOutsideClick: {kind: "boolean", label: "closeOnOutsideClick"},
         },
         render: (props, setProp) => {
             const clicks = props.clicks as number
             return <div style={{display: "flex", alignItems: "center", gap: "12px"}}>
-                <Menu trigger={props.trigger as string} items={[
+                <Menu trigger={props.trigger as string} closeOnOutsideClick={props.closeOnOutsideClick as boolean} items={[
                     {label: "Do a thing", onClick: () => setProp("clicks", clicks + 1)},
                     {label: "Disabled", disabled: true},
                 ]}/>
@@ -402,7 +431,7 @@ export const stories: ComponentStory[] = [
     },
     {
         name: "Avatar", group: "Data Display",
-        defaultProps: {initials: "JW", src: "", size: "2.5em"},
+        defaultProps: {initials: "JR", src: "", size: "2.5em"},
         controls: {
             initials: {kind: "text", label: "initials"},
             src: {kind: "text", label: "src"},
@@ -508,7 +537,7 @@ export const stories: ComponentStory[] = [
     },
     {
         name: "Combobox", group: "Data Entry",
-        defaultProps: {placeholder: "Choose a fruit", disabled: false},
+        defaultProps: {placeholder: "Choose a country", disabled: false},
         controls: {
             placeholder: {kind: "text", label: "placeholder"},
             disabled: {kind: "boolean", label: "disabled"},
@@ -516,7 +545,7 @@ export const stories: ComponentStory[] = [
         render: (props) => <Combobox
             placeholder={props.placeholder as string}
             disabled={props.disabled as boolean}
-            options={[{value: "Apple"}, {value: "Banana"}, {value: "Cherry"}]}/>,
+            options={comboboxCountryOptions}/>,
     },
     {
         name: "Upload", group: "Data Entry",
@@ -529,14 +558,16 @@ export const stories: ComponentStory[] = [
     },
     {
         name: "Rate", group: "Data Entry",
-        defaultProps: {value: 3, count: 5, disabled: false},
+        defaultProps: {value: 3, count: 5, type: "warning", disabled: false},
         controls: {
             count: {kind: "number", label: "count"},
+            type: {kind: "select", label: "type", options: ["primary", "secondary", "warning", "danger"]},
             disabled: {kind: "boolean", label: "disabled"},
         },
         render: (props, setProp) => <Rate
             value={props.value as number}
             count={props.count as number}
+            type={props.type as RateType}
             disabled={props.disabled as boolean}
             onChange={(event) => setProp("value", Number((event.target as HTMLInputElement).value))}/>,
     },
@@ -596,13 +627,17 @@ export const stories: ComponentStory[] = [
     // --- Overlays ---
     {
         name: "Drawer", group: "Overlays",
-        defaultProps: {title: "Settings", placement: "right"},
+        defaultProps: {title: "Settings", placement: "left", enterFrom: "left"},
         controls: {
             title: {kind: "text", label: "title"},
             placement: {kind: "select", label: "placement", options: ["left", "right", "top", "bottom"]},
+            enterFrom: {kind: "select", label: "enterFrom", options: ["left", "right", "top", "bottom"]},
         },
         render: (props) => {
-            const drawer = <Drawer title={props.title as string} placement={props.placement as "left" | "right" | "top" | "bottom"}>Drawer body content goes here.</Drawer>
+            const drawer = <Drawer
+                title={props.title as string}
+                placement={props.placement as "left" | "right" | "top" | "bottom"}
+                enterFrom={props.enterFrom as "left" | "right" | "top" | "bottom"}>Drawer body content goes here.</Drawer>
             return <span style={{display: "contents"}}>{drawer}<Button type="secondary" onClick={() => drawer.showModal()}>Open drawer</Button></span>
         },
     },
@@ -687,7 +722,7 @@ export const stories: ComponentStory[] = [
         defaultProps: {},
         controls: {},
         render: () => <List items={[
-            {key: "1", leading: <Avatar initials="JW"/>, title: "Jonathan Word", description: "jonathan@example.com"},
+            {key: "1", leading: <Avatar initials="JR"/>, title: "Jamie Rivera", description: "jamie@example.com"},
             {key: "2", leading: <Avatar initials="AB"/>, title: "Alex Baker", description: "alex@example.com"},
         ]}/>,
     },
@@ -730,7 +765,7 @@ export const stories: ComponentStory[] = [
                 {key: "name", header: "Name", render: (row: {name: string, role: string}) => row.name},
                 {key: "role", header: "Role", render: (row: {name: string, role: string}) => row.role},
             ]}
-            rows={[{name: "Jonathan Word", role: "Engineer"}, {name: "Alex Baker", role: "Designer"}]}/>,
+            rows={[{name: "Jamie Rivera", role: "Engineer"}, {name: "Alex Baker", role: "Designer"}]}/>,
     },
     {
         name: "DataTable", group: "Data Display",
@@ -739,13 +774,14 @@ export const stories: ComponentStory[] = [
         render: () => <DataTable
             searchable
             pageSize={5}
+            showPageSizeControl
             columns={[
-                {key: "name", header: "Name", render: (row: {name: string, role: string, status: string}) => row.name, sortValue: (row) => row.name, filterValue: (row) => row.name},
+                {key: "name", header: "Name", render: (row: {name: string, role: string, status: string}) => row.name, sortValue: (row) => row.name, filterValue: (row) => row.name, hideable: false},
                 {key: "role", header: "Role", render: (row: {name: string, role: string, status: string}) => row.role, sortValue: (row) => row.role, filterValue: (row) => row.role},
                 {key: "status", header: "Status", render: (row: {name: string, role: string, status: string}) => row.status, align: "end"},
             ]}
             rows={[
-                {name: "Jonathan Word", role: "Engineer", status: "active"},
+                {name: "Jamie Rivera", role: "Engineer", status: "active"},
                 {name: "Alex Baker", role: "Designer", status: "active"},
                 {name: "Casey Diaz", role: "Support", status: "inactive"},
                 {name: "Morgan Lee", role: "Manager", status: "active"},

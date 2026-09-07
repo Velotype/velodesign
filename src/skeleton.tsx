@@ -35,7 +35,7 @@ display:block;
 background-color:var(--background-3);
 animation:vtd-skeleton-pulse 1.5s ease-in-out infinite;
 }
-.vtd-skeleton-text{height:1em;border-radius:0.25rem;margin-block-end:0.5em;}
+.vtd-skeleton-text{width:100%;box-sizing:border-box;height:1em;border-radius:0.25rem;margin-block-end:0.5em;}
 .vtd-skeleton-text:last-child{margin-block-end:0;width:70%;}
 .vtd-skeleton-circular{border-radius:50%;}
 .vtd-skeleton-rectangular{border-radius:0.25rem;}

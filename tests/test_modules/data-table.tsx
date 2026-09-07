@@ -11,7 +11,7 @@ type PersonRow = {
     status: "active" | "inactive"
 }
 
-const names = ["Jonathan Word", "Alex Baker", "Casey Diaz", "Morgan Lee", "Riley Chen", "Jordan Smith", "Taylor Kim", "Sam Patel", "Drew Nguyen", "Avery Brooks", "Quinn Foster", "Reese Cole"]
+const names = ["Jamie Rivera", "Alex Baker", "Casey Diaz", "Morgan Lee", "Riley Chen", "Jordan Smith", "Taylor Kim", "Sam Patel", "Drew Nguyen", "Avery Brooks", "Quinn Foster", "Reese Cole"]
 const roles = ["Engineer", "Designer", "Support", "Manager", "Analyst"]
 const departments = ["Platform", "Growth", "Infra", "Design", "Success"]
 
@@ -29,11 +29,13 @@ class DataTableGallery extends Component<EmptyAttrs> {
                 searchable
                 searchPlaceholder="Search people..."
                 pageSize={5}
+                showPageSizeControl
+                pageSizeOptions={[5, 10, 25]}
                 columns={[
-                    {key: "name", header: "Name", render: row => row.name, sortValue: row => row.name, filterValue: row => row.name},
+                    {key: "name", header: "Name", render: row => row.name, sortValue: row => row.name, filterValue: row => row.name, hideable: false},
                     {key: "role", header: "Role", render: row => row.role, sortValue: row => row.role, filterValue: row => row.role},
                     {key: "department", header: "Department", render: row => row.department, sortValue: row => row.department, filterValue: row => row.department, hideable: true},
-                    {key: "status", header: "Status", render: row => <Badge type={row.status == "active" ? "secondary" : "neutral"}>{row.status}</Badge>, align: "end", width: 120, minWidth: 90},
+                    {key: "status", header: "Status", render: row => <Badge type={row.status == "active" ? "secondary" : "neutral"}>{row.status}</Badge>, align: "end", width: 120, minWidth: 90, resizable: false},
                 ]}
                 rows={rows}/></div>
         </div>

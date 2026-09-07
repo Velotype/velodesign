@@ -9,6 +9,12 @@ class RateGallery extends Component<EmptyAttrs> {
         return <div style={{marginTop:"10px", display:"flex", flexDirection:"column", gap:"14px"}}>
             <div id="default-rate"><Rate value={3}/></div>
             <div><Rate value={2} count={10}/></div>
+            <div style={{display:"flex", gap:"14px"}}>
+                <Rate value={4} type="primary"/>
+                <Rate value={4} type="secondary"/>
+                <Rate value={4} type="warning"/>
+                <Rate value={4} type="danger"/>
+            </div>
             <div><Rate value={4} disabled/></div>
         </div>
     }

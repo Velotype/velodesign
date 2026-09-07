@@ -71,7 +71,7 @@ transition:color 0.25s ease-in-out, background-color 0.25s ease-in-out, border 0
 .vtd-btn-text:hover{background-color:var(--background-2);}
 .vtd-btn-text:active{background-color:var(--background-5);}
 
-.vtd-btn:disabled:hover{cursor:not-allowed;}
+.vtd-btn:disabled{cursor:not-allowed;opacity:0.5;}
 .vtd-btn:focus-visible{border:1px solid var(--accent);}
 
 .vtd-btn-spinner{

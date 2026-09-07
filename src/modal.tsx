@@ -6,8 +6,10 @@ import { Button, type ButtonType } from "./button.tsx"
  */
 export const ModalThemeOptions: {
     closeSymbol: FunctionComponent<EmptyAttrs>
+    cancelSymbol: FunctionComponent<EmptyAttrs>
 } = {
-    closeSymbol: function(){return "x"}
+    closeSymbol: function(){return "x"},
+    cancelSymbol: function(){return "✕"}
 }
 
 /**
@@ -22,7 +24,7 @@ export type ModalAttrsType = {
     title: RenderableElements
     /** Confirm button content (usually a string) */
     confirmButtonChildren: RenderableElements
-    /** Cancel button content (usually a string) defaults to `"cancel"` */
+    /** Cancel button content (default: `ModalThemeOptions.cancelSymbol` - a plain "x", not English text, so the library doesn't assume a language) */
     cancelButtonChildren?: RenderableElements
 } & ChildrenAttr
 
@@ -101,7 +103,7 @@ padding:0.5em;
             <div style={{display: "flex", alignItems: "center", justifyContent: "end"}}>
                 <Button type="text" onClick={()=>{
                     this.#dialog.close()
-                }}>{attrs.cancelButtonChildren || "cancel"}</Button>
+                }}>{attrs.cancelButtonChildren || <ModalThemeOptions.cancelSymbol/>}</Button>
                 {this.#confirmButton}
             </div>
         </dialog>

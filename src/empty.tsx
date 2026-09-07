@@ -14,7 +14,7 @@ export const EmptyThemeOptions: {
  * Attrs type for `<Empty/>` Component
  */
 export type EmptyAttrsType = {
-    /** Main message (default: `"No data"`) */
+    /** Main message. No default - `EmptyThemeOptions.image` (the ∅ symbol) is the only default visual, so the library doesn't assume a language */
     title?: RenderableElements
     /** Optional smaller supporting text below the title */
     description?: RenderableElements
@@ -31,6 +31,8 @@ export const Empty: FunctionComponent<EmptyAttrsType> = function(attrs: EmptyAtt
         areEmptyStylesMounted = true
         setStylesheet(`
 .vtd-empty{
+width:100%;
+box-sizing:border-box;
 display:flex;
 flex-direction:column;
 align-items:center;
@@ -48,7 +50,7 @@ color:var(--text);
 
     return passthroughAttrsToElement<HTMLDivElement>(<div class="vtd-empty" role="status">
         <EmptyThemeOptions.image/>
-        <div class="vtd-empty-title">{attrs.title || "No data"}</div>
+        {attrs.title ? <div class="vtd-empty-title">{attrs.title}</div> : null}
         {attrs.description && <div class="vtd-empty-description">{attrs.description}</div>}
         {children}
     </div>, attrs)

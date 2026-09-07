@@ -3,6 +3,7 @@ import type { EmptyAttrs } from "@velotype/velotype"
 
 import { Badge, Button, Card, History, Statistic } from "../../../src/index.ts"
 import { componentDocs, groupedDocs } from "../data/docs.tsx"
+import { categoryPageUrl } from "./category-page.tsx"
 
 let areHomeStylesMounted = false
 
@@ -64,7 +65,7 @@ gap:1em;
             <section class="vtd-showcase-section">
                 <h2>Browse by category</h2>
                 <div class="vtd-showcase-category-grid">
-                    {groups.map(bucket => <div class="vtd-showcase-category-card" onClick={() => History.changeLocation(`/components/${bucket.docs[0].slug}`)}>
+                    {groups.map(bucket => <div class="vtd-showcase-category-card" onClick={() => History.changeLocation(categoryPageUrl(bucket.group))}>
                         <Card header={<span>{bucket.group} <Badge type="neutral">{bucket.docs.length}</Badge></span>}>
                             <div class="vtd-showcase-category-names">{bucket.docs.map(doc => doc.name).join(", ")}</div>
                         </Card>

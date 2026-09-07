@@ -25,6 +25,8 @@ export const Collapse: FunctionComponent<CollapseAttrsType> = function(attrs: Co
         areCollapseStylesMounted = true
         setStylesheet(`
 .vtd-collapse{
+width:100%;
+box-sizing:border-box;
 border:1px solid var(--background-4);
 border-radius:0.25rem;
 overflow:hidden;
@@ -33,6 +35,7 @@ overflow:hidden;
 cursor:pointer;
 display:flex;
 align-items:center;
+gap:0.75em;
 list-style:none;
 padding:0.6em 0.9em;
 user-select:none;

@@ -23,6 +23,8 @@ export type MenuAttrsType = {
     trigger: RenderableElements
     /** The set of entries to show */
     items: MenuItemType[]
+    /** Closes the menu when the user clicks anywhere outside of it (default: `true`) */
+    closeOnOutsideClick?: boolean
 } & IdAttr & StylePassthroughAttrs
 
 let areMenuStylesMounted = false
@@ -37,9 +39,14 @@ let areMenuStylesMounted = false
 export class Menu extends Component<MenuAttrsType> {
     /** The underlying `<details/>` element */
     #detailsElement: HTMLDetailsElement
+    /** Attrs captured at construction, read by `#handleDocumentClick` (see the `Command` doc note on why this can't just close over the constructor's `attrs` parameter) */
+    #attrs: MenuAttrsType
 
-    /** Close the menu if it's open and the click landed outside of it */
+    /** Close the menu if it's open, outside-click closing is enabled, and the click landed outside of it */
     #handleDocumentClick = (event: MouseEvent) => {
+        if (this.#attrs.closeOnOutsideClick === false) {
+            return
+        }
         if (!this.#detailsElement.open) {
             return
         }
@@ -62,6 +69,7 @@ export class Menu extends Component<MenuAttrsType> {
     /** Create a new `<Menu/>` Component */
     constructor(attrs: MenuAttrsType, children: RenderableElements[]) {
         super(attrs, children)
+        this.#attrs = attrs
         if (!areMenuStylesMounted) {
             areMenuStylesMounted = true
             setStylesheet(`

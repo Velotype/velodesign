@@ -3,6 +3,7 @@ import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotyp
 import { Button } from "./button.tsx"
 import { Checkbox } from "./checkbox.tsx"
 import { Pagination } from "./pagination.tsx"
+import { Select } from "./select.tsx"
 import { TextBox } from "./textbox.tsx"
 
 /**
@@ -25,8 +26,10 @@ export type DataTableColumnType<RowType> = {
     width?: number
     /** Minimum width in px when resized (default: `60`) */
     minWidth?: number
-    /** If `false`, this column can't be hidden via the column-visibility control (default: `true`) */
+    /** If `false`, this column can't be hidden via the column-visibility control, and always shows as a disabled, checked entry there instead of being omitted (default: `true`) */
     hideable?: boolean
+    /** If `false`, this column's width can't be dragged, regardless of `resizableColumns` (default: `true`) */
+    resizable?: boolean
 }
 
 /**
@@ -39,9 +42,17 @@ export type DataTableAttrsType<RowType> = {
     rows: RowType[]
     /** Rows shown per page. Set to `0` to disable pagination and show every row (default: `10`) */
     pageSize?: number
+    /** Options offered by the page-size control, when shown (default: `[10, 25, 50, 100]`) */
+    pageSizeOptions?: number[]
+    /** Shows a control letting the user change how many rows are displayed per page (default: `false`) */
+    showPageSizeControl?: boolean
+    /** Whether columns can be resized by dragging their trailing edge, unless overridden per-column via `resizable` (default: `true`) */
+    resizableColumns?: boolean
+    /** Shows the column-visibility customizer button (default: `true`) */
+    showColumnToggle?: boolean
     /** Shows a search box that filters rows using each column's `filterValue` (default: `false`) */
     searchable?: boolean
-    /** Placeholder for the search input (default: `"Search..."`) */
+    /** Placeholder for the search input */
     searchPlaceholder?: string
 } & IdAttr & StylePassthroughAttrs
 
@@ -53,34 +64,61 @@ type DataTableInnerAttrsType<RowType> = {
     columns: DataTableColumnType<RowType>[]
     rows: RowType[]
     pageSize: number
+    pageSizeOptions: number[]
+    showPageSizeControl: boolean
+    resizableColumns: boolean
+    showColumnToggle: boolean
 }
 
 /**
  * Owns every piece of `DataTable`'s state (sort, page, column widths/visibility) and renders
  * the actual `<table>`. Split out from `DataTable` so the search `TextBox` - which needs to
- * stay mounted and keep focus while the user types - never gets caught in one of this
- * component's own `refresh()` calls; see `setSearchQuery`.
+ * stay mounted and keep focus while the user types - never gets caught up in one of this
+ * component's own updates; see `setSearchQuery`.
+ *
+ * Every piece of persistent structure (the column-menu button/panel, the `<colgroup>`/`<thead>`/
+ * `<tbody>`, the footer) is built exactly once, in the constructor. State changes (sort, search,
+ * page, column visibility, page size) call `#renderTable()`, a targeted update that only
+ * replaces the contents of the specific elements that actually need to change, rather than
+ * `this.refresh()` - `refresh()` unmounts and rebuilds this *entire* component from scratch,
+ * which previously caused two real bugs here: the column-menu panel closing itself immediately
+ * after opening (a fresh `refresh()`-built element no longer matched the one a same-tick
+ * document click listener still held a reference to) and a resized column's width reverting
+ * after an unrelated update. Since `columns[].render(row)` is consumer-supplied and can return
+ * anything (including other stateful components), a full `refresh()` on every sort/search/page
+ * change would also risk tearing down and losing state in any such cell content, and in the
+ * column-menu panel/toolbar even though neither one is actually affected by those changes.
  */
 class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>> {
+    #attrs: DataTableInnerAttrsType<RowType>
     #searchQuery = ""
     #sortKey: string | undefined
     #sortDirection: SortDirection = "asc"
     #currentPage = 1
+    #currentPageSize: number
     #hiddenColumns = new Set<string>()
     #columnWidths: Record<string, number> = {}
     #columnMenuOpen = false
-    /** The column-menu's own wrapper, re-captured each render so outside-click detection always checks the current DOM */
-    #columnMenuWrapperEl: HTMLDivElement | undefined
 
+    #root: HTMLDivElement
+    #colgroupEl: HTMLTableColElement = <colgroup/>
+    #theadRowEl: HTMLTableRowElement = <tr/>
+    #tbodyEl: HTMLTableSectionElement = <tbody/>
+    #footerEl: HTMLDivElement = <div class="vtd-datatable-footer"/>
+    /** The column-menu's own wrapper; built once, so outside-click detection always checks a stable element */
+    #columnMenuWrapperEl: HTMLDivElement
+    #columnMenuPanelEl: HTMLDivElement
+
+    /** Close the column menu if it's open and the click landed outside of it */
     #handleDocumentClick = (event: MouseEvent) => {
         if (!this.#columnMenuOpen) {
             return
         }
-        if (event.target instanceof Node && this.#columnMenuWrapperEl?.contains(event.target)) {
+        if (event.target instanceof Node && this.#columnMenuWrapperEl.contains(event.target)) {
             return
         }
         this.#columnMenuOpen = false
-        this.refresh()
+        this.#columnMenuPanelEl.classList.remove("vtd-datatable-column-menu-open")
     }
 
     override mount() {
@@ -94,7 +132,13 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
     setSearchQuery(query: string) {
         this.#searchQuery = query
         this.#currentPage = 1
-        this.refresh()
+        this.#renderTable()
+    }
+
+    #setPageSize(size: number) {
+        this.#currentPageSize = size
+        this.#currentPage = 1
+        this.#renderTable()
     }
 
     #toggleSort(column: DataTableColumnType<RowType>) {
@@ -109,20 +153,22 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
         } else {
             this.#sortKey = undefined
         }
-        this.refresh()
+        this.#renderTable()
     }
 
+    /** Native checkbox toggling already updates its own visual state - this only needs to update which columns the table itself shows */
     #toggleColumnVisibility(key: string) {
         if (this.#hiddenColumns.has(key)) {
             this.#hiddenColumns.delete(key)
         } else {
             this.#hiddenColumns.add(key)
         }
-        this.refresh()
+        this.#renderTable()
     }
 
-    /** Applies search filtering then sorting (in that order) to `attrs.rows` */
-    #processRows(attrs: DataTableInnerAttrsType<RowType>): RowType[] {
+    /** Applies search filtering then sorting (in that order) to `this.#attrs.rows` */
+    #processRows(): RowType[] {
+        const attrs = this.#attrs
         let rows = attrs.rows
         const query = this.#searchQuery.trim().toLowerCase()
         if (query) {
@@ -169,79 +215,109 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
         document.addEventListener("pointerup", handleUp)
     }
 
-    override render(attrs: DataTableInnerAttrsType<RowType>): RenderableElements {
+    /**
+     * Recomputes visible columns/rows/page and rewrites the `<colgroup>`/`<thead>`/`<tbody>`/
+     * footer contents in place via `replaceChildren` - never touches the search input, toolbar,
+     * or column-menu wrapper, which don't depend on any of this state.
+     */
+    #renderTable() {
+        const attrs = this.#attrs
         const visibleColumns = attrs.columns.filter(column => !this.#hiddenColumns.has(column.key))
-        const hideableColumns = attrs.columns.filter(column => column.hideable !== false)
 
-        const allRows = this.#processRows(attrs)
-        const pageSize = attrs.pageSize
+        const allRows = this.#processRows()
+        const pageSize = this.#currentPageSize
         const totalPages = pageSize > 0 ? Math.max(1, Math.ceil(allRows.length / pageSize)) : 1
         const currentPage = Math.min(this.#currentPage, totalPages)
         const pageRows = pageSize > 0 ? allRows.slice((currentPage - 1) * pageSize, currentPage * pageSize) : allRows
 
         const colElements: Record<string, HTMLTableColElement> = {}
-        const colgroup = <colgroup>
-            {visibleColumns.map(column => {
-                const width = this.#columnWidths[column.key] ?? column.width
-                const colElement: HTMLTableColElement = <col style={{width: width ? `${width}px` : undefined}}/>
-                colElements[column.key] = colElement
-                return colElement
-            })}
-        </colgroup>
+        this.#colgroupEl.replaceChildren(...visibleColumns.map(column => {
+            const width = this.#columnWidths[column.key] ?? column.width
+            const colElement: HTMLTableColElement = <col style={{width: width ? `${width}px` : undefined}}/>
+            colElements[column.key] = colElement
+            return colElement
+        }))
 
-        const headerRow = <tr>
-            {visibleColumns.map(column => {
-                const sortDirection: SortDirection | undefined = this.#sortKey == column.key ? this.#sortDirection : undefined
-                const thElement: HTMLTableCellElement = <th
-                    class={`${column.align ? `vtd-datatable-align-${column.align}` : ""}${column.sortValue ? " vtd-datatable-sortable" : ""}`}
-                    aria-sort={sortDirection ? (sortDirection == "asc" ? "ascending" : "descending") : undefined}
-                    onClick={column.sortValue ? () => this.#toggleSort(column) : undefined}>
-                    <span class="vtd-datatable-header-content">
-                        {column.header}
-                        {sortDirection ? <span class="vtd-datatable-sort-indicator" aria-hidden="true">{sortDirection == "asc" ? "▲" : "▼"}</span> : null}
-                    </span>
-                    <span class="vtd-datatable-resize-handle" onPointerDown={(event: PointerEvent) => this.#startResize(column, colElements[column.key], thElement, event)}/>
-                </th>
-                return thElement
-            })}
-        </tr>
+        this.#theadRowEl.replaceChildren(...visibleColumns.map(column => {
+            const sortDirection: SortDirection | undefined = this.#sortKey == column.key ? this.#sortDirection : undefined
+            const thElement: HTMLTableCellElement = <th
+                class={`${column.align ? `vtd-datatable-align-${column.align}` : ""}${column.sortValue ? " vtd-datatable-sortable" : ""}`}
+                aria-sort={sortDirection ? (sortDirection == "asc" ? "ascending" : "descending") : undefined}
+                onClick={column.sortValue ? () => this.#toggleSort(column) : undefined}>
+                <span class="vtd-datatable-header-content">
+                    {column.header}
+                    {sortDirection ? <span class="vtd-datatable-sort-indicator" aria-hidden="true">{sortDirection == "asc" ? "▲" : "▼"}</span> : null}
+                </span>
+                {(column.resizable ?? true) && attrs.resizableColumns ? <span class="vtd-datatable-resize-handle" onPointerDown={(event: PointerEvent) => this.#startResize(column, colElements[column.key], thElement, event)}/> : null}
+            </th>
+            return thElement
+        }))
 
         const bodyRows = pageRows.map(row => <tr>
             {visibleColumns.map(column => <td class={column.align ? `vtd-datatable-align-${column.align}` : ""}>{column.render(row)}</td>)}
         </tr>)
+        this.#tbodyEl.replaceChildren(...(allRows.length == 0 ? [<tr><td class="vtd-datatable-empty" colspan={visibleColumns.length}>No results</td></tr>] : bodyRows))
 
-        // The panel is always present in the DOM, gated by a class rather than conditional JSX,
-        // and the toggle button mutates that class directly instead of calling this.refresh():
-        // refreshing here would tear down and rebuild #columnMenuWrapperEl *while the
-        // triggering click is still bubbling* to #handleDocumentClick, which reads that same
-        // field - by the time it runs, the field would already point at the new element while
-        // the event's target is the old (now-disconnected) button, so `.contains()` would
-        // incorrectly read as "outside" and close the menu that was just opened.
-        const columnMenuPanel: HTMLDivElement = <div class={`vtd-datatable-column-menu${this.#columnMenuOpen ? " vtd-datatable-column-menu-open" : ""}`}>
-            {hideableColumns.map(column => <Checkbox checked={!this.#hiddenColumns.has(column.key)} onChange={() => this.#toggleColumnVisibility(column.key)}>{column.header}</Checkbox>)}
+        const footerChildren: HTMLDivElement[] = []
+        if (pageSize > 0 && (totalPages > 1 || attrs.showPageSizeControl)) {
+            footerChildren.push(<div class="vtd-datatable-page-size">
+                {attrs.showPageSizeControl ? <label class="vtd-datatable-page-size-label">
+                    Rows per page:
+                    <Select
+                        value={String(pageSize)}
+                        options={attrs.pageSizeOptions.map(size => ({value: String(size), label: String(size)}))}
+                        onChange={(event: Event) => {
+                            if (event.target instanceof HTMLSelectElement) { this.#setPageSize(Number(event.target.value)) }
+                        }}/>
+                </label> : null}
+            </div>)
+            if (totalPages > 1) {
+                footerChildren.push(<div class="vtd-datatable-pagination">
+                    <Pagination page={currentPage} totalPages={totalPages} onPageChange={(page) => { this.#currentPage = page; this.#renderTable() }}/>
+                </div>)
+            }
+        }
+        this.#footerEl.replaceChildren(...footerChildren)
+    }
+
+    /** Create a new `<DataTableInner/>` Component */
+    constructor(attrs: DataTableInnerAttrsType<RowType>, children: RenderableElements[]) {
+        super(attrs, children)
+        this.#attrs = attrs
+        this.#currentPageSize = attrs.pageSize
+
+        this.#columnMenuPanelEl = <div class="vtd-datatable-column-menu">
+            {attrs.columns.map(column => column.hideable === false
+                ? <Checkbox checked disabled>{column.header}</Checkbox>
+                : <Checkbox checked={!this.#hiddenColumns.has(column.key)} onChange={() => this.#toggleColumnVisibility(column.key)}>{column.header}</Checkbox>)}
         </div>
 
         this.#columnMenuWrapperEl = <div class="vtd-datatable-column-menu-wrapper">
             <Button type="secondary" onClick={() => {
                 this.#columnMenuOpen = !this.#columnMenuOpen
-                columnMenuPanel.classList.toggle("vtd-datatable-column-menu-open", this.#columnMenuOpen)
+                this.#columnMenuPanelEl.classList.toggle("vtd-datatable-column-menu-open", this.#columnMenuOpen)
             }}>Columns</Button>
-            {columnMenuPanel}
+            {this.#columnMenuPanelEl}
         </div>
 
-        return <div class="vtd-datatable">
-            {hideableColumns.length > 0 ? <div class="vtd-datatable-toolbar">{this.#columnMenuWrapperEl}</div> : null}
+        this.#root = <div class="vtd-datatable">
+            {attrs.showColumnToggle ? <div class="vtd-datatable-toolbar">{this.#columnMenuWrapperEl}</div> : null}
             <div class="vtd-datatable-scroll">
                 <table class="vtd-datatable-table">
-                    {colgroup}
-                    <thead>{headerRow}</thead>
-                    <tbody>{allRows.length == 0 ? <tr><td class="vtd-datatable-empty" colspan={visibleColumns.length}>No results</td></tr> : bodyRows}</tbody>
+                    {this.#colgroupEl}
+                    <thead>{this.#theadRowEl}</thead>
+                    {this.#tbodyEl}
                 </table>
             </div>
-            {pageSize > 0 && totalPages > 1 ? <div class="vtd-datatable-pagination">
-                <Pagination page={currentPage} totalPages={totalPages} onPageChange={(page) => { this.#currentPage = page; this.refresh() }}/>
-            </div> : null}
+            {this.#footerEl}
         </div>
+
+        this.#renderTable()
+    }
+
+    /** Render this Component */
+    override render(): HTMLDivElement {
+        return this.#root
     }
 }
 
@@ -267,7 +343,7 @@ export class DataTable<RowType> extends Component<DataTableAttrsType<RowType>> {
         if (!areDataTableStylesMounted) {
             areDataTableStylesMounted = true
             setStylesheet(`
-.vtd-datatable-wrapper{display:flex;flex-direction:column;gap:0.75em;}
+.vtd-datatable-wrapper{width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:0.75em;}
 .vtd-datatable-search-wrapper{display:flex;}
 .vtd-datatable-search-wrapper .vtd-textbox{width:100%;max-width:20em;margin-inline-start:0;box-sizing:border-box;}
 .vtd-datatable-toolbar{display:flex;justify-content:flex-end;}
@@ -317,19 +393,32 @@ touch-action:none;
 }
 .vtd-datatable-resize-handle:hover{background-color:var(--primary-6);}
 .vtd-datatable-empty{text-align:center;opacity:0.6;padding:2em;}
-.vtd-datatable-pagination{display:flex;justify-content:center;}
+.vtd-datatable-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1em;}
+.vtd-datatable-page-size-label{display:flex;align-items:center;gap:0.5em;}
+.vtd-datatable-pagination{display:flex;justify-content:center;flex-grow:1;}
 `, "vtd/DataTable")
         }
 
         const pageSize = attrs.pageSize ?? 10
-        const inner = getComponent<DataTableInner<RowType>>(<DataTableInner<RowType> columns={attrs.columns} rows={attrs.rows} pageSize={pageSize}/>)
+        const pageSizeOptions = attrs.pageSizeOptions ?? [10, 25, 50, 100]
+        const showPageSizeControl = attrs.showPageSizeControl ?? false
+        const resizableColumns = attrs.resizableColumns ?? true
+        const showColumnToggle = attrs.showColumnToggle ?? true
+        const inner = getComponent<DataTableInner<RowType>>(<DataTableInner<RowType>
+            columns={attrs.columns}
+            rows={attrs.rows}
+            pageSize={pageSize}
+            pageSizeOptions={pageSizeOptions}
+            showPageSizeControl={showPageSizeControl}
+            resizableColumns={resizableColumns}
+            showColumnToggle={showColumnToggle}/>)
 
         let searchInput: HTMLInputElement | undefined
         if (attrs.searchable) {
             searchInput = <TextBox
                 type="text"
                 class="vtd-datatable-search"
-                placeholder={attrs.searchPlaceholder || "Search..."}
+                placeholder={attrs.searchPlaceholder}
                 onInput={(event: Event) => {
                     if (event.target instanceof HTMLInputElement) { inner.setSearchQuery(event.target.value) }
                 }}/>

@@ -18,6 +18,14 @@ class AccordionGallery extends Component<EmptyAttrs> {
                 {header: "Section two", content: "Content of section two."},
                 {header: "Section three", content: "Content of section three."}
             ]}/></div>
+            <hr style={{marginTop:"20px"}}/>
+            <div id="side-by-side-accordion" style={{marginTop:"20px", display:"flex", gap:"10px"}}>
+                <Accordion items={[{header: "Narrow", content: "Short."}]}/>
+                <Accordion items={[{header: "Wide", content: "A much longer line of body content than the header, to check that the collapsed and expanded widths stay the same."}]}/>
+            </div>
+            <div id="long-header-accordion" style={{marginTop:"20px"}}>
+                <Accordion items={[{header: "A deliberately long header, to check the minimum gap before the chevron", content: "Body content."}]}/>
+            </div>
         </div>
     }
 }

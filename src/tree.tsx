@@ -49,7 +49,7 @@ export const Tree: FunctionComponent<TreeAttrsType> = function(attrs: TreeAttrsT
     if (!areTreeStylesMounted) {
         areTreeStylesMounted = true
         setStylesheet(`
-.vtd-tree{list-style:none;padding:0;margin:0;}
+.vtd-tree{width:100%;box-sizing:border-box;list-style:none;padding:0;margin:0;}
 .vtd-tree-children{list-style:none;padding-inline-start:1.25em;margin:0;}
 .vtd-tree-node{margin-block:0.1em;}
 .vtd-tree-label,.vtd-tree-leaf{

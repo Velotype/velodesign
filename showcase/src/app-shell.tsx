@@ -2,9 +2,10 @@ import { Component, getComponent, RenderBasic, setStylesheet } from "@velotype/v
 import type { EmptyAttrs, RenderableElements } from "@velotype/velotype"
 
 import { Button, ColorScheme, History, TextBox } from "../../src/index.ts"
-import { docBySlug, groupedDocs } from "./data/docs.tsx"
+import { docBySlug, groupByGroupSlug, groupedDocs } from "./data/docs.tsx"
 import { HomePage } from "./pages/home.tsx"
 import { ComponentPage } from "./pages/component-page.tsx"
+import { CategoryPage, categoryPageUrl } from "./pages/category-page.tsx"
 import { NotFoundPage } from "./pages/not-found.tsx"
 import { ThemeBuilderPage } from "./pages/theme-builder.tsx"
 
@@ -65,7 +66,10 @@ class SidebarList extends Component<EmptyAttrs> {
         const root: HTMLDivElement = <div class="vtd-showcase-sidebar-list">
             {buckets.length == 0 ? <div class="vtd-showcase-sidebar-empty">No components match "{this.#filterText}"</div> : null}
             {buckets.map(bucket => <div class="vtd-showcase-sidebar-group">
-                <div class="vtd-showcase-sidebar-group-label">{bucket.group}</div>
+                <a
+                    class="vtd-showcase-sidebar-group-label"
+                    href={categoryPageUrl(bucket.group)}
+                    onClick={(event: Event) => { event.preventDefault(); History.changeLocation(categoryPageUrl(bucket.group)) }}>{bucket.group}</a>
                 {bucket.docs.map(doc => <a
                     href={`/components/${doc.slug}`}
                     class={`vtd-showcase-sidebar-item${doc.slug == activeSlug ? " vtd-showcase-sidebar-item-active" : ""}`}
@@ -104,11 +108,18 @@ class ContentArea extends Component<EmptyAttrs> {
         if (pathname == "/theme" || pathname == "/theme/") {
             return <ThemeBuilderPage/>
         }
-        const match = pathname.match(/^\/components\/([a-z0-9-]+)\/?$/)
-        if (match) {
-            const doc = docBySlug(match[1])
+        const componentMatch = pathname.match(/^\/components\/([a-z0-9-]+)\/?$/)
+        if (componentMatch) {
+            const doc = docBySlug(componentMatch[1])
             if (doc) {
                 return <ComponentPage doc={doc}/>
+            }
+        }
+        const categoryMatch = pathname.match(/^\/category\/([a-z0-9-]+)\/?$/)
+        if (categoryMatch) {
+            const bucket = groupByGroupSlug(categoryMatch[1])
+            if (bucket) {
+                return <CategoryPage group={bucket.group} docs={bucket.docs}/>
             }
         }
         return <NotFoundPage/>
@@ -169,13 +180,16 @@ height:calc(100vh - 53px);
 .vtd-showcase-sidebar-search .vtd-textbox{width:100%;margin-inline-start:0;box-sizing:border-box;}
 .vtd-showcase-sidebar-list{overflow-y:auto;flex-grow:1;padding-block-end:1em;}
 .vtd-showcase-sidebar-group-label{
+display:block;
 padding:0.9em 0.9em 0.3em 0.9em;
 font-size:0.75em;
 font-weight:bold;
 text-transform:uppercase;
 letter-spacing:0.05em;
 color:var(--background-9);
+text-decoration:none;
 }
+.vtd-showcase-sidebar-group-label:hover{color:var(--primary-8);}
 .vtd-showcase-sidebar-item{
 display:block;
 padding:0.4em 0.9em;
