@@ -58,14 +58,14 @@ border-radius:0.25rem;
 .vtd-cb {
 position:relative;
 border-radius:0.3em;
-display:inline-block;
-height:calc(1.5em);
-width:calc(1.5em);
-margin-inline-end:1ex;
 display:inline-flex;
 align-items:center;
 justify-content:center;
-transition:background-color 0.2s ease-in, border 0.3s ease-in;
+height:1.5em;
+width:1.5em;
+margin-inline-end:1ex;
+flex-shrink:0;
+transition:background-color 0.2s ease-in, border-color 0.2s ease-in;
 background-color:var(--background-1);border:1px solid var(--background-5);
 }
 
@@ -83,7 +83,7 @@ opacity:0;
 transition:opacity 0.2s ease-in;
 width:0.3em;
 height:0.6em;
-border:solid var(--primary);
+border:solid var(--text);
 border-width:0 0.15em 0.15em 0;
 transform:translate(-50%,-65%) rotate(45deg);
 }
@@ -96,7 +96,7 @@ opacity:0;
 transition:opacity 0.2s ease-in;
 width:0.7em;
 height:0.15em;
-background-color:var(--primary);
+background-color:var(--text);
 transform:translate(-50%,-50%);
 }
 
@@ -107,8 +107,8 @@ opacity:1;
 }
 .vtd-cb-input:checked ~ .vtd-cb,
 .vtd-cb-input:indeterminate ~ .vtd-cb {
-background-color:transparent;
-border-color:var(--background-9);
+background-color:var(--primary);
+border-color:var(--primary-5);
 }
 
 .vtd-cb-container:has(> .vtd-cb-input:disabled){cursor:not-allowed;}
