@@ -1,0 +1,22 @@
+{
+    "tasks": {
+        "bundle": "deno bundle ./src/main.tsx --output ./build/main.js --sourcemap=linked",
+        "dev": "deno task bundle && deno run --allow-read --allow-net --allow-sys --allow-env ./server.ts",
+        "serve": "deno run --allow-read --allow-net --allow-sys --allow-env ./server.ts"
+    },
+    "compilerOptions": {
+        "jsx": "react-jsx",
+        "jsxImportSource": "jsr:@velotype/velotype",
+        "lib": ["dom", "deno.ns", "esnext"]
+    },
+    "nodeModulesDir": "auto",
+    "imports": {
+        "@velotype/veloserver": "jsr:@velotype/veloserver@^0.0.2",
+        "@velotype/velotype": "jsr:@velotype/velotype@^0.0.25"
+    },
+    "lint": {
+        "rules": {
+            "exclude": ["jsx-key"]
+        }
+    }
+}

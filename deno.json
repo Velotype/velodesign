@@ -8,7 +8,8 @@
     "publish": {
         "exclude": [
             "docs/",
-            "tests/"
+            "tests/",
+            "showcase/"
         ]
     },
     "tasks": {
