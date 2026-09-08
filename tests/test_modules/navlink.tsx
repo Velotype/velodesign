@@ -7,9 +7,9 @@ import { TestModulePage } from "./module-page.tsx"
 class NavLinkGallery extends Component<EmptyAttrs> {
     override render() {
         return <div style={{marginTop:"10px", display: "flex", gap: "12px"}}>
-            <NavLink id="navlink-home" to="/navlink">Home (exact, active here)</NavLink>
-            <NavLink to="/navlink/other">Other (inactive)</NavLink>
-            <NavLink to="/navlink" exact={false}>Home (prefix match)</NavLink>
+            <NavLink id="navlink-home" to="/navlink" spa>Home (exact, active here)</NavLink>
+            <NavLink to="/navlink/other" spa>Other (inactive)</NavLink>
+            <NavLink to="/navlink" exact={false} spa>Home (prefix match)</NavLink>
         </div>
     }
 }

@@ -1,5 +1,6 @@
 import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs, TargetedEvent, TargetedInputEvent } from "@velotype/velotype"
+import { highlightMatch, searchHighlightCss } from "./search-highlight.tsx"
 
 /**
  * A single suggestion in a `<Combobox/>`
@@ -121,13 +122,14 @@ export class Combobox extends Component<ComboboxAttrsType> {
             this.#panelEl.replaceChildren(<li class="vtd-combobox-empty">No matches</li>)
             return
         }
+        const query = this.#inputEl.value.trim()
         this.#optionEls = options.map((option, index) => <li
             role="option"
             aria-selected={index == this.#highlightedIndex}
             class={`vtd-combobox-option${index == this.#highlightedIndex ? " vtd-combobox-option-highlighted" : ""}`}
             onClick={() => this.#selectOption(option)}
             onPointerEnter={() => this.#setHighlighted(index)}>
-            {option.label || option.value}
+            {query ? highlightMatch(option.label || option.value, query) : (option.label || option.value)}
         </li>)
         this.#panelEl.replaceChildren(...this.#optionEls)
     }
@@ -225,6 +227,7 @@ display:none;
 .vtd-combobox-option{padding:0.5em 0.75em;border-radius:0.25rem;cursor:pointer;}
 .vtd-combobox-option-highlighted{background-color:var(--background-2);}
 .vtd-combobox-empty{padding:0.75em;text-align:center;opacity:0.6;}
+${searchHighlightCss}
 `, "vtd/Combobox")
         }
 

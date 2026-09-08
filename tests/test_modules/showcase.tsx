@@ -81,7 +81,7 @@ class ShowcaseSide extends Component<EmptyAttrs> {
             <div style={{marginTop:"10px", maxWidth:"320px"}}><Tabs tabs={[{key:"a",label:"A",content:"Panel A"},{key:"b",label:"B",content:"Panel B"}]}/></div>
             <hr style={{marginTop:"10px"}}/>
             Example Breadcrumbs:
-            <div style={{marginTop:"10px"}}><Breadcrumbs items={[{label:"Home",to:"/showcase"},{label:"Section",to:"/showcase#s"},{label:"Current"}]}/></div>
+            <div style={{marginTop:"10px"}}><Breadcrumbs spa items={[{label:"Home",to:"/showcase"},{label:"Section",to:"/showcase#s"},{label:"Current"}]}/></div>
             <hr style={{marginTop:"10px"}}/>
             Example Pagination:
             <div style={{marginTop:"10px"}}><Pagination page={4} totalPages={10} onPageChange={()=>{}}/></div>
@@ -89,13 +89,13 @@ class ShowcaseSide extends Component<EmptyAttrs> {
             Example Navbar (with NavLink items):
             <div style={{marginTop:"10px"}}>
                 <Navbar brand="My App">
-                    <NavLink to="/showcase">Home</NavLink>
-                    <NavLink to="/showcase/docs">Docs</NavLink>
+                    <NavLink to="/showcase" spa>Home</NavLink>
+                    <NavLink to="/showcase/docs" spa>Docs</NavLink>
                 </Navbar>
             </div>
             <hr style={{marginTop:"10px"}}/>
             Example Sidebar:
-            <div style={{marginTop:"10px"}}><Sidebar header="Sections" items={[{label:"Overview",to:"/showcase"},{label:"Settings",to:"/showcase/settings"}]}/></div>
+            <div style={{marginTop:"10px"}}><Sidebar header="Sections" spa items={[{label:"Overview",to:"/showcase"},{label:"Settings",to:"/showcase/settings"}]}/></div>
             <hr style={{marginTop:"10px"}}/>
             Example Menu:
             <div style={{marginTop:"40px"}}><Menu trigger="Actions" items={[{label:"Do a thing",onClick:()=>{}},{label:"Disabled",disabled:true}]}/></div>

@@ -5,6 +5,7 @@ import { Checkbox } from "./checkbox.tsx"
 import { Pagination } from "./pagination.tsx"
 import { Select } from "./select.tsx"
 import { TextBox } from "./textbox.tsx"
+import { highlightMatch, searchHighlightCss } from "./search-highlight.tsx"
 
 /**
  * A single column definition for a `<DataTable/>`
@@ -54,6 +55,26 @@ export type DataTableAttrsType<RowType> = {
     searchable?: boolean
     /** Placeholder for the search input */
     searchPlaceholder?: string
+    /** Alternate row background colors for readability (default: `false`) */
+    zebra?: boolean
+    /** Highlight a row's background on hover (default: `true`, matching this component's original behavior) */
+    highlightOnHover?: boolean
+    /**
+     * If set, wraps each row's first visible column in a real `<a href>` spanning the row's
+     * full width - a native "stretched link" (see `.vtd-datatable-row-link::after` below),
+     * so middle-click/ctrl-click/right-click "open in new tab" all keep working, unlike a
+     * JS-only click handler on the row would. Return `undefined` for a given row to leave it
+     * non-navigable. Takes priority over `onRowSelect` for a row where both would apply.
+     */
+    rowHref?: (row: RowType) => string | undefined
+    /**
+     * If set (and `rowHref` doesn't apply for a given row), makes the row a JS-driven "select"
+     * action via a stretched `<button>` instead of an `<a>` - for picking a row that should
+     * trigger something other than navigation (opening a modal, etc). Either way, a column's
+     * own `render` can still put its own links/buttons/etc in any cell - they stay clickable
+     * above the row-stretch overlay regardless (see the `:is(a,button,...)` rule below).
+     */
+    onRowSelect?: (row: RowType) => void
 } & IdAttr & StylePassthroughAttrs
 
 type SortDirection = "asc" | "desc"
@@ -68,6 +89,10 @@ type DataTableInnerAttrsType<RowType> = {
     showPageSizeControl: boolean
     resizableColumns: boolean
     showColumnToggle: boolean
+    zebra: boolean
+    highlightOnHover: boolean
+    rowHref?: (row: RowType) => string | undefined
+    onRowSelect?: (row: RowType) => void
 }
 
 /**
@@ -259,10 +284,35 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
             return thElement
         }))
 
-        const bodyRows = pageRows.map(row => <tr>
-            {visibleColumns.map(column => <td class={column.align ? `vtd-datatable-align-${column.align}` : ""}>{column.render(row)}</td>)}
-        </tr>)
+        const searchQuery = this.#searchQuery.trim()
+        const bodyRows = pageRows.map(row => {
+            const href = attrs.rowHref?.(row)
+            const useButton = !href && !!attrs.onRowSelect
+            return <tr>
+                {visibleColumns.map((column, colIndex) => {
+                    const rawCellContent = column.render(row)
+                    // Only a column whose rendered value is plain text can be safely searched
+                    // through character-by-character - `column.render` is free to return
+                    // arbitrary consumer content (another component, nested markup, ...), which
+                    // there's no safe way to splice a <mark> into without knowing its structure.
+                    const cellContent = searchQuery && (typeof rawCellContent == "string" || typeof rawCellContent == "number" || typeof rawCellContent == "bigint")
+                        ? highlightMatch(String(rawCellContent), searchQuery)
+                        : rawCellContent
+                    const cellClass = column.align ? `vtd-datatable-align-${column.align}` : ""
+                    if (colIndex != 0 || (!href && !useButton)) {
+                        return <td class={cellClass}>{cellContent}</td>
+                    }
+                    return <td class={cellClass}>
+                        {href
+                            ? <a class="vtd-datatable-row-link" href={href}>{cellContent}</a>
+                            : <button type="button" class="vtd-datatable-row-link vtd-datatable-row-link-button" onClick={() => attrs.onRowSelect?.(row)}>{cellContent}</button>}
+                    </td>
+                })}
+            </tr>
+        })
         this.#tbodyEl.replaceChildren(...(allRows.length == 0 ? [<tr><td class="vtd-datatable-empty" colspan={visibleColumns.length}>No results</td></tr>] : bodyRows))
+        this.#tbodyEl.classList.toggle("vtd-datatable-zebra", attrs.zebra)
+        this.#tbodyEl.classList.toggle("vtd-datatable-hoverable", attrs.highlightOnHover)
 
         const footerChildren: HTMLDivElement[] = []
         if (pageSize > 0 && (totalPages > 1 || attrs.showPageSizeControl)) {
@@ -397,9 +447,25 @@ padding:0;
 .vtd-datatable-sort-button:focus-visible{outline:1px solid var(--primary);outline-offset:1px;}
 .vtd-datatable-header-content{display:inline-flex;align-items:center;}
 .vtd-datatable-sort-indicator{margin-inline-start:0.3em;opacity:0.6;}
-.vtd-datatable-table tbody tr:hover{background-color:var(--background-1);}
+.vtd-datatable-table tbody tr{position:relative;}
+.vtd-datatable-hoverable tr:hover{background-color:var(--background-1);}
+.vtd-datatable-zebra tr:nth-child(even){background-color:var(--background-1);}
+.vtd-datatable-zebra.vtd-datatable-hoverable tr:nth-child(even):hover{background-color:var(--background-2);}
 .vtd-datatable-align-center{text-align:center;}
 .vtd-datatable-align-end{text-align:end;}
+/*
+ * A "clickable row" (rowHref/onRowSelect): the link/button wraps the first visible column's
+ * real content (so it keeps a natural, meaningful accessible name from that content, and
+ * displays inline exactly as that cell always did) - the actual full-row hit target is a
+ * pseudo-element stretched via position:absolute;inset:0 to the row's own position:relative
+ * box above. Any other interactive element a column's own render() puts in a cell (a per-row
+ * action button in a later column, say) gets position:relative + a higher stacking order here
+ * so it stays clickable above that stretch, rather than the row-level link swallowing its clicks.
+ */
+.vtd-datatable-row-link{color:inherit;text-decoration:none;}
+.vtd-datatable-row-link-button{display:block;width:100%;text-align:inherit;background:transparent;border:none;color:inherit;font:inherit;padding:0;cursor:pointer;}
+.vtd-datatable-row-link::after{content:"";position:absolute;inset:0;z-index:0;}
+.vtd-datatable-table td :is(a,button,input,select,textarea):not(.vtd-datatable-row-link):not(.vtd-datatable-row-link-button){position:relative;z-index:1;}
 .vtd-datatable-resize-handle{
 position:absolute;
 top:0;
@@ -414,6 +480,7 @@ touch-action:none;
 .vtd-datatable-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1em;}
 .vtd-datatable-page-size-label{display:flex;align-items:center;gap:0.5em;}
 .vtd-datatable-pagination{display:flex;justify-content:center;flex-grow:1;}
+${searchHighlightCss}
 `, "vtd/DataTable")
         }
 
@@ -429,7 +496,11 @@ touch-action:none;
             pageSizeOptions={pageSizeOptions}
             showPageSizeControl={showPageSizeControl}
             resizableColumns={resizableColumns}
-            showColumnToggle={showColumnToggle}/>)
+            showColumnToggle={showColumnToggle}
+            zebra={attrs.zebra ?? false}
+            highlightOnHover={attrs.highlightOnHover ?? true}
+            rowHref={attrs.rowHref}
+            onRowSelect={attrs.onRowSelect}/>)
 
         let searchInput: HTMLInputElement | undefined
         if (attrs.searchable) {

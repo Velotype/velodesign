@@ -1,4 +1,4 @@
-import { App, Router } from "@velotype/veloserver"
+import { Server, Router } from "@velotype/veloserver"
 
 const port = Number(Deno.env.get("PORT")) || Number(Deno.args[0]) || 4000
 const hostname = Deno.env.get("HOST") || "0.0.0.0"
@@ -23,7 +23,7 @@ function shellHandler() {
     return response
 }
 
-const router = new Router()
+const router = new Router<never>({})
 
 // Mount the static build output FIRST: this Router resolves sibling routes at each node in
 // registration order (first match wins, wildcard included) rather than by specificity, so the
@@ -38,7 +38,7 @@ await router.mountFiles("/build/", `${Deno.cwd()}/build/`)
 // the client router (src/app-shell.tsx's ContentArea) never needs a matching change here.
 router.get("/*", shellHandler)
 
-const app = new App(router)
+const app = new Server(router)
 app.addServerListenCallback(() => {
     console.log(`velodesign showcase running at http://${hostname}:${port}`)
 })

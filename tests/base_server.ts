@@ -1,16 +1,22 @@
-import { App, Context, Inspector, RequestInspectorResponse, Router } from "@velotype/veloserver"
+import { Server, Context, Inspector, RequestInspectorResponse, Router } from "@velotype/veloserver"
 
-export async function startAppServer(server_port: number): Promise<App> {
-    const router: Router = new Router()
-    router.addAllInspector("", new Inspector(
-        (request: Request, context: Context) => {
+export type ServerContextMetadata = {
+    /** Request start time (`performance.now()`), set by the timing inspector below */
+    st?: number
+}
+
+export async function startAppServer(server_port: number): Promise<Server<ServerContextMetadata>> {
+    const router: Router<ServerContextMetadata> = new Router<ServerContextMetadata>({
+        context_metadata_constructor: () => ({}),
+    })
+    router.addAllInspector("", new Inspector<ServerContextMetadata>(
+        (request: Request, context: Context<ServerContextMetadata>) => {
             console.log(`START ${request.method} ${request.url}`)
-            const startTime = performance.now()
-            context.metadata.set("st", startTime)
-            return new RequestInspectorResponse(true)
+            context.meta.st = performance.now()
+            return new RequestInspectorResponse()
         },
-        (request: Request, response: Response, context: Context) => {
-            const startTime = context.metadata.get("st")
+        (request: Request, response: Response, context: Context<ServerContextMetadata>) => {
+            const startTime = context.meta.st
             if (startTime != undefined) {
                 const ms = (performance.now() - startTime).toFixed(2)
                 response.headers.set("X-Response-Time", `${ms}ms`);
@@ -25,9 +31,9 @@ export async function startAppServer(server_port: number): Promise<App> {
         'navlink','breadcrumbs','pagination','navbar','sidebar','menu',
         'toast','accordion','avatar',
         'progress','skeleton','tag','empty','collapse','statistic','list','timeline','aspect-ratio','scroll-area',
-        'datepicker','slider','input-number','colorpicker','combobox','upload',
+        'datepicker','datetimepicker','datetimerangepicker','slider','input-number','colorpicker','combobox','upload',
         'drawer','popover','popconfirm','steps','rate',
-        'table','form','context-menu','resizable','carousel','calendar','tree','command','button-group','data-table']
+        'table','form','context-menu','resizable','carousel','calendar','calendar-range','tree','command','button-group','data-table']
     setOfModules.forEach((module) => {
         router.get(`/${module}`, function() {
             const response = new Response(`<!DOCTYPE html><html><body>
@@ -47,8 +53,8 @@ export async function startAppServer(server_port: number): Promise<App> {
         return response
     })
     await router.mountFiles("/build/", `${Deno.cwd()}/tests/build/`)
-    const app = new App(router)
-    const prom = new Promise<App>((resolve) => {
+    const app = new Server<ServerContextMetadata>(router)
+    const prom = new Promise<Server<ServerContextMetadata>>((resolve) => {
         app.addServerListenCallback(() => {
             resolve(app)
         })

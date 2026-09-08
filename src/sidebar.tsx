@@ -22,6 +22,8 @@ export type SidebarAttrsType = {
     header?: RenderableElements
     /** Accessible label for the navigation landmark. No default - the library doesn't assume a language; set this (e.g. to "Sidebar") to give screen reader users a description */
     ariaLabel?: string
+    /** Forwarded to every item's underlying `NavLink` - see its own `spa` attr (default `false`) for the full SPA-vs-multi-page-site explanation */
+    spa?: boolean
 } & IdAttr & StylePassthroughAttrs
 
 let areSidebarStylesMounted = false
@@ -60,7 +62,7 @@ border-radius:0.25rem;
     return passthroughAttrsToElement<HTMLElement>(<nav aria-label={attrs.ariaLabel} class="vtd-sidebar">
         {attrs.header && <div class="vtd-sidebar-header">{attrs.header}</div>}
         <ul class="vtd-sidebar-list">
-            {attrs.items.map(item => <li><NavLink to={item.to} class="vtd-sidebar-link">{item.label}</NavLink></li>)}
+            {attrs.items.map(item => <li><NavLink to={item.to} spa={attrs.spa} class="vtd-sidebar-link">{item.label}</NavLink></li>)}
         </ul>
     </nav>, attrs)
 }

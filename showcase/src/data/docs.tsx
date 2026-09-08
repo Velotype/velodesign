@@ -1,13 +1,13 @@
-import type { RenderableElements } from "@velotype/velotype"
-import { getComponent, RenderBasic } from "@velotype/velotype"
+import type { EmptyAttrs, RenderableElements } from "@velotype/velotype"
+import { Component, getComponent, RenderBasic } from "@velotype/velotype"
 
 import { stories } from "../../../tests/test_modules/explorer-schema.tsx"
 import type { ComponentStory } from "../../../tests/test_modules/explorer-schema.tsx"
 
 import {
     Accordion, Alert, AspectRatio, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, ButtonModal,
-    Calendar, Card, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu,
-    DatePicker, Divider, Drawer, Empty, Form, FormField, I, InputNumber, Link, List, Menu, Modal,
+    Calendar, CalendarRange, Card, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu,
+    DatePicker, DateTimePicker, DateTimeRangePicker, Divider, Drawer, Empty, Form, FormField, I, InputNumber, Link, List, Menu, Modal,
     Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, ScrollArea, Select, SelectMenu,
     showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, DataTable, Tabs, Tag, TextBox,
     Textarea, TextEditableField, TextFormField, TextNonEditableField, TimeAgo, Timeline, Toggle,
@@ -112,9 +112,12 @@ const descriptions: Record<string, string> = {
     DataTable: "A batteries-included data table: sortable and resizable columns, user-toggleable column visibility, an optional search box, and built-in pagination via Pagination.",
     Carousel: "A single-slide-at-a-time carousel with prev/next arrows and optional dot indicators.",
     Calendar: "A month-grid date picker with prev/next month navigation and a selectable day.",
+    CalendarRange: "A month-grid date-*range* picker: click a start day, then an end day, and the span between them highlights.",
     Tree: "A hierarchical, expandable/collapsible list built on nested native details/summary pairs.",
     // Data Entry
     DatePicker: "A themed date input, wrapping a native <input type=\"date\">.",
+    DateTimePicker: "A themed date-and-time input, wrapping a native <input type=\"datetime-local\">.",
+    DateTimeRangePicker: "A pair of linked date-and-time inputs for picking a span rather than a single moment.",
     Slider: "A themed range input, wrapping a native <input type=\"range\">.",
     InputNumber: "A themed numeric input, wrapping a native <input type=\"number\">.",
     ColorPicker: "A themed color swatch input, wrapping a native <input type=\"color\">.",
@@ -220,15 +223,18 @@ const propTables: Record<string, PropDoc[]> = {
         {name: "to", type: "string", description: "Target URL (required)."},
         {name: "exact", type: "boolean", description: "Match only the exact pathname vs. any path starting with to (default: true)."},
         {name: "activeClass", type: "string", description: 'CSS class added when active (default: "vtd-navlink-active").'},
+        {name: "spa", type: "boolean", description: "Client-side route change via History.changeLocation, no page reload (default: false). Set true for an SPA; leave false for a multi-page site, where a click should be a real navigation."},
     ],
     Link: [
         {name: "to", type: "string", description: "Target URL (required)."},
         {name: "children", type: "RenderableElements", description: "Link content."},
+        {name: "spa", type: "boolean", description: "Same meaning as NavLink's spa (default: false)."},
     ],
     Breadcrumbs: [
         {name: "items", type: "BreadcrumbItemType[]", description: "The trail of crumbs, root to current (required)."},
         {name: "separator", type: "RenderableElements", description: 'Content shown between crumbs (default: "/").'},
         {name: "ariaLabel", type: "string", description: "Accessible label for the nav landmark. No default text."},
+        {name: "spa", type: "boolean", description: "Forwarded to every crumb's Link (default: false)."},
     ],
     Pagination: [
         {name: "page", type: "number", description: "Currently selected page, 1-indexed (required)."},
@@ -246,10 +252,11 @@ const propTables: Record<string, PropDoc[]> = {
         {name: "items", type: "SidebarItemType[]", description: "The entries to list (required)."},
         {name: "header", type: "RenderableElements", description: "Content shown above the list."},
         {name: "ariaLabel", type: "string", description: "Accessible label for the nav landmark. No default text."},
+        {name: "spa", type: "boolean", description: "Forwarded to every item's NavLink (default: false)."},
     ],
     Menu: [
         {name: "trigger", type: "RenderableElements", description: "Content that opens the menu when clicked (required)."},
-        {name: "items", type: "MenuItemType[]", description: "The entries to show (required)."},
+        {name: "items", type: "MenuItemType[]", description: "The entries to show (required) - each with label, and either href (+ optional spa) and/or onClick."},
         {name: "closeOnOutsideClick", type: "boolean", description: "Closes the menu on an outside click (default: true)."},
     ],
     Steps: [
@@ -378,7 +385,9 @@ const propTables: Record<string, PropDoc[]> = {
         {name: "prefix / suffix", type: "RenderableElements", description: "Content before/after the value."},
     ],
     List: [
-        {name: "items", type: "ListItemType[]", description: "The entries to show (required) - each with title, description, leading, trailing."},
+        {name: "items", type: "ListItemType[]", description: "The entries to show (required) - each with title, description, leading, trailing, and optionally href/onSelect."},
+        {name: "zebra", type: "boolean", description: "Alternate item background colors for readability (default: false)."},
+        {name: "highlightOnHover", type: "boolean", description: "Highlight an item's background on hover (default: false)."},
     ],
     Timeline: [
         {name: "items", type: "TimelineItemType[]", description: "The events, in order (required) - each with a title, description, and dot type."},
@@ -403,17 +412,29 @@ const propTables: Record<string, PropDoc[]> = {
         {name: "showPageSizeControl", type: "boolean", description: "Shows a control letting the user change how many rows are displayed per page (default: false)."},
         {name: "resizableColumns", type: "boolean", description: "Whether columns can be resized by dragging, unless overridden per-column via resizable (default: true)."},
         {name: "showColumnToggle", type: "boolean", description: "Shows the column-visibility customizer button (default: true)."},
-        {name: "searchable", type: "boolean", description: "Shows a search box filtering rows via each column's filterValue (default: false)."},
+        {name: "searchable", type: "boolean", description: "Shows a search box filtering rows via each column's filterValue (default: false). Any column whose render() returns plain text highlights its matched characters automatically."},
         {name: "searchPlaceholder", type: "string", description: "Placeholder for the search input. No default text."},
+        {name: "zebra", type: "boolean", description: "Alternate row background colors for readability (default: false)."},
+        {name: "highlightOnHover", type: "boolean", description: "Highlight a row's background on hover (default: true)."},
+        {name: "rowHref", type: "(row) => string | undefined", description: "Wraps a row's first visible column in a real, full-width link. Takes priority over onRowSelect."},
+        {name: "onRowSelect", type: "(row) => void", description: "Makes a row a JS-driven full-width \"select\" action (a stretched button) instead of a link."},
     ],
     Carousel: [
         {name: "slides", type: "RenderableElements[]", description: "The slides to cycle through (required)."},
         {name: "showDots", type: "boolean", description: "Shows numbered dot indicators (default: true)."},
         {name: "getDotLabel", type: "(index) => string", description: "Builds a dot's accessible label from its 0-indexed slide index. No default text."},
+        {name: "autoplay", type: "boolean", description: "Automatically advance on a timer; stops for good on the first user-driven navigation (default: false)."},
+        {name: "autoplayFirstDelay", type: "number", description: "Delay in ms before the very first automatic advance (default: same as autoplayDelay)."},
+        {name: "autoplayDelay", type: "number", description: "Flat delay in ms between each automatic advance after the first (default: 5000)."},
+        {name: "autoplaySlideDelays", type: "Record<number, number>", description: "Per-slide delay overrides in ms, keyed by the currently-shown slide's index."},
     ],
     Calendar: [
         {name: "value", type: "Date", description: "Currently selected date."},
         {name: "onSelectDate", type: "(date) => void", description: "Called when a day cell is clicked."},
+    ],
+    CalendarRange: [
+        {name: "value", type: "{start?: Date, end?: Date}", description: "Currently selected range."},
+        {name: "onSelectRange", type: "(range) => void", description: "Called after picking the start, and again after picking the end."},
     ],
     Tree: [
         {name: "nodes", type: "TreeNodeType[]", description: "The root nodes (required) - each optionally with children."},
@@ -424,6 +445,19 @@ const propTables: Record<string, PropDoc[]> = {
         {name: "min / max", type: "string", description: "Selectable date bounds."},
         {name: "disabled", type: "boolean", description: "Disables the input."},
         {name: "required", type: "boolean", description: "Marks the field required in a <form>."},
+    ],
+    DateTimePicker: [
+        {name: "value", type: "string", description: 'Current value, as an "YYYY-MM-DDTHH:mm" string.'},
+        {name: "min / max", type: "string", description: "Selectable date-time bounds."},
+        {name: "step", type: "number", description: "Time granularity in seconds (default: 60, i.e. no seconds field)."},
+        {name: "disabled", type: "boolean", description: "Disables the input."},
+        {name: "required", type: "boolean", description: "Marks the field required in a <form>."},
+    ],
+    DateTimeRangePicker: [
+        {name: "value", type: "{start?: string, end?: string}", description: 'Currently selected range, each as an "YYYY-MM-DDTHH:mm" string.'},
+        {name: "min / max", type: "string", description: "Selectable date-time bounds, for both fields."},
+        {name: "onChange", type: "(range) => void", description: "Called with the updated range whenever either field changes."},
+        {name: "disabled", type: "boolean", description: "Disables both inputs."},
     ],
     Slider: [
         {name: "value", type: "number", description: "Current value."},
@@ -480,6 +514,32 @@ const col = {display: "flex", flexDirection: "column", gap: "0.75em"} as const
 const textFormFieldValue = new RenderBasic<string>("editable value")
 const textEditableFieldValue = new RenderBasic<string>("click edit to change me")
 const selectMenuSelection = new RenderBasic<string>("Jamie Rivera")
+
+/**
+ * Calendar (like Carousel/DataTable/every other stateful `Component` in the library - see each
+ * one's own doc comment) reads `value` once at construction and has no way to pick up a changed
+ * prop on an already-mounted instance, so a docs example that just does
+ * `<Calendar value={someDate} onSelectDate={...}/>` with a fixed `someDate` never visibly
+ * reacts to a click - the selected-day highlight never moves, which reads as "doesn't let you
+ * select a date" even though `onSelectDate` is in fact firing. This wrapper holds the selected
+ * date as its own state and `refresh()`es to hand Calendar a fresh `value` on every pick -
+ * safe here specifically because Calendar takes no consumer children of its own to lose.
+ */
+class CalendarDemo extends Component<EmptyAttrs> {
+    #selected: Date = new Date()
+    override render(): RenderableElements {
+        return <Calendar value={this.#selected} onSelectDate={(date) => { this.#selected = date; this.refresh() }}/>
+    }
+}
+
+/** Same "read-once, refresh() to hand it a fresh value" wiring as `CalendarDemo` above - see
+ * its doc comment - `CalendarRange` has the identical limitation. */
+class CalendarRangeDemo extends Component<EmptyAttrs> {
+    #range: {start?: Date, end?: Date} = {}
+    override render(): RenderableElements {
+        return <CalendarRange value={this.#range} onSelectRange={(range) => { this.#range = range; this.refresh() }}/>
+    }
+}
 
 /** A long option list for Combobox, so its search/filter behavior actually has something to filter */
 const comboboxCountryOptions = [
@@ -615,13 +675,13 @@ const examplesByName: Record<string, ExampleDoc[]> = {
 
     // --- Navigation ---
     NavLink: [
-        {label: "Default", node: () => <div style={row}><NavLink to="/">Home</NavLink><NavLink to="/docs">Docs</NavLink></div>},
+        {label: "Default", node: () => <div style={row}><NavLink to="/" spa>Home</NavLink><NavLink to="/docs" spa>Docs</NavLink></div>},
     ],
     Link: [
-        {label: "Default", node: () => <Link to="/somewhere">Click me</Link>},
+        {label: "Default", node: () => <Link to="/somewhere" spa>Click me</Link>},
     ],
     Breadcrumbs: [
-        {label: "Default", node: () => <Breadcrumbs items={[{label: "Home", to: "/"}, {label: "Library", to: "/library"}, {label: "Current page"}]}/>},
+        {label: "Default", node: () => <Breadcrumbs spa items={[{label: "Home", to: "/"}, {label: "Library", to: "/library"}, {label: "Current page"}]}/>},
     ],
     Pagination: [
         {label: "First page", node: () => <Pagination page={1} totalPages={10} onPageChange={() => {}}/>},
@@ -629,10 +689,10 @@ const examplesByName: Record<string, ExampleDoc[]> = {
         {label: "Last page", node: () => <Pagination page={10} totalPages={10} onPageChange={() => {}}/>},
     ],
     Navbar: [
-        {label: "Default", node: () => <Navbar brand="My App"><NavLink to="/">Home</NavLink><NavLink to="/docs">Docs</NavLink></Navbar>},
+        {label: "Default", node: () => <Navbar brand="My App"><NavLink to="/" spa>Home</NavLink><NavLink to="/docs" spa>Docs</NavLink></Navbar>},
     ],
     Sidebar: [
-        {label: "Default", node: () => <Sidebar header="Sections" items={[{label: "Overview", to: "/"}, {label: "Settings", to: "/settings"}]}/>},
+        {label: "Default", node: () => <Sidebar spa header="Sections" items={[{label: "Overview", to: "/"}, {label: "Settings", to: "/settings"}]}/>},
     ],
     Menu: [
         {label: "Default", node: () => <Menu trigger="Actions" items={[{label: "Do a thing", onClick: () => {}}, {label: "Disabled", disabled: true}]}/>},
@@ -799,6 +859,14 @@ const examplesByName: Record<string, ExampleDoc[]> = {
             {key: "1", leading: <Avatar initials="JR"/>, title: "Jamie Rivera", description: "jamie@example.com"},
             {key: "2", leading: <Avatar initials="AB"/>, title: "Alex Baker", description: "alex@example.com"},
         ]}/>},
+        {label: "Zebra striping, hover highlight, and per-item links (click a name)", node: () => <List
+            zebra
+            highlightOnHover
+            items={[
+                {key: "1", leading: <Avatar initials="JR"/>, title: "Jamie Rivera", description: "jamie@example.com", href: "#jamie-rivera"},
+                {key: "2", leading: <Avatar initials="AB"/>, title: "Alex Baker", description: "alex@example.com", href: "#alex-baker"},
+                {key: "3", leading: <Avatar initials="CD"/>, title: "Casey Diaz", description: "casey@example.com", href: "#casey-diaz"},
+            ]}/>},
     ],
     Timeline: [
         {label: "Default", node: () => <Timeline items={[
@@ -849,6 +917,21 @@ const examplesByName: Record<string, ExampleDoc[]> = {
                 {name: "Sam Patel", role: "Support", department: "Success", status: "active"},
                 {name: "Drew Nguyen", role: "Manager", department: "Infra", status: "active"},
             ]}/>},
+        {label: "Zebra striping, hover highlight, and a per-row link (click a name)", node: () => <DataTable
+            zebra
+            highlightOnHover
+            showColumnToggle={false}
+            rowHref={(row: {name: string, role: string}) => `#${row.name.toLowerCase().replace(/\s+/g, "-")}`}
+            columns={[
+                {key: "name", header: "Name", render: (row: {name: string, role: string}) => row.name},
+                {key: "role", header: "Role", render: (row: {name: string, role: string}) => row.role},
+            ]}
+            rows={[
+                {name: "Jamie Rivera", role: "Engineer"},
+                {name: "Alex Baker", role: "Designer"},
+                {name: "Casey Diaz", role: "Support"},
+                {name: "Morgan Lee", role: "Manager"},
+            ]}/>},
     ],
     Carousel: [
         {label: "Default", node: () => <Carousel slides={[
@@ -856,9 +939,21 @@ const examplesByName: Record<string, ExampleDoc[]> = {
             <div style={{padding: "2.5em", textAlign: "center", background: "var(--secondary-3)"}}>Slide 2</div>,
             <div style={{padding: "2.5em", textAlign: "center", background: "var(--warning-3)"}}>Slide 3</div>,
         ]}/>},
+        {label: "Autoplay (stops once you click prev/next/a dot)", node: () => <Carousel
+            autoplay
+            autoplayFirstDelay={1500}
+            autoplayDelay={2000}
+            slides={[
+                <div style={{padding: "2.5em", textAlign: "center", background: "var(--primary-3)"}}>Slide 1</div>,
+                <div style={{padding: "2.5em", textAlign: "center", background: "var(--secondary-3)"}}>Slide 2</div>,
+                <div style={{padding: "2.5em", textAlign: "center", background: "var(--warning-3)"}}>Slide 3</div>,
+            ]}/>},
     ],
     Calendar: [
-        {label: "Default", node: () => <Calendar value={new Date()} onSelectDate={() => {}}/>},
+        {label: "Default (pick a day)", node: () => <CalendarDemo/>},
+    ],
+    CalendarRange: [
+        {label: "Default (pick a start, then an end)", node: () => <CalendarRangeDemo/>},
     ],
     Tree: [
         {label: "Default", node: () => <Tree nodes={[
@@ -874,6 +969,13 @@ const examplesByName: Record<string, ExampleDoc[]> = {
     DatePicker: [
         {label: "Default", node: () => <DatePicker value="2026-01-15"/>},
         {label: "Disabled", node: () => <DatePicker value="2026-01-15" disabled/>},
+    ],
+    DateTimePicker: [
+        {label: "Default", node: () => <DateTimePicker value="2026-01-15T09:30"/>},
+        {label: "Disabled", node: () => <DateTimePicker value="2026-01-15T09:30" disabled/>},
+    ],
+    DateTimeRangePicker: [
+        {label: "Default", node: () => <DateTimeRangePicker value={{start: "2026-01-15T09:30", end: "2026-01-17T17:00"}} onChange={() => {}}/>},
     ],
     Slider: [
         {label: "Values", node: () => <div style={col}>

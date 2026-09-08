@@ -78,8 +78,27 @@ cursor:pointer;
 .vtd-calendar-day:hover{background-color:var(--background-1);}
 .vtd-calendar-day:focus-visible{outline:1px solid var(--primary);outline-offset:1px;}
 .vtd-calendar-day-outside{opacity:0.35;}
+/*
+ * "Today" is a subtle background tint, not a box-shadow ring - a ring reads too much like a
+ * border/selection indicator (it was one, before this was written this way; a demo whose
+ * initial value happened to be today made that ring look like a leftover selection outline
+ * after picking a different day, since it doesn't - and shouldn't - go away just because
+ * something else got selected. Today keeps its own marker regardless of what's selected; the
+ * two are meant to coexist, so they need to look clearly different, not just be different
+ * classes). --primary-1 (this package's usual "very subtle tint" step, same one Checkbox/
+ * RadioButton/Toggle use for their own off-state background) keeps it a background, not text
+ * color alone, without competing with -selected's solid --primary fill below.
+ */
+.vtd-calendar-day-today{font-weight:bold;background-color:var(--primary-1);}
 .vtd-calendar-day-selected{background-color:var(--primary);color:var(--text-alt);}
-.vtd-calendar-day-today{font-weight:bold;box-shadow:inset 0 0 0 1px var(--primary-6);}
+/*
+ * Both need to win over the plain :hover rule above by specificity (not just source order,
+ * which would be one stray reorder away from silently regressing back to this) - otherwise
+ * hovering either drops it back to the same neutral background :hover gives every other day,
+ * making it indistinguishable from an unselected one for as long as the pointer sits on it.
+ */
+.vtd-calendar-day.vtd-calendar-day-today:hover{background-color:var(--primary-2);}
+.vtd-calendar-day.vtd-calendar-day-selected:hover{background-color:var(--primary-6);}
 `, "vtd/Calendar")
         }
 

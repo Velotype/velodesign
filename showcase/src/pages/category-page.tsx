@@ -48,7 +48,7 @@ background-size:16px 16px;
 
     override render(attrs: CategoryPageAttrsType): RenderableElements {
         return <div class="vtd-showcase-category-page">
-            <Breadcrumbs items={[{label: "Home", to: "/"}, {label: attrs.group}]}/>
+            <Breadcrumbs spa items={[{label: "Home", to: "/"}, {label: attrs.group}]}/>
             <h1>{attrs.group}</h1>
             <p class="vtd-showcase-category-page-description">{attrs.docs.length} component{attrs.docs.length == 1 ? "" : "s"} in this category.</p>
 

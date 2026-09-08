@@ -49,7 +49,13 @@ export const I: FunctionComponent<IAttrsType> = function(attrs: IAttrsType): SVG
         setAttributeHelper(path,"fill", "currentcolor")
         setAttributeHelper(path,"d", icon.d)
         svg.appendChild(path)
-        return passthroughAttrsToElement<SVGSVGElement>(svg, attrs)
+        // `passthroughAttrsToElement`'s generic is declared `<T extends HTMLElement>`, and
+        // unlike `HTMLDetailsElement` (used the same way by `Menu`/`Accordion`/`Collapse`/
+        // `Tree`), `SVGSVGElement` genuinely doesn't structurally satisfy that - it descends
+        // from `SVGElement`/`Element`, not `HTMLElement`, so it's missing real HTMLElement-only
+        // members (`accessKey`, `autocapitalize`, ...). The `id`/`class`/`style` attrs this
+        // actually sets are all plain `Element`-level concerns, so the cast is safe at runtime.
+        return passthroughAttrsToElement<HTMLElement>(svg as unknown as HTMLElement, attrs) as unknown as SVGSVGElement
     }
     return null
 }

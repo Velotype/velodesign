@@ -13,6 +13,7 @@ import {
     ButtonGroup,
     ButtonModal,
     Calendar,
+    CalendarRange,
     Card,
     Carousel,
     Checkbox,
@@ -22,6 +23,8 @@ import {
     Command,
     ContextMenu,
     DatePicker,
+    DateTimePicker,
+    DateTimeRangePicker,
     Divider,
     Drawer,
     Empty,
@@ -265,7 +268,7 @@ export const stories: ComponentStory[] = [
             exact: {kind: "boolean", label: "exact"},
             children: {kind: "text", label: "children"},
         },
-        render: (props) => <NavLink to={props.to as string} exact={props.exact as boolean}>{props.children as string}</NavLink>,
+        render: (props) => <NavLink to={props.to as string} exact={props.exact as boolean} spa>{props.children as string}</NavLink>,
     },
     {
         name: "Link", group: "Navigation",
@@ -274,7 +277,7 @@ export const stories: ComponentStory[] = [
             to: {kind: "text", label: "to"},
             children: {kind: "text", label: "children"},
         },
-        render: (props) => <Link to={props.to as string}>{props.children as string}</Link>,
+        render: (props) => <Link to={props.to as string} spa>{props.children as string}</Link>,
     },
     {
         name: "Breadcrumbs", group: "Navigation",
@@ -283,6 +286,7 @@ export const stories: ComponentStory[] = [
             separator: {kind: "text", label: "separator"},
         },
         render: (props) => <Breadcrumbs
+            spa
             separator={props.separator as string}
             items={[{label: "Home", to: "/"}, {label: "Library", to: "/library"}, {label: "Current page"}]}/>,
     },
@@ -306,8 +310,8 @@ export const stories: ComponentStory[] = [
             brand: {kind: "text", label: "brand"},
         },
         render: (props) => <Navbar brand={props.brand as string}>
-            <NavLink to="/">Home</NavLink>
-            <NavLink to="/docs">Docs</NavLink>
+            <NavLink to="/" spa>Home</NavLink>
+            <NavLink to="/docs" spa>Docs</NavLink>
         </Navbar>,
     },
     {
@@ -317,6 +321,7 @@ export const stories: ComponentStory[] = [
             header: {kind: "text", label: "header"},
         },
         render: (props) => <Sidebar
+            spa
             header={props.header as string}
             items={[{label: "Overview", to: "/"}, {label: "Settings", to: "/settings"}]}/>,
     },
@@ -500,6 +505,29 @@ export const stories: ComponentStory[] = [
             disabled: {kind: "boolean", label: "disabled"},
         },
         render: (props) => <DatePicker value={props.value as string} disabled={props.disabled as boolean}/>,
+    },
+    {
+        name: "DateTimePicker", group: "Data Entry",
+        defaultProps: {value: "2026-01-15T09:30", disabled: false},
+        controls: {
+            value: {kind: "text", label: "value"},
+            disabled: {kind: "boolean", label: "disabled"},
+        },
+        render: (props) => <DateTimePicker value={props.value as string} disabled={props.disabled as boolean}/>,
+    },
+    {
+        name: "DateTimeRangePicker", group: "Data Entry",
+        defaultProps: {start: "2026-01-15T09:30", end: "2026-01-17T17:00", disabled: false},
+        controls: {
+            disabled: {kind: "boolean", label: "disabled"},
+        },
+        render: (props, setProp) => <DateTimeRangePicker
+            value={{start: props.start as string, end: props.end as string}}
+            disabled={props.disabled as boolean}
+            onChange={(range) => {
+                setProp("start", range.start ?? "")
+                setProp("end", range.end ?? "")
+            }}/>,
     },
     {
         name: "Slider", group: "Data Entry",
@@ -809,9 +837,28 @@ export const stories: ComponentStory[] = [
     },
     {
         name: "Calendar", group: "Data Display",
-        defaultProps: {},
+        // Stored as `Date.toDateString()` (e.g. "Thu Jan 15 2026") rather than an ISO
+        // "YYYY-MM-DD" string - `new Date("YYYY-MM-DD")` parses as UTC midnight, which can
+        // shift a day backward once re-read with local getters (getFullYear/getMonth/getDate,
+        // as Calendar's own rendering does) in a negative-UTC-offset timezone; toDateString()'s
+        // format parses back as local midnight instead, so it round-trips exactly.
+        defaultProps: {selected: new Date(2026, 0, 15).toDateString()},
         controls: {},
-        render: (_props, setProp) => <Calendar value={new Date(2026, 0, 15)} onSelectDate={(date) => setProp("selected", date.toDateString())}/>,
+        render: (props, setProp) => <Calendar value={new Date(props.selected as string)} onSelectDate={(date) => setProp("selected", date.toDateString())}/>,
+    },
+    {
+        name: "CalendarRange", group: "Data Display",
+        defaultProps: {start: new Date(2026, 0, 10).toDateString(), end: new Date(2026, 0, 15).toDateString()},
+        controls: {},
+        render: (props, setProp) => <CalendarRange
+            value={{
+                start: new Date(props.start as string),
+                end: props.end ? new Date(props.end as string) : undefined,
+            }}
+            onSelectRange={(range) => {
+                if (range.start) { setProp("start", range.start.toDateString()) }
+                if (range.end) { setProp("end", range.end.toDateString()) }
+            }}/>,
     },
     {
         name: "Tree", group: "Data Display",
