@@ -57,7 +57,7 @@ return passthroughAttrsToElement<HTMLButtonElement>(<button ...>, attrs)   // co
 return passthroughAttrsToElement(<button ...>, attrs) as HTMLButtonElement // don't do this
 ```
 
-The generic is declared `<T extends HTMLElement>`, but TypeScript's structural typing means `SVGSVGElement` and `HTMLDetailsElement` satisfy it fine too (verified empirically — `passthroughAttrsToElement<SVGSVGElement>(...)` type-checks) — you don't need a cast even for non-`HTMLElement`-shaped roots like `Icon`'s `<svg>` or `Menu`'s `<details>`.
+The generic is declared `<T extends HTMLElement>`. `HTMLDetailsElement` (used this way by `Menu`/`Accordion`/`Collapse`/`Tree`) genuinely satisfies that constraint - it's a real `HTMLElement` subtype - so it needs no cast. `SVGSVGElement` (`Icon`'s `<svg>` root) does *not*: it descends from `SVGElement`/`Element`, not `HTMLElement`, so it's missing real `HTMLElement`-only members (`accessKey`, `autocapitalize`, ...) and fails to type-check against the constraint (confirmed against `@velotype/velotype@0.0.27` - an earlier note here claiming structural typing let `SVGSVGElement` through anyway was wrong, or true only against an older `dom.d.ts`; either way it isn't now). `Icon` handles this with a double cast through `unknown` at its one call site, safe because the attrs `passthroughAttrsToElement` actually reads (`id`/`class`/`style`) are plain `Element`-level concerns - don't reach for `<T>` itself as a way around this on a new SVG-rooted component; cast at the call site the same way.
 
 ## Styling
 

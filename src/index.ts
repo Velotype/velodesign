@@ -50,6 +50,8 @@ import { Timeline, type TimelineAttrsType, type TimelineItemType } from "./timel
 import { AspectRatio, type AspectRatioAttrsType } from "./aspect-ratio.tsx"
 import { ScrollArea, type ScrollAreaAttrsType } from "./scroll-area.tsx"
 import { DatePicker, type DatePickerAttrsType } from "./datepicker.tsx"
+import { DateTimePicker, type DateTimePickerAttrsType } from "./datetimepicker.tsx"
+import { DateTimeRangePicker, type DateTimeRangePickerAttrsType, type DateTimeRangeType } from "./datetimerangepicker.tsx"
 import { Slider, type SliderAttrsType } from "./slider.tsx"
 import { InputNumber, type InputNumberAttrsType } from "./input-number.tsx"
 import { ColorPicker, type ColorPickerAttrsType } from "./colorpicker.tsx"
@@ -67,6 +69,7 @@ import { ContextMenu, type ContextMenuAttrsType, type ContextMenuItemType } from
 import { Resizable, type ResizableAttrsType } from "./resizable.tsx"
 import { Carousel, type CarouselAttrsType } from "./carousel.tsx"
 import { Calendar, type CalendarAttrsType } from "./calendar.tsx"
+import { CalendarRange, type CalendarRangeAttrsType, type DateRangeType } from "./calendar-range.tsx"
 import { Tree, type TreeAttrsType, type TreeNodeType } from "./tree.tsx"
 import { Command, type CommandAttrsType, type CommandItemType } from "./command.tsx"
 
@@ -242,6 +245,13 @@ export {
     DatePicker,
     type DatePickerAttrsType,
 
+    DateTimePicker,
+    type DateTimePickerAttrsType,
+
+    DateTimeRangePicker,
+    type DateTimeRangePickerAttrsType,
+    type DateTimeRangeType,
+
     Slider,
     type SliderAttrsType,
 
@@ -304,6 +314,10 @@ export {
 
     Calendar,
     type CalendarAttrsType,
+
+    CalendarRange,
+    type CalendarRangeAttrsType,
+    type DateRangeType,
 
     Tree,
     type TreeAttrsType,

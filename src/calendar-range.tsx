@@ -2,17 +2,26 @@ import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/v
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 import { Button } from "./button.tsx"
 
+/** A (possibly incomplete) date range, as picked by `<CalendarRange/>` */
+export type DateRangeType = {
+    /** Start of the range (inclusive) */
+    start?: Date
+    /** End of the range (inclusive) */
+    end?: Date
+}
+
 /**
- * Attrs type for `<Calendar/>` Component
+ * Attrs type for `<CalendarRange/>` Component
  */
-export type CalendarAttrsType = {
-    /** Currently selected date, if any */
-    value?: Date
-    /** Called when the user clicks a day cell */
-    onSelectDate?: (date: Date) => void
+export type CalendarRangeAttrsType = {
+    /** Currently selected range, if any */
+    value?: DateRangeType
+    /** Called every time the range changes - once when the start is picked (with `end`
+     * `undefined`), and again once the end is picked completing the range */
+    onSelectRange?: (range: DateRangeType) => void
 } & IdAttr & StylePassthroughAttrs
 
-let areCalendarStylesMounted = false
+let areCalendarRangeStylesMounted = false
 
 const weekdayLabels = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
 
@@ -21,43 +30,60 @@ function isSameDay(a: Date, b: Date): boolean {
     return a.getFullYear() == b.getFullYear() && a.getMonth() == b.getMonth() && a.getDate() == b.getDate()
 }
 
+/** Midnight-normalized so range comparisons only ever look at the calendar day, never time-of-day */
+function atMidnight(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+}
+
 /**
- * A month-grid date picker with prev/next month navigation and a selectable day
+ * A month-grid date-range picker: the same prev/next-month grid as `Calendar`, but clicking
+ * picks a *start* then an *end* instead of a single day - the whole span between them (and
+ * both endpoints) highlights once both are picked.
  *
- * Implements the ARIA APG "Date Picker Dialog" grid keyboard model: one day cell at a time is
- * a Tab stop (a roving `tabindex`, tracked as `#focusedDate` - `value`/today, in that preference
- * order, until an arrow key moves it), Left/Right/Up/Down move a day/week at a time, Home/End
- * jump to the start/end of the current week, and PageUp/PageDown step a month (Shift+PageUp/Down
- * a year) - crossing a month boundary rebuilds the grid and then refocuses the same date's new
- * cell, since the old one no longer exists once that happens.
+ * A separate component from `Calendar` rather than a "range mode" flag on it: the two have
+ * meaningfully different attrs (`value`/`onSelectRange` vs. `value`/`onSelectDate`) and click
+ * semantics (two-step start/end picking, chronological reordering if the second pick lands
+ * before the first, vs. a single immediate pick), and folding both into one component's attrs
+ * would mean every consumer paying for a union type that's only ever half-relevant to them.
+ * They intentionally share the `vtd-calendar-*` class names for the grid/day-cell structure
+ * they render identically, each under its own `setStylesheet` key (see CLAUDE.md's Styling
+ * section) - not a shared stylesheet, but the same visual language.
  *
- * Unlike almost every other stateful `Component` in this package (see the "Avoid refresh()"
- * section of CLAUDE.md), `#header`/`#gridEl` are built once and updated via `#renderGrid()`
- * rather than `this.refresh()`-ing the whole component on every navigation - not for the usual
- * "don't tear down consumer content" reason (a Calendar has none), but because refocusing a day
- * cell after a month change needs a stable element to query the freshly-built grid through, and
- * `refresh()` replaces the component's entire rendered tree out from under any reference to it.
+ * Picking logic: the first click after a range is complete (or after nothing is picked yet)
+ * starts a new range and clears the end. The next click completes it, chronologically -
+ * clicking a day *before* the picked start swaps them so `start` is always the earlier date.
+ * `onSelectRange` fires on both the start-only pick and the completing pick, so a consumer that
+ * only cares about complete ranges should check `range.end !== undefined`.
+ *
+ * Keyboard model matches `Calendar` exactly (see its own doc comment for the full ARIA APG
+ * grid rationale) - Enter/Space (native button activation) on the focused day cell does
+ * whichever of "start" or "complete" a click would have done.
  */
-export class Calendar extends Component<CalendarAttrsType> {
+export class CalendarRange extends Component<CalendarRangeAttrsType> {
     /** First day of the month currently displayed */
     #viewDate: Date
     /** The date that currently holds the grid's roving tabindex/focus */
     #focusedDate: Date
-    #attrs: CalendarAttrsType
+    /** The range picked so far - distinct from `#attrs.value` so this stays the source of
+     * truth for an uncontrolled consumer that never passes `value` back in at all */
+    #range: DateRangeType
+    #attrs: CalendarRangeAttrsType
 
     #root: HTMLDivElement
     #titleEl: HTMLSpanElement = <span class="vtd-calendar-title"/>
     #gridEl: HTMLDivElement = <div class="vtd-calendar-grid" role="grid"/>
 
-    /** Create a new `<Calendar/>` Component */
-    constructor(attrs: CalendarAttrsType, children: RenderableElements[]) {
+    /** Create a new `<CalendarRange/>` Component */
+    constructor(attrs: CalendarRangeAttrsType, children: RenderableElements[]) {
         super(attrs, children)
         this.#attrs = attrs
+        this.#range = attrs.value ?? {}
         const today = new Date()
-        this.#viewDate = attrs.value ? new Date(attrs.value.getFullYear(), attrs.value.getMonth(), 1) : new Date(today.getFullYear(), today.getMonth(), 1)
-        this.#focusedDate = attrs.value ?? today
-        if (!areCalendarStylesMounted) {
-            areCalendarStylesMounted = true
+        const anchor = this.#range.start ?? today
+        this.#viewDate = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
+        this.#focusedDate = anchor
+        if (!areCalendarRangeStylesMounted) {
+            areCalendarRangeStylesMounted = true
             setStylesheet(`
 .vtd-calendar{width:20em;max-width:100%;}
 .vtd-calendar-header{display:flex;align-items:center;justify-content:space-between;margin-block-end:0.5em;}
@@ -78,28 +104,24 @@ cursor:pointer;
 .vtd-calendar-day:hover{background-color:var(--background-1);}
 .vtd-calendar-day:focus-visible{outline:1px solid var(--primary);outline-offset:1px;}
 .vtd-calendar-day-outside{opacity:0.35;}
-/*
- * "Today" is a subtle background tint, not a box-shadow ring - a ring reads too much like a
- * border/selection indicator (it was one, before this was written this way; a demo whose
- * initial value happened to be today made that ring look like a leftover selection outline
- * after picking a different day, since it doesn't - and shouldn't - go away just because
- * something else got selected. Today keeps its own marker regardless of what's selected; the
- * two are meant to coexist, so they need to look clearly different, not just be different
- * classes). --primary-1 (this package's usual "very subtle tint" step, same one Checkbox/
- * RadioButton/Toggle use for their own off-state background) keeps it a background, not text
- * color alone, without competing with -selected's solid --primary fill below.
- */
+/* See Calendar's identical comment for the full rationale - a subtle background tint instead of
+ * a box-shadow ring, so "today" never reads as a leftover selection/range outline. */
 .vtd-calendar-day-today{font-weight:bold;background-color:var(--primary-1);}
-.vtd-calendar-day-selected{background-color:var(--primary);color:var(--text-alt);}
+.vtd-calendar-day-in-range{background-color:var(--primary-3);border-radius:0;}
+.vtd-calendar-day-range-start,.vtd-calendar-day-range-end{background-color:var(--primary);color:var(--text-alt);}
+.vtd-calendar-day-range-start{border-start-end-radius:0;border-end-end-radius:0;}
+.vtd-calendar-day-range-end{border-start-start-radius:0;border-end-start-radius:0;}
 /*
- * Both need to win over the plain :hover rule above by specificity (not just source order,
- * which would be one stray reorder away from silently regressing back to this) - otherwise
- * hovering either drops it back to the same neutral background :hover gives every other day,
- * making it indistinguishable from an unselected one for as long as the pointer sits on it.
+ * All need to win over the plain :hover rule above by specificity (not source order, which
+ * would be one stray reorder away from silently regressing) - otherwise hovering any of them
+ * drops it back to the same neutral background :hover gives an ordinary day, making it
+ * indistinguishable from an unselected day for as long as the pointer sits on it - see
+ * Calendar's identical -selected:hover fix.
  */
 .vtd-calendar-day.vtd-calendar-day-today:hover{background-color:var(--primary-2);}
-.vtd-calendar-day.vtd-calendar-day-selected:hover{background-color:var(--primary-6);}
-`, "vtd/Calendar")
+.vtd-calendar-day.vtd-calendar-day-in-range:hover{background-color:var(--primary-4);}
+.vtd-calendar-day.vtd-calendar-day-range-start:hover,.vtd-calendar-day.vtd-calendar-day-range-end:hover{background-color:var(--primary-6);}
+`, "vtd/CalendarRange")
         }
 
         this.#gridEl.addEventListener("keydown", this.#handleGridKeyDown)
@@ -127,8 +149,7 @@ cursor:pointer;
     }
 
     /** Moves the roving tabindex/focus to `date`, changing the displayed month first (and
-     * rebuilding the grid) if `date` falls outside it - the currently-focused button is always
-     * about to be replaced in that case, so focus must be re-applied to its replacement after */
+     * rebuilding the grid) if `date` falls outside it - see `Calendar#moveFocusTo` for why */
     #moveFocusTo(date: Date) {
         this.#focusedDate = date
         const monthChanged = date.getFullYear() != this.#viewDate.getFullYear() || date.getMonth() != this.#viewDate.getMonth()
@@ -169,15 +190,31 @@ cursor:pointer;
         }
     }
 
-    /** Rebuilds the title and the grid's day cells to match `#viewDate`/`#focusedDate` */
+    /** Applies a click/activation on `day` to the in-progress range, reordering into
+     * chronological order if needed, and notifies the consumer */
+    #pickDay(day: Date) {
+        const picked = atMidnight(day)
+        if (!this.#range.start || this.#range.end) {
+            this.#range = {start: picked, end: undefined}
+        } else if (picked < this.#range.start) {
+            this.#range = {start: picked, end: this.#range.start}
+        } else {
+            this.#range = {start: this.#range.start, end: picked}
+        }
+        this.#focusedDate = day
+        this.#attrs.onSelectRange?.(this.#range)
+        this.#renderGrid()
+    }
+
+    /** Rebuilds the title and the grid's day cells to match `#viewDate`/`#focusedDate`/`#range` */
     #renderGrid() {
-        const attrs = this.#attrs
         const year = this.#viewDate.getFullYear()
         const month = this.#viewDate.getMonth()
         const firstOfMonth = new Date(year, month, 1)
         const startOffset = firstOfMonth.getDay()
         const gridStart = new Date(year, month, 1 - startOffset)
         const today = new Date()
+        const {start, end} = this.#range
 
         this.#titleEl.textContent = this.#viewDate.toLocaleDateString(undefined, {month: "long", year: "numeric"})
 
@@ -191,18 +228,26 @@ cursor:pointer;
             ...weeks.map(week => <div class="vtd-calendar-week" role="row">
                 {week.map(day => {
                     const outside = day.getMonth() != month
-                    const selected = attrs.value ? isSameDay(day, attrs.value) : false
                     const isToday = isSameDay(day, today)
                     const isFocusable = isSameDay(day, this.#focusedDate)
+                    const isStart = start ? isSameDay(day, start) : false
+                    const isEnd = end ? isSameDay(day, end) : false
+                    const inRange = start && end ? atMidnight(day) > start && atMidnight(day) < end : false
+                    const classes = [
+                        "vtd-calendar-day",
+                        outside && "vtd-calendar-day-outside",
+                        isToday && "vtd-calendar-day-today",
+                        inRange && "vtd-calendar-day-in-range",
+                        isStart && "vtd-calendar-day-range-start",
+                        isEnd && "vtd-calendar-day-range-end",
+                    ].filter(Boolean).join(" ")
                     return <button
                         type="button"
                         role="gridcell"
                         tabindex={isFocusable ? 0 : -1}
-                        class={`vtd-calendar-day${outside ? " vtd-calendar-day-outside" : ""}${selected ? " vtd-calendar-day-selected" : ""}${isToday ? " vtd-calendar-day-today" : ""}`}
-                        onClick={() => {
-                            this.#focusedDate = day
-                            attrs.onSelectDate?.(day)
-                        }}>{day.getDate()}</button>
+                        class={classes}
+                        aria-pressed={isStart || isEnd}
+                        onClick={() => this.#pickDay(day)}>{day.getDate()}</button>
                 })}
             </div>),
         )

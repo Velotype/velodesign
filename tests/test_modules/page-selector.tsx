@@ -8,10 +8,10 @@ function pageSelectorPage(pagename: string) {
     return function() {
         return <div>
             <div>currently on page: {pagename}</div>
-            <div><Link to="/page-selector">link to page none</Link></div>
-            <div><Link to="/page-selector/one">link to page one</Link></div>
-            <div><Link to="/page-selector/two">link to page two</Link></div>
-            <div><Link to="/page-selector/three">link to page three</Link></div>
+            <div><Link to="/page-selector" spa>link to page none</Link></div>
+            <div><Link to="/page-selector/one" spa>link to page one</Link></div>
+            <div><Link to="/page-selector/two" spa>link to page two</Link></div>
+            <div><Link to="/page-selector/three" spa>link to page three</Link></div>
         </div>
     }
 }

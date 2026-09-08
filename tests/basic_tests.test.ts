@@ -3,17 +3,18 @@
 import { afterAll, beforeAll, describe, it } from "@std/testing/bdd"
 import { fail, assertEquals } from "@std/assert"
 
-import {App} from "@velotype/veloserver"
+import {Server} from "@velotype/veloserver"
 
 import { launch } from "@astral/astral"
 import type { Browser, ElementHandle, Page } from "@astral/astral"
 import { startAppServer } from "./base_server.ts"
+import type { ServerContextMetadata } from "./base_server.ts"
 
 const server_port = 3000
 const baseUrl = `http://localhost:${server_port}`
 
 describe('basic component rendering', () => {
-    let server: App
+    let server: Server<ServerContextMetadata>
     let browser: Browser
     let page: Page
 

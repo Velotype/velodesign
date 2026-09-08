@@ -58,7 +58,7 @@ padding-block-start:1.5em;
         const next = index >= 0 && index < componentDocs.length - 1 ? componentDocs[index + 1] : undefined
 
         return <div class="vtd-showcase-doc">
-            <Breadcrumbs items={[{label: "Home", to: "/"}, {label: doc.group}, {label: doc.name}]}/>
+            <Breadcrumbs spa items={[{label: "Home", to: "/"}, {label: doc.group}, {label: doc.name}]}/>
             <h1>{doc.name}</h1>
             <p class="vtd-showcase-doc-description">{doc.description}</p>
 

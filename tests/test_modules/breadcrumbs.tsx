@@ -7,13 +7,13 @@ import { TestModulePage } from "./module-page.tsx"
 class BreadcrumbsGallery extends Component<EmptyAttrs> {
     override render() {
         return <div style={{marginTop:"10px"}}>
-            <Breadcrumbs id="default-breadcrumbs" items={[
+            <Breadcrumbs id="default-breadcrumbs" spa items={[
                 {label: "Home", to: "/breadcrumbs"},
                 {label: "Section", to: "/breadcrumbs#section"},
                 {label: "Current page"}
             ]}/>
             <div style={{marginTop:"10px"}}>
-                <Breadcrumbs items={[{label: "Home", to: "/breadcrumbs"}, {label: "Current"}]} separator=">"/>
+                <Breadcrumbs spa items={[{label: "Home", to: "/breadcrumbs"}, {label: "Current"}]} separator=">"/>
             </div>
         </div>
     }

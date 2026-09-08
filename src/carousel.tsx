@@ -16,6 +16,23 @@ export type CarouselAttrsType = {
      * language; without this, the dot buttons have no accessible name at all.
      */
     getDotLabel?: (index: number) => string
+    /**
+     * Automatically advance through the slides on a timer (default: `false`). Advancing stops
+     * permanently the first time the user interacts with the carousel (clicking a prev/next
+     * arrow or a dot) - it never resumes on its own afterward, on the assumption that a user who
+     * has taken control of the pace wants to keep it.
+     */
+    autoplay?: boolean
+    /** Delay in ms before the very first automatic advance (default: same as `autoplayDelay`) */
+    autoplayFirstDelay?: number
+    /** Flat delay in ms between each automatic advance, after the first (default: `5000`) */
+    autoplayDelay?: number
+    /**
+     * Per-slide delay overrides in ms, keyed by the *currently shown* slide's 0-indexed
+     * position - how long that slide stays up before auto-advancing away from it. Takes
+     * priority over `autoplayFirstDelay`/`autoplayDelay` for whichever indices it defines.
+     */
+    autoplaySlideDelays?: Record<number, number>
 } & IdAttr & StylePassthroughAttrs
 
 let areCarouselStylesMounted = false
@@ -31,6 +48,7 @@ let areCarouselStylesMounted = false
  * down and reconstruct it from scratch, losing whatever state an off-screen slide held.
  */
 export class Carousel extends Component<CarouselAttrsType> {
+    #attrs: CarouselAttrsType
     /** Index of the currently shown slide */
     #currentIndex = 0
     /** Slide wrapper elements, in order */
@@ -38,6 +56,16 @@ export class Carousel extends Component<CarouselAttrsType> {
     /** Dot indicator buttons, in order (empty if `showDots` is off or there's only one slide) */
     #dotEls: HTMLButtonElement[] = []
     #root: HTMLDivElement
+
+    /** Whether the autoplay timer is still running - flips to `false` for good the first time
+     * the user picks a slide themselves (see `#stopAutoplay`) */
+    #autoplayActive: boolean
+    /** Handle for the pending `setTimeout` advancing to the next slide, if autoplay is active */
+    #autoplayTimeoutId?: number
+    /** Whether autoplay has advanced at least once yet - once true, `autoplayFirstDelay` no
+     * longer applies even if a later slide happens to have no explicit `autoplaySlideDelays`
+     * entry of its own */
+    #hasAutoAdvancedOnce = false
 
     /** Move to `index`, wrapping around, toggling visibility/classes directly on the already-built elements */
     #goTo(index: number, total: number) {
@@ -52,14 +80,60 @@ export class Carousel extends Component<CarouselAttrsType> {
         this.#dotEls[this.#currentIndex]?.classList.add("vtd-carousel-dot-active")
     }
 
+    /** Permanently stops autoplay - called on any user-driven navigation (see class doc comment) */
+    #stopAutoplay() {
+        this.#autoplayActive = false
+        if (this.#autoplayTimeoutId !== undefined) {
+            clearTimeout(this.#autoplayTimeoutId)
+            this.#autoplayTimeoutId = undefined
+        }
+    }
+
+    /** A user picked a slide themselves (prev/next/dot) - stop autoplay for good, then navigate */
+    #handleUserGoTo(index: number, total: number) {
+        this.#stopAutoplay()
+        this.#goTo(index, total)
+    }
+
+    /** Schedules the next automatic advance, using the current slide's own delay override if
+     * `autoplaySlideDelays` has one, else `autoplayFirstDelay` for the very first advance or
+     * `autoplayDelay` for every one after that */
+    #scheduleAutoAdvance(total: number) {
+        if (!this.#autoplayActive) {
+            return
+        }
+        const perSlideDelay = this.#attrs.autoplaySlideDelays?.[this.#currentIndex]
+        const delay = perSlideDelay ?? (!this.#hasAutoAdvancedOnce
+            ? (this.#attrs.autoplayFirstDelay ?? this.#attrs.autoplayDelay ?? 5000)
+            : (this.#attrs.autoplayDelay ?? 5000))
+        this.#autoplayTimeoutId = setTimeout(() => {
+            this.#hasAutoAdvancedOnce = true
+            this.#goTo(this.#currentIndex + 1, total)
+            this.#scheduleAutoAdvance(total)
+        }, delay)
+    }
+
+    /** Mount this Component - autoplay's timers only start once actually on the page, and are
+     * torn down on unmount so a removed Carousel never keeps ticking in the background */
+    override mount() {
+        if (this.#autoplayActive) {
+            this.#scheduleAutoAdvance(this.#attrs.slides.length)
+        }
+    }
+    override unmount() {
+        this.#stopAutoplay()
+    }
+
     /** Create a new `<Carousel/>` Component */
     constructor(attrs: CarouselAttrsType, children: RenderableElements[]) {
         super(attrs, children)
+        this.#attrs = attrs
+        this.#autoplayActive = !!attrs.autoplay
         if (!areCarouselStylesMounted) {
             areCarouselStylesMounted = true
             setStylesheet(`
 .vtd-carousel{width:100%;box-sizing:border-box;position:relative;overflow:hidden;border-radius:0.5rem;}
-.vtd-carousel-track{position:relative;min-height:8em;}
+.vtd-carousel-track{position:relative;}
 .vtd-carousel-slide{display:flex;align-items:center;justify-content:center;}
 .vtd-carousel-slide[hidden]{display:none;}
 .vtd-carousel-nav{
@@ -93,7 +167,7 @@ padding:0;
                     type="button"
                     class={`vtd-carousel-dot${index == this.#currentIndex ? " vtd-carousel-dot-active" : ""}`}
                     aria-label={attrs.getDotLabel?.(index)}
-                    onClick={() => this.#goTo(index, total)}/>
+                    onClick={() => this.#handleUserGoTo(index, total)}/>
                 this.#dotEls[index] = dot
                 return dot
             })}
@@ -102,8 +176,8 @@ padding:0;
         this.#root = <div class="vtd-carousel">
             <div class="vtd-carousel-track">
                 {this.#slideEls}
-                {total > 1 ? <Button class="vtd-carousel-nav vtd-carousel-nav-prev" type="secondary" onClick={() => this.#goTo(this.#currentIndex - 1, total)}>‹</Button> : null}
-                {total > 1 ? <Button class="vtd-carousel-nav vtd-carousel-nav-next" type="secondary" onClick={() => this.#goTo(this.#currentIndex + 1, total)}>›</Button> : null}
+                {total > 1 ? <Button class="vtd-carousel-nav vtd-carousel-nav-prev" type="secondary" onClick={() => this.#handleUserGoTo(this.#currentIndex - 1, total)}>‹</Button> : null}
+                {total > 1 ? <Button class="vtd-carousel-nav vtd-carousel-nav-next" type="secondary" onClick={() => this.#handleUserGoTo(this.#currentIndex + 1, total)}>›</Button> : null}
             </div>
             {dotsEl}
         </div>

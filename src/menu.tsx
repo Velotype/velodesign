@@ -1,5 +1,6 @@
 import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import { History } from "./history.ts"
 
 /**
  * A single entry in a `<Menu/>`
@@ -9,6 +10,16 @@ export type MenuItemType = {
     label: RenderableElements
     /** If set, this entry renders as a link to this URL (for a navigational submenu) */
     href?: string
+    /**
+     * If `true` (default `false`), and `href` is also set, clicking this entry intercepts the
+     * browser's own navigation and calls `History.changeLocation(href)` instead - a client-side
+     * route change with no full page reload, for an SPA. Left `false` (matching this component's
+     * original behavior, so existing consumers relying on it see no change), `href` navigates
+     * normally - a real page load, for a multi-page site, or for a `href` that's genuinely
+     * external and should never be client-side-routed even from inside an SPA. Ignored when
+     * `href` isn't set (an actions-menu entry with only `onClick` has no navigation to intercept).
+     */
+    spa?: boolean
     /** Called when this entry is clicked (for an actions menu) */
     onClick?: () => void
     /** Is this entry disabled? */
@@ -172,6 +183,9 @@ text-decoration:none;
                 }
                 if (!item.href) {
                     event.preventDefault()
+                } else if (item.spa) {
+                    event.preventDefault()
+                    History.changeLocation(item.href)
                 }
                 item.onClick?.()
                 this.#closeMenu()

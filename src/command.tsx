@@ -1,5 +1,6 @@
 import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
 import type { RenderableElements, IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
+import { highlightMatch, searchHighlightCss } from "./search-highlight.tsx"
 
 /**
  * A single entry in a `<Command/>` palette
@@ -89,11 +90,14 @@ export class Command extends Component<CommandAttrsType> {
             this.#list.replaceChildren(<li class="vtd-command-empty">No results</li>)
             return
         }
+        const query = this.#query.trim()
         this.#list.replaceChildren(...items.map((item, index) => <li
             class={`vtd-command-item${index == this.#highlightedIndex ? " vtd-command-item-highlighted" : ""}`}
             role="option"
             aria-selected={index == this.#highlightedIndex}
-            onClick={() => { this.#highlightedIndex = index; this.#selectHighlighted() }}>{item.label}</li>))
+            onClick={() => { this.#highlightedIndex = index; this.#selectHighlighted() }}>
+            {typeof item.label == "string" && query ? highlightMatch(item.label, query) : item.label}
+        </li>))
     }
 
     /** Create a new `<Command/>` Component */
@@ -119,6 +123,7 @@ font:inherit;
 .vtd-command-item{padding:0.6em 0.75em;border-radius:0.25rem;cursor:pointer;}
 .vtd-command-item-highlighted{background-color:var(--primary-3);}
 .vtd-command-empty{padding:1.5em;text-align:center;opacity:0.6;}
+${searchHighlightCss}
 `, "vtd/Command")
         }
 

@@ -113,6 +113,7 @@ gap:0.25em;
 border-block-end:1px solid var(--background-4);
 }
 .vtd-tabs-tab{
+position:relative;
 cursor:pointer;
 background:transparent;
 border:none;
@@ -122,15 +123,28 @@ font:inherit;
 padding:0.5em 1em;
 margin-block-end:-1px;
 }
+/*
+ * A real font-weight:bold on .vtd-tabs-tab-active would widen the label text and shift every
+ * tab after it - so ::after carries a permanently-bold, invisible copy of the same label
+ * (via attr(data-label), set below only when the label is a plain string) that reserves the
+ * bold width up front. height:0/overflow:hidden keep it from taking any vertical space or
+ * being paintable; visibility:hidden (rather than opacity/color tricks) is what keeps
+ * generated content out of the accessible name computation. A rich (non-string) label has no
+ * data-label, so attr() resolves to an empty string and this becomes a no-op for it - the
+ * label just won't have its width pre-reserved, same as before this fix.
+ */
+.vtd-tabs-tab::after{
+content:attr(data-label);
+display:block;
+height:0;
+overflow:hidden;
+visibility:hidden;
+font-weight:bold;
+}
 .vtd-tabs-tab:hover{background-color:var(--background-1);}
 .vtd-tabs-tab-active{
 border-block-end:2px solid var(--primary);
-/*
- * A real font-weight:bold here would widen the label text and shift every tab after it -
- * text-shadow fakes a bolder stroke by drawing the glyphs twice, offset by under a pixel,
- * without touching text metrics/layout at all.
- */
-text-shadow:-0.4px 0 currentColor, 0.4px 0 currentColor;
+font-weight:bold;
 }
 .vtd-tabs-panel{
 display:none;
@@ -148,6 +162,7 @@ padding:1em 0;
                         role="tab"
                         aria-selected={tab.key == this.#activeKey}
                         tabindex={tab.key == this.#activeKey ? 0 : -1}
+                        data-label={typeof tab.label == "string" || typeof tab.label == "number" || typeof tab.label == "bigint" ? String(tab.label) : undefined}
                         class={`vtd-tabs-tab${tab.key == this.#activeKey ? " vtd-tabs-tab-active" : ""}`}
                         onClick={() => this.#activate(tab.key)}>{tab.label}</button>
                     this.#tabButtons[tab.key] = button

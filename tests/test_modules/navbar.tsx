@@ -8,9 +8,9 @@ class NavbarGallery extends Component<EmptyAttrs> {
     override render() {
         return <div style={{marginTop:"10px"}}>
             <Navbar brand="My App">
-                <NavLink to="/navbar">Home</NavLink>
-                <NavLink to="/navbar/docs">Docs</NavLink>
-                <NavLink to="/navbar/about">About</NavLink>
+                <NavLink to="/navbar" spa>Home</NavLink>
+                <NavLink to="/navbar/docs" spa>Docs</NavLink>
+                <NavLink to="/navbar/about" spa>About</NavLink>
             </Navbar>
         </div>
     }

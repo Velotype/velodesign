@@ -10,8 +10,8 @@
         "lib": ["dom", "deno.ns", "esnext"]
     },
     "imports": {
-        "@velotype/veloserver": "jsr:@velotype/veloserver@^0.0.2",
-        "@velotype/velotype": "jsr:@velotype/velotype@^0.0.25"
+        "@velotype/veloserver": "jsr:@velotype/veloserver@^0.1.5",
+        "@velotype/velotype": "jsr:@velotype/velotype@^0.0.27"
     },
     "lint": {
         "rules": {
