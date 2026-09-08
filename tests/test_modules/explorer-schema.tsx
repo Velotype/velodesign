@@ -1,4 +1,4 @@
-import { RenderBasic } from "@velotype/velotype"
+import { getComponent, RenderBasic } from "@velotype/velotype"
 import type { RenderableElements } from "@velotype/velotype"
 
 import {
@@ -674,10 +674,14 @@ export const stories: ComponentStory[] = [
         defaultProps: {},
         controls: {},
         render: () => {
-            const command = <Command placeholder="Search commands..." items={[
+            // getComponent gets the real Command instance - the JSX itself evaluates to the
+            // raw <dialog> element, which has its own native showModal() under the same name
+            // that would otherwise be silently called instead of Command's own (see the same
+            // note in tests/test_modules/command.tsx).
+            const command = getComponent<Command>(<Command placeholder="Search commands..." items={[
                 {key: "new-file", label: "New file", searchText: "new file create", onSelect: () => { commandLastPicked.value = "New file" }},
                 {key: "open-settings", label: "Open settings", searchText: "open settings preferences", onSelect: () => { commandLastPicked.value = "Open settings" }},
-            ]}/>
+            ]}/>)
             return <span style={{display: "contents"}}>
                 {command}
                 <Button type="secondary" onClick={() => command.showModal()}>Open command palette</Button>

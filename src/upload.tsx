@@ -43,9 +43,10 @@ text-align:center;
 transition:background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
 }
 .vtd-upload:hover{background-color:var(--background-1);border-color:var(--primary-6);}
-.vtd-upload-input{opacity:0;visibility:hidden;height:0;width:0;position:absolute;}
+.vtd-upload-input{position:absolute;opacity:0;height:0;width:0;margin:0;}
 .vtd-upload-disabled{cursor:not-allowed;opacity:0.6;}
 .vtd-upload-disabled:hover{background-color:transparent;border-color:var(--background-5);}
+.vtd-upload:has(.vtd-upload-input:focus-visible){outline:2px solid var(--primary);outline-offset:2px;}
 `, "vtd/Upload")
     }
 

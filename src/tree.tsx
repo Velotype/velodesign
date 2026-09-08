@@ -37,7 +37,17 @@ function renderNode(node: TreeNodeType, onSelect?: (node: TreeNodeType) => void)
             </ul>
         </details>
     }
-    return <div class="vtd-tree-leaf" onClick={() => onSelect?.(node)}>{node.label}</div>
+    return <div
+        class="vtd-tree-leaf"
+        role="button"
+        tabindex={0}
+        onClick={() => onSelect?.(node)}
+        onKeyDown={(event: KeyboardEvent) => {
+            if (event.key == "Enter" || event.key == " ") {
+                event.preventDefault()
+                onSelect?.(node)
+            }
+        }}>{node.label}</div>
 }
 
 /**
@@ -76,6 +86,7 @@ transition:transform 0.15s ease-in-out;
 .vtd-tree-node[open] > .vtd-tree-label::before{transform:rotate(45deg);}
 .vtd-tree-leaf{margin-inline-start:1.15em;}
 .vtd-tree-label:hover,.vtd-tree-leaf:hover{background-color:var(--background-1);}
+.vtd-tree-leaf:focus-visible{outline:1px solid var(--primary);outline-offset:1px;}
 `, "vtd/Tree")
     }
 

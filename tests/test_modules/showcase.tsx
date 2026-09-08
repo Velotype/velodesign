@@ -1,4 +1,4 @@
-import {replaceElementWithRoot, Component} from "@velotype/velotype"
+import {replaceElementWithRoot, Component, getComponent} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
 import { Accordion, Alert, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, Calendar, Card, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu, DataTable, DatePicker, Divider, Drawer, Empty, Form, FormField, InputNumber, List, Menu, Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, Resizable, ScrollArea, Select, SelectMenu, showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, Tabs, Tag, TextBox, Theme, Timeline, Toggle, Tooltip, Tree, Upload} from "../../src/index.ts"
@@ -201,7 +201,7 @@ class ShowcaseSide extends Component<EmptyAttrs> {
             <hr style={{marginTop:"10px"}}/>
             Example Command:
             <div style={{marginTop:"10px"}}>{(() => {
-                const command = <Command placeholder="Search..." items={[{key:"a",label:"New file",searchText:"new file",onSelect:()=>{}}]}/>
+                const command = getComponent<Command>(<Command placeholder="Search..." items={[{key:"a",label:"New file",searchText:"new file",onSelect:()=>{}}]}/>)
                 return <span style={{display:"contents"}}>{command}<Button type="secondary" onClick={()=>command.showModal()}>Open command palette</Button></span>
             })()}</div>
             <hr style={{marginTop:"10px"}}/>

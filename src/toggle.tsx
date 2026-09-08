@@ -45,7 +45,7 @@ border-radius:0.25rem;
 
 .vtd-tg-container:hover{background-color:var(--background-1);}
 
-.vtd-tg-input {opacity:0;visibility:hidden;height:0;width:0;}
+.vtd-tg-input {position:absolute;opacity:0;height:0;width:0;margin:0;}
 
 .vtd-tg-track{
 position:relative;
@@ -55,8 +55,8 @@ width:2.6em;
 margin-inline-end:1ex;
 border-radius:1em;
 transition:background-color 0.2s ease-in, border 0.3s ease-in;
-background-color:var(--background-3);
-border:1px solid var(--background-6);
+background-color:var(--background-1);
+border:1px solid var(--background-5);
 flex-shrink:0;
 }
 
@@ -83,7 +83,7 @@ background-color:var(--background);
 
 .vtd-tg-disabled{opacity:0.5;cursor:not-allowed;}
 .vtd-tg-container:has(> .vtd-tg-input:disabled){cursor:not-allowed;}
-.vtd-tg-track:focus-visible{outline:1px solid var(--primary);outline-offset:1px;}
+.vtd-tg-input:focus-visible ~ .vtd-tg-track{outline:1px solid var(--primary);outline-offset:1px;}
 `, "vtd/Toggle")
     }
 
@@ -96,7 +96,7 @@ background-color:var(--background);
             checked={attrs.checked}
             value={attrs.value}
             onChange={attrs.onChange}/>
-        <span class={`vtd-tg-track${attrs.disabled?" vtd-tg-disabled":""}`} tabindex={0}>
+        <span class={`vtd-tg-track${attrs.disabled?" vtd-tg-disabled":""}`}>
             <span class="vtd-tg-thumb"/>
         </span>
         {children}

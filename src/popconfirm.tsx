@@ -47,17 +47,35 @@ export class Popconfirm extends Component<PopconfirmAttrsType> {
     #wrapper: HTMLSpanElement
     /** The positioned confirmation bubble */
     #bubble: HTMLDivElement
+    /** Whatever had focus just before the bubble opened (the trigger, if it was activated by
+     * keyboard), so `Escape` can restore it - not built on `<dialog>` (see the class doc
+     * comment), so closing via script would otherwise leave focus stranded in the hidden bubble */
+    #previouslyFocusedEl: HTMLElement | null = null
     /** Attrs captured at construction, read by `#handleDocumentClick` */
     #attrs: PopconfirmAttrsType
 
     /** Close the bubble */
-    #close = () => {
+    #close = (restoreFocus = false) => {
         this.#bubble.classList.remove("vtd-popconfirm-open")
+        if (restoreFocus) {
+            this.#previouslyFocusedEl?.focus()
+        }
     }
 
     /** Open/close the bubble */
     #toggle = () => {
+        if (!this.#bubble.classList.contains("vtd-popconfirm-open")) {
+            this.#previouslyFocusedEl = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        }
         this.#bubble.classList.toggle("vtd-popconfirm-open")
+    }
+
+    /** Escape closes the bubble, from anywhere inside it (trigger or bubble content) */
+    #handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key == "Escape" && this.#bubble.classList.contains("vtd-popconfirm-open")) {
+            event.preventDefault()
+            this.#close(true)
+        }
     }
 
     /** Close the bubble if it's open, outside-click closing is enabled, and the click landed outside of it */
@@ -98,7 +116,7 @@ display:none;
 position:absolute;
 top:100%;
 left:0;
-z-index:1;
+z-index:1000;
 margin-block-start:0.4em;
 min-width:14em;
 padding:0.75em 1em;
@@ -121,7 +139,7 @@ box-shadow:0 2px 8px rgba(0,0,0,0.15);
             </div>
         </div>
 
-        this.#wrapper = <span class="vtd-popconfirm">
+        this.#wrapper = <span class="vtd-popconfirm" onKeyDown={this.#handleKeyDown}>
             <span class="vtd-popconfirm-trigger" onClick={() => { this.#toggle() }}>{children}</span>
             {this.#bubble}
         </span>

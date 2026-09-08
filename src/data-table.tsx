@@ -240,14 +240,20 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
 
         this.#theadRowEl.replaceChildren(...visibleColumns.map(column => {
             const sortDirection: SortDirection | undefined = this.#sortKey == column.key ? this.#sortDirection : undefined
+            // A sortable header's content is a real `<button>` (the ARIA APG "sortable columns"
+            // pattern) rather than a click handler on the `<th>` itself - a `<th>` isn't natively
+            // focusable/activatable, so without this a keyboard user would have no way to sort
+            // at all. An unsortable column just renders the same content as a plain `<span>`.
+            const headerContent = <span class="vtd-datatable-header-content">
+                {column.header}
+                {sortDirection ? <span class="vtd-datatable-sort-indicator" aria-hidden="true">{sortDirection == "asc" ? "▲" : "▼"}</span> : null}
+            </span>
             const thElement: HTMLTableCellElement = <th
                 class={`${column.align ? `vtd-datatable-align-${column.align}` : ""}${column.sortValue ? " vtd-datatable-sortable" : ""}`}
-                aria-sort={sortDirection ? (sortDirection == "asc" ? "ascending" : "descending") : undefined}
-                onClick={column.sortValue ? () => this.#toggleSort(column) : undefined}>
-                <span class="vtd-datatable-header-content">
-                    {column.header}
-                    {sortDirection ? <span class="vtd-datatable-sort-indicator" aria-hidden="true">{sortDirection == "asc" ? "▲" : "▼"}</span> : null}
-                </span>
+                aria-sort={sortDirection ? (sortDirection == "asc" ? "ascending" : "descending") : undefined}>
+                {column.sortValue
+                    ? <button type="button" class="vtd-datatable-sort-button" onClick={() => this.#toggleSort(column)}>{headerContent}</button>
+                    : headerContent}
                 {(column.resizable ?? true) && attrs.resizableColumns ? <span class="vtd-datatable-resize-handle" onPointerDown={(event: PointerEvent) => this.#startResize(column, colElements[column.key], thElement, event)}/> : null}
             </th>
             return thElement
@@ -352,7 +358,7 @@ export class DataTable<RowType> extends Component<DataTableAttrsType<RowType>> {
 position:absolute;
 top:100%;
 right:0;
-z-index:1;
+z-index:1000;
 margin-block-start:0.25em;
 min-width:12em;
 padding:0.5em;
@@ -375,8 +381,20 @@ color:var(--text);
 white-space:nowrap;
 user-select:none;
 }
-.vtd-datatable-sortable{cursor:pointer;}
 .vtd-datatable-sortable:hover{background-color:var(--background-1);}
+.vtd-datatable-sort-button{
+cursor:pointer;
+display:block;
+width:100%;
+text-align:inherit;
+background:transparent;
+border:none;
+color:inherit;
+font:inherit;
+font-weight:inherit;
+padding:0;
+}
+.vtd-datatable-sort-button:focus-visible{outline:1px solid var(--primary);outline-offset:1px;}
 .vtd-datatable-header-content{display:inline-flex;align-items:center;}
 .vtd-datatable-sort-indicator{margin-inline-start:0.3em;opacity:0.6;}
 .vtd-datatable-table tbody tr:hover{background-color:var(--background-1);}

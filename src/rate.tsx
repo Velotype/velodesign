@@ -48,7 +48,7 @@ export const Rate: FunctionComponent<RateAttrsType> = function(attrs: RateAttrsT
 display:inline-flex;
 flex-direction:row-reverse;
 }
-.vtd-rate-input{opacity:0;visibility:hidden;height:0;width:0;position:absolute;}
+.vtd-rate-input{position:absolute;opacity:0;height:0;width:0;margin:0;}
 .vtd-rate-star{
 cursor:pointer;
 font-size:1.5em;

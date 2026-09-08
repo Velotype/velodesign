@@ -223,7 +223,7 @@ margin-block-start:-0.3em;
 position:absolute;
 top:100%;
 left:0;
-z-index:1;
+z-index:1000;
 min-width:max(100%, 14em);
 box-sizing:border-box;
 margin:0;
@@ -267,12 +267,7 @@ display:none;
             aria-haspopup="listbox"
             aria-expanded="false"
             onClick={() => { this.#open ? this.#closePanel() : this.#openPanel() }}
-            onKeyDown={this.#handleTriggerKeyDown}
-            onBlur={() => {
-                globalThis.setTimeout(() => {
-                    if (!this.#root.contains(document.activeElement)) { this.#closePanel() }
-                }, 0)
-            }}>
+            onKeyDown={this.#handleTriggerKeyDown}>
             {this.#valueEl}
             <span class="vtd-select-menu-chevron" aria-hidden="true"/>
         </button>

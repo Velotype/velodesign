@@ -54,6 +54,7 @@ export class Combobox extends Component<ComboboxAttrsType> {
     #root: HTMLSpanElement
     #inputEl: HTMLInputElement
     #panelEl: HTMLUListElement
+    #optionEls: HTMLLIElement[] = []
     #open = false
     #highlightedIndex = 0
 
@@ -99,6 +100,16 @@ export class Combobox extends Component<ComboboxAttrsType> {
         this.#panelEl.classList.add("vtd-combobox-panel-open")
     }
 
+    /** Moves the highlight to `index` by toggling a class on the already-built option elements,
+     * rather than rebuilding the list - `onPointerEnter` needs this to stay a lightweight,
+     * targeted update: rebuilding the whole list on every hover (as this used to) replaces the
+     * very `<li>` the pointer is over mid-interaction, which silently swallows the click that's
+     * about to land on it. */
+    #setHighlighted(index: number) {
+        this.#highlightedIndex = index
+        this.#optionEls.forEach((el, i) => el.classList.toggle("vtd-combobox-option-highlighted", i == index))
+    }
+
     /** Rebuilds the visible suggestion list to match the input's current value and highlight */
     #renderOptions() {
         const options = this.#filteredOptions()
@@ -106,17 +117,19 @@ export class Combobox extends Component<ComboboxAttrsType> {
             this.#highlightedIndex = Math.max(0, options.length - 1)
         }
         if (options.length == 0) {
+            this.#optionEls = []
             this.#panelEl.replaceChildren(<li class="vtd-combobox-empty">No matches</li>)
             return
         }
-        this.#panelEl.replaceChildren(...options.map((option, index) => <li
+        this.#optionEls = options.map((option, index) => <li
             role="option"
             aria-selected={index == this.#highlightedIndex}
             class={`vtd-combobox-option${index == this.#highlightedIndex ? " vtd-combobox-option-highlighted" : ""}`}
             onClick={() => this.#selectOption(option)}
-            onPointerEnter={() => { this.#highlightedIndex = index; this.#renderOptions() }}>
+            onPointerEnter={() => this.#setHighlighted(index)}>
             {option.label || option.value}
-        </li>))
+        </li>)
+        this.#panelEl.replaceChildren(...this.#optionEls)
     }
 
     #selectOption(option: ComboboxOptionType) {
@@ -143,8 +156,7 @@ export class Combobox extends Component<ComboboxAttrsType> {
                 return
             }
             const options = this.#filteredOptions()
-            this.#highlightedIndex = Math.min(this.#highlightedIndex + 1, options.length - 1)
-            this.#renderOptions()
+            this.#setHighlighted(Math.min(this.#highlightedIndex + 1, options.length - 1))
         } else if (event.key == "ArrowUp") {
             event.preventDefault()
             if (!this.#open) {
@@ -152,8 +164,7 @@ export class Combobox extends Component<ComboboxAttrsType> {
                 this.#renderOptions()
                 return
             }
-            this.#highlightedIndex = Math.max(this.#highlightedIndex - 1, 0)
-            this.#renderOptions()
+            this.#setHighlighted(Math.max(this.#highlightedIndex - 1, 0))
         } else if (event.key == "Enter") {
             if (!this.#open) {
                 return
@@ -195,7 +206,7 @@ font:inherit;
 position:absolute;
 top:100%;
 left:0;
-z-index:1;
+z-index:1000;
 min-width:max(100%, 14em);
 box-sizing:border-box;
 margin:0;
@@ -232,12 +243,7 @@ display:none;
             onInput={this.#handleInput}
             onChange={attrs.onChange}
             onKeyDown={this.#handleKeyDown}
-            onFocus={() => { this.#openPanel(); this.#renderOptions() }}
-            onBlur={() => {
-                globalThis.setTimeout(() => {
-                    if (!this.#root.contains(document.activeElement)) { this.#closePanel() }
-                }, 0)
-            }}/>
+            onFocus={() => { this.#openPanel(); this.#renderOptions() }}/>
 
         this.#root = <span class="vtd-combobox-wrapper">
             {this.#inputEl}
