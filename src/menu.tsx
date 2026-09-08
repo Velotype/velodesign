@@ -39,8 +39,21 @@ let areMenuStylesMounted = false
 export class Menu extends Component<MenuAttrsType> {
     /** The underlying `<details/>` element */
     #detailsElement: HTMLDetailsElement
+    /** The trigger, so `Escape` can return focus to it (native `<details>` gives no such
+     * behavior on its own - closing it via script leaves focus wherever it was, which is
+     * inside the now-hidden menu if the user was navigating it by keyboard) */
+    #summaryElement: HTMLElement
+    /** The menu item links, in order - what arrow-key/Home/End navigation moves between */
+    #itemEls: HTMLAnchorElement[] = []
     /** Attrs captured at construction, read by `#handleDocumentClick` (see the `Command` doc note on why this can't just close over the constructor's `attrs` parameter) */
     #attrs: MenuAttrsType
+
+    #closeMenu = (restoreFocus = false) => {
+        this.#detailsElement.removeAttribute("open")
+        if (restoreFocus) {
+            this.#summaryElement.focus()
+        }
+    }
 
     /** Close the menu if it's open, outside-click closing is enabled, and the click landed outside of it */
     #handleDocumentClick = (event: MouseEvent) => {
@@ -53,7 +66,37 @@ export class Menu extends Component<MenuAttrsType> {
         if (event.target instanceof Node && this.#detailsElement.contains(event.target)) {
             return
         }
-        this.#detailsElement.removeAttribute("open")
+        this.#closeMenu()
+    }
+
+    /** Implements the ARIA APG Menu keyboard pattern once the menu is open: Up/Down/Home/End
+     * move between items, Escape closes and returns focus to the trigger - none of which a
+     * native `<details>` provides on its own (only the summary's own open/close toggle is free) */
+    #handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key == "Escape") {
+            if (this.#detailsElement.open) {
+                event.preventDefault()
+                this.#closeMenu(true)
+            }
+            return
+        }
+        if (!this.#detailsElement.open || this.#itemEls.length == 0) {
+            return
+        }
+        const currentIndex = this.#itemEls.indexOf(document.activeElement as HTMLAnchorElement)
+        if (event.key == "ArrowDown") {
+            event.preventDefault()
+            this.#itemEls[(currentIndex + 1) % this.#itemEls.length]?.focus()
+        } else if (event.key == "ArrowUp") {
+            event.preventDefault()
+            this.#itemEls[(currentIndex - 1 + this.#itemEls.length) % this.#itemEls.length]?.focus()
+        } else if (event.key == "Home") {
+            event.preventDefault()
+            this.#itemEls[0]?.focus()
+        } else if (event.key == "End") {
+            event.preventDefault()
+            this.#itemEls[this.#itemEls.length - 1]?.focus()
+        }
     }
 
     /** Mount this Component */
@@ -92,7 +135,7 @@ border-radius:0.25rem;
 position:absolute;
 top:100%;
 left:0;
-z-index:1;
+z-index:1000;
 min-width:10em;
 margin-block-start:0.25em;
 padding:0.25em;
@@ -110,35 +153,34 @@ color:inherit;
 text-decoration:none;
 }
 .vtd-menu-item:hover{background-color:var(--background-2);}
+.vtd-menu-item:focus-visible{background-color:var(--background-2);outline:none;}
 .vtd-menu-item-disabled{opacity:0.5;cursor:not-allowed;pointer-events:none;}
 `, "vtd/Menu")
         }
 
-        const closeMenu = () => {
-            this.#detailsElement.removeAttribute("open")
-        }
+        this.#summaryElement = <summary class="vtd-menu-trigger">{attrs.trigger}</summary>
 
-        this.#detailsElement = <details class="vtd-menu">
-            <summary class="vtd-menu-trigger">{attrs.trigger}</summary>
+        this.#itemEls = attrs.items.map(item => <a
+            role="menuitem"
+            href={item.href || "#"}
+            aria-disabled={item.disabled}
+            class={`vtd-menu-item${item.disabled ? " vtd-menu-item-disabled" : ""}`}
+            onClick={(event: Event) => {
+                if (item.disabled) {
+                    event.preventDefault()
+                    return
+                }
+                if (!item.href) {
+                    event.preventDefault()
+                }
+                item.onClick?.()
+                this.#closeMenu()
+            }}>{item.label}</a>)
+
+        this.#detailsElement = <details class="vtd-menu" onKeyDown={this.#handleKeyDown}>
+            {this.#summaryElement}
             <ul class="vtd-menu-list" role="menu">
-                {attrs.items.map(item => <li role="none">
-                    <a
-                        role="menuitem"
-                        href={item.href || "#"}
-                        aria-disabled={item.disabled}
-                        class={`vtd-menu-item${item.disabled ? " vtd-menu-item-disabled" : ""}`}
-                        onClick={(event: Event) => {
-                            if (item.disabled) {
-                                event.preventDefault()
-                                return
-                            }
-                            if (!item.href) {
-                                event.preventDefault()
-                            }
-                            item.onClick?.()
-                            closeMenu()
-                        }}>{item.label}</a>
-                </li>)}
+                {this.#itemEls.map(itemEl => <li role="none">{itemEl}</li>)}
             </ul>
         </details>
 

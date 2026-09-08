@@ -56,11 +56,44 @@ export class Tabs extends Component<TabsAttrsType> {
         }
         this.#tabButtons[this.#activeKey]?.classList.remove("vtd-tabs-tab-active")
         this.#tabButtons[this.#activeKey]?.setAttribute("aria-selected", "false")
+        this.#tabButtons[this.#activeKey]?.setAttribute("tabindex", "-1")
         this.#panels[this.#activeKey]?.classList.remove("vtd-tabs-panel-active")
         this.#activeKey = key
         this.#tabButtons[key]?.classList.add("vtd-tabs-tab-active")
         this.#tabButtons[key]?.setAttribute("aria-selected", "true")
+        this.#tabButtons[key]?.setAttribute("tabindex", "0")
         this.#panels[key]?.classList.add("vtd-tabs-panel-active")
+    }
+
+    /** Moves focus to the tab at `key` (as opposed to `#activate`, which also switches the
+     * panel) - used by arrow-key navigation, which per the ARIA APG Tabs pattern activates the
+     * newly-focused tab immediately (the "automatic activation" model), so this always calls
+     * through to `#activate` too, but keeping it separate documents the two distinct triggers */
+    #focusAndActivate(key: string) {
+        this.#activate(key)
+        this.#tabButtons[key]?.focus()
+    }
+
+    /** Implements the ARIA APG Tabs keyboard pattern: Left/Right moves between tabs
+     * (wrapping), Home/End jumps to the first/last - the browser's own Tab key still moves
+     * focus in and out of the whole tablist as a single stop, via the roving `tabindex`
+     * `#activate` maintains above */
+    #handleKeyDown = (event: KeyboardEvent) => {
+        const keys = Object.keys(this.#tabButtons)
+        const currentIndex = keys.indexOf(this.#activeKey)
+        if (event.key == "ArrowLeft") {
+            event.preventDefault()
+            this.#focusAndActivate(keys[(currentIndex - 1 + keys.length) % keys.length])
+        } else if (event.key == "ArrowRight") {
+            event.preventDefault()
+            this.#focusAndActivate(keys[(currentIndex + 1) % keys.length])
+        } else if (event.key == "Home") {
+            event.preventDefault()
+            this.#focusAndActivate(keys[0])
+        } else if (event.key == "End") {
+            event.preventDefault()
+            this.#focusAndActivate(keys[keys.length - 1])
+        }
     }
 
     /** Create a new `<Tabs/>` Component */
@@ -108,12 +141,13 @@ padding:1em 0;
         }
 
         this.#root = <div class="vtd-tabs">
-            <div class="vtd-tabs-list" role="tablist">
+            <div class="vtd-tabs-list" role="tablist" onKeyDown={this.#handleKeyDown}>
                 {attrs.tabs.map(tab => {
                     const button: HTMLButtonElement = <button
                         type="button"
                         role="tab"
                         aria-selected={tab.key == this.#activeKey}
+                        tabindex={tab.key == this.#activeKey ? 0 : -1}
                         class={`vtd-tabs-tab${tab.key == this.#activeKey ? " vtd-tabs-tab-active" : ""}`}
                         onClick={() => this.#activate(tab.key)}>{tab.label}</button>
                     this.#tabButtons[tab.key] = button

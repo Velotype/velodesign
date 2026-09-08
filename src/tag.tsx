@@ -52,7 +52,7 @@ vertical-align:middle;
 .vtd-tag-secondary{background-color:var(--secondary-3);border:1px solid var(--secondary-6);}
 .vtd-tag-warning{background-color:var(--warning-3);border:1px solid var(--warning-6);}
 .vtd-tag-danger{background-color:var(--accent-3);border:1px solid var(--accent-6);}
-.vtd-tag-neutral{background-color:var(--background-2);border:1px solid var(--background-6);}
+.vtd-tag-neutral{background-color:var(--background-1);border:1px solid var(--background-6);}
 .vtd-tag-remove{
 cursor:pointer;
 background:transparent;

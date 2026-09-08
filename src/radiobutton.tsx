@@ -51,7 +51,7 @@ border-radius:0.25rem;
 
 .vtd-r-btn-container:hover .vtd-r-btn{background-color:var(--primary-2);border:1px solid var(--primary-7);}
 
-.vtd-r-btn-input {opacity:0;visibility:hidden;height:0;width:0;}
+.vtd-r-btn-input {position:absolute;opacity:0;height:0;width:0;margin:0;}
 
 .vtd-r-btn {
 position:relative;
@@ -92,7 +92,7 @@ border-color:var(--primary-7);
 }
 
 .vtd-r-btn-container:has(> .vtd-r-btn-input:disabled){cursor:not-allowed;}
-.vtd-r-btn:focus-visible{border:1px solid var(--primary);outline-color:var(--primary)}
+.vtd-r-btn-input:focus-visible ~ .vtd-r-btn{border:1px solid var(--primary);outline:1px solid var(--primary)}
 `, "vtd/RadioButton")
     }
 
@@ -105,17 +105,9 @@ border-color:var(--primary-7);
             checked={attrs.checked}
             value={attrs.value}
             onChange={attrs.onChange}/>
-        <span class={`vtd-r-btn${attrs.disabled?" vtd-r-btn-disabled":""}`} tabindex={0}>
+        <span class={`vtd-r-btn${attrs.disabled?" vtd-r-btn-disabled":""}`}>
             <span class="vtd-r-btn-check"/>
         </span>
         {children}
     </label>, attrs)
-
-/*
-                onKeyUp={(event: KeyboardEvent)=>{
-                    if (event.key === "Enter" || event.keyCode === 13) {
-                        event.preventDefault()
-                    }
-                }}
-*/
 }

@@ -36,7 +36,7 @@ vertical-align:middle;
 .vtd-badge-secondary{background-color:var(--secondary-3);border:1px solid var(--secondary-6);}
 .vtd-badge-warning{background-color:var(--warning-3);border:1px solid var(--warning-6);}
 .vtd-badge-danger{background-color:var(--accent-3);border:1px solid var(--accent-6);}
-.vtd-badge-neutral{background-color:var(--background-2);border:1px solid var(--background-6);}
+.vtd-badge-neutral{background-color:var(--background-1);border:1px solid var(--background-6);}
 `, "vtd/Badge")
     }
 

@@ -466,7 +466,7 @@ describe('basic component rendering', () => {
         })
         const clickFirstHeader = () => page.evaluate(() => {
             const root = document.getElementById("default-data-table") as HTMLElement
-            ;(root.querySelector("th") as HTMLElement).click()
+            ;(root.querySelector(".vtd-datatable-sort-button") as HTMLElement).click()
         })
 
         const unsorted = await firstColumnValues()

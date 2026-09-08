@@ -49,6 +49,10 @@ let accordionInstanceCounter = 0
  * - `visibility` flips at the *end* of the closing transition (via a transition-delay) so
  *   closed content still leaves the tab order immediately, same as it did under the browser's
  *   native `display:none`.
+ *
+ * One small piece of JS is still needed alongside that CSS: a one-time forced layout read per
+ * section, scheduled for the frame after mount (see below) - not for the animation itself, only
+ * to make sure it reliably *starts*. See that call site for why.
  */
 export const Accordion: FunctionComponent<AccordionAttrsType> = function(attrs: AccordionAttrsType, _children: RenderableElements[]): HTMLDivElement {
     if (!areAccordionStylesMounted) {
@@ -105,10 +109,31 @@ transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0s;
 
     const groupName = attrs.exclusive ? `vtd-accordion-group-${accordionInstanceCounter++}` : undefined
 
-    return passthroughAttrsToElement<HTMLDivElement>(<div class="vtd-accordion">
-        {attrs.items.map(item => <details class="vtd-accordion-item" open={item.defaultOpen} name={groupName}>
-            <summary class="vtd-accordion-header">{item.header}<span class="vtd-accordion-chevron"/></summary>
-            <div class="vtd-accordion-content"><div class="vtd-accordion-content-inner">{item.content}</div></div>
-        </details>)}
+    const contentEls: HTMLDivElement[] = []
+    const root = passthroughAttrsToElement<HTMLDivElement>(<div class="vtd-accordion">
+        {attrs.items.map(item => {
+            const contentEl: HTMLDivElement = <div class="vtd-accordion-content"><div class="vtd-accordion-content-inner">{item.content}</div></div>
+            contentEls.push(contentEl)
+            return <details class="vtd-accordion-item" open={item.defaultOpen} name={groupName}>
+                <summary class="vtd-accordion-header">{item.header}<span class="vtd-accordion-chevron"/></summary>
+                {contentEl}
+            </details>
+        })}
     </div>, attrs)
+
+    // Force layout on each section's content once it's connected, so the browser has an
+    // established "before" style to transition from the moment it's actually toggled -
+    // without this, a section clicked shortly after being newly mounted (e.g. right after a
+    // client-side route change put the whole Accordion on the page for the first time) can
+    // jump open/closed instantly with no animation at all, since the CSS transition spec
+    // only animates a property change relative to a style the browser already flushed at
+    // least once before. Reading layout is enough to establish that - no open/closed state
+    // is read or stored here, so this stays consistent with the "pure CSS, no JS" design.
+    requestAnimationFrame(() => {
+        for (const contentEl of contentEls) {
+            contentEl.getBoundingClientRect()
+        }
+    })
+
+    return root
 }

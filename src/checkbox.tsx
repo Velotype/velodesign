@@ -53,7 +53,7 @@ border-radius:0.25rem;
 
 .vtd-cb-container:hover .vtd-cb{background-color:var(--primary-2);border:1px solid var(--primary-7);}
 
-.vtd-cb-input {opacity:0;visibility:hidden;height:0;width:0;}
+.vtd-cb-input {position:absolute;opacity:0;height:0;width:0;margin:0;}
 
 .vtd-cb {
 position:relative;
@@ -112,7 +112,7 @@ border-color:var(--primary-5);
 }
 
 .vtd-cb-container:has(> .vtd-cb-input:disabled){cursor:not-allowed;}
-.vtd-cb:focus-visible{border:1px solid var(--primary);outline-color:var(--primary)}
+.vtd-cb-input:focus-visible ~ .vtd-cb{border:1px solid var(--primary);outline:1px solid var(--primary)}
 `, "vtd/Checkbox")
     }
 
@@ -126,7 +126,7 @@ border-color:var(--primary-5);
             indeterminate={attrs.indeterminate}
             value={attrs.value}
             onChange={attrs.onChange}/>
-        <span class={`vtd-cb${attrs.disabled?" vtd-cb-disabled":""}`} tabindex={0}>
+        <span class={`vtd-cb${attrs.disabled?" vtd-cb-disabled":""}`}>
             <span class="vtd-cb-check"/>
             <span class="vtd-cb-dash"/>
         </span>

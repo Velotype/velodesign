@@ -42,16 +42,27 @@ export class Popover extends Component<PopoverAttrsType> {
     #wrapper: HTMLSpanElement
     /** The positioned content bubble */
     #bubble: HTMLDivElement
+    /** Whatever had focus just before the popover opened (the trigger, if it was activated by
+     * keyboard), so `Escape` can restore it - there's no native dialog dismissal behavior here
+     * (see the class doc comment for why this isn't a `<dialog>`), so closing via script would
+     * otherwise just leave focus stranded inside the now-hidden bubble */
+    #previouslyFocusedEl: HTMLElement | null = null
     /** Attrs captured at construction, read by `#handleDocumentClick` (see the `Command` doc note on why this can't just close over the constructor's `attrs` parameter) */
     #attrs: PopoverAttrsType
 
     /** Close the popover */
-    #close = () => {
+    #close = (restoreFocus = false) => {
         this.#bubble.classList.remove("vtd-popover-open")
+        if (restoreFocus) {
+            this.#previouslyFocusedEl?.focus()
+        }
     }
 
     /** Open/close the popover */
     #toggle = () => {
+        if (!this.#bubble.classList.contains("vtd-popover-open")) {
+            this.#previouslyFocusedEl = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        }
         this.#bubble.classList.toggle("vtd-popover-open")
     }
 
@@ -67,6 +78,15 @@ export class Popover extends Component<PopoverAttrsType> {
             return
         }
         this.#close()
+    }
+
+    /** Escape closes the popover, from anywhere inside it (trigger or bubble content) - no
+     * native behavior provides this since it's not built on `<dialog>`/`<details>` */
+    #handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key == "Escape" && this.#bubble.classList.contains("vtd-popover-open")) {
+            event.preventDefault()
+            this.#close(true)
+        }
     }
 
     /** Mount this Component */
@@ -91,7 +111,7 @@ export class Popover extends Component<PopoverAttrsType> {
 .vtd-popover-content{
 display:none;
 position:absolute;
-z-index:1;
+z-index:1000;
 min-width:12em;
 max-width:20em;
 padding:0.75em 1em;
@@ -111,7 +131,7 @@ box-shadow:0 2px 8px rgba(0,0,0,0.15);
         const placement = attrs.placement || "bottom"
         this.#bubble = <div class={`vtd-popover-content vtd-popover-${placement}`}>{attrs.content}</div>
 
-        this.#wrapper = <span class="vtd-popover">
+        this.#wrapper = <span class="vtd-popover" onKeyDown={this.#handleKeyDown}>
             <span class="vtd-popover-trigger" onClick={() => { this.#toggle() }}>{attrs.trigger}</span>
             {this.#bubble}
         </span>
