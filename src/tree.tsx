@@ -30,8 +30,21 @@ let areTreeStylesMounted = false
 /** Recursively renders one node, using a native `<details>`/`<summary>` for any node with children */
 function renderNode(node: TreeNodeType, onSelect?: (node: TreeNodeType) => void): RenderableElements {
     if (node.children && node.children.length > 0) {
+        // A click anywhere on <summary> - including its disclosure-arrow area, drawn via
+        // ::before, which has no element of its own to attach a distinct handler to - triggers
+        // the browser's native toggle-open/closed behavior, regardless of where onClick is
+        // attached. Putting onSelect directly on <summary> (as this used to) therefore fired
+        // onSelect on every expand/collapse click too, not just on a genuine label click. Scoping
+        // onSelect to only the inner label span, and calling preventDefault() there, cancels the
+        // pending toggle specifically for that click while leaving clicks on the rest of the row
+        // (the arrow, the row's own padding) to toggle exactly as before, untouched by onSelect.
         return <details class="vtd-tree-node" open={node.defaultOpen}>
-            <summary class="vtd-tree-label" onClick={() => onSelect?.(node)}>{node.label}</summary>
+            <summary class="vtd-tree-label">
+                <span class="vtd-tree-label-text" onClick={(event: MouseEvent) => {
+                    event.preventDefault()
+                    onSelect?.(node)
+                }}>{node.label}</span>
+            </summary>
             <ul class="vtd-tree-children">
                 {node.children.map(child => <li>{renderNode(child, onSelect)}</li>)}
             </ul>
