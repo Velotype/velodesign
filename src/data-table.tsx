@@ -6,6 +6,7 @@ import { Pagination } from "./pagination.tsx"
 import { Select } from "./select.tsx"
 import { TextBox } from "./textbox.tsx"
 import { highlightMatch, searchHighlightCss } from "./search-highlight.tsx"
+import { History } from "./history.ts"
 
 /**
  * A single column definition for a `<DataTable/>`
@@ -68,6 +69,14 @@ export type DataTableAttrsType<RowType> = {
      */
     rowHref?: (row: RowType) => string | undefined
     /**
+     * Forwarded to every row link built by `rowHref` - see `Link`'s own `spa` attr (default
+     * `false`) for the full SPA-vs-multi-page-site explanation. With `spa`, a plain left-click
+     * routes client-side via `History.changeLocation` while middle-click, ctrl/cmd-click,
+     * right-click "open in new tab" and "copy link address" all keep working, because the row is
+     * still a real `<a href>`. Has no effect on `onRowSelect`, which is JS-driven either way.
+     */
+    rowHrefSpa?: boolean
+    /**
      * If set (and `rowHref` doesn't apply for a given row), makes the row a JS-driven "select"
      * action via a stretched `<button>` instead of an `<a>` - for picking a row that should
      * trigger something other than navigation (opening a modal, etc). Either way, a column's
@@ -88,31 +97,33 @@ type DataTableInnerAttrsType<RowType> = {
     pageSizeOptions: number[]
     showPageSizeControl: boolean
     resizableColumns: boolean
-    showColumnToggle: boolean
     zebra: boolean
     highlightOnHover: boolean
     rowHref?: (row: RowType) => string | undefined
+    rowHrefSpa?: boolean
     onRowSelect?: (row: RowType) => void
 }
 
 /**
  * Owns every piece of `DataTable`'s state (sort, page, column widths/visibility) and renders
- * the actual `<table>`. Split out from `DataTable` so the search `TextBox` - which needs to
- * stay mounted and keep focus while the user types - never gets caught up in one of this
- * component's own updates; see `setSearchQuery`.
+ * the actual `<table>`. Split out from `DataTable` so that nothing in the toolbar - the search
+ * `TextBox`, which needs to stay mounted and keep focus while the user types, and the
+ * column-visibility menu, whose open/closed state is tracked by a live element reference - ever
+ * gets caught up in one of this component's own updates. The toolbar is `DataTable`'s, and it
+ * drives this component through the two public methods below (`setSearchQuery`,
+ * `toggleColumnVisibility`) rather than by owning any of the state itself.
  *
- * Every piece of persistent structure (the column-menu button/panel, the `<colgroup>`/`<thead>`/
- * `<tbody>`, the footer) is built exactly once, in the constructor. State changes (sort, search,
- * page, column visibility, page size) call `#renderTable()`, a targeted update that only
- * replaces the contents of the specific elements that actually need to change, rather than
- * `this.refresh()` - `refresh()` unmounts and rebuilds this *entire* component from scratch,
- * which previously caused two real bugs here: the column-menu panel closing itself immediately
- * after opening (a fresh `refresh()`-built element no longer matched the one a same-tick
- * document click listener still held a reference to) and a resized column's width reverting
- * after an unrelated update. Since `columns[].render(row)` is consumer-supplied and can return
- * anything (including other stateful components), a full `refresh()` on every sort/search/page
- * change would also risk tearing down and losing state in any such cell content, and in the
- * column-menu panel/toolbar even though neither one is actually affected by those changes.
+ * Every piece of persistent structure (the `<colgroup>`/`<thead>`/`<tbody>`, the footer) is
+ * built exactly once, in the constructor. State changes (sort, search, page, column visibility,
+ * page size) call `#renderTable()`, a targeted update that only replaces the contents of the
+ * specific elements that actually need to change, rather than `this.refresh()` - `refresh()`
+ * unmounts and rebuilds this *entire* component from scratch, which previously caused two real
+ * bugs here: the column-menu panel closing itself immediately after opening (a fresh
+ * `refresh()`-built element no longer matched the one a same-tick document click listener still
+ * held a reference to) and a resized column's width reverting after an unrelated update. Since
+ * `columns[].render(row)` is consumer-supplied and can return anything (including other stateful
+ * components), a full `refresh()` on every sort/search/page change would also risk tearing down
+ * and losing state in any such cell content.
  */
 class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>> {
     #attrs: DataTableInnerAttrsType<RowType>
@@ -123,35 +134,12 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
     #currentPageSize: number
     #hiddenColumns = new Set<string>()
     #columnWidths: Record<string, number> = {}
-    #columnMenuOpen = false
 
     #root: HTMLDivElement
     #colgroupEl: HTMLTableColElement = <colgroup/>
     #theadRowEl: HTMLTableRowElement = <tr/>
     #tbodyEl: HTMLTableSectionElement = <tbody/>
     #footerEl: HTMLDivElement = <div class="vtd-datatable-footer"/>
-    /** The column-menu's own wrapper; built once, so outside-click detection always checks a stable element */
-    #columnMenuWrapperEl: HTMLDivElement
-    #columnMenuPanelEl: HTMLDivElement
-
-    /** Close the column menu if it's open and the click landed outside of it */
-    #handleDocumentClick = (event: MouseEvent) => {
-        if (!this.#columnMenuOpen) {
-            return
-        }
-        if (event.target instanceof Node && this.#columnMenuWrapperEl.contains(event.target)) {
-            return
-        }
-        this.#columnMenuOpen = false
-        this.#columnMenuPanelEl.classList.remove("vtd-datatable-column-menu-open")
-    }
-
-    override mount() {
-        document.addEventListener("click", this.#handleDocumentClick)
-    }
-    override unmount() {
-        document.removeEventListener("click", this.#handleDocumentClick)
-    }
 
     /** Called by `DataTable`'s persistent search input on every keystroke */
     setSearchQuery(query: string) {
@@ -181,8 +169,11 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
         this.#renderTable()
     }
 
-    /** Native checkbox toggling already updates its own visual state - this only needs to update which columns the table itself shows */
-    #toggleColumnVisibility(key: string) {
+    /**
+     * Called by `DataTable`'s column menu. The native checkbox there already updates its own
+     * visual state, so this only needs to update which columns the table itself shows.
+     */
+    toggleColumnVisibility(key: string) {
         if (this.#hiddenColumns.has(key)) {
             this.#hiddenColumns.delete(key)
         } else {
@@ -304,7 +295,18 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
                     }
                     return <td class={cellClass}>
                         {href
-                            ? <a class="vtd-datatable-row-link" href={href}>{cellContent}</a>
+                            ? <a
+                                class="vtd-datatable-row-link"
+                                href={href}
+                                onClick={attrs.rowHrefSpa ? (event: MouseEvent) => {
+                                    // Only a plain left-click routes client-side. A modified click
+                                    // (new tab/window, download, or any non-primary button) is left
+                                    // to the browser, which is the whole point of keeping a real
+                                    // <a href> here rather than a JS-only handler.
+                                    if (event.defaultPrevented || event.button != 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {return}
+                                    event.preventDefault()
+                                    History.changeLocation(href)
+                                } : undefined}>{cellContent}</a>
                             : <button type="button" class="vtd-datatable-row-link vtd-datatable-row-link-button" onClick={() => attrs.onRowSelect?.(row)}>{cellContent}</button>}
                     </td>
                 })}
@@ -342,22 +344,7 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
         this.#attrs = attrs
         this.#currentPageSize = attrs.pageSize
 
-        this.#columnMenuPanelEl = <div class="vtd-datatable-column-menu">
-            {attrs.columns.map(column => column.hideable === false
-                ? <Checkbox checked disabled>{column.header}</Checkbox>
-                : <Checkbox checked={!this.#hiddenColumns.has(column.key)} onChange={() => this.#toggleColumnVisibility(column.key)}>{column.header}</Checkbox>)}
-        </div>
-
-        this.#columnMenuWrapperEl = <div class="vtd-datatable-column-menu-wrapper">
-            <Button type="secondary" onClick={() => {
-                this.#columnMenuOpen = !this.#columnMenuOpen
-                this.#columnMenuPanelEl.classList.toggle("vtd-datatable-column-menu-open", this.#columnMenuOpen)
-            }}>Columns</Button>
-            {this.#columnMenuPanelEl}
-        </div>
-
         this.#root = <div class="vtd-datatable">
-            {attrs.showColumnToggle ? <div class="vtd-datatable-toolbar">{this.#columnMenuWrapperEl}</div> : null}
             <div class="vtd-datatable-scroll">
                 <table class="vtd-datatable-table">
                     {this.#colgroupEl}
@@ -393,6 +380,29 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
  */
 export class DataTable<RowType> extends Component<DataTableAttrsType<RowType>> {
     #root: HTMLDivElement
+    #columnMenuOpen = false
+    /** The column-menu's own wrapper; built once, so outside-click detection always checks a stable element */
+    #columnMenuWrapperEl: HTMLDivElement | undefined
+    #columnMenuPanelEl: HTMLDivElement | undefined
+
+    /** Close the column menu if it's open and the click landed outside of it */
+    #handleDocumentClick = (event: MouseEvent) => {
+        if (!this.#columnMenuOpen || !this.#columnMenuWrapperEl || !this.#columnMenuPanelEl) {
+            return
+        }
+        if (event.target instanceof Node && this.#columnMenuWrapperEl.contains(event.target)) {
+            return
+        }
+        this.#columnMenuOpen = false
+        this.#columnMenuPanelEl.classList.remove("vtd-datatable-column-menu-open")
+    }
+
+    override mount() {
+        document.addEventListener("click", this.#handleDocumentClick)
+    }
+    override unmount() {
+        document.removeEventListener("click", this.#handleDocumentClick)
+    }
 
     constructor(attrs: DataTableAttrsType<RowType>, children: RenderableElements[]) {
         super(attrs, children)
@@ -400,10 +410,17 @@ export class DataTable<RowType> extends Component<DataTableAttrsType<RowType>> {
             areDataTableStylesMounted = true
             setStylesheet(`
 .vtd-datatable-wrapper{width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:0.75em;}
-.vtd-datatable-search-wrapper{display:flex;}
+/*
+ * The search box and the "Columns" button share one toolbar row: search takes the leading edge
+ * and absorbs the slack, the button sits at the trailing edge. flex-wrap is the escape valve
+ * for a container too narrow to hold both - they stack rather than crushing the input - and the
+ * search box's flex-basis is what decides when that happens.
+ */
+.vtd-datatable-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5em;}
+.vtd-datatable-search-wrapper{display:flex;flex:1 1 12em;min-width:0;}
 .vtd-datatable-search-wrapper .vtd-textbox{width:100%;max-width:20em;margin-inline-start:0;box-sizing:border-box;}
-.vtd-datatable-toolbar{display:flex;justify-content:flex-end;}
-.vtd-datatable-column-menu-wrapper{position:relative;}
+/* The auto margin keeps the button trailing-aligned in the searchable={false} case, where it's the row's only child */
+.vtd-datatable-column-menu-wrapper{position:relative;margin-inline-start:auto;}
 .vtd-datatable-column-menu{
 position:absolute;
 top:100%;
@@ -496,10 +513,10 @@ ${searchHighlightCss}
             pageSizeOptions={pageSizeOptions}
             showPageSizeControl={showPageSizeControl}
             resizableColumns={resizableColumns}
-            showColumnToggle={showColumnToggle}
             zebra={attrs.zebra ?? false}
             highlightOnHover={attrs.highlightOnHover ?? true}
             rowHref={attrs.rowHref}
+            rowHrefSpa={attrs.rowHrefSpa}
             onRowSelect={attrs.onRowSelect}/>)
 
         let searchInput: HTMLInputElement | undefined
@@ -513,8 +530,29 @@ ${searchHighlightCss}
                 }}/>
         }
 
+        if (showColumnToggle) {
+            const panelEl: HTMLDivElement = <div class="vtd-datatable-column-menu">
+                {attrs.columns.map(column => column.hideable === false
+                    ? <Checkbox checked disabled>{column.header}</Checkbox>
+                    : <Checkbox checked onChange={() => inner.toggleColumnVisibility(column.key)}>{column.header}</Checkbox>)}
+            </div>
+            this.#columnMenuPanelEl = panelEl
+            this.#columnMenuWrapperEl = <div class="vtd-datatable-column-menu-wrapper">
+                <Button type="secondary" onClick={() => {
+                    this.#columnMenuOpen = !this.#columnMenuOpen
+                    panelEl.classList.toggle("vtd-datatable-column-menu-open", this.#columnMenuOpen)
+                }}>Columns</Button>
+                {panelEl}
+            </div>
+        }
+
         this.#root = <div class="vtd-datatable-wrapper">
-            {searchInput ? <div class="vtd-datatable-search-wrapper">{searchInput}</div> : null}
+            {searchInput || this.#columnMenuWrapperEl
+                ? <div class="vtd-datatable-toolbar">
+                    {searchInput ? <div class="vtd-datatable-search-wrapper">{searchInput}</div> : null}
+                    {this.#columnMenuWrapperEl ?? null}
+                </div>
+                : null}
             {inner}
         </div>
 
