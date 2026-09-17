@@ -35,10 +35,24 @@
 - **Internal modules live beside the components they serve**, not in `core/`, when only one
   category uses them: `data-display/data-table-view.tsx` is shared by the two tables, and
   `charts/chart-common.ts` + `charts/chart-frame.ts` by the six charts. Neither is re-exported.
-- **Filenames were left alone by the move.** Several predate the kebab-case convention
-  (`radiobutton.tsx`, `textbox.tsx`, `datepicker.tsx`, `timeago.ts`, `navlink.tsx`,
-  `textformfield.tsx`), so a file's name doesn't always match its component's. Renaming them is a
-  separate change; don't assume `<Component>` lives in `<component>.tsx`.
+- **A component lives in the file its own name predicts**, kebab-cased: `RadioButton` in
+  `radio-button.tsx`, `DateTimeRangePicker` in `date-time-range-picker.tsx`. The gallery pages in
+  `tests/test_modules/` use the same stems, which are also their URLs and their `bundle-<stem>`
+  task names, so all four agree.
+
+  Two deliberate exceptions:
+  - **A file named for its primary component may also hold that component's close variants** -
+    `overlays/modal.tsx` has `Modal` and `ButtonModal`, `charts/line-chart.ts` has `LineChart` and
+    `AreaChart`, `form/text-form-field.tsx` has `TextFormField` plus its non-editable and editable
+    siblings. Splitting those would be three files to read to understand one idea.
+  - **A module that isn't a component is named for what it does**, not for an export:
+    `core/strings.ts` holds `LocalizedString`/`S`/`T`, and `core/utilities.ts`, `core/theme.ts`,
+    `charts/chart-common.ts` and the rest follow the same rule.
+
+  ⚠️ **CSS class names did not follow the filenames.** `RadioButton` still emits `vtd-radiobutton`,
+  `ColorPicker` still emits `vtd-colorpicker`, and their `setStylesheet` keys match those. Those
+  strings are public API - a consumer may target them from their own stylesheet - so changing them
+  is a breaking change rather than a tidy-up, and it was left out of the rename deliberately.
 - `tests/basic_tests.test.ts` — a small number of real Astral (headless Chrome) assertions, not one per component.
 
 ## Component shape: `FunctionComponent` vs `Component` class

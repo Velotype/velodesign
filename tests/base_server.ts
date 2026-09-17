@@ -26,12 +26,12 @@ export async function startAppServer(server_port: number): Promise<Server<Server
             }
         }
     ))
-    const setOfModules = ['button','icon','page-selector','textbox','modal','textformfield','radiobutton','showcase','timeago',
+    const setOfModules = ['button','icon','page-selector','text-box','modal','text-form-field','radio-button','showcase','time-ago',
         'checkbox','toggle','textarea','select','select-menu','badge','card','alert','tooltip','spinner','tabs','divider',
-        'navlink','breadcrumbs','pagination','navbar','sidebar','menu',
+        'nav-link','breadcrumbs','pagination','navbar','sidebar','menu',
         'toast','accordion','avatar',
         'progress','skeleton','tag','empty','collapse','statistic','list','timeline','aspect-ratio','scroll-area',
-        'datepicker','datetimepicker','datetimerangepicker','slider','input-number','colorpicker','combobox','upload',
+        'date-picker','date-time-picker','date-time-range-picker','slider','input-number','color-picker','combobox','upload',
         'drawer','popover','popconfirm','steps','rate',
         'table','form','context-menu','resizable','carousel','calendar','calendar-range','tree','command','button-group','data-table','async-data-table','charts']
     setOfModules.forEach((module) => {

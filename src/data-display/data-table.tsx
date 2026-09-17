@@ -2,7 +2,7 @@ import { Component, getComponent, passthroughAttrsToElement } from "@velotype/ve
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 import { Pagination } from "../navigation/pagination.tsx"
 import { Select } from "../form/select.tsx"
-import { TextBox } from "../form/textbox.tsx"
+import { TextBox } from "../form/text-box.tsx"
 import {
     buildBodyRows, buildColGroup, buildHeaderCells, buildStatusRow, ColumnMenu,
     DataTableThemeOptions, mountDataTableStyles, startColumnResize

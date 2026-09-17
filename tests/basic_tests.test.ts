@@ -87,7 +87,7 @@ describe('basic component rendering', () => {
         assertEquals(await selection.innerText(),"default button")
     })
 
-    itWrap("set of timeago tests", "timeago", "#timeago-page", async (_pageLoadSelection: ElementHandle) => {
+    itWrap("set of time-ago tests", "time-ago", "#timeago-page", async (_pageLoadSelection: ElementHandle) => {
         const setOfVariations = [
             {selector: "#now", text: "now"},
             {selector: "#less-1", text: "now"},
@@ -177,25 +177,25 @@ describe('basic component rendering', () => {
         if (valueAfterSwitchingBack != "typed value") {fail(`ERROR: expected the typed value to survive switching tabs away and back, got: ${valueAfterSwitchingBack}`)}
     })
 
-    itWrap("navlink highlights the active route and updates on navigation", "navlink", "#navlink-home", async (selection: ElementHandle) => {
+    itWrap("nav-link highlights the active route and updates on navigation", "nav-link", "#navlink-home", async (selection: ElementHandle) => {
         const initialClass = await selection.getAttribute("class")
         if (!initialClass?.includes("vtd-navlink-active")) {
             fail(`ERROR: expected home NavLink to start active, class was: ${initialClass}`)
         }
 
-        const otherLink = await page.$("a[href='/navlink/other']")
-        if (!otherLink) {fail("ERROR: other navlink not found")}
+        const otherLink = await page.$("a[href='/nav-link/other']")
+        if (!otherLink) {fail("ERROR: other nav-link not found")}
         await otherLink.click()
 
         const updatedHome = await page.waitForSelector("#navlink-home")
-        if (!updatedHome) {fail("ERROR: home navlink not found after navigation")}
+        if (!updatedHome) {fail("ERROR: home nav-link not found after navigation")}
         const updatedClass = await updatedHome.getAttribute("class")
         if (updatedClass?.includes("vtd-navlink-active")) {
             fail(`ERROR: expected home NavLink to no longer be active, class was: ${updatedClass}`)
         }
 
-        const updatedOtherLink = await page.$("a[href='/navlink/other']")
-        if (!updatedOtherLink) {fail("ERROR: other navlink not found after navigation")}
+        const updatedOtherLink = await page.$("a[href='/nav-link/other']")
+        if (!updatedOtherLink) {fail("ERROR: other nav-link not found after navigation")}
         const otherClass = await updatedOtherLink.getAttribute("class")
         if (!otherClass?.includes("vtd-navlink-active")) {
             fail(`ERROR: expected other NavLink to become active, class was: ${otherClass}`)
