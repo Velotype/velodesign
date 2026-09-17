@@ -56,6 +56,13 @@ import {
     Steps,
     Table,
     DataTable,
+    AsyncDataTable,
+    LineChart,
+    AreaChart,
+    BarChart,
+    PieChart,
+    Gauge,
+    Sparkline,
     Tabs,
     Tag, type TagType,
     TextBox, type TextBoxTypeType,
@@ -114,6 +121,20 @@ const comboboxCountryOptions = [
     "United Kingdom", "United States", "Vietnam",
 ].map(name => ({value: name}))
 const commandLastPicked = new RenderBasic<string>("none")
+
+const chartMonths = [
+    {label: "Jan", values: {revenue: 12, costs: 8}},
+    {label: "Feb", values: {revenue: 19, costs: 11}},
+    {label: "Mar", values: {revenue: 15, costs: 10}},
+    {label: "Apr", values: {revenue: 27, costs: 15}},
+    {label: "May", values: {revenue: 24, costs: 14}},
+    {label: "Jun", values: {revenue: 31, costs: 17}},
+]
+const chartSeries = [{key: "revenue", label: "Revenue"}, {key: "costs", label: "Costs"}]
+const chartShare = [
+    {label: "Platform", value: 24}, {label: "Growth", value: 18},
+    {label: "Infra", value: 12}, {label: "Design", value: 7},
+]
 
 export const stories: ComponentStory[] = [
     // --- Form ---
@@ -807,6 +828,10 @@ export const stories: ComponentStory[] = [
             searchable
             pageSize={5}
             showPageSizeControl
+            columnToggleChildren="Columns"
+            columnToggleLabel="Choose columns"
+            pageSizeLabel="Rows per page:"
+            emptyMessage="No results"
             columns={[
                 {key: "name", header: "Name", render: (row: {name: string, role: string, status: string}) => row.name, sortValue: (row) => row.name, filterValue: (row) => row.name, hideable: false},
                 {key: "role", header: "Role", render: (row: {name: string, role: string, status: string}) => row.role, sortValue: (row) => row.role, filterValue: (row) => row.role},
@@ -820,6 +845,130 @@ export const stories: ComponentStory[] = [
                 {name: "Riley Chen", role: "Analyst", status: "active"},
                 {name: "Jordan Smith", role: "Engineer", status: "inactive"},
             ]}/>,
+    },
+    {
+        name: "AsyncDataTable", group: "Data Display",
+        defaultProps: {},
+        controls: {},
+        render: () => <AsyncDataTable
+            pageSize={3}
+            showPageSizeControl
+            pageSizeOptions={[3, 5, 10]}
+            loadingLabel="Loading"
+            searchPlaceholder="Search people"
+            columnToggleChildren="Columns"
+            columnToggleLabel="Choose columns"
+            pageSizeLabel="Rows per page:"
+            noMatchMessage="Nothing matched that search"
+            columns={[
+                {key: "name", header: "Name", render: (row: {name: string, role: string, status: string}) => row.name, sortable: true, hideable: false},
+                {key: "role", header: "Role", render: (row: {name: string, role: string, status: string}) => row.role, sortable: true},
+                {key: "status", header: "Status", render: (row: {name: string, role: string, status: string}) => row.status, align: "end"},
+            ]}
+            // Stands in for a server: the point of this component is that filtering, sorting and
+            // paging happen *there*, so the story does that work in the loader rather than
+            // handing the table an array to compute over.
+            load={(query) => {
+                const all = [
+                    {name: "Jamie Rivera", role: "Engineer", status: "active"},
+                    {name: "Alex Baker", role: "Designer", status: "active"},
+                    {name: "Casey Diaz", role: "Support", status: "inactive"},
+                    {name: "Morgan Lee", role: "Manager", status: "active"},
+                    {name: "Riley Chen", role: "Analyst", status: "active"},
+                    {name: "Jordan Smith", role: "Engineer", status: "inactive"},
+                ]
+                const needle = query.search.toLowerCase()
+                let rows = needle ? all.filter(r => `${r.name} ${r.role} ${r.status}`.toLowerCase().includes(needle)) : all
+                if (query.sortKey) {
+                    const direction = query.sortDirection === "desc" ? -1 : 1
+                    const key = query.sortKey as "name" | "role" | "status"
+                    rows = [...rows].sort((a, b) => a[key] < b[key] ? -direction : (a[key] > b[key] ? direction : 0))
+                }
+                const start = (query.page - 1) * query.pageSize
+                return new Promise(resolve => setTimeout(() => resolve({rows: rows.slice(start, start + query.pageSize), total: rows.length}), 200))
+            }}/>,
+    },
+    {
+        name: "LineChart", group: "Charts",
+        defaultProps: {stacked: false, area: false, showDots: true},
+        controls: {
+            stacked: {kind: "boolean", label: "stacked"},
+            area: {kind: "boolean", label: "area"},
+            showDots: {kind: "boolean", label: "showDots"},
+        },
+        render: (props) => <LineChart
+            data={chartMonths} series={chartSeries} height={220}
+            ariaLabel="Revenue and costs by month"
+            formatValue={(n: number) => `$${n}k`}
+            stacked={props.stacked as boolean}
+            area={props.area as boolean}
+            showDots={props.showDots as boolean}/>,
+    },
+    {
+        name: "AreaChart", group: "Charts",
+        defaultProps: {stacked: true},
+        controls: {stacked: {kind: "boolean", label: "stacked"}},
+        render: (props) => <AreaChart
+            data={chartMonths} series={chartSeries} height={220}
+            ariaLabel="Revenue and costs by month"
+            formatValue={(n: number) => `$${n}k`}
+            stacked={props.stacked as boolean}/>,
+    },
+    {
+        name: "BarChart", group: "Charts",
+        defaultProps: {stacked: false, horizontal: false},
+        controls: {
+            stacked: {kind: "boolean", label: "stacked"},
+            horizontal: {kind: "boolean", label: "horizontal"},
+        },
+        render: (props) => <BarChart
+            data={chartMonths} series={chartSeries} height={220}
+            ariaLabel="Revenue and costs by month"
+            formatValue={(n: number) => `$${n}k`}
+            stacked={props.stacked as boolean}
+            horizontal={props.horizontal as boolean}/>,
+    },
+    {
+        name: "PieChart", group: "Charts",
+        defaultProps: {donut: 0, showPercent: true},
+        controls: {
+            donut: {kind: "number", label: "donut"},
+            showPercent: {kind: "boolean", label: "showPercent"},
+        },
+        render: (props) => <PieChart
+            data={chartShare} height={240}
+            ariaLabel="Headcount share by department"
+            donut={props.donut as number}
+            showPercent={props.showPercent as boolean}/>,
+    },
+    {
+        name: "Gauge", group: "Charts",
+        defaultProps: {value: 72, sweep: 240, showRange: true},
+        controls: {
+            value: {kind: "number", label: "value"},
+            sweep: {kind: "number", label: "sweep"},
+            showRange: {kind: "boolean", label: "showRange"},
+        },
+        render: (props) => <Gauge
+            height={200} subLabel="of quota"
+            formatValue={(n: number) => `${n}%`}
+            ariaLabel="Percent of quota"
+            value={props.value as number}
+            sweep={props.sweep as number}
+            showRange={props.showRange as boolean}/>,
+    },
+    {
+        name: "Sparkline", group: "Charts",
+        defaultProps: {variant: "line", showLast: true},
+        controls: {
+            variant: {kind: "select", label: "variant", options: ["line", "area", "bar"]},
+            showLast: {kind: "boolean", label: "showLast"},
+        },
+        render: (props) => <Sparkline
+            values={[4, 9, 6, 12, 8, 15, 11, 19, 14, 22]}
+            width={200} height={44}
+            variant={props.variant as "line" | "area" | "bar"}
+            showLast={props.showLast as boolean}/>,
     },
     {
         name: "Carousel", group: "Data Display",

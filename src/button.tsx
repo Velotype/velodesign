@@ -27,6 +27,14 @@ export type ButtonAttrsType = {
     onClick?: (event: TargetedMouseEvent<HTMLButtonElement>, doneLoading?: () => void) => void,
     /** Should the button trigger a loading icon when clicked? */
     loadingOnClick?: boolean
+    /**
+     * Accessible name for the button. No default - the library doesn't assume a language.
+     *
+     * Only needed when the button's own content doesn't already name it: a button whose children
+     * are text takes its accessible name from that text, but one whose children are a symbol
+     * (`DataTable`'s column-visibility button, say) has no name at all without this.
+     */
+    ariaLabel?: string
 } & IdAttr & StylePassthroughAttrs & ChildrenAttr
 
 /**
@@ -96,6 +104,7 @@ visibility:hidden;
     return passthroughAttrsToElement<HTMLButtonElement>(<button type="button"
         class={`vtd-btn vtd-btn-${attrs.type||"primary"}`}
         tabindex={0}
+        aria-label={attrs.ariaLabel}
         disabled={attrs.disabled}
         onClick={(event: TargetedMouseEvent<HTMLButtonElement>) => {
             if (attrs.loadingOnClick && isLoading) {
