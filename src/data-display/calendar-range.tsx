@@ -1,6 +1,6 @@
 import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
-import { Button } from "./button.tsx"
+import { Button } from "../form/button.tsx"
 
 /** A (possibly incomplete) date range, as picked by `<CalendarRange/>` */
 export type DateRangeType = {

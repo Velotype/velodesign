@@ -1,6 +1,6 @@
 import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
 import type { FunctionComponent, IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
-import { createElementNSHelper, setAttributeHelper, svgNamespace } from "./utilities.ts"
+import { createElementNSHelper, setAttributeHelper, svgNamespace } from "../core/utilities.ts"
 
 /**
  * An Icon 

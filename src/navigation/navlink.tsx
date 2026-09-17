@@ -1,6 +1,6 @@
 import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
 import type { ChildrenAttr, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
-import { History } from "./history.ts"
+import { History } from "../core/history.ts"
 
 /**
  * Attrs type for `<NavLink/>` Component

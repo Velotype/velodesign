@@ -1,6 +1,6 @@
 import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
-import { History } from "./history.ts"
+import { History } from "../core/history.ts"
 
 /**
  * A single entry in a `<Menu/>`

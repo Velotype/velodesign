@@ -1,6 +1,6 @@
 import { ChildrenAttr, Component, EmptyAttrs, RenderableElements, RenderBasic } from "@velotype/velotype/jsx-runtime"
-import { Button } from "../../src/button.tsx"
-import { ColorScheme } from "../../src/theme.ts"
+import { Button } from "../../src/form/button.tsx"
+import { ColorScheme } from "../../src/core/theme.ts"
 
 class NavSchemeSelector extends Component<EmptyAttrs> {
     darkMode = new RenderBasic<string>("--")

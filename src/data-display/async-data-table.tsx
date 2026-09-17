@@ -1,11 +1,11 @@
 import { Component, passthroughAttrsToElement } from "@velotype/velotype"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
-import { Button } from "./button.tsx"
-import { ButtonGroup } from "./button-group.tsx"
-import { Pagination } from "./pagination.tsx"
-import { Select } from "./select.tsx"
-import { Spinner } from "./spinner.tsx"
-import { TextBox } from "./textbox.tsx"
+import { Button } from "../form/button.tsx"
+import { ButtonGroup } from "../form/button-group.tsx"
+import { Pagination } from "../navigation/pagination.tsx"
+import { Select } from "../form/select.tsx"
+import { Spinner } from "../feedback/spinner.tsx"
+import { TextBox } from "../form/textbox.tsx"
 import {
     buildBodyRows, buildColGroup, buildHeaderCells, buildStatusRow, ColumnMenu,
     DataTableThemeOptions, mountDataTableStyles, startColumnResize

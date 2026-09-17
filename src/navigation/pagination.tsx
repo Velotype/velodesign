@@ -1,5 +1,5 @@
 import { type EmptyAttrs, type FunctionComponent, passthroughAttrsToElement, type RenderableElements, setStylesheet } from "@velotype/velotype"
-import { Button } from "./button.tsx"
+import { Button } from "../form/button.tsx"
 import type { IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
