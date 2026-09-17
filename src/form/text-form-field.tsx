@@ -2,7 +2,7 @@
 
 import { type RenderBasic, Component, type RenderableElements, type ChildrenAttr, type FunctionComponent, type EmptyAttrs, type AnchorElement, type StylePassthroughAttrs, type IdAttr, passthroughAttrsToElement } from "@velotype/velotype"
 import { Button } from "./button.tsx"
-import { TextBox, type TextBoxTypeType } from "./textbox.tsx"
+import { TextBox, type TextBoxTypeType } from "./text-box.tsx"
 
 /**
  * Options to customize `<TextFormField/>` Component Theme

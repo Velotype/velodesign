@@ -1,6 +1,6 @@
 import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
 import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
-import { NavLink } from "./navlink.tsx"
+import { NavLink } from "./nav-link.tsx"
 
 /**
  * A single entry in a `<Sidebar/>`

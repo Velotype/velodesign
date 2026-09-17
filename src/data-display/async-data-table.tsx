@@ -5,7 +5,7 @@ import { ButtonGroup } from "../form/button-group.tsx"
 import { Pagination } from "../navigation/pagination.tsx"
 import { Select } from "../form/select.tsx"
 import { Spinner } from "../feedback/spinner.tsx"
-import { TextBox } from "../form/textbox.tsx"
+import { TextBox } from "../form/text-box.tsx"
 import {
     buildBodyRows, buildColGroup, buildHeaderCells, buildStatusRow, ColumnMenu,
     DataTableThemeOptions, mountDataTableStyles, startColumnResize
