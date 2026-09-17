@@ -4,11 +4,41 @@
 
 ## Layout
 
-- `src/<name>.tsx` (or `.ts` for non-JSX helpers like `theme.ts`, `history.ts`, `strings.ts`) — one file per component/module.
-- `src/index.ts` — the only public entrypoint (`deno.json`'s `exports` field points here). Every new component's value + attrs type (+ any other exported types) get added here, in the same flat `import` list + single `export { ... }` block style already there. Nothing is usable from outside the package unless it's re-exported here.
+- **`src/<category>/<name>.tsx`** — one file per component, in the folder for its category. The
+  categories are the showcase's, and they are not decorative: a component's folder and its position
+  in the showcase sidebar come from the same fact, so the two cannot drift. When you add a
+  component, its story's `group` in `tests/test_modules/explorer-schema.tsx` and its folder must
+  agree.
+
+  | Folder | Holds |
+  |---|---|
+  | `form/` | Button, Checkbox, Select, TextBox, the text form fields … |
+  | `navigation/` | NavLink, Breadcrumbs, Navbar, Sidebar, Menu, Steps, PageSelector |
+  | `feedback/` | Alert, Toast, Tooltip, Spinner, Progress, Skeleton, Empty |
+  | `overlays/` | Modal, Drawer, Popover, Popconfirm, ContextMenu, Command |
+  | `data-display/` | Badge, Card, Table, DataTable, AsyncDataTable, Calendar, Tree, Resizable … |
+  | `data-entry/` | DatePicker, Slider, Combobox, Upload, Rate, Form |
+  | `charts/` | LineChart, AreaChart, BarChart, PieChart, Gauge, Sparkline |
+  | `utility/` | Icon |
+  | `core/` | **Not a category.** Cross-cutting infrastructure imported by components in several categories, so it belongs to none of them: `utilities.ts`, `theme.ts`, `history.ts`, `strings.ts`, `license.ts`, `search-highlight.tsx`. |
+
+  Two placements are judgement calls rather than showcase facts: `PageSelector` and `Resizable`
+  have no story at all, so they went to `navigation/` (client-side routing) and `data-display/`
+  (a layout container). Giving them stories is a real gap worth closing.
+
+- `src/index.ts` — the only public entrypoint (`deno.json`'s `exports` field points here) and the
+  only file at the root of `src/`. Every new component's value + attrs type (+ any other exported
+  types) get added here, in the same flat `import` list + single `export { ... }` block style
+  already there. Nothing is usable from outside the package unless it's re-exported here.
 - `tests/test_modules/<name>.tsx` — a manual "gallery" page per component (see Testing below).
-- `src/data-table-view.tsx` — the one current example of an *internal* module shared by two components and deliberately not re-exported (see the DataTable section below).
-- `src/chart-common.ts` / `src/chart-frame.ts` — the same, for the six chart components (see Charts below).
+  These stay flat: they are pages served by name, not components.
+- **Internal modules live beside the components they serve**, not in `core/`, when only one
+  category uses them: `data-display/data-table-view.tsx` is shared by the two tables, and
+  `charts/chart-common.ts` + `charts/chart-frame.ts` by the six charts. Neither is re-exported.
+- **Filenames were left alone by the move.** Several predate the kebab-case convention
+  (`radiobutton.tsx`, `textbox.tsx`, `datepicker.tsx`, `timeago.ts`, `navlink.tsx`,
+  `textformfield.tsx`), so a file's name doesn't always match its component's. Renaming them is a
+  separate change; don't assume `<Component>` lives in `<component>.tsx`.
 - `tests/basic_tests.test.ts` — a small number of real Astral (headless Chrome) assertions, not one per component.
 
 ## Component shape: `FunctionComponent` vs `Component` class
@@ -162,7 +192,7 @@ A handful of components need a small piece of glyph/icon-ish content with no bak
 ## Two components sharing one look: `DataTable` / `AsyncDataTable`
 
 `DataTable` owns an array and computes over it; `AsyncDataTable` owns a *query* and asks a `load`
-callback to answer it. They must look identical, so neither one owns the markup: `data-table-view.tsx`
+callback to answer it. They must look identical, so neither one owns the markup: `data-display/data-table-view.tsx`
 (internal, not exported from `index.ts`) holds the shared stylesheet, the `<colgroup>`/`<thead>`/
 `<tbody>` builders, the resize drag, and the `ColumnMenu`. Two `setStylesheet` calls would be two
 places for a padding value to diverge, which is exactly the drift the split exists to prevent.
@@ -204,8 +234,8 @@ here.
 ## Charts
 
 Six components - `LineChart`, `AreaChart`, `BarChart`, `PieChart`, `Gauge`, `Sparkline` - over two
-internal modules, `chart-common.ts` (palette, scales, axes, legend, tooltip, one stylesheet) and
-`chart-frame.ts` (the `ChartFrame` base class). Neither internal module is exported; `index.ts`
+internal modules, `charts/chart-common.ts` (palette, scales, axes, legend, tooltip, one
+stylesheet) and `charts/chart-frame.ts` (the `ChartFrame` base class). Neither internal module is exported; `index.ts`
 exports the six components, their attrs types, and `ChartThemeOptions`.
 
 **The set comes from where Ant Design and shadcn/ui agree.** shadcn ships six (area, bar, line,
@@ -217,7 +247,7 @@ nothing else here would share. Add it when something actually needs it.
 
 **SVG is built imperatively, never in JSX** - velotype cannot emit `<svg>` at all (gotcha 2), and
 velotype's `<SVG innerHTML="...">` can't carry the per-element event handlers hover needs. So
-`chart-common.ts`'s `svgEl()` wraps `createElementNS` exactly as `icon.ts` does, and every chart
+`charts/chart-common.ts`'s `svgEl()` wraps `createElementNS` exactly as `utility/icon.ts` does, and every chart
 draws through it.
 
 **Charts size themselves with a `ResizeObserver`, not a scaling `viewBox`.** Scaling one fixed

@@ -1,6 +1,6 @@
 import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
 import type { RenderableElements, IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
-import { highlightMatch, searchHighlightCss } from "./search-highlight.tsx"
+import { highlightMatch, searchHighlightCss } from "../core/search-highlight.tsx"
 
 /**
  * A single entry in a `<Command/>` palette

@@ -1,5 +1,5 @@
 import { type ChildrenAttr, Component, type RenderableElements, setStylesheet, type EmptyAttrs, type FunctionComponent, type TargetedMouseEvent, type StylePassthroughAttrs, type IdAttr, passthroughAttrsToElement } from "@velotype/velotype"
-import { Button, type ButtonType } from "./button.tsx"
+import { Button, type ButtonType } from "../form/button.tsx"
 
 /**
  * Options to customize `<Modal/>` Component Theme

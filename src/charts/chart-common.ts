@@ -1,6 +1,6 @@
 import { setStylesheet } from "@velotype/velotype"
 import type { EmptyAttrs, FunctionComponent } from "@velotype/velotype"
-import { createElementNSHelper, setAttributeHelper } from "./utilities.ts"
+import { createElementNSHelper, setAttributeHelper } from "../core/utilities.ts"
 
 /**
  * Shared internals for every chart in this package.

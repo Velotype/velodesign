@@ -1,9 +1,9 @@
 import { setStylesheet } from "@velotype/velotype"
 import type { EmptyAttrs, FunctionComponent, RenderableElements } from "@velotype/velotype"
-import { Button } from "./button.tsx"
-import { Checkbox } from "./checkbox.tsx"
-import { highlightMatch, searchHighlightCss } from "./search-highlight.tsx"
-import { History } from "./history.ts"
+import { Button } from "../form/button.tsx"
+import { Checkbox } from "../form/checkbox.tsx"
+import { highlightMatch, searchHighlightCss } from "../core/search-highlight.tsx"
+import { History } from "../core/history.ts"
 
 /**
  * Shared internals for `DataTable` and `AsyncDataTable`.

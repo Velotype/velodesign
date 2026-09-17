@@ -1,5 +1,5 @@
 import { type ChildrenAttr, Component, type EmptyAttrs, type FunctionComponent, type RenderableElements, setStylesheet } from "@velotype/velotype"
-import { Button } from "./button.tsx"
+import { Button } from "../form/button.tsx"
 
 /**
  * Options to customize `<Drawer/>` Component Theme

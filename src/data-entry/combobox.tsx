@@ -1,6 +1,6 @@
 import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs, TargetedEvent, TargetedInputEvent } from "@velotype/velotype"
-import { highlightMatch, searchHighlightCss } from "./search-highlight.tsx"
+import { highlightMatch, searchHighlightCss } from "../core/search-highlight.tsx"
 
 /**
  * A single suggestion in a `<Combobox/>`

@@ -1,6 +1,6 @@
 import { type ChildrenAttr, Component, type EmptyAttrs, type FunctionComponent, passthroughAttrsToElement, type RenderableElements, setStylesheet } from "@velotype/velotype"
 import type { IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
-import { Button } from "./button.tsx"
+import { Button } from "../form/button.tsx"
 
 /**
  * Options to customize `<Popconfirm/>` Component Theme

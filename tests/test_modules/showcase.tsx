@@ -3,7 +3,7 @@ import type {EmptyAttrs} from "@velotype/velotype"
 
 import { Accordion, Alert, AreaChart, AsyncDataTable, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, Calendar, Card, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu, DataTable, DatePicker, Gauge, LineChart, PieChart, Sparkline, Divider, Drawer, Empty, Form, FormField, InputNumber, List, Menu, Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, Resizable, ScrollArea, Select, SelectMenu, showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, Tabs, Tag, TextBox, Theme, Timeline, Toggle, Tooltip, Tree, Upload} from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
-import { setThemeOnSelector } from "../../src/theme.ts"
+import { setThemeOnSelector } from "../../src/core/theme.ts"
 
 class ShowcaseSide extends Component<EmptyAttrs> {
     override render() {
