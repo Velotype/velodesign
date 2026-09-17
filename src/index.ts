@@ -64,6 +64,8 @@ import { Steps, type StepsAttrsType, type StepType } from "./steps.tsx"
 import { Rate, type RateAttrsType, type RateType } from "./rate.tsx"
 import { Table, type TableAttrsType, type TableColumnType } from "./table.tsx"
 import { DataTable, type DataTableAttrsType, type DataTableColumnType } from "./data-table.tsx"
+import { AsyncDataTable, type AsyncDataTableAttrsType, type AsyncDataTableColumnType, type AsyncDataTableQuery, type AsyncDataTableResult } from "./async-data-table.tsx"
+import { DataTableThemeOptions } from "./data-table-view.tsx"
 import { Form, type FormAttrsType, FormField, type FormFieldAttrsType } from "./form.tsx"
 import { ContextMenu, type ContextMenuAttrsType, type ContextMenuItemType } from "./context-menu.tsx"
 import { Resizable, type ResizableAttrsType } from "./resizable.tsx"
@@ -72,6 +74,12 @@ import { Calendar, type CalendarAttrsType } from "./calendar.tsx"
 import { CalendarRange, type CalendarRangeAttrsType, type DateRangeType } from "./calendar-range.tsx"
 import { Tree, type TreeAttrsType, type TreeNodeType } from "./tree.tsx"
 import { Command, type CommandAttrsType, type CommandItemType } from "./command.tsx"
+import { LineChart, AreaChart, type LineChartAttrsType, type AreaChartAttrsType } from "./line-chart.ts"
+import { BarChart, type BarChartAttrsType } from "./bar-chart.ts"
+import { PieChart, type PieChartAttrsType, type PieSliceType } from "./pie-chart.ts"
+import { Gauge, type GaugeAttrsType, type GaugeBandType } from "./gauge-chart.ts"
+import { Sparkline, type SparklineAttrsType, type SparklineVariant } from "./sparkline.ts"
+import { ChartThemeOptions, type ChartBaseAttrsType, type ChartPointType, type ChartSeriesType } from "./chart-common.ts"
 
 export {
     Button,
@@ -296,6 +304,32 @@ export {
     DataTable,
     type DataTableAttrsType,
     type DataTableColumnType,
+    AsyncDataTable,
+    type AsyncDataTableAttrsType,
+    type AsyncDataTableColumnType,
+    type AsyncDataTableQuery,
+    type AsyncDataTableResult,
+    DataTableThemeOptions,
+
+    LineChart,
+    type LineChartAttrsType,
+    AreaChart,
+    type AreaChartAttrsType,
+    BarChart,
+    type BarChartAttrsType,
+    PieChart,
+    type PieChartAttrsType,
+    type PieSliceType,
+    Gauge,
+    type GaugeAttrsType,
+    type GaugeBandType,
+    Sparkline,
+    type SparklineAttrsType,
+    type SparklineVariant,
+    ChartThemeOptions,
+    type ChartBaseAttrsType,
+    type ChartPointType,
+    type ChartSeriesType,
 
     Form,
     type FormAttrsType,

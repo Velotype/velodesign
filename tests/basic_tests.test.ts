@@ -496,7 +496,10 @@ describe('basic component rendering', () => {
         // closed the menu immediately after opening it.
         await page.evaluate(() => {
             const root = document.getElementById("default-data-table") as HTMLElement
-            const columnsButton = Array.from(root.querySelectorAll("button")).find(b => b.textContent?.trim() == "Columns") as HTMLElement | undefined
+            // Found by class, not by text: the button's content is consumer-supplied (the library
+            // defaults it to a language-agnostic symbol), so matching on "Columns" would couple
+            // this test to the gallery's demo copy.
+            const columnsButton = root.querySelector(".vtd-datatable-column-menu-wrapper button") as HTMLElement | undefined
             columnsButton?.click()
         })
         const openRightAfterClick = await page.evaluate(() => {
@@ -531,7 +534,10 @@ describe('basic component rendering', () => {
     itWrap("data-table non-hideable column shows as a disabled, checked entry that can't be unchecked", "data-table", "#default-data-table", async (_selection: ElementHandle) => {
         await page.evaluate(() => {
             const root = document.getElementById("default-data-table") as HTMLElement
-            const columnsButton = Array.from(root.querySelectorAll("button")).find(b => b.textContent?.trim() == "Columns") as HTMLElement | undefined
+            // Found by class, not by text: the button's content is consumer-supplied (the library
+            // defaults it to a language-agnostic symbol), so matching on "Columns" would couple
+            // this test to the gallery's demo copy.
+            const columnsButton = root.querySelector(".vtd-datatable-column-menu-wrapper button") as HTMLElement | undefined
             columnsButton?.click()
         })
         const firstCheckboxState = await page.evaluate(() => {
@@ -623,6 +629,350 @@ describe('basic component rendering', () => {
         await page.evaluate(() => { document.body.click() })
         const openAfterOutsideClick = await page.evaluate(() => document.querySelector("#default-select-menu .vtd-select-menu-panel")?.classList.contains("vtd-select-menu-panel-open"))
         if (openAfterOutsideClick) {fail("ERROR: expected panel to close on an outside click")}
+    })
+
+    /**
+     * Polls an in-page predicate until it holds, instead of sleeping a fixed amount.
+     *
+     * The async-data-table tests assert on state that arrives after a network-ish round trip, and
+     * a fixed sleep tuned on a single test is simply wrong inside the full suite, where everything
+     * runs slower - two of these failed that way before this helper existed. Returns false on
+     * timeout so the caller can `fail()` with a useful message rather than a bare timeout.
+     */
+    const waitForCondition = async (expression: string, timeoutMs = 5000): Promise<boolean> => {
+        const deadline = Date.now() + timeoutMs
+        while (Date.now() < deadline) {
+            if (await page.evaluate(expression)) {
+                return true
+            }
+            await new Promise(resolve => setTimeout(resolve, 50))
+        }
+        return false
+    }
+
+    /**
+     * Rows that actually hold data in one gallery table - the loading/empty/error status row is a
+     * single spanning cell, so it's filtered out.
+     *
+     * `getElementById`, never `querySelectorAll("#id ...")`: every gallery page renders its
+     * component twice, once in a light container and once in a dark one, so each id genuinely
+     * exists twice in the document. A `querySelectorAll` id selector matches *both* copies, which
+     * silently mixes the copy the test is driving with the untouched one - it looks like a
+     * component bug and is a test bug.
+     */
+    const dataRowsExpression = (id: string) =>
+        `Array.from(document.getElementById("${id}").querySelectorAll("tbody tr"))
+            .filter(row => !row.querySelector(".vtd-datatable-empty"))
+            .map(row => row.innerText.replace(/\\s+/g, " ").trim())`
+
+    itWrap("async-data-table discards a stale response that resolves after a newer one", "async-data-table", "#race-async-table", async (_selection: ElementHandle) => {
+        // The gallery's loader for this table makes *shorter* searches slower on purpose, so the
+        // request for "e" is still in flight when "riley" resolves and lands after it. Without the
+        // sequence guard in AsyncDataTable the stale answer wins and the table contradicts its own
+        // input box. This is the whole reason the component exists rather than each caller
+        // hand-rolling the fetch, and it is invisible against a fast local backend.
+        //
+        // The two search strings must return genuinely *different* rows or the race is untestable:
+        // an earlier draft used "ja" then "jam", which match exactly the same people in this data
+        // set, so a stale response was indistinguishable from a fresh one and the test passed with
+        // the guard deleted. "e" matches most rows; "riley" matches one person.
+        const setSearch = (value: string) => page.evaluate(`(() => {
+            const input = document.getElementById("race-async-table").querySelector(".vtd-datatable-search")
+            input.value = ${JSON.stringify(value)}
+            input.dispatchEvent(new Event("input", {bubbles: true}))
+        })()`)
+
+        // Let the initial load (search "", and therefore the slowest of all) settle first, so the
+        // thing under test is the typed-query race rather than a straggling first paint.
+        const booted = await waitForCondition(`${dataRowsExpression("race-async-table")}.length > 0`)
+        if (!booted) {fail("ERROR: the race table never completed its initial load")}
+
+
+        // 200ms apart, comfortably more than the 0ms debounce plus dispatch jitter, so the slow
+        // request is definitely issued rather than being cancelled before it leaves.
+        await setSearch("e")
+        await new Promise(resolve => setTimeout(resolve, 200))
+        await setSearch("riley")
+        // Asserting once after a fixed sleep is fragile: how much of the initial (slowest) load is
+        // still outstanding when the test starts depends on how long the page took to boot, which
+        // differs between running this file alone and running it after thirty other tests. So
+        // assert the property itself in two steps instead of guessing a timestamp.
+        //
+        // Step 1: wait for the *newest* query's answer to land ("riley" resolves fastest).
+        const rowsMatch = `(rows => rows.length > 0 && rows.every(row => row.toLowerCase().includes("riley")))(${dataRowsExpression("race-async-table")})`
+        const landed = await waitForCondition(rowsMatch)
+        if (!landed) {
+            const rows = await page.evaluate(dataRowsExpression("race-async-table"))
+            fail(`ERROR: the newest query's rows never rendered, got: ${JSON.stringify(rows)}`)
+        }
+
+        // Step 2: wait past the slower, staler request's resolution and confirm it did *not*
+        // overwrite what is on screen. This is the assertion the component exists to satisfy, and
+        // it is the one that fails when the sequence guard is removed.
+        // Wait for the *slow* query to actually come back, rather than sleeping a guessed amount.
+        // A fixed sleep is unsound here: this runs in a headless browser that throttles timers
+        // unpredictably - a 720ms fixture delay was measured taking 1476ms - so a sleep tuned to
+        // pass locally reads the DOM just *before* the stale response lands and the test silently
+        // stops testing anything. The fixture records each resolved query for exactly this.
+        const staleLanded = await waitForCondition(`(window.__resolvedQueries || []).includes("e")`, 10000)
+        if (!staleLanded) {fail("ERROR: the slow 'e' query never resolved, so the race was never exercised")}
+        // Give the render that would follow it a moment to happen
+        await new Promise(resolve => setTimeout(resolve, 150))
+        const state = await page.evaluate(`(() => ({
+            value: document.getElementById("race-async-table").querySelector(".vtd-datatable-search").value,
+            rows: ${dataRowsExpression("race-async-table")}
+        }))()`) as {value: string, rows: string[]}
+        if (state.value != "riley") {fail(`ERROR: expected the input to hold "riley", got "${state.value}"`)}
+        if (state.rows.length == 0) {fail("ERROR: expected rows matching 'riley' to still be shown")}
+        const offenders = state.rows.filter(row => !row.toLowerCase().includes("riley"))
+        if (offenders.length > 0) {fail(`ERROR: a stale response overwrote the newest - rows not matching "riley": ${JSON.stringify(offenders)}`)}
+    })
+
+    itWrap("async-data-table keeps the search input focused across a reload", "async-data-table", "#default-async-table", async (_selection: ElementHandle) => {
+        await page.evaluate(() => {
+            const input = document.querySelector("#default-async-table .vtd-datatable-search") as HTMLInputElement
+            input.focus()
+            input.value = "eng"
+            input.dispatchEvent(new Event("input", {bubbles: true}))
+        })
+        // Wait for the reload to actually land - asserting focus before anything re-rendered would
+        // pass even if the component tore its own input down on every update.
+        const reloaded = await waitForCondition(`${dataRowsExpression("default-async-table")}.every(row => row.toLowerCase().includes("eng"))
+            && ${dataRowsExpression("default-async-table")}.length > 0`)
+        if (!reloaded) {fail("ERROR: the table never reloaded for the 'eng' search")}
+        const focused = await page.evaluate(() => document.activeElement == document.querySelector("#default-async-table .vtd-datatable-search"))
+        if (!focused) {fail("ERROR: expected the search input to keep focus across an async reload")}
+    })
+
+    itWrap("async-data-table shows an error state when its loader rejects", "async-data-table", "#error-async-table", async (_selection: ElementHandle) => {
+        // A rejected load that isn't caught renders as a convincing *empty* table, which reads as
+        // "no results" rather than "this is broken" - so the distinction is worth a test.
+        await page.evaluate(() => {
+            const input = document.querySelector("#error-async-table .vtd-datatable-search") as HTMLInputElement
+            input.value = "boom"
+            input.dispatchEvent(new Event("input", {bubbles: true}))
+        })
+        const errored = await waitForCondition(`document.getElementById("error-async-table").querySelector("tbody").innerText.includes("Could not load")`)
+        if (!errored) {
+            const text = await page.evaluate(() => (document.querySelector("#error-async-table tbody") as HTMLElement).innerText)
+            fail(`ERROR: expected the rendered error state, got: ${JSON.stringify(text)}`)
+        }
+    })
+
+    itWrap("charts draw a line per series, with axis ticks and a legend", "charts", "#default-line-chart", async (_selection: ElementHandle) => {
+        const state = await page.evaluate(() => {
+            const root = document.getElementById("default-line-chart") as HTMLElement
+            return {
+                lines: root.querySelectorAll("path.vtd-chart-line").length,
+                legend: root.querySelectorAll(".vtd-chart-legend-item").length,
+                ticks: Array.from(root.querySelectorAll("text.vtd-chart-tick-y")).map(t => t.textContent),
+                categories: Array.from(root.querySelectorAll("text.vtd-chart-tick-x")).map(t => t.textContent)
+            }
+        })
+        if (state.lines != 2) {fail(`ERROR: expected one path per series, got ${state.lines}`)}
+        if (state.legend != 2) {fail(`ERROR: expected a legend entry per series, got ${state.legend}`)}
+        // niceTicks must produce round numbers through the caller's formatValue, not raw maxima
+        if (!state.ticks.includes("$0k") || !state.ticks.includes("$40k")) {
+            fail(`ERROR: expected rounded ticks spanning the data, got ${JSON.stringify(state.ticks)}`)
+        }
+        if (!state.categories.includes("Jan")) {fail(`ERROR: expected category labels, got ${JSON.stringify(state.categories)}`)}
+    })
+
+    itWrap("charts show a tooltip naming every series at the hovered category", "charts", "#default-line-chart", async (_selection: ElementHandle) => {
+        // The hit target is one rect over the whole plot, so a pointer near a column is enough -
+        // this is the interaction that decides whether a line chart is usable at all.
+        await page.evaluate(() => {
+            const root = document.getElementById("default-line-chart") as HTMLElement
+            const hit = root.querySelector("rect.vtd-chart-hit") as SVGRectElement
+            const box = hit.getBoundingClientRect()
+            hit.dispatchEvent(new PointerEvent("pointermove", {
+                bubbles: true, clientX: box.left + box.width / 2, clientY: box.top + box.height / 2
+            }))
+        })
+        await new Promise(resolve => setTimeout(resolve, 150))
+        const tip = await page.evaluate(() => {
+            const root = document.getElementById("default-line-chart") as HTMLElement
+            const el = root.querySelector(".vtd-chart-tooltip") as HTMLElement
+            return {
+                visible: el.classList.contains("vtd-chart-tooltip-visible"),
+                rows: el.querySelectorAll(".vtd-chart-tooltip-row").length,
+                text: el.innerText.replace(/\s+/g, " ").trim()
+            }
+        })
+        if (!tip.visible) {fail("ERROR: expected the tooltip to appear on pointermove over the plot")}
+        if (tip.rows != 2) {fail(`ERROR: expected one tooltip row per series, got ${tip.rows}`)}
+        if (!tip.text.includes("Revenue") || !tip.text.includes("Costs")) {
+            fail(`ERROR: expected both series named in the tooltip, got ${JSON.stringify(tip.text)}`)
+        }
+    })
+
+    itWrap("charts stack bars rather than overlaying them", "charts", "#stacked-bar-chart", async (_selection: ElementHandle) => {
+        // A stacked bar's two segments must sit on top of each other and together reach the
+        // category total. Overlaid bars look plausible and are simply wrong, so check the geometry.
+        const first = await page.evaluate(() => {
+            const root = document.getElementById("stacked-bar-chart") as HTMLElement
+            const bars = Array.from(root.querySelectorAll("rect.vtd-chart-bar")) as SVGRectElement[]
+            const jan = bars.slice(0, 2).map(b => ({
+                x: Number(b.getAttribute("x")), y: Number(b.getAttribute("y")), h: Number(b.getAttribute("height"))
+            }))
+            return jan
+        })
+        if (first.length != 2) {fail(`ERROR: expected two segments in the first category, got ${first.length}`)}
+        if (first[0].x != first[1].x) {fail("ERROR: stacked segments must share an x, otherwise they are side by side")}
+        // The second segment sits directly on top of the first, within a rounding pixel
+        const gap = Math.abs((first[1].y + first[1].h) - first[0].y)
+        if (gap > 1.5) {fail(`ERROR: expected the segments to stack flush, gap was ${gap}`)}
+    })
+
+    itWrap("charts show an empty state instead of an axis when there is no data", "charts", "#empty-line-chart", async (_selection: ElementHandle) => {
+        const state = await page.evaluate(() => {
+            const root = document.getElementById("empty-line-chart") as HTMLElement
+            const empty = root.querySelector(".vtd-chart-empty") as HTMLElement
+            return {svgs: root.querySelectorAll("svg").length, emptyShown: !empty.hidden, text: empty.innerText.trim()}
+        })
+        if (state.svgs != 0) {fail("ERROR: expected no drawing at all for empty data")}
+        if (!state.emptyShown) {fail("ERROR: expected the empty state to be visible")}
+        if (state.text.length == 0) {fail("ERROR: expected the empty state to render its symbol")}
+    })
+
+    itWrap("charts render a donut's hole and centre label", "charts", "#donut-pie-chart", async (_selection: ElementHandle) => {
+        const state = await page.evaluate(() => {
+            const root = document.getElementById("donut-pie-chart") as HTMLElement
+            return {
+                slices: root.querySelectorAll("path.vtd-chart-arc").length,
+                text: Array.from(root.querySelectorAll("text")).map(t => t.textContent),
+                // A ring segment's path has two arcs; a filled wedge has one and starts at the centre
+                firstPath: (root.querySelector("path.vtd-chart-arc") as SVGPathElement).getAttribute("d") ?? ""
+            }
+        })
+        if (state.slices != 5) {fail(`ERROR: expected a path per slice, got ${state.slices}`)}
+        if (!state.text.includes("76")) {fail(`ERROR: expected the centre label, got ${JSON.stringify(state.text)}`)}
+        if ((state.firstPath.match(/A /g) ?? []).length < 2) {
+            fail("ERROR: expected a ring segment (two arcs) for a donut, not a filled wedge")
+        }
+    })
+
+    itWrap("charts place the tooltip clear of the point it describes", "charts", "#default-line-chart", async (_selection: ElementHandle) => {
+        // Regression: the tooltip's top-left used to be placed *at* the highest data point and
+        // centred on the hovered column, so it covered exactly what the reader was pointing at.
+        // It now sits beside the whole cursor-to-marker span and flips near the right edge.
+        for (const fraction of [0.1, 0.4, 0.6, 0.95]) {
+            const state = await page.evaluate(`(() => {
+                const root = document.getElementById("default-line-chart")
+                const hit = root.querySelector("rect.vtd-chart-hit")
+                const box = hit.getBoundingClientRect()
+                const cx = box.left + box.width * ${fraction}
+                const cy = box.top + box.height * 0.5
+                hit.dispatchEvent(new PointerEvent("pointermove", {bubbles: true, clientX: cx, clientY: cy}))
+                const tip = root.querySelector(".vtd-chart-tooltip").getBoundingClientRect()
+                const marker = root.querySelector("line[visibility=visible]")
+                const markerX = marker ? marker.getBoundingClientRect().left : null
+                const container = root.getBoundingClientRect()
+                return {
+                    coversCursor: cx >= tip.left && cx <= tip.right && cy >= tip.top && cy <= tip.bottom,
+                    coversMarker: markerX !== null && markerX >= tip.left && markerX <= tip.right,
+                    // Placed beside the cursor (rather than above/below it) when it shares the
+                    // cursor's vertical band - which is the case the marker check applies to.
+                    placedBeside: cy >= tip.top && cy <= tip.bottom,
+                    overflows: tip.left < container.left - 1 || tip.right > container.right + 1,
+                    visible: tip.width > 0
+                }
+            })()`) as {coversCursor: boolean, coversMarker: boolean, placedBeside: boolean, overflows: boolean, visible: boolean}
+            if (!state.visible) {fail(`ERROR: no tooltip at ${fraction * 100}% across the plot`)}
+            // The invariant that always holds, whatever the container width
+            if (state.coversCursor) {fail(`ERROR: tooltip sits under the cursor at ${fraction * 100}%`)}
+            if (state.overflows) {fail(`ERROR: tooltip escapes the chart container at ${fraction * 100}%`)}
+            // When there was room beside the cursor, it must also clear the marker line. In a
+            // container too narrow for that the tooltip goes above instead, and merely crosses the
+            // marker's x - the line stays visible either side of it, so this doesn't apply.
+            if (state.placedBeside && state.coversMarker) {
+                fail(`ERROR: tooltip placed beside the cursor still covers the marker line at ${fraction * 100}%`)
+            }
+        }
+    })
+
+    itWrap("charts expose their data as a hidden table, and never as an SVG title", "charts", "#default-line-chart", async (_selection: ElementHandle) => {
+        // Regression: the frame used to set an SVG <title> alongside aria-label. The title added
+        // nothing - aria-label already wins the accessible-name computation - and made browsers pop
+        // their own native tooltip on hover, competing with the chart's.
+        const titles = await page.evaluate(() => document.querySelectorAll(".vtd-chart svg title").length)
+        if (titles != 0) {fail(`ERROR: found ${titles} SVG <title> elements; they trigger the native hover tooltip`)}
+
+        const state = await page.evaluate(() => {
+            const root = document.getElementById("default-line-chart") as HTMLElement
+            const svg = root.querySelector("svg") as SVGSVGElement
+            const sr = root.querySelector(".vtd-chart-sr") as HTMLElement
+            const table = sr.querySelector("table") as HTMLTableElement
+            return {
+                svgHidden: svg.getAttribute("aria-hidden"),
+                caption: table?.querySelector("caption")?.textContent ?? null,
+                headers: Array.from(table?.querySelectorAll("thead th") ?? []).map(t => t.textContent),
+                rows: table?.querySelectorAll("tbody tr").length ?? 0,
+                firstRow: (table?.querySelector("tbody tr") as HTMLElement)?.innerText.replace(/\s+/g, " ").trim() ?? "",
+                // Hidden from sight, not from assistive tech
+                boxWidth: Math.round(sr.getBoundingClientRect().width)
+            }
+        })
+        if (state.svgHidden != "true") {fail("ERROR: expected the drawing to be aria-hidden once a data table carries the content")}
+        if (state.caption != "Revenue and costs by month") {fail(`ERROR: expected the ariaLabel as the table caption, got ${JSON.stringify(state.caption)}`)}
+        if (state.rows != 8) {fail(`ERROR: expected a row per category, got ${state.rows}`)}
+        if (!state.headers.includes("Revenue") || !state.headers.includes("Costs")) {
+            fail(`ERROR: expected a column per series, got ${JSON.stringify(state.headers)}`)
+        }
+        // Values must go through the caller's formatValue, so what is read aloud matches the axis
+        if (!state.firstRow.includes("$12k")) {fail(`ERROR: expected formatted values in the table, got ${JSON.stringify(state.firstRow)}`)}
+        if (state.boxWidth > 1) {fail(`ERROR: the table must be visually hidden, its box is ${state.boxWidth}px wide`)}
+    })
+
+    itWrap("charts do no DOM work for a hover that changes nothing", "charts", "#default-line-chart", async (_selection: ElementHandle) => {
+        // `pointermove` fires up to ~120 times a second. The first cut rebuilt the tooltip's whole
+        // subtree on every one: 60 moves inside a single column produced 580 mutation records and
+        // 180 new nodes for a reading that never changed. Content is now reused in place, so a
+        // repeat hover must be completely inert, and a real category change must not create nodes
+        // either - only mutate the text already there.
+        const churn = await page.evaluate(() => {
+            const root = document.getElementById("default-line-chart") as HTMLElement
+            const hit = root.querySelector("rect.vtd-chart-hit") as SVGRectElement
+            const box = hit.getBoundingClientRect()
+            const move = (x: number) => hit.dispatchEvent(new PointerEvent("pointermove", {
+                bubbles: true, clientX: x, clientY: box.top + 40
+            }))
+            const fixedX = box.left + box.width * 0.5
+            move(fixedX) // warm up: the first hover legitimately builds the row pool
+
+            let added = 0, removed = 0
+            const observer = new MutationObserver(() => { /* drained synchronously below */ })
+            observer.observe(root, {childList: true, subtree: true, attributes: true, characterData: true})
+            // A MutationObserver's callback is an async microtask, so it never runs inside this
+            // synchronous block - the records have to be drained by hand. A first version of this
+            // test read counters the callback would only have filled in later, and so passed
+            // against the very implementation it was written to reject.
+            const drain = () => {
+                for (const record of observer.takeRecords()) {
+                    added += record.addedNodes.length
+                    removed += record.removedNodes.length
+                }
+            }
+
+            for (let i = 0; i < 40; i++) { move(fixedX) }
+            drain()
+            const idle = {added, removed}
+
+            added = 0; removed = 0
+            // Sweep the whole plot, genuinely changing category several times
+            for (let i = 0; i < 40; i++) { move(box.left + (box.width * i) / 40) }
+            drain()
+            const sweep = {added, removed}
+
+            observer.disconnect()
+            return {idle, sweep}
+        })
+        if (churn.idle.added != 0 || churn.idle.removed != 0) {
+            fail(`ERROR: 40 identical hovers churned the DOM: +${churn.idle.added}/-${churn.idle.removed} nodes`)
+        }
+        if (churn.sweep.added != 0 || churn.sweep.removed != 0) {
+            fail(`ERROR: sweeping the plot created nodes instead of updating text in place: +${churn.sweep.added}/-${churn.sweep.removed}`)
+        }
     })
 
 })

@@ -7,6 +7,8 @@
 - `src/<name>.tsx` (or `.ts` for non-JSX helpers like `theme.ts`, `history.ts`, `strings.ts`) — one file per component/module.
 - `src/index.ts` — the only public entrypoint (`deno.json`'s `exports` field points here). Every new component's value + attrs type (+ any other exported types) get added here, in the same flat `import` list + single `export { ... }` block style already there. Nothing is usable from outside the package unless it's re-exported here.
 - `tests/test_modules/<name>.tsx` — a manual "gallery" page per component (see Testing below).
+- `src/data-table-view.tsx` — the one current example of an *internal* module shared by two components and deliberately not re-exported (see the DataTable section below).
+- `src/chart-common.ts` / `src/chart-frame.ts` — the same, for the six chart components (see Charts below).
 - `tests/basic_tests.test.ts` — a small number of real Astral (headless Chrome) assertions, not one per component.
 
 ## Component shape: `FunctionComponent` vs `Component` class
@@ -23,12 +25,65 @@ A third, rarer shape: an **imperative function**, not a component at all, for so
 
 ### Avoid `refresh()` on any component that accepts children — via `children` or via an attrs field typed as `RenderableElements`/`RenderableElements[]`
 
+This is the sharpest case of the general rule in the next section: `refresh()` is the largest
+possible DOM update, so it is the first thing to rule out.
+
 `refresh()` unmounts and rebuilds the *entire* subtree, and that subtree can include consumer-supplied content you don't own — another component with its own state (a `TextBox` mid-edit, a nested `DataTable`, anything holding focus or internal state). Rebuilding it from scratch on every internal state change of *your* component silently discards that state, and the consumer has no way to opt out. If a component's attrs include a bare `RenderableElements`/`RenderableElements[]`/a row-render callback, or it takes `children`, its internal state transitions should **never** call `this.refresh()` — reach for one of these instead, both already proven out in this package:
 
 1. **Build once in the constructor, then targeted-update via `replaceChildren`/class toggles on stored element refs.** `Command`'s `#renderList()`, `SelectMenu`'s per-method updates, and `DataTable`'s `#renderTable()` all do this: persistent fields (`#tbodyEl`, `#panelEl`, ...) get built once in the constructor, and every state-changing method rebuilds *only* the specific pieces that actually depend on that state, leaving everything else (a search `TextBox`, an unrelated toolbar button) untouched and never remounted. `DataTable` used to call `refresh()` on every sort/search/page/column-visibility change; the toolbar and column-menu panel don't depend on any of that state, so it was refreshing (and risking mid-interaction stale-reference bugs in) parts of the tree that never needed to change at all.
 2. **Keep every consumer-supplied panel mounted permanently, toggle which one is visible with a CSS class.** `Tabs` and `Carousel` both do this now: every tab's `content` / every carousel `slide` is built once in the constructor and stays in the DOM the whole time (same trade-off `Accordion` already made for its sections, via native `<details>`), and switching just toggles a `-active` class on the relevant button/panel pair — the previously-visible one is never torn down, so whatever state it held (typed text, scroll position, a mid-flow child component) survives being switched away from and back to. This does mean *all* panels/slides get constructed up front rather than lazily — an accepted trade-off, matching `Accordion`'s.
 
 The only components still calling `refresh()` are `Calendar` (`#changeMonth`) — its attrs (`value: Date`, `onSelectDate`) don't accept any consumer content at all, every rendered cell is self-generated, so there's no external state at risk and a full re-render is the simplest correct option.
+
+## Interaction must only touch the DOM that actually changed
+
+**Every handler in this package - click, input, hover, scroll, resize - must do the smallest DOM
+update that expresses the change, and no update at all when nothing changed.** This is a hard rule,
+not an optimisation to get to later: the cost lands on the consumer's page, and rebuilt DOM
+silently destroys focus, caret position, text selection, scroll offset and in-flight CSS
+transitions - state no component owns and none can restore.
+
+Three questions, in order, for any handler:
+
+1. **Scope** - what is the *smallest* element whose contents depend on this change? Rebuild that
+   one, never its ancestor. `DataTable`'s `#renderTable` rewrites the `<colgroup>`/`<thead>`/
+   `<tbody>`/footer and deliberately leaves the toolbar and column menu alone; `Calendar` replaces
+   only `#gridEl`; `SelectMenu` only `#valueEl`. All correct.
+2. **Frequency** - could this handler fire continuously? `pointermove`, `input`, `scroll` and
+   `resize` all fire at up to display rate. Derive the state the update depends on, compare it to
+   last time, and **return early when it is unchanged**. A handler that fires 120 times a second
+   and rebuilds on all 120 is the default outcome if nobody checks.
+3. **Granularity** - once you know something changed, change only that:
+   - **Text: `textNode.nodeValue = x`, not `element.textContent = x`.** Assigning `textContent`
+     *replaces* the text node; `nodeValue` mutates it. A label that updates per interaction is the
+     difference between zero node churn and one churn per event.
+   - **Appearance: toggle a class**, don't write inline styles per element. `BarChart` dims
+     non-hovered bars with one class on the `<svg>` plus one on the hovered `<rect>`, precisely so
+     a few hundred bars don't each take a style write on every pointer move.
+   - **Never read layout in a handler.** `offsetWidth`, `clientHeight`, `getBoundingClientRect`
+     force a synchronous reflow. Cache the value when you draw and read the cache. The charts'
+     `containerBounds()` exists only for this.
+
+**Verify it, don't assume it.** A `MutationObserver` over the component's root, counting
+`addedNodes`/`removedNodes` across a burst of events, tells you in seconds what review will not:
+
+```ts
+const observer = new MutationObserver(() => {})
+observer.observe(root, {childList: true, subtree: true, attributes: true, characterData: true})
+for (let i = 0; i < 40; i++) { /* fire the same interaction */ }
+// Drain by hand - the callback is an async microtask and will NOT have run yet inside a
+// synchronous block. Reading counters a callback fills in later is how a churn test passes
+// against the very implementation it was written to reject. This happened here.
+for (const record of observer.takeRecords()) { /* count */ }
+```
+
+An interaction that changes nothing should produce **zero** records. `basic_tests.test.ts`'s
+"charts do no DOM work for a hover that changes nothing" is the worked example; copy its shape for
+any new component with a continuous handler.
+
+The charts are where this rule was learned: `LineChart`'s tooltip rebuilt its whole subtree on
+every `pointermove`, which measured 580 mutation records and 180 new nodes for 60 moves inside a
+single column - for a reading that never changed. It now measures zero.
 
 ## Attrs types
 
@@ -102,7 +157,119 @@ When adding a new component with any button/placeholder/label content, ask "what
 
 ## The `XThemeOptions` escape hatch
 
-A handful of components need a small piece of glyph/icon-ish content with no baked-in icon-font dependency: `ButtonThemeOptions.spinner`, `ModalThemeOptions.closeSymbol`/`.cancelSymbol`, `AlertThemeOptions.dismissSymbol`, `TagThemeOptions.removeSymbol`, `ToastThemeOptions.dismissSymbol`, `DrawerThemeOptions.closeSymbol`, `PopconfirmThemeOptions.confirmSymbol`/`.cancelSymbol`, `PaginationThemeOptions.prevSymbol`/`.nextSymbol`, `EmptyThemeOptions.image`, `TextFormFieldOptions.check`/`.xmark`/`.edit` (note: this one predates the `XThemeOptions` naming and doesn't have "Theme" in its name — a known inconsistency, not a pattern to copy the *name* of, just be aware it exists). Each is an exported, mutable object of `FunctionComponent<EmptyAttrs>` defaults that a consumer can override wholesale (`ButtonThemeOptions.spinner = () => <MyIcon/>`) to reskin that one piece across every instance, without needing a per-instance prop. Add one of these when a component needs a small overridable visual (not for anything structural) - it's also the standard mechanism for satisfying the language-agnostic-defaults rule above whenever the default is a button/content symbol rather than a placeholder or ARIA label.
+A handful of components need a small piece of glyph/icon-ish content with no baked-in icon-font dependency: `ButtonThemeOptions.spinner`, `DataTableThemeOptions.columnsSymbol`/`.emptySymbol`, `ModalThemeOptions.closeSymbol`/`.cancelSymbol`, `AlertThemeOptions.dismissSymbol`, `TagThemeOptions.removeSymbol`, `ToastThemeOptions.dismissSymbol`, `DrawerThemeOptions.closeSymbol`, `PopconfirmThemeOptions.confirmSymbol`/`.cancelSymbol`, `PaginationThemeOptions.prevSymbol`/`.nextSymbol`, `EmptyThemeOptions.image`, `TextFormFieldOptions.check`/`.xmark`/`.edit` (note: this one predates the `XThemeOptions` naming and doesn't have "Theme" in its name — a known inconsistency, not a pattern to copy the *name* of, just be aware it exists). Each is an exported, mutable object of `FunctionComponent<EmptyAttrs>` defaults that a consumer can override wholesale (`ButtonThemeOptions.spinner = () => <MyIcon/>`) to reskin that one piece across every instance, without needing a per-instance prop. Add one of these when a component needs a small overridable visual (not for anything structural) - it's also the standard mechanism for satisfying the language-agnostic-defaults rule above whenever the default is a button/content symbol rather than a placeholder or ARIA label.
+
+## Two components sharing one look: `DataTable` / `AsyncDataTable`
+
+`DataTable` owns an array and computes over it; `AsyncDataTable` owns a *query* and asks a `load`
+callback to answer it. They must look identical, so neither one owns the markup: `data-table-view.tsx`
+(internal, not exported from `index.ts`) holds the shared stylesheet, the `<colgroup>`/`<thead>`/
+`<tbody>` builders, the resize drag, and the `ColumnMenu`. Two `setStylesheet` calls would be two
+places for a padding value to diverge, which is exactly the drift the split exists to prevent.
+
+**Which one a consumer needs is decided by where the filtering happens, not by preference.** A
+server-truncated page handed to `DataTable` silently turns "search everything" into "search the
+page you already have" — the search box is right there and quietly lies. That failure is invisible
+in review, so the column types are deliberately *different* rather than overlapping: `DataTable`'s
+column takes `sortValue`/`filterValue` (functions over a row it has), `AsyncDataTable`'s takes
+`sortable: boolean` (a flag the server acts on). A single `columns` type whose fields mean
+different things depending on a sibling attr would let a `filterValue` be silently ignored.
+
+**What `AsyncDataTable` owns that a hand-rolled fetch reliably gets wrong**, each worth keeping if
+this is ever refactored: a **sequence guard** discarding any response that isn't the newest (a slow
+early query landing after a fast later one is routine over a real network and invisible locally);
+the search input **never unmounting**; a **debounce**; and loading / empty / no-match / error kept
+as four distinct states rather than one blank table. Its `truncated` result flag exists so a
+backend row cap can say so instead of a short list looking complete.
+
+Testing the sequence guard needs care, and two ways of writing that test look right and prove
+nothing — both were written and thrown away here. The fixture's two search strings must select
+**different rows** (racing "ja" against "jam" over data where they match the same people passes
+with the guard deleted), and the assertion must **wait for the stale response to have resolved**
+rather than sleep: the headless browser throttles timers unpredictably — a 720ms fixture delay was
+measured taking 1476ms — so a sleep tuned locally reads the DOM just before the stale answer lands.
+`tests/test_modules/async-data-table.tsx` exposes `__resolvedQueries` on `globalThis` for the test
+to wait on. **Whenever changing either component, delete the guard, confirm the test fails, then
+put it back** — that is the only evidence the test still tests anything.
+
+**Both tables follow the language-agnostic rule**, and the three pieces of text they used to bake
+in show all three shapes that rule distinguishes. The column-visibility button and the empty state
+had icon substitutes, so they became `DataTableThemeOptions.columnsSymbol` (`▥`) and `.emptySymbol`
+(`∅`). "Rows per page:" has no icon that means it, so `pageSizeLabel` simply has **no default** and
+renders no caption when unset - the same call `Empty`'s `title` makes. And an icon-only button has
+no accessible name, which is why `Button` gained an `ariaLabel` attr and both tables expose
+`columnToggleLabel`; setting it is on the consumer, with no default, like every other ARIA label
+here.
+
+## Charts
+
+Six components - `LineChart`, `AreaChart`, `BarChart`, `PieChart`, `Gauge`, `Sparkline` - over two
+internal modules, `chart-common.ts` (palette, scales, axes, legend, tooltip, one stylesheet) and
+`chart-frame.ts` (the `ChartFrame` base class). Neither internal module is exported; `index.ts`
+exports the six components, their attrs types, and `ChartThemeOptions`.
+
+**The set comes from where Ant Design and shadcn/ui agree.** shadcn ships six (area, bar, line,
+pie, radar, radial) plus container/tooltip/legend primitives; Ant ships ~25 plus a "tiny" family.
+Their overlap, minus what this package already had, is what's here - `Gauge` is shadcn's radial and
+Ant's gauge, `Sparkline` is Ant's TinyLine/TinyArea/TinyColumn. **Radar is the deliberate omission**:
+both systems ship it, but it is the least reached-for of the six and it needs polar-axis machinery
+nothing else here would share. Add it when something actually needs it.
+
+**SVG is built imperatively, never in JSX** - velotype cannot emit `<svg>` at all (gotcha 2), and
+velotype's `<SVG innerHTML="...">` can't carry the per-element event handlers hover needs. So
+`chart-common.ts`'s `svgEl()` wraps `createElementNS` exactly as `icon.ts` does, and every chart
+draws through it.
+
+**Charts size themselves with a `ResizeObserver`, not a scaling `viewBox`.** Scaling one fixed
+viewBox is the cheap way to be responsive and it scales the *text* too - microscopic ticks in a
+sidebar, oversized ones on a dashboard, in a package whose whole point is consistent typography.
+`ChartFrame` redraws at the container's real pixel width instead; `draw()` is therefore called many
+times and must be idempotent. `Sparkline` is the exception and is deliberately fixed-size: it is a
+glyph that sits inside a table cell, so it has no observer, no axes, no legend and no tooltip.
+
+**Series colours come from `ChartThemeOptions.seriesColors`** - eight slots built from the theme's
+four hues at two lightness steps. Never add a hex literal to a chart: it will look right in one
+theme and wrong in the other, which is exactly what the never-hardcode-a-colour rule exists to stop.
+
+Details worth keeping if these are ever reworked, each of which looked fine until it didn't:
+
+- A **full-circle pie slice draws nothing** - an SVG arc whose start and end coincide is empty - so
+  `arcPath` splits a 360° sweep into two half arcs. A single-slice pie otherwise renders blank,
+  which reads as a data bug.
+- A **gauge's value arc is inset** when `bands` are set, so the bands stay visible as a rim. Drawn
+  full-thickness it covers them completely and `bands` looks like it does nothing. (It did.)
+- A **stacked area's lower edge is the previous series' line**, not the baseline; filling every band
+  to zero makes them hide each other.
+- The **line chart's hit target is one rect over the whole plot**, tracking the nearest category -
+  not a target per point. A 2px line is not a pointer target, and this is the single detail that
+  decides whether a line chart is usable.
+- **Tooltips show each series' own value, never its stacked running total.** "This contributed 12"
+  is the fact a reader wants; "the stack reached 40" is not.
+- **The tooltip is placed beside the whole cursor-to-marker span, never on it**, flipping left near
+  the right edge and going *above* when the container is too narrow for either side. Anchoring it on
+  a single point lets it land on the other end of that span, and a plain horizontal clamp in a
+  narrow container drops it straight onto the cursor.
+- **No chart sets an SVG `<title>`.** It contributes nothing - `aria-label` already wins the
+  accessible-name computation - and it makes browsers pop their own native tooltip on hover, slow
+  and unstyled and directly in the way of the chart's. This was in the first cut and had to come out.
+
+**Hover does no DOM work when nothing changed** - see "Interaction must only touch the DOM that
+actually changed" above, which this is the worked example of. Concretely: the tooltip pools its row
+elements and writes through `Text.nodeValue`, the marker line is rewritten only when the nearest
+category changes, and `containerBounds()` returns dimensions cached at draw time so the handler
+never forces a reflow.
+
+**Accessibility: a hidden data table, not just a label.** `role="img"` + `aria-label` is a weak
+ceiling - it gives a screen reader the chart's *name* and none of its numbers. So every chart with
+tabular values implements `dataTable()`, the frame renders it into a visually-hidden `<table>`
+(caption = `ariaLabel`, row headers per category), and the drawing itself becomes `aria-hidden`:
+the table *is* the content, and the SVG is decoration. Values go through the caller's `formatValue`,
+so what is read aloud matches the axis. `Gauge` returns `undefined` and keeps `role="img"` + a
+label, because one number against a range is exactly what a label already says and a one-row table
+would be more structure for less information.
+
+One gallery page covers the whole category (`tests/test_modules/charts.tsx`) rather than one per
+component - the thing worth eyeballing is whether the charts look like *each other*.
 
 ## Native-element wrapping, not reimplemented widgets
 
@@ -142,4 +309,5 @@ Running the bundler: use `deno task bundle-<name>` **one at a time**. Passing mu
 2. `cd tests && deno task bundle-<name>` (and `bundle-showcase` if you added a showcase section) — one task per invocation.
 3. `deno task test` (from repo root) — runs the full Astral suite; check for individual `ok`/`FAILED` lines per test, not just the final summary line (it can read `0 passed | 0 failed` even when every individual step passed — a pre-existing cosmetic quirk of how the test runner tallies when the suite calls `Deno.exit(0)`). If an assertion intermittently throws `Unable to get stable box model to click on` (or a destroyed-remote-object error from `getAttribute`) on an element that's clickable fine in an isolated throwaway script - this happened writing `Accordion`'s test, specifically only when running as a later test in the full suite - don't chase the exact cause. Stop holding an `ElementHandle` across the interaction entirely and drive the whole assertion through `page.evaluate()` instead (query + click + read state all as plain in-page JS, returning only plain data); that resolved it and is the more robust pattern regardless.
 4. A broader headless-Chrome smoke pass hitting the new gallery page(s) directly and checking for zero `console`/`pageerror` events is worth doing for anything with real interaction, beyond just the handful of `basic_tests.test.ts` assertions — write a small throwaway script using `@astral/astral`'s `launch()` + `startAppServer` from `tests/base_server.ts` (see recent git history for the shape; nothing this specific is checked into the repo).
-5. For anything with non-trivial CSS/layout (a new positioning trick, a windowed list, an open/closed state), take an actual screenshot (`page.screenshot()` → `Deno.writeFile(...)`) and look at it in both themes before calling it done. This is the only check that catches rendering-level mistakes `deno check`/automated assertions can't see by construction — e.g. `Breadcrumbs`'s stray literal `"false"` text (gotcha #1 above) was invisible to every other check and only showed up in a screenshot.
+5. **For anything with an interaction, count the DOM churn** (see "Interaction must only touch the DOM that actually changed"): a `MutationObserver` over the component root across ~40 repeats of the same interaction must report **zero** added/removed nodes, and a run that *does* change state must not create nodes where it could mutate text in place. Drain with `takeRecords()` - the observer's callback is an async microtask and will not have run inside a synchronous block. This is the only check that catches a handler which looks correct and rebuilds its subtree on every event; it is invisible to `deno check`, to assertions about rendered content, and to a screenshot.
+6. For anything with non-trivial CSS/layout (a new positioning trick, a windowed list, an open/closed state), take an actual screenshot (`page.screenshot()` → `Deno.writeFile(...)`) and look at it in both themes before calling it done. This is the only check that catches rendering-level mistakes `deno check`/automated assertions can't see by construction — e.g. `Breadcrumbs`'s stray literal `"false"` text (gotcha #1 above) was invisible to every other check and only showed up in a screenshot.

@@ -33,7 +33,7 @@ export async function startAppServer(server_port: number): Promise<Server<Server
         'progress','skeleton','tag','empty','collapse','statistic','list','timeline','aspect-ratio','scroll-area',
         'datepicker','datetimepicker','datetimerangepicker','slider','input-number','colorpicker','combobox','upload',
         'drawer','popover','popconfirm','steps','rate',
-        'table','form','context-menu','resizable','carousel','calendar','calendar-range','tree','command','button-group','data-table']
+        'table','form','context-menu','resizable','carousel','calendar','calendar-range','tree','command','button-group','data-table','async-data-table','charts']
     setOfModules.forEach((module) => {
         router.get(`/${module}`, function() {
             const response = new Response(`<!DOCTYPE html><html><body>

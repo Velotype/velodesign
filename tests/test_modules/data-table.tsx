@@ -27,6 +27,10 @@ class DataTableGallery extends Component<EmptyAttrs> {
         return <div style={{marginTop:"10px", maxWidth: "640px"}}>
             <div id="default-data-table"><DataTable<PersonRow>
                 searchable
+                columnToggleChildren="Columns"
+                columnToggleLabel="Choose columns"
+                pageSizeLabel="Rows per page:"
+                emptyMessage="No results"
                 searchPlaceholder="Search people..."
                 pageSize={5}
                 showPageSizeControl

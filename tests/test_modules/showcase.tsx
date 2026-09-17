@@ -1,7 +1,7 @@
 import {replaceElementWithRoot, Component, getComponent} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
-import { Accordion, Alert, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, Calendar, Card, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu, DataTable, DatePicker, Divider, Drawer, Empty, Form, FormField, InputNumber, List, Menu, Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, Resizable, ScrollArea, Select, SelectMenu, showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, Tabs, Tag, TextBox, Theme, Timeline, Toggle, Tooltip, Tree, Upload} from "../../src/index.ts"
+import { Accordion, Alert, AreaChart, AsyncDataTable, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, Calendar, Card, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu, DataTable, DatePicker, Gauge, LineChart, PieChart, Sparkline, Divider, Drawer, Empty, Form, FormField, InputNumber, List, Menu, Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, Resizable, ScrollArea, Select, SelectMenu, showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, Tabs, Tag, TextBox, Theme, Timeline, Toggle, Tooltip, Tree, Upload} from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 import { setThemeOnSelector } from "../../src/theme.ts"
 
@@ -173,11 +173,67 @@ class ShowcaseSide extends Component<EmptyAttrs> {
             <div style={{marginTop:"10px", maxWidth:"420px"}}><DataTable
                 searchable
                 pageSize={3}
+                columnToggleChildren="Columns"
+                emptyMessage="No results"
                 columns={[
                     {key:"name",header:"Name",render:(row: {name: string, role: string})=>row.name, sortValue:(row)=>row.name, filterValue:(row)=>row.name},
                     {key:"role",header:"Role",render:(row: {name: string, role: string})=>row.role, sortValue:(row)=>row.role, filterValue:(row)=>row.role},
                 ]}
                 rows={[{name:"Jamie",role:"Engineer"},{name:"Alex",role:"Designer"},{name:"Casey",role:"Support"},{name:"Morgan",role:"Manager"}]}/></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example AsyncDataTable:
+            <div style={{marginTop:"10px", maxWidth:"420px"}}><AsyncDataTable
+                pageSize={3}
+                loadingLabel="Loading"
+                searchPlaceholder="Search"
+                columnToggleChildren="Columns"
+                emptyMessage="No results"
+                columns={[
+                    {key:"name",header:"Name",render:(row: {name: string, role: string})=>row.name, sortable:true},
+                    {key:"role",header:"Role",render:(row: {name: string, role: string})=>row.role, sortable:true},
+                ]}
+                load={(query) => {
+                    // A stand-in for a server: filters and pages here so the showcase needs no backend
+                    const all = [{name:"Jamie",role:"Engineer"},{name:"Alex",role:"Designer"},{name:"Casey",role:"Support"},{name:"Morgan",role:"Manager"}]
+                    const needle = query.search.toLowerCase()
+                    const rows = needle ? all.filter(r => `${r.name} ${r.role}`.toLowerCase().includes(needle)) : all
+                    const start = (query.page - 1) * query.pageSize
+                    return new Promise(resolve => setTimeout(() => resolve({rows: rows.slice(start, start + query.pageSize), total: rows.length}), 150))
+                }}/></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example LineChart:
+            <div style={{marginTop:"10px", maxWidth:"420px"}}><LineChart
+                height={140}
+                ariaLabel="Example trend"
+                data={[
+                    {label:"Jan",values:{a:12,b:8}},{label:"Feb",values:{a:19,b:11}},
+                    {label:"Mar",values:{a:15,b:10}},{label:"Apr",values:{a:27,b:15}},
+                ]}
+                series={[{key:"a",label:"Revenue"},{key:"b",label:"Costs"}]}/></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example AreaChart:
+            <div style={{marginTop:"10px", maxWidth:"420px"}}><AreaChart
+                height={140}
+                ariaLabel="Example area"
+                data={[
+                    {label:"Jan",values:{a:12}},{label:"Feb",values:{a:19}},
+                    {label:"Mar",values:{a:15}},{label:"Apr",values:{a:27}},
+                ]}
+                series={[{key:"a",label:"Revenue"}]}/></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example PieChart:
+            <div style={{marginTop:"10px", maxWidth:"260px"}}><PieChart
+                height={160}
+                donut={0.6}
+                centerLabel="61"
+                ariaLabel="Example share"
+                data={[{label:"Platform",value:24},{label:"Growth",value:18},{label:"Infra",value:12},{label:"Design",value:7}]}/></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Gauge:
+            <div style={{marginTop:"10px", maxWidth:"200px"}}><Gauge
+                value={72} height={140} subLabel="of quota" formatValue={(n: number) => `${n}%`} ariaLabel="72 percent of quota"/></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Sparkline: <Sparkline values={[4,9,6,12,8,15,11,19]}/>
             <hr style={{marginTop:"10px"}}/>
             Example Form:
             <div style={{marginTop:"10px", maxWidth:"320px"}}><Form><FormField label="Name" required><TextBox type="text"/></FormField></Form></div>

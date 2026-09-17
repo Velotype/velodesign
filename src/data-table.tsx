@@ -1,37 +1,22 @@
-import { Component, getComponent, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import { Component, getComponent, passthroughAttrsToElement } from "@velotype/velotype"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
-import { Button } from "./button.tsx"
-import { Checkbox } from "./checkbox.tsx"
 import { Pagination } from "./pagination.tsx"
 import { Select } from "./select.tsx"
 import { TextBox } from "./textbox.tsx"
-import { highlightMatch, searchHighlightCss } from "./search-highlight.tsx"
-import { History } from "./history.ts"
+import {
+    buildBodyRows, buildColGroup, buildHeaderCells, buildStatusRow, ColumnMenu,
+    DataTableThemeOptions, mountDataTableStyles, startColumnResize
+} from "./data-table-view.tsx"
+import type { DataTableColumnBase, SortDirection } from "./data-table-view.tsx"
 
 /**
  * A single column definition for a `<DataTable/>`
  */
-export type DataTableColumnType<RowType> = {
-    /** Unique key identifying this column */
-    key: string
-    /** Displayed content for the column's header */
-    header: RenderableElements
-    /** Renders a row's value for this column */
-    render: (row: RowType) => RenderableElements
+export type DataTableColumnType<RowType> = DataTableColumnBase<RowType> & {
     /** Extracts a comparable value from a row for sorting; omit to make this column unsortable */
     sortValue?: (row: RowType) => string | number
     /** Extracts searchable text from a row for this column; omit to exclude it from search matching */
     filterValue?: (row: RowType) => string
-    /** Text alignment for this column's cells (default: `"start"`) */
-    align?: "start" | "center" | "end"
-    /** Starting width in px (every column can be resized by dragging its trailing edge, regardless of this) */
-    width?: number
-    /** Minimum width in px when resized (default: `60`) */
-    minWidth?: number
-    /** If `false`, this column can't be hidden via the column-visibility control, and always shows as a disabled, checked entry there instead of being omitted (default: `true`) */
-    hideable?: boolean
-    /** If `false`, this column's width can't be dragged, regardless of `resizableColumns` (default: `true`) */
-    resizable?: boolean
 }
 
 /**
@@ -52,6 +37,14 @@ export type DataTableAttrsType<RowType> = {
     resizableColumns?: boolean
     /** Shows the column-visibility customizer button (default: `true`) */
     showColumnToggle?: boolean
+    /** Content of the column-visibility button (default: `DataTableThemeOptions.columnsSymbol` - the `▥` glyph, not English text) */
+    columnToggleChildren?: RenderableElements
+    /** Accessible name for the column-visibility button. No default - the library doesn't assume a language. Set this whenever `columnToggleChildren` is a symbol rather than words, or the button has no name at all */
+    columnToggleLabel?: string
+    /** Label beside the page-size control. **No default** - there is no icon that means "rows per page", and this package never falls back to English, so an unset label renders the control with no caption */
+    pageSizeLabel?: RenderableElements
+    /** Shown in place of the rows when nothing matches (default: `DataTableThemeOptions.emptySymbol` - the `∅` glyph, not English text) */
+    emptyMessage?: RenderableElements
     /** Shows a search box that filters rows using each column's `filterValue` (default: `false`) */
     searchable?: boolean
     /** Placeholder for the search input */
@@ -62,10 +55,10 @@ export type DataTableAttrsType<RowType> = {
     highlightOnHover?: boolean
     /**
      * If set, wraps each row's first visible column in a real `<a href>` spanning the row's
-     * full width - a native "stretched link" (see `.vtd-datatable-row-link::after` below),
-     * so middle-click/ctrl-click/right-click "open in new tab" all keep working, unlike a
-     * JS-only click handler on the row would. Return `undefined` for a given row to leave it
-     * non-navigable. Takes priority over `onRowSelect` for a row where both would apply.
+     * full width - a native "stretched link" (see `.vtd-datatable-row-link` in
+     * `data-table-view.tsx`), so middle-click/ctrl-click/right-click "open in new tab" all keep
+     * working, unlike a JS-only click handler on the row would. Return `undefined` for a given row
+     * to leave it non-navigable. Takes priority over `onRowSelect` for a row where both would apply.
      */
     rowHref?: (row: RowType) => string | undefined
     /**
@@ -81,14 +74,10 @@ export type DataTableAttrsType<RowType> = {
      * action via a stretched `<button>` instead of an `<a>` - for picking a row that should
      * trigger something other than navigation (opening a modal, etc). Either way, a column's
      * own `render` can still put its own links/buttons/etc in any cell - they stay clickable
-     * above the row-stretch overlay regardless (see the `:is(a,button,...)` rule below).
+     * above the row-stretch overlay regardless.
      */
     onRowSelect?: (row: RowType) => void
 } & IdAttr & StylePassthroughAttrs
-
-type SortDirection = "asc" | "desc"
-
-let areDataTableStylesMounted = false
 
 type DataTableInnerAttrsType<RowType> = {
     columns: DataTableColumnType<RowType>[]
@@ -99,6 +88,8 @@ type DataTableInnerAttrsType<RowType> = {
     resizableColumns: boolean
     zebra: boolean
     highlightOnHover: boolean
+    pageSizeLabel: RenderableElements | undefined
+    emptyMessage: RenderableElements
     rowHref?: (row: RowType) => string | undefined
     rowHrefSpa?: boolean
     onRowSelect?: (row: RowType) => void
@@ -148,27 +139,6 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
         this.#renderTable()
     }
 
-    #setPageSize(size: number) {
-        this.#currentPageSize = size
-        this.#currentPage = 1
-        this.#renderTable()
-    }
-
-    #toggleSort(column: DataTableColumnType<RowType>) {
-        if (!column.sortValue) {
-            return
-        }
-        if (this.#sortKey != column.key) {
-            this.#sortKey = column.key
-            this.#sortDirection = "asc"
-        } else if (this.#sortDirection == "asc") {
-            this.#sortDirection = "desc"
-        } else {
-            this.#sortKey = undefined
-        }
-        this.#renderTable()
-    }
-
     /**
      * Called by `DataTable`'s column menu. The native checkbox there already updates its own
      * visual state, so this only needs to update which columns the table itself shows.
@@ -178,6 +148,24 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
             this.#hiddenColumns.delete(key)
         } else {
             this.#hiddenColumns.add(key)
+        }
+        this.#renderTable()
+    }
+
+    #setPageSize(size: number) {
+        this.#currentPageSize = size
+        this.#currentPage = 1
+        this.#renderTable()
+    }
+
+    #toggleSort(column: DataTableColumnBase<RowType>) {
+        if (this.#sortKey != column.key) {
+            this.#sortKey = column.key
+            this.#sortDirection = "asc"
+        } else if (this.#sortDirection == "asc") {
+            this.#sortDirection = "desc"
+        } else {
+            this.#sortKey = undefined
         }
         this.#renderTable()
     }
@@ -206,35 +194,9 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
     }
 
     /**
-     * Starts a column-resize drag from `column`'s trailing-edge handle. Reads the starting
-     * width from `thElement` (a real rendered box) rather than `colElement` - a `<col>` is a
-     * layout hint, not a painted box, and its own `getBoundingClientRect()` isn't reliable -
-     * and tracks the live width in a local variable through the drag rather than re-reading
-     * from either element, committing that same tracked value to `#columnWidths` on pointerup.
-     */
-    #startResize(column: DataTableColumnType<RowType>, colElement: HTMLTableColElement, thElement: HTMLTableCellElement, event: PointerEvent) {
-        event.preventDefault()
-        const minWidth = column.minWidth ?? 60
-        const startWidth = thElement.getBoundingClientRect().width
-        const startX = event.clientX
-        let currentWidth = startWidth
-        const handleMove = (moveEvent: PointerEvent) => {
-            currentWidth = Math.max(minWidth, startWidth + (moveEvent.clientX - startX))
-            colElement.style.width = `${currentWidth}px`
-        }
-        const handleUp = () => {
-            this.#columnWidths[column.key] = currentWidth
-            document.removeEventListener("pointermove", handleMove)
-            document.removeEventListener("pointerup", handleUp)
-        }
-        document.addEventListener("pointermove", handleMove)
-        document.addEventListener("pointerup", handleUp)
-    }
-
-    /**
      * Recomputes visible columns/rows/page and rewrites the `<colgroup>`/`<thead>`/`<tbody>`/
-     * footer contents in place via `replaceChildren` - never touches the search input, toolbar,
-     * or column-menu wrapper, which don't depend on any of this state.
+     * footer contents in place - never touches the search input, toolbar, or column-menu wrapper,
+     * which don't depend on any of this state.
      */
     #renderTable() {
         const attrs = this.#attrs
@@ -246,73 +208,33 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
         const currentPage = Math.min(this.#currentPage, totalPages)
         const pageRows = pageSize > 0 ? allRows.slice((currentPage - 1) * pageSize, currentPage * pageSize) : allRows
 
-        const colElements: Record<string, HTMLTableColElement> = {}
-        this.#colgroupEl.replaceChildren(...visibleColumns.map(column => {
-            const width = this.#columnWidths[column.key] ?? column.width
-            const colElement: HTMLTableColElement = <col style={{width: width ? `${width}px` : undefined}}/>
-            colElements[column.key] = colElement
-            return colElement
+        const {colElements, cols} = buildColGroup(visibleColumns, this.#columnWidths)
+        this.#colgroupEl.replaceChildren(...cols)
+
+        this.#theadRowEl.replaceChildren(...buildHeaderCells({
+            columns: visibleColumns,
+            isSortable: (column) => !!(column as DataTableColumnType<RowType>).sortValue,
+            sortKey: this.#sortKey,
+            sortDirection: this.#sortDirection,
+            onSort: (column) => this.#toggleSort(column),
+            resizableColumns: attrs.resizableColumns,
+            onResizeStart: (column, thElement, event) => startColumnResize(
+                column, colElements[column.key], thElement, event,
+                (width) => { this.#columnWidths[column.key] = width }
+            )
         }))
 
-        this.#theadRowEl.replaceChildren(...visibleColumns.map(column => {
-            const sortDirection: SortDirection | undefined = this.#sortKey == column.key ? this.#sortDirection : undefined
-            // A sortable header's content is a real `<button>` (the ARIA APG "sortable columns"
-            // pattern) rather than a click handler on the `<th>` itself - a `<th>` isn't natively
-            // focusable/activatable, so without this a keyboard user would have no way to sort
-            // at all. An unsortable column just renders the same content as a plain `<span>`.
-            const headerContent = <span class="vtd-datatable-header-content">
-                {column.header}
-                {sortDirection ? <span class="vtd-datatable-sort-indicator" aria-hidden="true">{sortDirection == "asc" ? "▲" : "▼"}</span> : null}
-            </span>
-            const thElement: HTMLTableCellElement = <th
-                class={`${column.align ? `vtd-datatable-align-${column.align}` : ""}${column.sortValue ? " vtd-datatable-sortable" : ""}`}
-                aria-sort={sortDirection ? (sortDirection == "asc" ? "ascending" : "descending") : undefined}>
-                {column.sortValue
-                    ? <button type="button" class="vtd-datatable-sort-button" onClick={() => this.#toggleSort(column)}>{headerContent}</button>
-                    : headerContent}
-                {(column.resizable ?? true) && attrs.resizableColumns ? <span class="vtd-datatable-resize-handle" onPointerDown={(event: PointerEvent) => this.#startResize(column, colElements[column.key], thElement, event)}/> : null}
-            </th>
-            return thElement
-        }))
-
-        const searchQuery = this.#searchQuery.trim()
-        const bodyRows = pageRows.map(row => {
-            const href = attrs.rowHref?.(row)
-            const useButton = !href && !!attrs.onRowSelect
-            return <tr>
-                {visibleColumns.map((column, colIndex) => {
-                    const rawCellContent = column.render(row)
-                    // Only a column whose rendered value is plain text can be safely searched
-                    // through character-by-character - `column.render` is free to return
-                    // arbitrary consumer content (another component, nested markup, ...), which
-                    // there's no safe way to splice a <mark> into without knowing its structure.
-                    const cellContent = searchQuery && (typeof rawCellContent == "string" || typeof rawCellContent == "number" || typeof rawCellContent == "bigint")
-                        ? highlightMatch(String(rawCellContent), searchQuery)
-                        : rawCellContent
-                    const cellClass = column.align ? `vtd-datatable-align-${column.align}` : ""
-                    if (colIndex != 0 || (!href && !useButton)) {
-                        return <td class={cellClass}>{cellContent}</td>
-                    }
-                    return <td class={cellClass}>
-                        {href
-                            ? <a
-                                class="vtd-datatable-row-link"
-                                href={href}
-                                onClick={attrs.rowHrefSpa ? (event: MouseEvent) => {
-                                    // Only a plain left-click routes client-side. A modified click
-                                    // (new tab/window, download, or any non-primary button) is left
-                                    // to the browser, which is the whole point of keeping a real
-                                    // <a href> here rather than a JS-only handler.
-                                    if (event.defaultPrevented || event.button != 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {return}
-                                    event.preventDefault()
-                                    History.changeLocation(href)
-                                } : undefined}>{cellContent}</a>
-                            : <button type="button" class="vtd-datatable-row-link vtd-datatable-row-link-button" onClick={() => attrs.onRowSelect?.(row)}>{cellContent}</button>}
-                    </td>
-                })}
-            </tr>
+        const bodyRows = buildBodyRows({
+            rows: pageRows,
+            columns: visibleColumns,
+            searchQuery: this.#searchQuery,
+            rowHref: attrs.rowHref,
+            rowHrefSpa: attrs.rowHrefSpa,
+            onRowSelect: attrs.onRowSelect
         })
-        this.#tbodyEl.replaceChildren(...(allRows.length == 0 ? [<tr><td class="vtd-datatable-empty" colspan={visibleColumns.length}>No results</td></tr>] : bodyRows))
+        this.#tbodyEl.replaceChildren(...(allRows.length == 0
+            ? [buildStatusRow(visibleColumns.length, attrs.emptyMessage)]
+            : bodyRows))
         this.#tbodyEl.classList.toggle("vtd-datatable-zebra", attrs.zebra)
         this.#tbodyEl.classList.toggle("vtd-datatable-hoverable", attrs.highlightOnHover)
 
@@ -320,7 +242,7 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
         if (pageSize > 0 && (totalPages > 1 || attrs.showPageSizeControl)) {
             footerChildren.push(<div class="vtd-datatable-page-size">
                 {attrs.showPageSizeControl ? <label class="vtd-datatable-page-size-label">
-                    Rows per page:
+                    {attrs.pageSizeLabel ?? null}
                     <Select
                         value={String(pageSize)}
                         options={attrs.pageSizeOptions.map(size => ({value: String(size), label: String(size)}))}
@@ -374,132 +296,29 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
  * `<DataTable columns={...} rows={...}/>` (letting your own `refresh()` remount it) to show new
  * data, rather than expecting an already-mounted instance to pick up changed attrs on its own.
  *
+ * **This is the right table only when the browser already holds every row.** Its search and sort
+ * run over `rows` and nothing else, so pointing it at a server-truncated page silently turns
+ * "search everything" into "search the first page". For a list the server filters, sorts and
+ * pages, use `AsyncDataTable`, which looks identical and delegates all three.
+ *
  * For a simple, fully-controlled table with no owned state (sort/page/etc. all driven by props
  * you manage yourself), use `Table` instead - `DataTable` is for when you want the common
  * table interactions to just work without wiring that state up by hand.
  */
 export class DataTable<RowType> extends Component<DataTableAttrsType<RowType>> {
     #root: HTMLDivElement
-    #columnMenuOpen = false
-    /** The column-menu's own wrapper; built once, so outside-click detection always checks a stable element */
-    #columnMenuWrapperEl: HTMLDivElement | undefined
-    #columnMenuPanelEl: HTMLDivElement | undefined
-
-    /** Close the column menu if it's open and the click landed outside of it */
-    #handleDocumentClick = (event: MouseEvent) => {
-        if (!this.#columnMenuOpen || !this.#columnMenuWrapperEl || !this.#columnMenuPanelEl) {
-            return
-        }
-        if (event.target instanceof Node && this.#columnMenuWrapperEl.contains(event.target)) {
-            return
-        }
-        this.#columnMenuOpen = false
-        this.#columnMenuPanelEl.classList.remove("vtd-datatable-column-menu-open")
-    }
+    #columnMenu: ColumnMenu | undefined
 
     override mount() {
-        document.addEventListener("click", this.#handleDocumentClick)
+        this.#columnMenu?.attach()
     }
     override unmount() {
-        document.removeEventListener("click", this.#handleDocumentClick)
+        this.#columnMenu?.detach()
     }
 
     constructor(attrs: DataTableAttrsType<RowType>, children: RenderableElements[]) {
         super(attrs, children)
-        if (!areDataTableStylesMounted) {
-            areDataTableStylesMounted = true
-            setStylesheet(`
-.vtd-datatable-wrapper{width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:0.75em;}
-/*
- * The search box and the "Columns" button share one toolbar row: search takes the leading edge
- * and absorbs the slack, the button sits at the trailing edge. flex-wrap is the escape valve
- * for a container too narrow to hold both - they stack rather than crushing the input - and the
- * search box's flex-basis is what decides when that happens.
- */
-.vtd-datatable-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5em;}
-.vtd-datatable-search-wrapper{display:flex;flex:1 1 12em;min-width:0;}
-.vtd-datatable-search-wrapper .vtd-textbox{width:100%;max-width:20em;margin-inline-start:0;box-sizing:border-box;}
-/* The auto margin keeps the button trailing-aligned in the searchable={false} case, where it's the row's only child */
-.vtd-datatable-column-menu-wrapper{position:relative;margin-inline-start:auto;}
-.vtd-datatable-column-menu{
-position:absolute;
-top:100%;
-right:0;
-z-index:1000;
-margin-block-start:0.25em;
-min-width:12em;
-padding:0.5em;
-background-color:var(--background-1);
-border:1px solid var(--background-4);
-border-radius:0.25rem;
-box-shadow:0 2px 8px rgba(0,0,0,0.15);
-display:none;
-flex-direction:column;
-gap:0.1em;
-}
-.vtd-datatable-column-menu-open{display:flex;}
-.vtd-datatable-scroll{overflow-x:auto;}
-.vtd-datatable-table{width:100%;border-collapse:collapse;}
-.vtd-datatable-table th,.vtd-datatable-table td{padding:0.6em 0.9em;text-align:start;border-block-end:1px solid var(--background-4);}
-.vtd-datatable-table th{
-position:relative;
-font-weight:bold;
-color:var(--text);
-white-space:nowrap;
-user-select:none;
-}
-.vtd-datatable-sortable:hover{background-color:var(--background-1);}
-.vtd-datatable-sort-button{
-cursor:pointer;
-display:block;
-width:100%;
-text-align:inherit;
-background:transparent;
-border:none;
-color:inherit;
-font:inherit;
-font-weight:inherit;
-padding:0;
-}
-.vtd-datatable-sort-button:focus-visible{outline:1px solid var(--primary);outline-offset:1px;}
-.vtd-datatable-header-content{display:inline-flex;align-items:center;}
-.vtd-datatable-sort-indicator{margin-inline-start:0.3em;opacity:0.6;}
-.vtd-datatable-table tbody tr{position:relative;}
-.vtd-datatable-hoverable tr:hover{background-color:var(--background-1);}
-.vtd-datatable-zebra tr:nth-child(even){background-color:var(--background-1);}
-.vtd-datatable-zebra.vtd-datatable-hoverable tr:nth-child(even):hover{background-color:var(--background-2);}
-.vtd-datatable-align-center{text-align:center;}
-.vtd-datatable-align-end{text-align:end;}
-/*
- * A "clickable row" (rowHref/onRowSelect): the link/button wraps the first visible column's
- * real content (so it keeps a natural, meaningful accessible name from that content, and
- * displays inline exactly as that cell always did) - the actual full-row hit target is a
- * pseudo-element stretched via position:absolute;inset:0 to the row's own position:relative
- * box above. Any other interactive element a column's own render() puts in a cell (a per-row
- * action button in a later column, say) gets position:relative + a higher stacking order here
- * so it stays clickable above that stretch, rather than the row-level link swallowing its clicks.
- */
-.vtd-datatable-row-link{color:inherit;text-decoration:none;}
-.vtd-datatable-row-link-button{display:block;width:100%;text-align:inherit;background:transparent;border:none;color:inherit;font:inherit;padding:0;cursor:pointer;}
-.vtd-datatable-row-link::after{content:"";position:absolute;inset:0;z-index:0;}
-.vtd-datatable-table td :is(a,button,input,select,textarea):not(.vtd-datatable-row-link):not(.vtd-datatable-row-link-button){position:relative;z-index:1;}
-.vtd-datatable-resize-handle{
-position:absolute;
-top:0;
-right:0;
-bottom:0;
-width:0.4em;
-cursor:col-resize;
-touch-action:none;
-}
-.vtd-datatable-resize-handle:hover{background-color:var(--primary-6);}
-.vtd-datatable-empty{text-align:center;opacity:0.6;padding:2em;}
-.vtd-datatable-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1em;}
-.vtd-datatable-page-size-label{display:flex;align-items:center;gap:0.5em;}
-.vtd-datatable-pagination{display:flex;justify-content:center;flex-grow:1;}
-${searchHighlightCss}
-`, "vtd/DataTable")
-        }
+        mountDataTableStyles()
 
         const pageSize = attrs.pageSize ?? 10
         const pageSizeOptions = attrs.pageSizeOptions ?? [10, 25, 50, 100]
@@ -515,6 +334,8 @@ ${searchHighlightCss}
             resizableColumns={resizableColumns}
             zebra={attrs.zebra ?? false}
             highlightOnHover={attrs.highlightOnHover ?? true}
+            pageSizeLabel={attrs.pageSizeLabel}
+            emptyMessage={attrs.emptyMessage ?? <DataTableThemeOptions.emptySymbol/>}
             rowHref={attrs.rowHref}
             rowHrefSpa={attrs.rowHrefSpa}
             onRowSelect={attrs.onRowSelect}/>)
@@ -531,26 +352,20 @@ ${searchHighlightCss}
         }
 
         if (showColumnToggle) {
-            const panelEl: HTMLDivElement = <div class="vtd-datatable-column-menu">
-                {attrs.columns.map(column => column.hideable === false
-                    ? <Checkbox checked disabled>{column.header}</Checkbox>
-                    : <Checkbox checked onChange={() => inner.toggleColumnVisibility(column.key)}>{column.header}</Checkbox>)}
-            </div>
-            this.#columnMenuPanelEl = panelEl
-            this.#columnMenuWrapperEl = <div class="vtd-datatable-column-menu-wrapper">
-                <Button type="secondary" onClick={() => {
-                    this.#columnMenuOpen = !this.#columnMenuOpen
-                    panelEl.classList.toggle("vtd-datatable-column-menu-open", this.#columnMenuOpen)
-                }}>Columns</Button>
-                {panelEl}
-            </div>
+            this.#columnMenu = new ColumnMenu(
+                attrs.columns,
+                (key) => inner.toggleColumnVisibility(key),
+                attrs.columnToggleChildren ?? <DataTableThemeOptions.columnsSymbol/>,
+                attrs.columnToggleLabel
+            )
         }
+        const columnMenuEl = this.#columnMenu?.element
 
         this.#root = <div class="vtd-datatable-wrapper">
-            {searchInput || this.#columnMenuWrapperEl
+            {searchInput || columnMenuEl
                 ? <div class="vtd-datatable-toolbar">
                     {searchInput ? <div class="vtd-datatable-search-wrapper">{searchInput}</div> : null}
-                    {this.#columnMenuWrapperEl ?? null}
+                    {columnMenuEl ?? null}
                 </div>
                 : null}
             {inner}
