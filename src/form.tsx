@@ -38,6 +38,8 @@ export const Form: FunctionComponent<FormAttrsType> = function(attrs: FormAttrsT
 export type FormFieldAttrsType = {
     /** Label shown above the field's control */
     label?: RenderableElements
+    /** Guidance shown below the field's control, always - for explaining what a field is for. Distinct from `error`, which appears only when something is wrong */
+    hint?: RenderableElements
     /** Validation error shown below the field's control */
     error?: RenderableElements
     /** Shows a required-field marker next to the label */
@@ -57,6 +59,7 @@ export const FormField: FunctionComponent<FormFieldAttrsType> = function(attrs: 
 .vtd-form-field{width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:0.35em;}
 .vtd-form-field-label{font-weight:bold;font-size:0.9em;}
 .vtd-form-field-required{color:var(--accent);margin-inline-start:0.2em;}
+.vtd-form-field-hint{color:var(--background-6);font-size:0.85em;}
 .vtd-form-field-error{color:var(--accent-8);font-size:0.85em;}
 `, "vtd/FormField")
     }
@@ -64,6 +67,7 @@ export const FormField: FunctionComponent<FormFieldAttrsType> = function(attrs: 
     return passthroughAttrsToElement<HTMLDivElement>(<div class="vtd-form-field">
         {attrs.label ? <label class="vtd-form-field-label">{attrs.label}{attrs.required ? <span class="vtd-form-field-required">*</span> : null}</label> : null}
         {children}
+        {attrs.hint ? <span class="vtd-form-field-hint">{attrs.hint}</span> : null}
         {attrs.error ? <span class="vtd-form-field-error" role="alert">{attrs.error}</span> : null}
     </div>, attrs)
 }

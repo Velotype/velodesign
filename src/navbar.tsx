@@ -5,8 +5,14 @@ import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, Style
  * Attrs type for `<Navbar/>` Component
  */
 export type NavbarAttrsType = {
-    /** Brand/logo content, shown on the left */
+    /** Brand/logo content, shown at the far left */
     brand?: RenderableElements
+    /**
+     * Content shown immediately after `brand`, still on the left - for navigation that belongs
+     * beside the brand rather than out with the account controls (a product switcher, a search
+     * trigger). `children` stay pushed to the right regardless of whether this is set.
+     */
+    leading?: RenderableElements
 } & IdAttr & StylePassthroughAttrs & ChildrenAttr
 
 let areNavbarStylesMounted = false
@@ -30,11 +36,19 @@ gap:1em;
 padding:0.75em 1em;
 border-block-end:1px solid var(--background-4);
 }
-.vtd-navbar-brand{
-font-weight:bold;
+.vtd-navbar-start{
+display:flex;
+flex-wrap:wrap;
+align-items:center;
+gap:1em;
+/* The auto margin lives here rather than on the brand, so brand and leading group together on
+   the left and children are pushed right whether or not leading is set. */
 margin-inline-end:auto;
 }
-.vtd-navbar-items{
+.vtd-navbar-brand{
+font-weight:bold;
+}
+.vtd-navbar-leading,.vtd-navbar-items{
 display:flex;
 flex-wrap:wrap;
 align-items:center;
@@ -44,7 +58,10 @@ gap:1em;
     }
 
     return passthroughAttrsToElement<HTMLElement>(<nav class="vtd-navbar">
-        {attrs.brand && <div class="vtd-navbar-brand">{attrs.brand}</div>}
+        <div class="vtd-navbar-start">
+            {attrs.brand && <div class="vtd-navbar-brand">{attrs.brand}</div>}
+            {attrs.leading && <div class="vtd-navbar-leading">{attrs.leading}</div>}
+        </div>
         <div class="vtd-navbar-items">{children}</div>
     </nav>, attrs)
 }

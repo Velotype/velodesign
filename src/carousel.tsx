@@ -61,7 +61,9 @@ export class Carousel extends Component<CarouselAttrsType> {
      * the user picks a slide themselves (see `#stopAutoplay`) */
     #autoplayActive: boolean
     /** Handle for the pending `setTimeout` advancing to the next slide, if autoplay is active */
-    #autoplayTimeoutId?: number
+    // `ReturnType<typeof setTimeout>`, not `number` - under Deno's own lib types setTimeout
+    // returns a `Timeout` object, so hardcoding `number` only type-checks in a DOM-only project
+    #autoplayTimeoutId?: ReturnType<typeof setTimeout>
     /** Whether autoplay has advanced at least once yet - once true, `autoplayFirstDelay` no
      * longer applies even if a later slide happens to have no explicit `autoplaySlideDelays`
      * entry of its own */
