@@ -1778,4 +1778,92 @@ describe('basic component rendering', () => {
         }
     })
 
+
+    /**
+     * `Tree`'s open/closed state has to be readable and drivable from outside, which is what makes
+     * a filterable tree possible at all: reveal the branch holding a match, then put the reader's
+     * own expansions back when the filter clears.
+     *
+     * The subtle one is `onToggle` firing *after* the state has changed. It is driven by the
+     * element's own `toggle` event for that reason - reporting from the click handler instead
+     * looks correct and is a frame early, so the obvious `onToggle` handler (read `getOpenKeys()`)
+     * silently sees the previous state. The showcase's sidebar lost every expansion that way.
+     */
+    itWrap("tree open state can be read and driven from outside", "tree", "#default-tree", async (_selection: ElementHandle) => {
+        const read = () => page.evaluate(`(() => {
+            const scope = document.getElementById("showcase-theme-light")
+            return {
+                reported: scope.querySelector("#tree-open-keys").innerText.trim(),
+                open: [...scope.querySelectorAll("#default-tree .vtd-tree-node")]
+                    .filter((d) => d.open && !d.classList.contains("vtd-disclosure-closing"))
+                    .map((d) => d.querySelector(".vtd-tree-label").innerText.trim()),
+            }
+        })()`) as Promise<{reported: string, open: string[]}>
+
+        const click = (id: string) => page.evaluate(`document.getElementById("showcase-theme-light").querySelector("#${id}").click()`)
+
+        // defaultOpen puts one branch open before anything is clicked
+        const initial = await read()
+        if (initial.open.join(",") != "src") {
+            fail(`ERROR: expected only the defaultOpen branch open, got ${JSON.stringify(initial.open)}`)
+        }
+
+        // setOpenKeys over every branch key, then none
+        await click("tree-expand-all")
+        const expanded = await read()
+        if (expanded.open.length != 2) {
+            fail(`ERROR: expand-all left ${expanded.open.length} branches open, expected 2: ${JSON.stringify(expanded.open)}`)
+        }
+        // onToggle reports after the change, so what it saw must match what is actually open
+        if (expanded.reported != "Open: src,components") {
+            fail(`ERROR: onToggle reported stale state after expand-all: ${JSON.stringify(expanded.reported)}`)
+        }
+
+        await click("tree-collapse-all")
+        const collapsed = await read()
+        if (collapsed.open.length != 0) {
+            fail(`ERROR: collapse-all left branches open: ${JSON.stringify(collapsed.open)}`)
+        }
+        if (collapsed.reported != "Open: (none)") {
+            fail(`ERROR: onToggle reported stale state after collapse-all: ${JSON.stringify(collapsed.reported)}`)
+        }
+
+        // reveal() opens a leaf's whole ancestor chain. setOpen("components") alone would leave it
+        // open inside a closed "src" - on screen that is indistinguishable from nothing happening.
+        await click("tree-reveal-card")
+        const revealed = await read()
+        if (!revealed.open.includes("src") || !revealed.open.includes("components")) {
+            fail(`ERROR: reveal did not open the leaf's whole ancestor chain: ${JSON.stringify(revealed.open)}`)
+        }
+    })
+
+    /**
+     * A leaf with no `onSelect` must not claim to be a button.
+     *
+     * It used to render `role="button" tabindex="0"` whether or not anything was listening, so a
+     * keyboard user could focus it and press Enter to no effect - and a `Link` in `label` ended up
+     * as a link inside a button. Leaving `onSelect` unset is how the showcase's sidebar nav lets
+     * its `NavLink`s own their own clicks.
+     */
+    itWrap("a tree leaf is only a button when something is listening", "tree", "#linked-tree", async (_selection: ElementHandle) => {
+        const shapes = await page.evaluate(`(() => {
+            const scope = document.getElementById("showcase-theme-light")
+            const describe = (selector) => {
+                const leaf = scope.querySelector(selector + " .vtd-tree-leaf")
+                return {role: leaf.getAttribute("role"), tabindex: leaf.getAttribute("tabindex"), links: leaf.querySelectorAll("a").length}
+            }
+            return {selectable: describe("#default-tree"), linked: describe("#linked-tree")}
+        })()`) as {selectable: {role: string | null, tabindex: string | null, links: number}, linked: {role: string | null, tabindex: string | null, links: number}}
+
+        if (shapes.selectable.role != "button" || shapes.selectable.tabindex != "0") {
+            fail(`ERROR: a leaf with onSelect is not focusable as a button: ${JSON.stringify(shapes.selectable)}`)
+        }
+        if (shapes.linked.role != null || shapes.linked.tabindex != null) {
+            fail(`ERROR: a leaf without onSelect still claims to be a button: ${JSON.stringify(shapes.linked)}`)
+        }
+        if (shapes.linked.links != 1) {
+            fail(`ERROR: expected the link in the label to be the only control: ${JSON.stringify(shapes.linked)}`)
+        }
+    })
+
 })

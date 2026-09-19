@@ -1,7 +1,8 @@
 import { Component, getComponent, RenderBasic, setStylesheet } from "@velotype/velotype"
 import type { EmptyAttrs, RenderableElements } from "@velotype/velotype"
 
-import { Button, ColorScheme, Empty, Link, NavLink, Navbar, Text, TextBox } from "../../src/index.ts"
+import { Button, ColorScheme, Empty, Link, NavLink, Navbar, Text, TextBox, Tree } from "../../src/index.ts"
+import type { TreeNodeType } from "../../src/index.ts"
 import { docBySlug, groupByGroupSlug, groupedDocs } from "./data/docs.tsx"
 import { HomePage } from "./pages/home.tsx"
 import { ComponentPage } from "./pages/component-page.tsx"
@@ -10,23 +11,30 @@ import { NotFoundPage } from "./pages/not-found.tsx"
 import { ThemeBuilderPage } from "./pages/theme-builder.tsx"
 
 /**
- * The grouped, searchable sidebar list of every documented component.
+ * The grouped, searchable sidebar list of every documented component - a `Tree`, one branch per
+ * category.
  *
- * Every entry is a `NavLink`, which tracks the current location itself - it re-evaluates
- * `location.pathname` on `popstate`/`locationchange` and toggles its own `activeClass`. This
- * component used to do that by hand: a `popstate`/`locationchange` listener pair, a retained
- * reference to its own root element, and a `querySelectorAll` that toggled the active class on
- * every link after each navigation. All of it existed because `refresh()` would have reset the
- * sidebar's scroll position and lost the user's place in a long list - and all of it is what
- * `NavLink` is for.
+ * This is the showcase doing what it exists to do: using the package the way a consumer would. It
+ * was a hand-rolled list of `<div>`s before, and moving it onto `Tree` is what surfaced three
+ * things `Tree` was missing - see CLAUDE.md's Tree section.
  *
- * `setFilter` still uses `refresh()`: an actual search edit changes which items exist, so the
- * list genuinely has to be rebuilt, and losing scroll position there is both acceptable and much
- * rarer. It stays scoped to this subtree and never touches the search `TextBox` in `AppShell`, so
- * typing never loses focus.
+ * **No `onSelect`.** Each entry's `label` is a `NavLink`, which tracks `location.pathname` itself
+ * and owns its own click; a leaf without `onSelect` is a plain container rather than something
+ * claiming to be a button, so the link is the only control in the row. Passing `onSelect` here
+ * would put a button around a link and fire both.
+ *
+ * `setFilter` rebuilds via `refresh()`, because a search edit genuinely changes which entries
+ * exist. Losing the reader's expansions across that rebuild is the part that needed care:
+ * `#openCategories` remembers what they opened, `getOpenKeys()` reads it back off the live tree
+ * whenever they toggle, and the rebuild re-applies it through `defaultOpen`. While a filter is
+ * active every surviving category opens instead, so a match is never hidden inside a collapsed
+ * branch - typing "bu" opens Form so Button is visible without a second click.
  */
 class SidebarList extends Component<EmptyAttrs> {
     #filterText = ""
+    /** What the reader has expanded, kept across the rebuilds a filter edit causes */
+    #openCategories = new Set<string>()
+    #tree?: Tree
 
     setFilter(text: string) {
         this.#filterText = text
@@ -35,23 +43,54 @@ class SidebarList extends Component<EmptyAttrs> {
 
     override render(): HTMLDivElement {
         const filterLower = this.#filterText.trim().toLowerCase()
+        const filtering = filterLower.length > 0
         const buckets = groupedDocs()
             .map(bucket => ({group: bucket.group, docs: bucket.docs.filter(doc => doc.name.toLowerCase().includes(filterLower))}))
             .filter(bucket => bucket.docs.length > 0)
 
-        return <div class="vtd-showcase-sidebar-list">
-            {buckets.length == 0
-                ? <Empty description={`No components match "${this.#filterText}"`}/>
-                : null}
-            {buckets.map(bucket => <div class="vtd-showcase-sidebar-group">
-                <Link spa to={categoryPageUrl(bucket.group)} class="vtd-showcase-sidebar-group-label">{bucket.group}</Link>
-                {bucket.docs.map(doc => <NavLink
+        if (buckets.length == 0) {
+            return <div class="vtd-showcase-sidebar-list">
+                <Empty description={`No components match "${this.#filterText}"`}/>
+            </div>
+        }
+
+        const nodes: TreeNodeType[] = buckets.map(bucket => ({
+            key: bucket.group,
+            // The category name links to its own page, and is also what toggles the branch: the
+            // click lands on the link, so Tree's summary handler sees defaultPrevented and leaves
+            // the toggle to the chevron and the rest of the row.
+            label: <Link spa to={categoryPageUrl(bucket.group)} class="vtd-showcase-sidebar-group-label">{bucket.group}</Link>,
+            // Trailing, not leading: a count announced *before* the category name reads as
+            // "3 Typography", and reordering a leading slot in CSS would leave that wrong for a
+            // screen reader while looking right on screen
+            trailing: <Text type="muted" class="vtd-showcase-sidebar-count">{bucket.docs.length}</Text>,
+            // A filter reveals every category that still has a match; otherwise the reader's own
+            // expansions are restored
+            defaultOpen: filtering || this.#openCategories.has(bucket.group),
+            children: bucket.docs.map(doc => ({
+                key: doc.slug,
+                label: <NavLink
                     spa
                     to={`/components/${doc.slug}`}
                     activeClass="vtd-showcase-sidebar-item-active"
-                    class="vtd-showcase-sidebar-item">{doc.name}</NavLink>)}
-            </div>)}
-        </div>
+                    class="vtd-showcase-sidebar-item">{doc.name}</NavLink>,
+            })),
+        }))
+
+        this.#tree = getComponent<Tree>(<Tree
+            class="vtd-showcase-sidebar-tree"
+            ariaLabel="Components by category"
+            nodes={nodes}
+            onToggle={() => {
+                // Read the whole state back rather than tracking one node's change: while a filter
+                // is active the tree holds categories the reader never opened, and only what they
+                // have open *now* should survive the filter being cleared.
+                if (this.#tree && !this.#filterText.trim()) {
+                    this.#openCategories = new Set(this.#tree.getOpenKeys())
+                }
+            }}/>)
+
+        return <div class="vtd-showcase-sidebar-list">{this.#tree}</div>
     }
 }
 
@@ -135,9 +174,15 @@ height:calc(100vh - 53px);
 .vtd-showcase-sidebar-search{padding:0.75em;border-block-end:1px solid var(--background-4);}
 .vtd-showcase-sidebar-search .vtd-text-box{width:100%;margin-inline-start:0;box-sizing:border-box;}
 .vtd-showcase-sidebar-list{overflow-y:auto;flex-grow:1;padding-block-end:1em;}
+/*
+ * Tree supplies the disclosure, the chevron and the indentation; these rules restyle it for a
+ * navigation sidebar rather than a file listing. Targeting Tree's classes is the supported way to
+ * do that - the class is the API, the tag it happens to render is not.
+ */
+.vtd-showcase-sidebar-tree{padding:0.5em 0.35em;}
+/* A category row: small caps, and the whole row is the hit target for the disclosure */
+.vtd-showcase-sidebar-tree .vtd-tree-label{padding:0.5em 0.55em;}
 .vtd-showcase-sidebar-group-label{
-display:block;
-padding:0.9em 0.9em 0.3em 0.9em;
 font-size:0.75em;
 font-weight:bold;
 text-transform:uppercase;
@@ -146,10 +191,15 @@ color:var(--background-9);
 text-decoration:none;
 }
 .vtd-showcase-sidebar-group-label:hover{color:var(--primary-8);}
+/* Tree's own trailing slot already sits at the far edge; this only sizes it */
+.vtd-showcase-sidebar-tree .vtd-tree-trailing{font-size:0.75em;}
+/* A leaf is only a wrapper here - the NavLink inside it is the whole row */
+.vtd-showcase-sidebar-tree .vtd-tree-leaf{padding:0;margin-inline-start:0.6em;border-radius:0;}
+.vtd-showcase-sidebar-tree .vtd-tree-leaf:hover{background-color:transparent;}
+.vtd-showcase-sidebar-tree .vtd-tree-children{padding-inline-start:0.75em;}
 .vtd-showcase-sidebar-item{
 display:block;
-padding:0.4em 0.9em;
-margin:0 0.5em;
+padding:0.35em 0.6em;
 border-radius:0.25rem;
 color:inherit;
 text-decoration:none;
