@@ -677,6 +677,51 @@ Adding this surfaced a gap worth keeping: **`Menu` had no `ariaLabel`**, so a me
 a glyph had no accessible name at all. It takes one now, applied to the `<summary>`, which is what
 the expander uses.
 
+## `Tree` is a class, because its open state has to be readable from outside
+
+`Tree` is the one data-display component that is a `class Component` rather than a
+`FunctionComponent`, and the reason is a filterable tree. A filter has to be able to reveal the
+branch holding a match, and to put the reader's own expansions back when the filter clears - so
+something outside the component has to be able to read and drive the open state. Reading
+`<details open>` out of the DOM would work and would make every consumer depend on the markup this
+component happens to emit, so it is an API instead: `isOpen`, `getOpenKeys`, `getBranchKeys`,
+`setOpen`, `setOpenKeys`, `reveal`.
+
+**Never call `refresh()` in it.** `label` is `RenderableElements`, so it can hold a consumer's own
+components; every method does a targeted DOM update on the one `<details>` it addresses.
+
+Four things here were found by putting the showcase's sidebar on it, and each is the kind of thing
+only a real consumer surfaces:
+
+- **`onToggle` must fire from the element's own `toggle` event, not from the click handler.** A
+  click handler runs *before* the browser applies the new state, so the obvious `onToggle` body -
+  read `getOpenKeys()` and store it - silently sees the state as it was a moment ago. The sidebar
+  lost every expansion that way. `toggle` fires after the flip and also covers `setOpen` and a
+  sequenced close landing a transition later, so there is one honest report per real change.
+- **A leaf with no `onSelect` is not a button.** It used to render `role="button" tabindex="0"`
+  whether or not anything was listening, so a keyboard user could focus it and press Enter to no
+  effect. Leaving `onSelect` unset is now meaningful: the leaf is a plain container, which is what
+  lets a `NavLink` in `label` own its own click instead of being a link inside a button.
+- **`reveal(key)` exists because `setOpen` alone is not enough.** Opening a branch whose ancestor is
+  closed leaves it open and invisible, which on screen is indistinguishable from nothing happening.
+  `reveal` walks the ancestor chain, and accepts a leaf's key so a caller can name the thing that
+  actually matched.
+- **`getOpenKeys()` reports document order, parents before children**, which needs its own
+  `#branchOrder` array: a branch can only register itself *after* its children are rendered,
+  because it needs the content element they build, so iterating the map alone reports the deepest
+  node first.
+
+`leading` and `trailing` slots match `ListItemType`'s, and **`trailing` is not a leading slot moved
+with CSS `order`** - the showcase's category counts sit at the far edge, and reordering visually
+would have left a screen reader announcing "3 Typography". The row is `display:flex` for the same
+family of reason: with either slot the label becomes a block-level flex container, which a
+`display:block` summary pushes onto the line below the `::before` chevron, stranding the chevron
+above the label.
+
+⚠️ Writing that last comment reintroduced **the backtick-in-a-CSS-template-literal bug for the
+fourth time**. It was invisible because the build output had been piped to `/dev/null` - `deno
+check` had not been re-run either. Don't discard build output.
+
 ## `TableOfContents` takes items, and watches with an observer
 
 The entries are data the consumer passes, not headings scraped out of the DOM. Deriving them looks
@@ -767,6 +812,9 @@ structural glue no component owns (the shell's `100vh` column, the sidebar's sti
 the dotted example frame) and each carrying a comment saying so. **Keep it that way** - it is the
 only place the package is used the way a consumer uses it, and it earns its keep:
 
+- Dogfooding is what found four gaps in `Tree` (see its section above) the moment the sidebar nav
+  moved onto it - including an `onToggle` that reported a frame early and a leaf that claimed to be
+  a button with nothing listening.
 - Dogfooding is what found `Link` rendering an `<a>` with **no class at all** - the one component a
   consumer had nothing to target, against this file's own "never a bare unprefixed class" rule. It
   emits `vtd-link` now, still with no stylesheet of its own.

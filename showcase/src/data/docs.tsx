@@ -284,6 +284,14 @@ const functionDocs: Record<string, string> = {
 }
 
 const methodDocs: Record<string, MethodDoc[]> = {
+    Tree: [
+        {name: "isOpen(key)", description: "Is this branch open? A branch mid-close still carries the open attribute - it is held for the length of the collapse - and is reported as closed here, because what a caller wants is where the tree is heading."},
+        {name: "getOpenKeys()", description: "Every branch currently open, in document order. Safe to call from onToggle, which runs after the change."},
+        {name: "getBranchKeys()", description: "Every branch, open or not, in document order - the keys these methods accept."},
+        {name: "setOpen(key, open, animate?)", description: "Opens or closes one branch. animate defaults to true, matching a click; pass false when the change is a consequence of something else the reader did, where a transition reads as lag."},
+        {name: "setOpenKeys(keys, animate?)", description: "Makes exactly these branches open and every other one closed. animate defaults to false here, because animating several branches in opposite directions at once reads as noise."},
+        {name: "reveal(key)", description: "Opens a node and every ancestor above it, so it is actually on screen. The one to use for a search match - setOpen alone leaves a closed ancestor hiding it."},
+    ],
     Modal: [
         {name: "showModal()", description: "Opens the modal. This is the <dialog>'s own native method, which is why calling it on the JSX value works."},
         {name: "close()", description: "Closes the modal. Also the <dialog>'s own native method."},
@@ -397,10 +405,12 @@ const typeDefinitions: Record<string, TypeDoc> = {
         name: "TreeNodeType",
         description: "One node of a Tree, which may hold its own children.",
         fields: [
-            {name: "key", type: "string", required: true, description: "Unique key identifying this node."},
-            {name: "label", type: "RenderableElements", required: true, description: "The node's text."},
+            {name: "key", type: "string", required: true, description: "Unique key identifying this node, across the whole tree and not just among its siblings - the open/close methods address nodes by it."},
+            {name: "label", type: "RenderableElements", required: true, description: "The node's content. A Link or NavLink here owns its own click, provided onSelect is left unset."},
             {name: "children", type: "TreeNodeType[]", description: "Child nodes. A node with none renders as a leaf."},
             {name: "defaultOpen", type: "boolean", defaultValue: "false", description: "Whether this node starts expanded."},
+            {name: "leading", type: "RenderableElements", description: "Content shown before the label - an Icon, a Badge, an Avatar."},
+            {name: "trailing", type: "RenderableElements", description: "Content shown after the label, pushed to the trailing edge - a count, a status dot."},
         ],
     },
     ContextMenuItemType: {
@@ -1149,7 +1159,9 @@ const attrTables: Record<string, AttrDoc[]> = {
     ],
     Tree: [
         {name: "nodes", type: "TreeNodeType[]", required: true, description: "The root nodes - each optionally with children."},
-        {name: "onSelect", type: "(node) => void", description: "Called when a node's label is clicked."},
+        {name: "onSelect", type: "(node) => void", description: "Called when a node's label is clicked. Leaving it unset is meaningful: a leaf then renders as a plain container rather than something claiming to be a button, which is what lets a link in the label own its own click."},
+        {name: "onToggle", type: "(node, open) => void", description: "Called after a branch has opened or closed, from a click or from setOpen. It runs after the change, so reading getOpenKeys() inside it is safe."},
+        {name: "ariaLabel", type: "string", description: "Accessible name for the tree as a whole."},
     ],
     DatePicker: [
         {name: "value", type: "string", description: 'Current value, as an "YYYY-MM-DD" string.'},
@@ -2076,7 +2088,7 @@ secondary. The last paragraph in a container drops its bottom margin.</Paragraph
         {label: "Default (pick a start, then an end)", node: () => <CalendarRangeDemo/>, code: `<CalendarRangeDemo/>`},
     ],
     Tree: [
-        {label: "Default", node: () => <Tree nodes={[
+        {label: "Default", node: () => <Tree ariaLabel="Project files" nodes={[
             {key: "src", label: "src", defaultOpen: true, children: [
                 {key: "components", label: "components", children: [{key: "button", label: "button.tsx"}]},
                 {key: "index", label: "index.ts"},
