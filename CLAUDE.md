@@ -828,6 +828,41 @@ only place the package is used the way a consumer uses it, and it earns its keep
   focuses the control) stays a `<label>`, because `Stack` renders a `<div>` - theme-builder's
   colour fields are the worked example.
 
+**Stacking: the page content is one layer, and the chrome is one step above it.** That is the
+whole of the showcase's stacking story - `isolation:isolate` on `.vtd-showcase-main`, and
+`z-index:1` on the two chrome elements (header and sidebar wrapper), which never overlap each
+other so they share a value.
+
+It replaced two values that looked reasonable and did nothing. **A `z-index` is meaningless unless
+you know which stacking context it lands in**, and this bug is the worked example:
+
+- The sidebar panel carried `z-index:3`, but its wrapper is `position:sticky`, which *is already a
+  stacking context*. So the 3 ranked the panel against its own siblings inside the sidebar and said
+  nothing about the sidebar versus the page.
+- `Button` is `position:relative`, because it hosts its loading spinner. Two positioned elements at
+  `z-index:auto` paint in **DOM order**, and `main` comes after the `aside`. So every button in the
+  page painted over the expanded sidebar, and no number on the panel could have changed it. The
+  reported symptom was Save and Cancel sitting on top of the hovered sidebar on the Stack page.
+
+⚠️ **`isolation:isolate` alone does not push content *down*.** A stacking context on a
+non-positioned element paints where `z-index:0` would - which is *after* an earlier positioned
+sibling, not before it. Isolating `main` on its own made the overlap slightly worse, and the check
+caught it. Isolation's job here is containment: it stops `DataTable`'s `z-index:1000` column menu
+ranking itself against the site header. Getting the chrome above the content still takes the one
+`z-index`.
+
+**That last `z-index:1` is not avoidable without a worse trade.** Same-level positioned elements
+paint in DOM order, and the sidebar precedes `main` because it is navigation. Moving it after
+`main` would fix the paint order for nothing - and a keyboard user would then tab through the whole
+page to reach the nav. The declaration is cheaper than that.
+
+**The library still carries 18 `z-index` values, eight of them `1000`** (`Popover`, `Menu`,
+`SelectMenu`, `Combobox`, `Popconfirm`, `ContextMenu`, `DataTable`'s column menu, `Toast`). Those
+are the ladder this rule exists to discourage: `1000` means "win", which is only true until
+something else says `1001`. They work today because consumers rarely isolate their layouts - and
+the showcase now does, which is the honest test of whether they were ever right. Worth revisiting
+as each is touched.
+
 **A filter has to show *what* matched, not just that something did.** The sidebar's entries run
 their names through `highlightMatch` - the same helper `Combobox`, `Command` and both tables use,
 now exported from `index.ts` alongside `searchHighlightCss` so a consumer building their own
