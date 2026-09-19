@@ -11,11 +11,16 @@ on:
 jobs:
   enable:
     name: Enable auto-merge
-    # Only for pull requests raised from a branch in this repository by its owner. A fork's PR, or
-    # anyone else's, waits for a human - otherwise "no review required" would apply to strangers.
+    # Only for a pull request raised from a branch in this repository, never a fork - pushing a
+    # branch here already requires write access, so that is the trust boundary. A fork's PR gets no
+    # auto-merge and waits for a human, which is the point: "no review required" must not extend to
+    # strangers.
+    #
+    # Checking `github.actor == github.repository_owner` looked like the tighter test and is wrong
+    # here: this repository is owned by the Velotype *organisation*, so repository_owner is
+    # "Velotype" while the actor is a user account. The job silently skipped on the first real PR.
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor == github.repository_owner &&
       !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     permissions:
