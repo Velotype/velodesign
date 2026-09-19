@@ -199,6 +199,13 @@ color:var(--background-5);
 user-select:none;
 }
 .vtd-codeblock-line{display:block;min-height:1.6em;}
+/*
+ * A hanging indent, so wrap and showLineNumbers work together: without it a wrapped line's
+ * continuation starts at the left edge, underneath the number, and reads as its own line. The
+ * outdent is the gutter's own width (2.5em) plus its trailing gap (1em), which puts the number in
+ * the outdented space and aligns every continuation with the first line's code.
+ */
+.vtd-codeblock-numbered.vtd-codeblock-wrap .vtd-codeblock-line{padding-inline-start:3.5em;text-indent:-3.5em;}
 `, "vtd/CodeBlock")
     }
 

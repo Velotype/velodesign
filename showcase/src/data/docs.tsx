@@ -11,7 +11,7 @@ import {
     Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, ScrollArea, Select, SelectMenu,
     showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, DataTable, Tabs, Tag, TextBox,
     LineChart, AreaChart, BarChart, PieChart, Gauge, Sparkline,
-    Heading, Text, Paragraph, Stack, Grid, CodeBlock,
+    Heading, Text, Paragraph, Stack, Grid, CodeBlock, TableOfContents,
     Textarea, TextEditableField, TextFormField, TextNonEditableField, TimeAgo, Timeline, Toggle,
     Tooltip, Tree, Upload, AsyncDataTable,
 } from "../../../src/index.ts"
@@ -90,6 +90,22 @@ export type MethodDoc = {
     description: string
 }
 
+/**
+ * A named type a component's attributes refer to, documented with the same columns as an
+ * attribute table.
+ *
+ * A row reading `items: AccordionItemType[]` told the reader the name of a shape and nothing about
+ * it. These are that shape, shown under the component that uses them rather than in a reference
+ * page nobody navigates to.
+ */
+export type TypeDoc = {
+    name: string
+    /** One line on what the type is for, shown above its table */
+    description?: string
+    /** Its fields - the same shape as an attribute row, so the tables read identically */
+    fields: AttrDoc[]
+}
+
 /** A `ComponentStory` (from the Explorer) augmented with showcase-only documentation */
 export type ComponentDoc = ComponentStory & {
     /** URL-safe id, e.g. "context-menu" for "ContextMenu" */
@@ -110,6 +126,8 @@ export type ComponentDoc = ComponentStory & {
     attrs: AttrDoc[]
     /** Methods callable on the component's instance, shown in their own section */
     methods?: MethodDoc[]
+    /** Named types this component's attributes refer to, shown below the attribute table */
+    types?: TypeDoc[]
     /**
      * What this component does with the children placed inside it, if it takes any.
      *
@@ -143,6 +161,7 @@ const descriptions: Record<string, string> = {
     Pagination: "A control for navigating between pages of results, with a windowed page-number list.",
     Navbar: "A themed top navigation bar with a brand slot and a row of children (typically NavLinks).",
     Sidebar: "A themed vertical navigation list, with the current page highlighted automatically.",
+    TableOfContents: "A list of a page's sections, indented by level, with the one currently in view highlighted. Each entry is an in-page anchor.",
     Menu: "A dropdown menu of navigational links or actions, built on native details/summary.",
     Steps: "A horizontal sequence of numbered steps for wizards and checkout flows.",
     // Feedback
@@ -277,6 +296,273 @@ const methodDocs: Record<string, MethodDoc[]> = {
     ],
 }
 
+/**
+ * The named types each component's attributes refer to.
+ *
+ * A row reading `items: AccordionItemType[]` gave the reader the name of a shape and nothing
+ * about it. Defined once and shared by every component that uses them - the three cartesian
+ * charts all point at ChartPointType, and a copy per component is how copies drift apart.
+ */
+const typeDefinitions: Record<string, TypeDoc> = {
+    AccordionItemType: {
+        name: "AccordionItemType",
+        description: "One section of an Accordion.",
+        fields: [
+            {name: "header", type: "RenderableElements", required: true, description: "Content of the section's clickable header."},
+            {name: "content", type: "RenderableElements", required: true, description: "Content revealed when the section is open."},
+            {name: "defaultOpen", type: "boolean", defaultValue: "false", description: "Whether this section starts open."},
+        ],
+    },
+    TableOfContentsItemType: {
+        name: "TableOfContentsItemType",
+        description: "One entry in a TableOfContents.",
+        fields: [
+            {name: "id", type: "string", required: true, description: "id of the element this entry links to - the anchor target."},
+            {name: "label", type: "RenderableElements", required: true, description: "Displayed text for this entry."},
+            {name: "level", type: "number", defaultValue: "1", description: "Depth, 1 being top level. Levels past 6 render at 6."},
+        ],
+    },
+    BreadcrumbItemType: {
+        name: "BreadcrumbItemType",
+        description: "One crumb in a trail.",
+        fields: [
+            {name: "label", type: "RenderableElements", required: true, description: "The crumb's text."},
+            {name: "to", type: "string", description: "Target URL. The last crumb usually omits it, which renders it as plain text marked aria-current."},
+        ],
+    },
+    SidebarItemType: {
+        name: "SidebarItemType",
+        description: "One entry in a Sidebar.",
+        fields: [
+            {name: "label", type: "RenderableElements", required: true, description: "The entry's text."},
+            {name: "to", type: "string", required: true, description: "Target URL, matched against the current location to highlight the active entry."},
+        ],
+    },
+    MenuItemType: {
+        name: "MenuItemType",
+        description: "One entry in a Menu - a link, an action, or both.",
+        fields: [
+            {name: "label", type: "RenderableElements", required: true, description: "The entry's text."},
+            {name: "href", type: "string", description: "Target URL, making this entry a link."},
+            {name: "spa", type: "boolean", defaultValue: "false", description: "Client-side route change rather than a page load, for an href inside an SPA."},
+            {name: "onClick", type: "() => void", description: "Called when the entry is chosen. May be combined with href."},
+            {name: "disabled", type: "boolean", defaultValue: "false", description: "Renders the entry unavailable and ignores clicks."},
+        ],
+    },
+    StepType: {
+        name: "StepType",
+        description: "One step in a Steps sequence.",
+        fields: [
+            {name: "key", type: "string", required: true, description: "Unique key identifying this step."},
+            {name: "title", type: "RenderableElements", required: true, description: "The step's name."},
+            {name: "description", type: "RenderableElements", description: "Supporting text below the title."},
+        ],
+    },
+    TabType: {
+        name: "TabType",
+        description: "One tab and the panel it reveals.",
+        fields: [
+            {name: "key", type: "string", required: true, description: "Unique key identifying this tab."},
+            {name: "label", type: "RenderableElements", required: true, description: "Content of the tab button."},
+            {name: "content", type: "RenderableElements", required: true, description: "The panel. Every panel is built up front and stays mounted, so a tab keeps its state while another is shown."},
+        ],
+    },
+    ListItemType: {
+        name: "ListItemType",
+        description: "One row of a List.",
+        fields: [
+            {name: "key", type: "string", required: true, description: "Unique key identifying this row."},
+            {name: "title", type: "RenderableElements", required: true, description: "The row's primary text."},
+            {name: "description", type: "RenderableElements", description: "Secondary text below the title."},
+            {name: "leading", type: "RenderableElements", description: "Content before the text, e.g. an Avatar."},
+            {name: "trailing", type: "RenderableElements", description: "Content after the text, e.g. a Badge."},
+            {name: "href", type: "string", description: "Makes the whole row a link."},
+            {name: "onSelect", type: "() => void", description: "Makes the whole row a JS-driven action instead."},
+        ],
+    },
+    TimelineItemType: {
+        name: "TimelineItemType",
+        description: "One event on a Timeline.",
+        fields: [
+            {name: "key", type: "string", required: true, description: "Unique key identifying this event."},
+            {name: "title", type: "RenderableElements", required: true, description: "The event's primary text."},
+            {name: "description", type: "RenderableElements", description: "Supporting text below the title."},
+            {name: "type", type: '"primary" | "secondary" | "warning" | "danger" | "neutral"', defaultValue: "neutral", description: "Colour of the event's dot."},
+        ],
+    },
+    TreeNodeType: {
+        name: "TreeNodeType",
+        description: "One node of a Tree, which may hold its own children.",
+        fields: [
+            {name: "key", type: "string", required: true, description: "Unique key identifying this node."},
+            {name: "label", type: "RenderableElements", required: true, description: "The node's text."},
+            {name: "children", type: "TreeNodeType[]", description: "Child nodes. A node with none renders as a leaf."},
+            {name: "defaultOpen", type: "boolean", defaultValue: "false", description: "Whether this node starts expanded."},
+        ],
+    },
+    ContextMenuItemType: {
+        name: "ContextMenuItemType",
+        description: "One entry in a ContextMenu.",
+        fields: [
+            {name: "label", type: "RenderableElements", required: true, description: "The entry's text."},
+            {name: "onClick", type: "() => void", description: "Called when the entry is chosen."},
+            {name: "disabled", type: "boolean", defaultValue: "false", description: "Renders the entry unavailable and ignores clicks."},
+        ],
+    },
+    ComboboxOptionType: {
+        name: "ComboboxOptionType",
+        description: "One suggestion offered by a Combobox.",
+        fields: [
+            {name: "value", type: "string", required: true, description: "The value written into the input when chosen."},
+            {name: "label", type: "string", defaultValue: "the value", description: "Text shown in the list, when it should differ from the value."},
+        ],
+    },
+    SelectOptionType: {
+        name: "SelectOptionType",
+        description: "One option in a Select.",
+        fields: [
+            {name: "value", type: "string", required: true, description: "The option's submitted value."},
+            {name: "label", type: "RenderableElements", required: true, description: "Text shown for the option."},
+            {name: "disabled", type: "boolean", defaultValue: "false", description: "Renders the option unselectable."},
+        ],
+    },
+    CommandItemType: {
+        name: "CommandItemType",
+        description: "One command in a Command palette.",
+        fields: [
+            {name: "key", type: "string", required: true, description: "Unique key identifying this command."},
+            {name: "label", type: "RenderableElements", required: true, description: "Text shown in the list."},
+            {name: "searchText", type: "string", defaultValue: "the label, when it is a plain string", description: "Text the search matches against. Set it when the label is markup rather than a string, or when it should match on more than it displays."},
+            {name: "onSelect", type: "() => void", required: true, description: "Called when the command is chosen."},
+        ],
+    },
+    TableColumnType: {
+        name: "TableColumnType",
+        description: "One column of a Table.",
+        fields: [
+            {name: "key", type: "string", required: true, description: "Unique key identifying this column."},
+            {name: "header", type: "RenderableElements", required: true, description: "Content of the column's header cell."},
+            {name: "render", type: "(row: RowType) => RenderableElements", required: true, description: "Renders a row's value for this column."},
+            {name: "align", type: '"start" | "center" | "end"', defaultValue: "start", description: "Text alignment for this column's cells."},
+            {name: "width", type: "number | string", description: "Column width - a number is px, a string any CSS length. Setting it on any column switches the table to fixed layout."},
+            {name: "sortDirection", type: '"asc" | "desc"', description: "Shows a sort indicator in the header. Table holds no sort state - sorting rows is the caller's job."},
+            {name: "onSortClick", type: "() => void", description: "Makes the header clickable, called to request a sort change."},
+        ],
+    },
+    DataTableColumnType: {
+        name: "DataTableColumnType",
+        description: "One column of a DataTable, which computes over rows it already holds.",
+        fields: [
+            {name: "key", type: "string", required: true, description: "Unique key identifying this column."},
+            {name: "header", type: "RenderableElements", required: true, description: "Content of the column's header cell."},
+            {name: "render", type: "(row: RowType) => RenderableElements", required: true, description: "Renders a row's value for this column."},
+            {name: "sortValue", type: "(row: RowType) => string | number", description: "Makes the column sortable, returning the value to sort on. Return the raw value rather than the rendered string, or money sorts as text and 1,000 lands before 9."},
+            {name: "filterValue", type: "(row: RowType) => string", description: "Makes the column searchable, returning the text to match against."},
+            {name: "align", type: '"start" | "center" | "end"', defaultValue: "start", description: "Text alignment for this column's cells."},
+            {name: "width", type: "number", description: "Starting width in px. Every column can still be resized by dragging."},
+            {name: "minWidth", type: "number", defaultValue: "60", description: "Smallest width in px a drag can reach."},
+            {name: "hideable", type: "boolean", defaultValue: "true", description: "Whether the column-visibility control may hide this column. false shows it there as a disabled, checked entry rather than omitting it."},
+            {name: "resizable", type: "boolean", defaultValue: "true", description: "Whether this column's width can be dragged, regardless of the table's resizableColumns."},
+        ],
+    },
+    AsyncDataTableColumnType: {
+        name: "AsyncDataTableColumnType",
+        description: "One column of an AsyncDataTable, where the server does the work.",
+        fields: [
+            {name: "key", type: "string", required: true, description: "Unique key identifying this column. Sent to load() as sortKey when the column is sorted."},
+            {name: "header", type: "RenderableElements", required: true, description: "Content of the column's header cell."},
+            {name: "render", type: "(row: RowType) => RenderableElements", required: true, description: "Renders a row's value for this column."},
+            {name: "sortable", type: "boolean", defaultValue: "false", description: "Makes the header clickable, asking load() to sort. A flag rather than a sortValue function, because the sorting happens on the server - only set it where the endpoint can actually sort."},
+            {name: "align", type: '"start" | "center" | "end"', defaultValue: "start", description: "Text alignment for this column's cells."},
+            {name: "width", type: "number", description: "Starting width in px. Every column can still be resized by dragging."},
+            {name: "minWidth", type: "number", defaultValue: "60", description: "Smallest width in px a drag can reach."},
+            {name: "hideable", type: "boolean", defaultValue: "true", description: "Whether the column-visibility control may hide this column."},
+            {name: "resizable", type: "boolean", defaultValue: "true", description: "Whether this column's width can be dragged."},
+        ],
+    },
+    AsyncDataTableQuery: {
+        name: "AsyncDataTableQuery",
+        description: "What the table asks load() for.",
+        fields: [
+            {name: "search", type: "string", required: true, description: "The current search text, already trimmed. Empty when the box is empty."},
+            {name: "sortKey", type: "string", description: "key of the column to sort by, or unset for the loader's own default order."},
+            {name: "sortDirection", type: '"asc" | "desc"', description: "Direction for sortKey."},
+            {name: "page", type: "number", required: true, description: "Which page to return, 1-indexed."},
+            {name: "pageSize", type: "number", required: true, description: "How many rows the page should hold."},
+        ],
+    },
+    AsyncDataTableResult: {
+        name: "AsyncDataTableResult",
+        description: "What load() gives back.",
+        fields: [
+            {name: "rows", type: "RowType[]", required: true, description: "This page's rows."},
+            {name: "total", type: "number", description: "Rows matching the query across every page. Given, the footer shows numbered pagination; omitted, it falls back to prev/next. Omitting it is a fair choice - a count over a large filtered set often costs more than the page query itself."},
+            {name: "truncated", type: "boolean", defaultValue: "false", description: "Set when the backend capped the result rather than returning everything that matched, so a short list is not mistaken for a complete one."},
+        ],
+    },
+    ChartPointType: {
+        name: "ChartPointType",
+        description: "One category on a chart's axis, with a value per series.",
+        fields: [
+            {name: "label", type: "string", required: true, description: "The category's name, drawn on the axis."},
+            {name: "values", type: "Record<string, number | undefined>", required: true, description: "One entry per series, keyed by that series' key. A missing or undefined value leaves a gap rather than plotting zero."},
+        ],
+    },
+    ChartSeriesType: {
+        name: "ChartSeriesType",
+        description: "One series plotted across every category.",
+        fields: [
+            {name: "key", type: "string", required: true, description: "Matches the key used in each point's values."},
+            {name: "label", type: "string", defaultValue: "the key", description: "Name shown in the legend and tooltip."},
+            {name: "color", type: "string", defaultValue: "its slot in ChartThemeOptions.seriesColors", description: "Overrides the palette for this series. Prefer the palette - a literal looks right in one theme and wrong in the other."},
+        ],
+    },
+    PieSliceType: {
+        name: "PieSliceType",
+        description: "One slice of a PieChart.",
+        fields: [
+            {name: "label", type: "string", required: true, description: "The slice's name."},
+            {name: "value", type: "number", required: true, description: "Its size, as a share of the total of every slice."},
+            {name: "color", type: "string", defaultValue: "its slot in ChartThemeOptions.seriesColors", description: "Overrides the palette for this slice."},
+        ],
+    },
+    GaugeBandType: {
+        name: "GaugeBandType",
+        description: "A tinted range on a Gauge's track.",
+        fields: [
+            {name: "from", type: "number", required: true, description: "Where the band starts, in the gauge's own units."},
+            {name: "to", type: "number", required: true, description: "Where it ends."},
+            {name: "color", type: "string", required: true, description: "The band's colour."},
+        ],
+    },
+}
+
+/** Which named types each component's page documents, in the order they matter */
+const componentTypes: Record<string, string[]> = {
+    Accordion: ["AccordionItemType"],
+    TableOfContents: ["TableOfContentsItemType"],
+    Breadcrumbs: ["BreadcrumbItemType"],
+    Sidebar: ["SidebarItemType"],
+    Menu: ["MenuItemType"],
+    Steps: ["StepType"],
+    Tabs: ["TabType"],
+    List: ["ListItemType"],
+    Timeline: ["TimelineItemType"],
+    Tree: ["TreeNodeType"],
+    ContextMenu: ["ContextMenuItemType"],
+    Combobox: ["ComboboxOptionType"],
+    Select: ["SelectOptionType"],
+    Command: ["CommandItemType"],
+    Table: ["TableColumnType"],
+    DataTable: ["DataTableColumnType"],
+    AsyncDataTable: ["AsyncDataTableColumnType", "AsyncDataTableQuery", "AsyncDataTableResult"],
+    LineChart: ["ChartPointType", "ChartSeriesType"],
+    AreaChart: ["ChartPointType", "ChartSeriesType"],
+    BarChart: ["ChartPointType", "ChartSeriesType"],
+    PieChart: ["PieSliceType"],
+    Gauge: ["GaugeBandType"],
+}
+
 const attrTables: Record<string, AttrDoc[]> = {
     Button: [
         {name: "type", type: '"primary" | "secondary" | "warning" | "danger" | "text"', defaultValue: "primary", description: "Sets the color."},
@@ -396,6 +682,12 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "header", type: "RenderableElements", description: "Content shown above the list."},
         {name: "ariaLabel", type: "string", description: "Accessible label for the nav landmark."},
         {name: "spa", type: "boolean", defaultValue: "false", description: "Makes every item a client-side route change via History.changeLocation rather than a page reload. Set true inside an SPA; leave false on a multi-page site, where an item should be a real navigation."},
+    ],
+    TableOfContents: [
+        {name: "items", type: "TableOfContentsItemType[]", required: true, description: "The entries to list, in the order they appear on the page: {id, label, level?}. id is the anchor target, and level (1 being top) sets the indent."},
+        {name: "header", type: "RenderableElements", description: "Content shown above the list, e.g. \"On this page\"."},
+        {name: "topOffset", type: "number", defaultValue: "0", description: "How far from the top of the viewport a section counts as current. Set it to the height of a sticky header, or the section sitting behind that header reads as the current one."},
+        {name: "ariaLabel", type: "string", description: "Accessible label for the nav landmark. Worth setting, since a page usually has more than one nav."},
     ],
     Menu: [
         {name: "trigger", type: "RenderableElements", required: true, description: "Content that opens the menu when clicked."},
@@ -1069,6 +1361,31 @@ renderOption={option => <span style={{display: "flex", alignItems: "center", gap
         {label: "Just started", node: () => <Steps current={0} steps={[{key: "a", title: "Account"}, {key: "b", title: "Profile"}, {key: "c", title: "Confirm"}]}/>, code: `<Steps current={0} steps={[{key: "a", title: "Account"}, {key: "b", title: "Profile"}, {key: "c", title: "Confirm"}]}/>`},
         {label: "In progress", node: () => <Steps current={1} steps={[{key: "a", title: "Account"}, {key: "b", title: "Profile"}, {key: "c", title: "Confirm"}]}/>, code: `<Steps current={1} steps={[{key: "a", title: "Account"}, {key: "b", title: "Profile"}, {key: "c", title: "Confirm"}]}/>`},
         {label: "Complete", node: () => <Steps current={2} steps={[{key: "a", title: "Account"}, {key: "b", title: "Profile"}, {key: "c", title: "Confirm"}]}/>, code: `<Steps current={2} steps={[{key: "a", title: "Account"}, {key: "b", title: "Profile"}, {key: "c", title: "Confirm"}]}/>`},
+    ],
+
+    TableOfContents: [
+        {label: "With the current section highlighted", node: () => <div style={{display: "flex", gap: "1.5em", alignItems: "flex-start", width: "100%"}}>
+            <div style={{flexGrow: 1, minWidth: 0}}>
+                <Heading id="toc-demo-install" level={4}>Installation</Heading>
+                <Paragraph type="muted">Scroll this page and the entry for the section you are reading lights up.</Paragraph>
+                <Heading id="toc-demo-usage" level={4}>Usage</Heading>
+                <Paragraph type="muted">Each entry is a real in-page anchor, so it is linkable and works with the back button.</Paragraph>
+            </div>
+            <div style={{width: "12em", flexShrink: 0}}>
+                <TableOfContents header="On this page" ariaLabel="Example contents" items={[
+                    {id: "toc-demo-install", label: "Installation", level: 1},
+                    {id: "toc-demo-usage", label: "Usage", level: 1},
+                ]}/>
+            </div>
+        </div>, code: `<TableOfContents
+    header="On this page"
+    ariaLabel="On this page"
+    topOffset={60}
+    items={[
+        {id: "install", label: "Installation", level: 1},
+        {id: "install-deno", label: "With Deno", level: 2},
+        {id: "usage", label: "Usage", level: 1},
+    ]}/>`},
     ],
 
     // --- Feedback ---
@@ -1751,6 +2068,7 @@ export const componentDocs: ComponentDoc[] = stories.map(story => ({
     signature: functionDocs[story.name],
     attrs: attrTables[story.name] ?? [],
     methods: methodDocs[story.name],
+    types: (componentTypes[story.name] ?? []).map(name => typeDefinitions[name]),
     children: childrenDocs[story.name],
     examples: examplesByName[story.name] ?? [],
 }))

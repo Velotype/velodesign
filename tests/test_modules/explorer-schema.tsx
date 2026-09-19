@@ -3,6 +3,7 @@ import type { RenderableElements } from "@velotype/velotype"
 
 import {
     CodeBlock, type CodeLanguage,
+    TableOfContents,
     Accordion,
     addLicense,
     Alert, type AlertType,
@@ -351,6 +352,36 @@ export const stories: ComponentStory[] = [
             spa
             header={attrs.header as string}
             items={[{label: "Overview", to: "/"}, {label: "Settings", to: "/settings"}]}/>,
+    },
+    {
+        name: "TableOfContents", group: "Navigation",
+        defaultAttrs: {header: "On this page", topOffset: 0},
+        controls: {
+            header: {kind: "text", label: "header"},
+            topOffset: {kind: "number", label: "topOffset"},
+        },
+        // Renders its own targets: the component observes real elements by id, so a story with
+        // nothing to point at would show a list that never highlights
+        render: (attrs) => <div style={{display: "flex", gap: "1.5em", alignItems: "flex-start"}}>
+            <div style={{flexGrow: 1, minWidth: 0}}>
+                {[["toc-story-one", "Getting started", 2], ["toc-story-two", "Configuration", 2], ["toc-story-three", "Options", 3]].map(
+                    ([id, label]) => <div>
+                        <Heading id={id as string} level={3}>{label as string}</Heading>
+                        <Paragraph>Section content for {label as string}.</Paragraph>
+                    </div>)}
+            </div>
+            <div style={{width: "12em", flexShrink: 0}}>
+                <TableOfContents
+                    header={attrs.header as string}
+                    topOffset={attrs.topOffset as number}
+                    ariaLabel="On this page"
+                    items={[
+                        {id: "toc-story-one", label: "Getting started", level: 1},
+                        {id: "toc-story-two", label: "Configuration", level: 1},
+                        {id: "toc-story-three", label: "Options", level: 2},
+                    ]}/>
+            </div>
+        </div>,
     },
     {
         name: "Menu", group: "Navigation",
