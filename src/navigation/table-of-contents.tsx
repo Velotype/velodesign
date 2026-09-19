@@ -73,8 +73,8 @@ export class TableOfContents extends Component<TableOfContentsAttrsType> {
         if (!areTableOfContentsStylesMounted) {
             areTableOfContentsStylesMounted = true
             setStylesheet(`
-.vtd-toc{width:100%;box-sizing:border-box;}
-.vtd-toc-header{
+.vtd-table-of-contents{width:100%;box-sizing:border-box;}
+.vtd-table-of-contents-header{
 font-size:0.75em;
 font-weight:bold;
 text-transform:uppercase;
@@ -82,8 +82,8 @@ letter-spacing:0.05em;
 color:var(--background-6);
 padding:0 0 0.6em 0.9em;
 }
-.vtd-toc-list{list-style:none;margin:0;padding:0;}
-.vtd-toc-link{
+.vtd-table-of-contents-list{list-style:none;margin:0;padding:0;}
+.vtd-table-of-contents-link{
 display:block;
 padding:0.3em 0 0.3em 0.9em;
 /* The rail: one continuous line down the list, with the current entry's segment picked out */
@@ -94,30 +94,30 @@ font-size:0.9em;
 line-height:1.4;
 transition:color 0.15s ease-in-out, border-color 0.15s ease-in-out;
 }
-.vtd-toc-link:hover{color:var(--text);border-inline-start-color:var(--background-6);}
-.vtd-toc-link-active{
+.vtd-table-of-contents-link:hover{color:var(--text);border-inline-start-color:var(--background-6);}
+.vtd-table-of-contents-link-active{
 color:var(--primary-8);
 border-inline-start-color:var(--primary);
 font-weight:bold;
 }
 /* Each level steps in from the rail; past 6 they all sit at the same depth */
-.vtd-toc-level-1{padding-inline-start:0.9em;}
-.vtd-toc-level-2{padding-inline-start:1.8em;}
-.vtd-toc-level-3{padding-inline-start:2.7em;}
-.vtd-toc-level-4{padding-inline-start:3.6em;}
-.vtd-toc-level-5{padding-inline-start:4.5em;}
-.vtd-toc-level-6{padding-inline-start:5.4em;}
+.vtd-table-of-contents-level-1{padding-inline-start:0.9em;}
+.vtd-table-of-contents-level-2{padding-inline-start:1.8em;}
+.vtd-table-of-contents-level-3{padding-inline-start:2.7em;}
+.vtd-table-of-contents-level-4{padding-inline-start:3.6em;}
+.vtd-table-of-contents-level-5{padding-inline-start:4.5em;}
+.vtd-table-of-contents-level-6{padding-inline-start:5.4em;}
 @media (prefers-reduced-motion: reduce){
-.vtd-toc-link{transition:none;}
+.vtd-table-of-contents-link{transition:none;}
 }
 `, "vtd/TableOfContents")
         }
 
-        const list: HTMLElement = <ol class="vtd-toc-list">
+        const list: HTMLElement = <ol class="vtd-table-of-contents-list">
             {attrs.items.map(item => {
                 const level = Math.min(Math.max(item.level ?? 1, 1), 6)
                 const link: HTMLAnchorElement = <a
-                    class={`vtd-toc-link vtd-toc-level-${level}`}
+                    class={`vtd-table-of-contents-link vtd-table-of-contents-level-${level}`}
                     href={`#${item.id}`}
                     onClick={() => {
                         // Highlight the clicked entry immediately rather than waiting for the
@@ -126,12 +126,12 @@ font-weight:bold;
                         this.#setActive(item.id)
                     }}>{item.label}</a>
                 this.#links.set(item.id, link)
-                return <li class="vtd-toc-item">{link}</li>
+                return <li class="vtd-table-of-contents-item">{link}</li>
             })}
         </ol>
 
-        this.#root = passthroughAttrsToElement<HTMLElement>(<nav class="vtd-toc" aria-label={attrs.ariaLabel}>
-            {attrs.header ? <div class="vtd-toc-header">{attrs.header}</div> : null}
+        this.#root = passthroughAttrsToElement<HTMLElement>(<nav class="vtd-table-of-contents" aria-label={attrs.ariaLabel}>
+            {attrs.header ? <div class="vtd-table-of-contents-header">{attrs.header}</div> : null}
             {list}
         </nav>, attrs)
     }
@@ -224,12 +224,12 @@ font-weight:bold;
         }
         const previous = this.#activeId === undefined ? undefined : this.#links.get(this.#activeId)
         if (previous) {
-            previous.classList.remove("vtd-toc-link-active")
+            previous.classList.remove("vtd-table-of-contents-link-active")
             previous.removeAttribute("aria-current")
         }
         const next = id === undefined ? undefined : this.#links.get(id)
         if (next) {
-            next.classList.add("vtd-toc-link-active")
+            next.classList.add("vtd-table-of-contents-link-active")
             next.setAttribute("aria-current", "true")
         }
         this.#activeId = id

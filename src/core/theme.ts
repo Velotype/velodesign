@@ -15,7 +15,7 @@ import { setAttributeHelper } from "./utilities.ts"
 /**
  * Options to customizable theme parameters
  */
-export type ThemeOptions = {
+export type ThemeColorOptions = {
     textLightColor?: string
     backgroundLightColor?: string
     backgroundLightAltColor?: string
@@ -133,7 +133,7 @@ const textColors = (cssColorPrefix: string, color1: string, color2: string) => {
 const setTheme = function(theme: string) {
     setAttributeHelper(document.getElementsByTagName("html")[0],"data-theme",theme)
 }
-const localThemeKey = "vtd-preferredtheme"
+const localThemeKey = "vtd-preferred-theme"
 type ColorSchemeType = "light" | "dark" | "default"
 const light = "light"
 const dark = "dark"
@@ -206,7 +206,7 @@ export const ColorScheme: {
  * is `true`, which replaces the previously-injected stylesheet with one built from the new
  * `options` (e.g. for a live theme editor letting a user preview color changes in real time).
  */
-export function setThemeOnSelector(selector: string, options?: ThemeOptions | undefined, resetSheet: boolean = false): void {
+export function setThemeOnSelector(selector: string, options?: ThemeColorOptions | undefined, resetSheet: boolean = false): void {
     setStylesheet(`
 ${selector}[data-theme="light"]{
 ${textColors("text", options?.textLightColor || defaultTextLightColor, options?.textDarkColor || defaultTextDarkColor)}
@@ -238,9 +238,9 @@ export const Theme: {
      * @param options Customizable options
      * @param includeCSSReset If a CSS Reset should be included
      */
-    injectStyles: (options?: ThemeOptions | undefined, includeCSSReset?: boolean) => void
+    injectStyles: (options?: ThemeColorOptions | undefined, includeCSSReset?: boolean) => void
 } = {
-    injectStyles(options?: ThemeOptions, includeCSSReset: boolean = true) {
+    injectStyles(options?: ThemeColorOptions, includeCSSReset: boolean = true) {
         // Optionally add Reset styles
         if (includeCSSReset) {
             // References:

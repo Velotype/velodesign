@@ -7,7 +7,7 @@ import { History } from "../core/history.ts"
  */
 export type NavLinkAttrsType = {
     to: string
-    /** CSS class added when this link matches the current location (default: `"vtd-navlink-active"`) */
+    /** CSS class added when this link matches the current location (default: `"vtd-nav-link-active"`) */
     activeClass?: string
     /** If `true` (default), only matches an exact `location.pathname`; if `false`, matches any path starting with `to` */
     exact?: boolean
@@ -38,7 +38,7 @@ export class NavLink extends Component<NavLinkAttrsType> {
         if (!areNavLinkStylesMounted) {
             areNavLinkStylesMounted = true
             setStylesheet(`
-.vtd-navlink{
+.vtd-nav-link{
 position:relative;
 color:inherit;
 text-decoration:none;
@@ -49,7 +49,7 @@ text-decoration:none;
  * string) so switching a link's own weight to bold on activation - which can happen live, via
  * popstate/locationchange, while this exact element stays mounted - never shifts layout.
  */
-.vtd-navlink::after{
+.vtd-nav-link::after{
 content:attr(data-label);
 display:block;
 height:0;
@@ -57,7 +57,7 @@ overflow:hidden;
 visibility:hidden;
 font-weight:bold;
 }
-.vtd-navlink-active{
+.vtd-nav-link-active{
 color:var(--primary);
 font-weight:bold;
 }
@@ -77,13 +77,13 @@ font-weight:bold;
     override render(attrs: NavLinkAttrsType, children: RenderableElements[]): HTMLAnchorElement {
         const exact = attrs.exact === undefined ? true : attrs.exact
         const isActive = exact ? globalThis.location.pathname == attrs.to : globalThis.location.pathname.startsWith(attrs.to)
-        const activeClass = attrs.activeClass || "vtd-navlink-active"
+        const activeClass = attrs.activeClass || "vtd-nav-link-active"
         const spa = attrs.spa ?? false
         const soleChild = children.length == 1 ? children[0] : undefined
         const plainTextLabel = typeof soleChild == "string" || typeof soleChild == "number" || typeof soleChild == "bigint" ? String(soleChild) : undefined
         return passthroughAttrsToElement<HTMLAnchorElement>(<a
             href={attrs.to}
-            class={`vtd-navlink${isActive ? ` ${activeClass}` : ""}`}
+            class={`vtd-nav-link${isActive ? ` ${activeClass}` : ""}`}
             data-label={plainTextLabel}
             aria-current={isActive ? "page" : undefined}
             onClick={spa ? (event: Event) => {

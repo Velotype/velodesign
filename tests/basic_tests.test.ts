@@ -197,7 +197,7 @@ describe('basic component rendering', () => {
 
     itWrap("nav-link highlights the active route and updates on navigation", "nav-link", "#navlink-home", async (selection: ElementHandle) => {
         const initialClass = await selection.getAttribute("class")
-        if (!initialClass?.includes("vtd-navlink-active")) {
+        if (!initialClass?.includes("vtd-nav-link-active")) {
             fail(`ERROR: expected home NavLink to start active, class was: ${initialClass}`)
         }
 
@@ -208,14 +208,14 @@ describe('basic component rendering', () => {
         const updatedHome = await page.waitForSelector("#navlink-home")
         if (!updatedHome) {fail("ERROR: home nav-link not found after navigation")}
         const updatedClass = await updatedHome.getAttribute("class")
-        if (updatedClass?.includes("vtd-navlink-active")) {
+        if (updatedClass?.includes("vtd-nav-link-active")) {
             fail(`ERROR: expected home NavLink to no longer be active, class was: ${updatedClass}`)
         }
 
         const updatedOtherLink = await page.$("a[href='/nav-link/other']")
         if (!updatedOtherLink) {fail("ERROR: other nav-link not found after navigation")}
         const otherClass = await updatedOtherLink.getAttribute("class")
-        if (!otherClass?.includes("vtd-navlink-active")) {
+        if (!otherClass?.includes("vtd-nav-link-active")) {
             fail(`ERROR: expected other NavLink to become active, class was: ${otherClass}`)
         }
     })
@@ -491,7 +491,7 @@ describe('basic component rendering', () => {
         })
         const clickFirstHeader = () => page.evaluate(() => {
             const root = document.getElementById("default-data-table") as HTMLElement
-            ;(root.querySelector(".vtd-datatable-sort-button") as HTMLElement).click()
+            ;(root.querySelector(".vtd-data-table-sort-button") as HTMLElement).click()
         })
 
         const unsorted = await firstColumnValues()
@@ -523,12 +523,12 @@ describe('basic component rendering', () => {
             // Found by class, not by text: the button's content is consumer-supplied (the library
             // defaults it to a language-agnostic symbol), so matching on "Columns" would couple
             // this test to the gallery's demo copy.
-            const columnsButton = root.querySelector(".vtd-datatable-column-menu-wrapper button") as HTMLElement | undefined
+            const columnsButton = root.querySelector(".vtd-data-table-column-menu-wrapper button") as HTMLElement | undefined
             columnsButton?.click()
         })
         const openRightAfterClick = await page.evaluate(() => {
             const root = document.getElementById("default-data-table") as HTMLElement
-            return root.querySelector(".vtd-datatable-column-menu")?.classList.contains("vtd-datatable-column-menu-open")
+            return root.querySelector(".vtd-data-table-column-menu")?.classList.contains("vtd-data-table-column-menu-open")
         })
         if (!openRightAfterClick) {fail("ERROR: expected the column menu to stay open immediately after clicking its trigger")}
 
@@ -537,20 +537,20 @@ describe('basic component rendering', () => {
             const root = document.getElementById("default-data-table") as HTMLElement
             // The first column ("Name") is non-hideable and renders a disabled, always-checked
             // entry here - so target the first *toggleable* checkbox instead of just the first one.
-            ;(root.querySelector(".vtd-datatable-column-menu input[type=checkbox]:not(:disabled)") as HTMLInputElement).click()
+            ;(root.querySelector(".vtd-data-table-column-menu input[type=checkbox]:not(:disabled)") as HTMLInputElement).click()
         })
         const headerCountAfter = await page.evaluate(() => document.getElementById("default-data-table")!.querySelectorAll("th").length)
         if (headerCountAfter >= headerCountBefore) {fail(`ERROR: expected unchecking a hideable column to remove a header, was ${headerCountBefore} -> ${headerCountAfter}`)}
         const stillOpenAfterCheckbox = await page.evaluate(() => {
             const root = document.getElementById("default-data-table") as HTMLElement
-            return root.querySelector(".vtd-datatable-column-menu")?.classList.contains("vtd-datatable-column-menu-open")
+            return root.querySelector(".vtd-data-table-column-menu")?.classList.contains("vtd-data-table-column-menu-open")
         })
         if (!stillOpenAfterCheckbox) {fail("ERROR: expected the column menu to stay open after toggling a column checkbox")}
 
         await page.evaluate(() => { document.body.click() })
         const openAfterOutsideClick = await page.evaluate(() => {
             const root = document.getElementById("default-data-table") as HTMLElement
-            return root.querySelector(".vtd-datatable-column-menu")?.classList.contains("vtd-datatable-column-menu-open")
+            return root.querySelector(".vtd-data-table-column-menu")?.classList.contains("vtd-data-table-column-menu-open")
         })
         if (openAfterOutsideClick) {fail("ERROR: expected the column menu to close on an outside click")}
     })
@@ -561,12 +561,12 @@ describe('basic component rendering', () => {
             // Found by class, not by text: the button's content is consumer-supplied (the library
             // defaults it to a language-agnostic symbol), so matching on "Columns" would couple
             // this test to the gallery's demo copy.
-            const columnsButton = root.querySelector(".vtd-datatable-column-menu-wrapper button") as HTMLElement | undefined
+            const columnsButton = root.querySelector(".vtd-data-table-column-menu-wrapper button") as HTMLElement | undefined
             columnsButton?.click()
         })
         const firstCheckboxState = await page.evaluate(() => {
             const root = document.getElementById("default-data-table") as HTMLElement
-            const checkbox = root.querySelector(".vtd-datatable-column-menu input[type=checkbox]") as HTMLInputElement
+            const checkbox = root.querySelector(".vtd-data-table-column-menu input[type=checkbox]") as HTMLInputElement
             return {checked: checkbox.checked, disabled: checkbox.disabled}
         })
         if (!firstCheckboxState.checked || !firstCheckboxState.disabled) {fail(`ERROR: expected the non-hideable column's entry to be checked and disabled, got: ${JSON.stringify(firstCheckboxState)}`)}
@@ -574,7 +574,7 @@ describe('basic component rendering', () => {
         const headerCountBefore = await page.evaluate(() => document.getElementById("default-data-table")!.querySelectorAll("th").length)
         await page.evaluate(() => {
             const root = document.getElementById("default-data-table") as HTMLElement
-            ;(root.querySelector(".vtd-datatable-column-menu input[type=checkbox]") as HTMLInputElement).click()
+            ;(root.querySelector(".vtd-data-table-column-menu input[type=checkbox]") as HTMLInputElement).click()
         })
         const headerCountAfter = await page.evaluate(() => document.getElementById("default-data-table")!.querySelectorAll("th").length)
         if (headerCountAfter != headerCountBefore) {fail(`ERROR: expected clicking the disabled entry to leave the header count unchanged, was ${headerCountBefore} -> ${headerCountAfter}`)}
@@ -588,7 +588,7 @@ describe('basic component rendering', () => {
 
         await page.evaluate(() => {
             const root = document.getElementById("default-data-table") as HTMLElement
-            const select = root.querySelector(".vtd-datatable-page-size select") as HTMLSelectElement
+            const select = root.querySelector(".vtd-data-table-page-size select") as HTMLSelectElement
             select.value = "10"
             select.dispatchEvent(new Event("change", {bubbles: true}))
         })
@@ -686,7 +686,7 @@ describe('basic component rendering', () => {
      */
     const dataRowsExpression = (id: string) =>
         `Array.from(document.getElementById("${id}").querySelectorAll("tbody tr"))
-            .filter(row => !row.querySelector(".vtd-datatable-empty"))
+            .filter(row => !row.querySelector(".vtd-data-table-empty"))
             .map(row => row.innerText.replace(/\\s+/g, " ").trim())`
 
     itWrap("async-data-table discards a stale response that resolves after a newer one", "async-data-table", "#race-async-table", async (_selection: ElementHandle) => {
@@ -701,7 +701,7 @@ describe('basic component rendering', () => {
         // set, so a stale response was indistinguishable from a fresh one and the test passed with
         // the guard deleted. "e" matches most rows; "riley" matches one person.
         const setSearch = (value: string) => page.evaluate(`(() => {
-            const input = document.getElementById("race-async-table").querySelector(".vtd-datatable-search")
+            const input = document.getElementById("race-async-table").querySelector(".vtd-data-table-search")
             input.value = ${JSON.stringify(value)}
             input.dispatchEvent(new Event("input", {bubbles: true}))
         })()`)
@@ -743,7 +743,7 @@ describe('basic component rendering', () => {
         // Give the render that would follow it a moment to happen
         await new Promise(resolve => setTimeout(resolve, 150))
         const state = await page.evaluate(`(() => ({
-            value: document.getElementById("race-async-table").querySelector(".vtd-datatable-search").value,
+            value: document.getElementById("race-async-table").querySelector(".vtd-data-table-search").value,
             rows: ${dataRowsExpression("race-async-table")}
         }))()`) as {value: string, rows: string[]}
         if (state.value != "riley") {fail(`ERROR: expected the input to hold "riley", got "${state.value}"`)}
@@ -754,7 +754,7 @@ describe('basic component rendering', () => {
 
     itWrap("async-data-table keeps the search input focused across a reload", "async-data-table", "#default-async-table", async (_selection: ElementHandle) => {
         await page.evaluate(() => {
-            const input = document.querySelector("#default-async-table .vtd-datatable-search") as HTMLInputElement
+            const input = document.querySelector("#default-async-table .vtd-data-table-search") as HTMLInputElement
             input.focus()
             input.value = "eng"
             input.dispatchEvent(new Event("input", {bubbles: true}))
@@ -764,7 +764,7 @@ describe('basic component rendering', () => {
         const reloaded = await waitForCondition(`${dataRowsExpression("default-async-table")}.every(row => row.toLowerCase().includes("eng"))
             && ${dataRowsExpression("default-async-table")}.length > 0`)
         if (!reloaded) {fail("ERROR: the table never reloaded for the 'eng' search")}
-        const focused = await page.evaluate(() => document.activeElement == document.querySelector("#default-async-table .vtd-datatable-search"))
+        const focused = await page.evaluate(() => document.activeElement == document.querySelector("#default-async-table .vtd-data-table-search"))
         if (!focused) {fail("ERROR: expected the search input to keep focus across an async reload")}
     })
 
@@ -772,7 +772,7 @@ describe('basic component rendering', () => {
         // A rejected load that isn't caught renders as a convincing *empty* table, which reads as
         // "no results" rather than "this is broken" - so the distinction is worth a test.
         await page.evaluate(() => {
-            const input = document.querySelector("#error-async-table .vtd-datatable-search") as HTMLInputElement
+            const input = document.querySelector("#error-async-table .vtd-data-table-search") as HTMLInputElement
             input.value = "boom"
             input.dispatchEvent(new Event("input", {bubbles: true}))
         })
@@ -1119,12 +1119,12 @@ describe('basic component rendering', () => {
         // perfectly fine until someone copies the snippet and it does not compile.
         const state = await page.evaluate(() => {
             const scope = document.querySelector("#showcase-theme-light")!
-            const block = (id: string) => scope.querySelector(`#${id} .vtd-codeblock`) as HTMLElement
+            const block = (id: string) => scope.querySelector(`#${id} .vtd-code-block`) as HTMLElement
             const kinds = (id: string) => {
                 const seen = new Set<string>()
                 for (const span of block(id).querySelectorAll("span")) {
                     for (const cls of span.classList) {
-                        if (cls.startsWith("vtd-codeblock-")) {seen.add(cls.replace("vtd-codeblock-", ""))}
+                        if (cls.startsWith("vtd-code-block-")) {seen.add(cls.replace("vtd-code-block-", ""))}
                     }
                 }
                 return [...seen]
@@ -1135,7 +1135,7 @@ describe('basic component rendering', () => {
                 plainKinds: kinds("code-plain"),
                 // A multi-line comment straddles newlines, so tokens and lines do not line up -
                 // regrouping for the number gutter must split those runs rather than drop them
-                straddleLines: block("code-straddle").querySelectorAll(".vtd-codeblock-line").length,
+                straddleLines: block("code-straddle").querySelectorAll(".vtd-code-block-line").length,
                 straddleText: block("code-straddle").innerText,
                 // Markup in the source must be shown, never rendered
                 renderedMarkup: !!block("code-escaped").querySelector("script,b"),
@@ -1168,6 +1168,56 @@ describe('basic component rendering', () => {
         }
     })
 
+    itWrap("code block does not treat prose between JSX tags as code", "code-block", "#code-jsx-text", async (_selection: ElementHandle) => {
+        // Three bugs met here, and each looked like the other two. The words `of`, `set` and `as`
+        // in a sentence inside <Paragraph> were coloured as keywords because they are also
+        // TypeScript keywords. `getComponent<Command>` was counted as an opening tag, inflating
+        // the JSX depth so every keyword *after* it became prose. And the `=>` in an attribute
+        // ended its tag early, after which the real `/>` no longer closed the element - same
+        // outcome, different cause.
+        const state = await page.evaluate(() => {
+            const scope = document.querySelector("#showcase-theme-light")!
+            const pre = scope.querySelector("#code-jsx-text .vtd-code-block") as HTMLElement
+            const kinds = (selector: string) =>
+                [...pre.querySelectorAll(selector)].map(e => (e as HTMLElement).innerText)
+            return {
+                keywords: kinds(".vtd-code-block-keyword"),
+                tags: kinds(".vtd-code-block-tag"),
+                strings: kinds(".vtd-code-block-string"),
+                text: pre.innerText,
+            }
+        }) as {keywords: string[], tags: string[], strings: string[], text: string}
+
+        // Prose words must not be keywords, however keyword-shaped they are
+        for (const word of ["of", "set", "as"]) {
+            if (state.keywords.includes(word)) {
+                fail(`ERROR: the prose word "${word}" was highlighted as a keyword`)
+            }
+        }
+        // ...and real statements still must be
+        for (const word of ["const", "return"]) {
+            if (!state.keywords.includes(word)) {
+                fail(`ERROR: the statement keyword "${word}" lost its highlighting (got ${state.keywords.join(",")})`)
+            }
+        }
+        // A generic argument is not a tag, but every real tag is - open and close alike
+        if (state.tags.includes("Command") && state.tags.filter(t => t == "Command").length > 1) {
+            fail(`ERROR: the generic argument was counted as a tag: ${state.tags.join(",")}`)
+        }
+        for (const tag of ["div", "Paragraph", "Button"]) {
+            if (state.tags.filter(t => t == tag).length != 2) {
+                fail(`ERROR: <${tag}> should appear twice as a tag (open and close), got ${state.tags.join(",")}`)
+            }
+        }
+        // A lone apostrophe in prose must not open a string
+        if (state.strings.length > 0) {
+            fail(`ERROR: prose was highlighted as a string: ${state.strings.join(" | ")}`)
+        }
+        if (!state.text.includes("package's line height")) {
+            fail("ERROR: the sample text did not survive tokenizing")
+        }
+    })
+
     itWrap("code block token colours stay distinct in both themes", "code-block", "#code-tsx", async (_selection: ElementHandle) => {
         // Token colours come from the theme ramps, which invert between themes - a step that
         // reads well on one background can collapse into it on the other.
@@ -1176,7 +1226,7 @@ describe('basic component rendering', () => {
                 const scope = document.querySelector('#showcase-theme-${theme}')
                 const out = {}
                 for (const kind of ["comment","string","keyword","tag","attr","number","punct"]) {
-                    const el = scope.querySelector('.vtd-codeblock-' + kind)
+                    const el = scope.querySelector('.vtd-code-block-' + kind)
                     out[kind] = el ? getComputedStyle(el).color : null
                 }
                 return out
@@ -1419,12 +1469,12 @@ describe('basic component rendering', () => {
         // observer never fires. What is asserted here is everything that does not depend on it.
         const state = await page.evaluate(() => {
             const scope = document.querySelector("#showcase-theme-light")!
-            const nav = scope.querySelector(".vtd-toc") as HTMLElement
-            const links = [...scope.querySelectorAll(".vtd-toc-link")] as HTMLAnchorElement[]
+            const nav = scope.querySelector(".vtd-table-of-contents") as HTMLElement
+            const links = [...scope.querySelectorAll(".vtd-table-of-contents-link")] as HTMLAnchorElement[]
             return {
                 navRole: nav.tagName.toLowerCase(),
                 navLabel: nav.getAttribute("aria-label"),
-                header: (scope.querySelector(".vtd-toc-header") as HTMLElement | null)?.innerText.trim(),
+                header: (scope.querySelector(".vtd-table-of-contents-header") as HTMLElement | null)?.innerText.trim(),
                 count: links.length,
                 hrefs: links.map(l => l.getAttribute("href") ?? ""),
                 indents: links.map(l => Math.round(parseFloat(getComputedStyle(l).paddingInlineStart))),
@@ -1459,10 +1509,10 @@ describe('basic component rendering', () => {
         // from touching the DOM at all.
         const result = await page.evaluate(() => {
             const scope = document.querySelector("#showcase-theme-light")!
-            const nav = scope.querySelector(".vtd-toc")!
-            const links = [...scope.querySelectorAll(".vtd-toc-link")] as HTMLAnchorElement[]
+            const nav = scope.querySelector(".vtd-table-of-contents")!
+            const links = [...scope.querySelectorAll(".vtd-table-of-contents-link")] as HTMLAnchorElement[]
             const activeHref = () => {
-                const link = scope.querySelector(".vtd-toc-link-active") as HTMLAnchorElement | null
+                const link = scope.querySelector(".vtd-table-of-contents-link-active") as HTMLAnchorElement | null
                 return link ? link.getAttribute("href") : null
             }
             links[4].click()
@@ -1507,6 +1557,224 @@ describe('basic component rendering', () => {
         }
         if (result.afterSecond.current != 1) {
             fail(`ERROR: after moving the highlight, ${result.afterSecond.current} elements carry aria-current, expected 1`)
+        }
+    })
+
+    itWrap("tree nodes use the shared disclosure animation without its chrome", "tree", "#default-tree", async (_selection: ElementHandle) => {
+        // Tree takes the mechanism from disclosure-view.tsx and not the look: a tree row is not a
+        // header, so it keeps its own hover, chevron and indentation and must never pick up the
+        // border box, header fill or content padding that Collapse and Accordion draw. The
+        // animation itself is only assertable standalone here - see the Collapse test for why -
+        // so this asserts the interception, which is what makes it work at all.
+        const state = await page.evaluate(() => {
+            const scope = document.querySelector("#showcase-theme-light")!
+            const node = scope.querySelector(".vtd-tree-node") as HTMLDetailsElement
+            const content = node.querySelector(".vtd-disclosure-content") as HTMLElement
+            const inner = node.querySelector(".vtd-disclosure-content-inner") as HTMLElement
+            const summary = node.querySelector(".vtd-tree-label") as HTMLElement
+            const label = node.querySelector(".vtd-tree-label-text") as HTMLElement
+            const nodeStyle = getComputedStyle(node)
+            const before = {
+                transition: getComputedStyle(content).transitionProperty,
+                display: getComputedStyle(content).display,
+                border: nodeStyle.borderTopWidth,
+                radius: nodeStyle.borderTopLeftRadius,
+                innerPadding: getComputedStyle(inner).paddingTop,
+                open: node.open,
+            }
+            summary.click()
+            const duringClose = {open: node.open, closing: node.classList.contains("vtd-disclosure-closing")}
+            // A click on the label selects the node; it must not toggle or start a close
+            const openBeforeLabel = node.open
+            label.click()
+            const afterLabel = {open: node.open, closing: node.classList.contains("vtd-disclosure-closing")}
+            return {before, duringClose, openBeforeLabel, afterLabel}
+        }) as {
+            before: {transition: string, display: string, border: string, radius: string, innerPadding: string, open: boolean}
+            duringClose: {open: boolean, closing: boolean}
+            openBeforeLabel: boolean
+            afterLabel: {open: boolean, closing: boolean}
+        }
+
+        if (!state.before.transition.includes("grid-template-rows") || state.before.display != "grid") {
+            fail(`ERROR: a tree node's content is not set up to animate: ${state.before.display} / ${state.before.transition}`)
+        }
+        // The chrome must not have come along with the mechanism
+        if (state.before.border != "0px" || state.before.radius != "0px") {
+            fail(`ERROR: a tree node picked up the disclosure chrome - border ${state.before.border}, radius ${state.before.radius}`)
+        }
+        if (state.before.innerPadding != "0px") {
+            fail(`ERROR: a tree node picked up the disclosure content padding (${state.before.innerPadding})`)
+        }
+        if (!state.before.open) {fail("ERROR: expected the first tree node to start open")}
+        if (!state.duringClose.open || !state.duringClose.closing) {
+            fail(`ERROR: the close was not intercepted - open=${state.duringClose.open} closing=${state.duringClose.closing}`)
+        }
+        // Selecting a label is not toggling
+        if (state.afterLabel.open != state.openBeforeLabel || state.afterLabel.closing != state.duringClose.closing) {
+            fail("ERROR: clicking a node's label changed its open state instead of only selecting it")
+        }
+    })
+
+    itWrap("breadcrumbs show leading content and collapse a long trail", "breadcrumbs", "#collapsed-breadcrumbs", async (_selection: ElementHandle) => {
+        const state = await page.evaluate(() => {
+            const scope = document.querySelector("#showcase-theme-light")!
+            const items = (id: string) => [...scope.querySelector("#" + id)!.querySelectorAll(".vtd-breadcrumbs-item")]
+            const collapsed = scope.querySelector("#collapsed-breadcrumbs")!
+            const expander = collapsed.querySelector(".vtd-menu-trigger") as HTMLElement
+            const details = expander.closest("details") as HTMLDetailsElement
+            const before = details.open
+            expander.click()
+            return {
+                // Seven crumbs at maxItems 4 render as first + expander + the last two
+                collapsedCount: items("collapsed-breadcrumbs").length,
+                collapsedTexts: items("collapsed-breadcrumbs").map(li =>
+                    (li as HTMLElement).innerText.replace(/\s+/g, " ").replace(/ \/ $/, "").trim()),
+                separators: collapsed.querySelectorAll(".vtd-breadcrumbs-separator").length,
+                current: collapsed.querySelectorAll("[aria-current='page']").length,
+                expanderLabel: expander.getAttribute("aria-label"),
+                openBefore: before,
+                openAfter: details.open,
+                hidden: [...details.querySelectorAll(".vtd-menu-item")].map(a => (a as HTMLElement).innerText.trim()),
+                // A trail short enough to fit must not collapse even with maxItems set
+                shortCount: items("uncollapsed-breadcrumbs").length,
+                shortHasExpander: !!scope.querySelector("#uncollapsed-breadcrumbs .vtd-menu-trigger"),
+                // The leading slot renders real components, not just a string
+                leadingSlots: scope.querySelectorAll("#leading-breadcrumbs .vtd-breadcrumbs-leading").length,
+                leadingHasAvatar: !!scope.querySelector("#leading-breadcrumbs .vtd-breadcrumbs-leading .vtd-avatar"),
+                leadingKeepsLabel: (scope.querySelector("#leading-breadcrumbs .vtd-breadcrumbs-crumb") as HTMLElement).innerText.includes("Acme"),
+            }
+        }) as {
+            collapsedCount: number, collapsedTexts: string[], separators: number, current: number
+            expanderLabel: string | null, openBefore: boolean, openAfter: boolean, hidden: string[]
+            shortCount: number, shortHasExpander: boolean
+            leadingSlots: number, leadingHasAvatar: boolean, leadingKeepsLabel: boolean
+        }
+
+        if (state.collapsedCount != 4) {
+            fail(`ERROR: seven crumbs at maxItems 4 rendered ${state.collapsedCount} slots: ${state.collapsedTexts.join(" | ")}`)
+        }
+        // The two ends of the trail are the ones that survive
+        if (!state.collapsedTexts[0].startsWith("Home")) {fail(`ERROR: the root crumb was collapsed away (${state.collapsedTexts.join(" | ")})`)}
+        if (state.collapsedTexts[3] != "Current page") {fail(`ERROR: the current page is not last (${state.collapsedTexts.join(" | ")})`)}
+        if (state.current != 1) {fail(`ERROR: ${state.current} crumbs marked aria-current, expected 1`)}
+        // One separator after every crumb except the very last
+        if (state.separators != state.collapsedCount - 1) {
+            fail(`ERROR: ${state.collapsedCount} crumbs but ${state.separators} separators`)
+        }
+        if (!state.expanderLabel) {fail("ERROR: the expander has no accessible name")}
+        if (state.openBefore || !state.openAfter) {
+            fail(`ERROR: the expander did not open on click (${state.openBefore} -> ${state.openAfter})`)
+        }
+        if (state.hidden.join(",") != "Level two,Level three,Level four,Level five") {
+            fail(`ERROR: the expander hides the wrong crumbs: ${state.hidden.join(",")}`)
+        }
+        if (state.shortCount != 3 || state.shortHasExpander) {
+            fail(`ERROR: a trail that fits inside maxItems collapsed anyway (${state.shortCount} slots, expander=${state.shortHasExpander})`)
+        }
+        if (state.leadingSlots != 2 || !state.leadingHasAvatar) {
+            fail(`ERROR: leading content did not render (${state.leadingSlots} slots, avatar=${state.leadingHasAvatar})`)
+        }
+        if (!state.leadingKeepsLabel) {fail("ERROR: a crumb's leading content replaced its label instead of preceding it")}
+    })
+
+
+    /**
+     * One assignment to `CommonThemeOptions` has to reach every component that means the same thing
+     * by that symbol, and a per-component assignment has to beat it for that component alone.
+     *
+     * Two of these assertions would have been impossible to write before the shared object existed:
+     * `Steps`' completed-step check and `Pagination`'s gap were literal glyphs in the markup with no
+     * override of any kind, so no consumer could have changed them at all. Deleting the delegation
+     * (capturing `CommonThemeOptions[field]` when the component's module is evaluated instead of
+     * reading it on every access) makes every `after` value below stay at the package default,
+     * because the page sets these long after `pagination.tsx` and friends were evaluated.
+     */
+    itWrap("one shared symbol reaches every component that means the same thing by it", "theme-options", "#symbols-close", async (_selection: ElementHandle) => {
+        const read = () => page.evaluate(() => {
+            const scope = document.getElementById("showcase-theme-light") as HTMLElement
+            const text = (selector: string) => (scope.querySelector(selector) as HTMLElement | null)?.innerText.trim() ?? "(missing)"
+            return {
+                alertDismiss: text("#symbols-close .vtd-alert-dismiss"),
+                tagRemove: text("#symbols-close .vtd-tag-remove"),
+                // The first pagination button is previous; Steps' first marker is a completed step
+                pagerPrev: text("#symbols-prev-next .vtd-pagination button"),
+                stepsDone: text("#symbols-confirm .vtd-steps-marker"),
+                crumbsCollapse: text("#symbols-collapse .vtd-menu-trigger"),
+            }
+        }) as Promise<Record<string, string>>
+
+        const before = await read()
+        if (before.alertDismiss != "x" || before.tagRemove != "x") {
+            fail(`ERROR: the close glyph did not start at the package default: ${JSON.stringify(before)}`)
+        }
+        if (before.pagerPrev != "\u2039" || before.stepsDone != "\u2713" || before.crumbsCollapse != "\u2026") {
+            fail(`ERROR: a shared glyph did not start at its package default: ${JSON.stringify(before)}`)
+        }
+
+        for (const id of ["set-common-close", "set-common-prev", "set-common-confirm", "set-common-collapse"]) {
+            await page.evaluate(`document.getElementById("${id}").click()`)
+        }
+        const after = await read()
+        // Two components, two different field names (dismissSymbol/removeSymbol), one assignment
+        if (after.alertDismiss != "CLOSE" || after.tagRemove != "CLOSE") {
+            fail(`ERROR: CommonThemeOptions.closeSymbol did not reach both components: ${JSON.stringify(after)}`)
+        }
+        if (after.pagerPrev != "PREV") {fail(`ERROR: prevSymbol did not reach Pagination: ${after.pagerPrev}`)}
+        if (after.stepsDone != "YES") {fail(`ERROR: confirmSymbol did not reach Steps, which had it hardcoded: ${after.stepsDone}`)}
+        if (after.crumbsCollapse != "MORE") {fail(`ERROR: collapseSymbol did not reach the Breadcrumbs expander: ${after.crumbsCollapse}`)}
+
+        // A per-component override wins, and only for that component
+        await page.evaluate(`document.getElementById("set-pagination-prev").click()`)
+        const overridden = await read()
+        if (overridden.pagerPrev != "PAGER-ONLY") {
+            fail(`ERROR: PaginationThemeOptions.prevSymbol did not beat the shared one: ${overridden.pagerPrev}`)
+        }
+        if (overridden.alertDismiss != "CLOSE") {
+            fail(`ERROR: a per-component override leaked into another component: ${JSON.stringify(overridden)}`)
+        }
+
+        // resetThemeOptions restores the package defaults, which nothing else can once a field has
+        // been assigned over - the original function is gone unless the accessor kept it
+        await page.evaluate(`document.getElementById("reset-symbols").click()`)
+        const reset = await read()
+        if (JSON.stringify(reset) != JSON.stringify(before)) {
+            fail(`ERROR: reset left ${JSON.stringify(reset)}, expected ${JSON.stringify(before)}`)
+        }
+    })
+
+
+    /**
+     * A no-match state must not be English, and must be overridable.
+     *
+     * `Combobox` rendered a baked-in "No matches" with no attr and no theme option, which survived
+     * an audit that claimed to have swept the whole package - it was invisible because it is not a
+     * *default* anywhere, just a literal inside a `replaceChildren` in a private method. The
+     * assertion is deliberately "contains no latin letters" rather than "is not the string
+     * \u0022No matches\u0022", so swapping one English phrase for another cannot make it pass.
+     */
+    itWrap("a no-match state is language-agnostic and overridable", "combobox", "#default-combobox", async (_selection: ElementHandle) => {
+        const noMatchIn = (containerId: string) => page.evaluate(`(() => {
+            const scope = document.getElementById(${JSON.stringify(containerId)})
+            const input = scope.querySelector("input.vtd-combobox")
+            input.focus()
+            input.value = "zzzznothingmatchesthis"
+            input.dispatchEvent(new Event("input", {bubbles: true}))
+            const empty = scope.querySelector(".vtd-combobox-empty")
+            return empty ? empty.innerText.trim() : "(no empty node rendered)"
+        })()`) as Promise<string>
+
+        const fallback = await noMatchIn("default-combobox")
+        if (/[A-Za-z]/.test(fallback)) {
+            fail(`ERROR: the default no-match state renders language-specific text: ${JSON.stringify(fallback)}`)
+        }
+        if (fallback != "\u2205") {
+            fail(`ERROR: expected the shared empty symbol for an unset noMatchMessage, got ${JSON.stringify(fallback)}`)
+        }
+
+        const worded = await noMatchIn("worded-combobox")
+        if (worded != "Rien ne correspond") {
+            fail(`ERROR: noMatchMessage was ignored, got ${JSON.stringify(worded)}`)
         }
     })
 

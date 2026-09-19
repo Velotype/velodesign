@@ -6,6 +6,7 @@ import { Pagination } from "../navigation/pagination.tsx"
 import { Select } from "../form/select.tsx"
 import { Spinner } from "../feedback/spinner.tsx"
 import { TextBox } from "../form/text-box.tsx"
+import { CommonThemeOptions } from "../core/theme-options.ts"
 import {
     buildBodyRows, buildColGroup, buildHeaderCells, buildStatusRow, ColumnMenu,
     DataTableThemeOptions, mountDataTableStyles, startColumnResize
@@ -158,7 +159,7 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
     #colgroupEl: HTMLTableColElement = <colgroup/>
     #theadRowEl: HTMLTableRowElement = <tr/>
     #tbodyEl: HTMLTableSectionElement = <tbody/>
-    #footerEl: HTMLDivElement = <div class="vtd-datatable-footer"/>
+    #footerEl: HTMLDivElement = <div class="vtd-data-table-footer"/>
 
     #search = ""
     #sortKey: string | undefined
@@ -307,7 +308,7 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
             // Only the first load shows a spinner in place of content; a reload with rows already
             // on screen keeps them and fades instead (the class toggle below).
             this.#tbodyEl.replaceChildren(buildStatusRow(colspan,
-                <span class="vtd-datatable-status"><Spinner label={attrs.loadingLabel}/></span>))
+                <span class="vtd-data-table-status"><Spinner label={attrs.loadingLabel}/></span>))
         } else if (this.#rows.length === 0) {
             const message = this.#renderedSearch
                 ? (attrs.noMatchMessage ?? attrs.emptyMessage ?? <DataTableThemeOptions.emptySymbol/>)
@@ -323,9 +324,9 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
                 onRowSelect: attrs.onRowSelect
             }))
         }
-        this.#tbodyEl.classList.toggle("vtd-datatable-zebra", attrs.zebra ?? false)
-        this.#tbodyEl.classList.toggle("vtd-datatable-hoverable", attrs.highlightOnHover ?? true)
-        this.#tbodyEl.classList.toggle("vtd-datatable-body-reloading", this.#state === "loading" && this.#rows.length > 0)
+        this.#tbodyEl.classList.toggle("vtd-data-table-zebra", attrs.zebra ?? false)
+        this.#tbodyEl.classList.toggle("vtd-data-table-hoverable", attrs.highlightOnHover ?? true)
+        this.#tbodyEl.classList.toggle("vtd-data-table-body-reloading", this.#state === "loading" && this.#rows.length > 0)
     }
 
     #goToPage(page: number) {
@@ -338,8 +339,8 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
         const children: HTMLElement[] = []
 
         if (attrs.showPageSizeControl) {
-            children.push(<div class="vtd-datatable-page-size">
-                <label class="vtd-datatable-page-size-label">
+            children.push(<div class="vtd-data-table-page-size">
+                <label class="vtd-data-table-page-size-label">
                     {attrs.pageSizeLabel ?? null}
                     <Select
                         value={String(this.#pageSize)}
@@ -356,13 +357,13 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
         }
 
         if (this.#truncated && attrs.truncatedMessage) {
-            children.push(<div class="vtd-datatable-truncated">{attrs.truncatedMessage}</div>)
+            children.push(<div class="vtd-data-table-truncated">{attrs.truncatedMessage}</div>)
         }
 
         if (this.#total !== undefined) {
             const totalPages = Math.max(1, Math.ceil(this.#total / this.#pageSize))
             if (totalPages > 1) {
-                children.push(<div class="vtd-datatable-pagination">
+                children.push(<div class="vtd-data-table-pagination">
                     <Pagination
                         page={Math.min(this.#page, totalPages)}
                         totalPages={totalPages}
@@ -374,10 +375,10 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
             // "There may be a next page" is inferred from a full page having come back - the only
             // signal available, and why `total` is worth providing when it is cheap.
             const atEnd = this.#rows.length < this.#pageSize
-            children.push(<div class="vtd-datatable-pagination">
+            children.push(<div class="vtd-data-table-pagination">
                 <ButtonGroup>
-                    <Button type="secondary" disabled={this.#page <= 1} onClick={() => this.#goToPage(this.#page - 1)}>‹</Button>
-                    <Button type="secondary" disabled={atEnd} onClick={() => this.#goToPage(this.#page + 1)}>›</Button>
+                    <Button type="secondary" disabled={this.#page <= 1} onClick={() => this.#goToPage(this.#page - 1)}><CommonThemeOptions.prevSymbol/></Button>
+                    <Button type="secondary" disabled={atEnd} onClick={() => this.#goToPage(this.#page + 1)}><CommonThemeOptions.nextSymbol/></Button>
                 </ButtonGroup>
             </div>)
         }
@@ -395,7 +396,7 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
         if (attrs.searchable ?? true) {
             searchInput = <TextBox
                 type="text"
-                class="vtd-datatable-search"
+                class="vtd-data-table-search"
                 placeholder={attrs.searchPlaceholder}
                 onInput={(event: Event) => {
                     if (event.target instanceof HTMLInputElement) { this.#setSearch(event.target.value) }
@@ -412,16 +413,16 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
         }
         const columnMenuEl = this.#columnMenu?.element
 
-        this.#root = <div class="vtd-datatable-wrapper">
+        this.#root = <div class="vtd-data-table-wrapper">
             {searchInput || columnMenuEl
-                ? <div class="vtd-datatable-toolbar">
-                    {searchInput ? <div class="vtd-datatable-search-wrapper">{searchInput}</div> : null}
+                ? <div class="vtd-data-table-toolbar">
+                    {searchInput ? <div class="vtd-data-table-search-wrapper">{searchInput}</div> : null}
                     {columnMenuEl ?? null}
                 </div>
                 : null}
-            <div class="vtd-datatable">
-                <div class="vtd-datatable-scroll">
-                    <table class="vtd-datatable-table">
+            <div class="vtd-data-table">
+                <div class="vtd-data-table-scroll">
+                    <table class="vtd-data-table-table">
                         {this.#colgroupEl}
                         <thead>{this.#theadRowEl}</thead>
                         {this.#tbodyEl}

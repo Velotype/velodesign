@@ -1,5 +1,6 @@
 import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
 import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import { CommonThemeOptions } from "../core/theme-options.ts"
 
 /**
  * A single step in a `<Steps/>` sequence
@@ -76,7 +77,7 @@ font-weight:bold;
         {attrs.steps.map((step, index) => {
             const status = index < attrs.current ? "done" : (index == attrs.current ? "current" : "upcoming")
             return <li class={`vtd-steps-item vtd-steps-item-${status}`}>
-                <span class="vtd-steps-marker">{index < attrs.current ? "✓" : index + 1}</span>
+                <span class="vtd-steps-marker">{index < attrs.current ? <CommonThemeOptions.confirmSymbol/> : index + 1}</span>
                 <span class="vtd-steps-title">{step.title}</span>
                 {step.description ? <span class="vtd-steps-description">{step.description}</span> : null}
             </li>

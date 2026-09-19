@@ -14,7 +14,7 @@ let areButtonGroupStylesMounted = false
 /**
  * Visually joins a row (or column) of `Button`s into a single connected control - adjacent
  * buttons share a border instead of each having their own, and only the outer corners are
- * rounded. Purely a CSS wrapper: it targets its children's own `.vtd-btn` class rather than
+ * rounded. Purely a CSS wrapper: it targets its children's own `.vtd-button` class rather than
  * cloning or otherwise modifying them, so any `Button` (any `type`, disabled or not, with its
  * own `onClick`) works as a child unchanged.
  */
@@ -24,14 +24,14 @@ export const ButtonGroup: FunctionComponent<ButtonGroupAttrsType> = function(att
         setStylesheet(`
 .vtd-button-group{display:inline-flex;}
 .vtd-button-group-vertical{flex-direction:column;}
-.vtd-button-group .vtd-btn{position:relative;border-radius:0;}
-.vtd-button-group .vtd-btn:hover,.vtd-button-group .vtd-btn:focus-visible{z-index:1;}
-.vtd-button-group-horizontal .vtd-btn:not(:first-child){margin-inline-start:-1px;}
-.vtd-button-group-horizontal .vtd-btn:first-child{border-start-start-radius:0.25rem;border-end-start-radius:0.25rem;}
-.vtd-button-group-horizontal .vtd-btn:last-child{border-start-end-radius:0.25rem;border-end-end-radius:0.25rem;}
-.vtd-button-group-vertical .vtd-btn:not(:first-child){margin-block-start:-1px;}
-.vtd-button-group-vertical .vtd-btn:first-child{border-start-start-radius:0.25rem;border-start-end-radius:0.25rem;}
-.vtd-button-group-vertical .vtd-btn:last-child{border-end-start-radius:0.25rem;border-end-end-radius:0.25rem;}
+.vtd-button-group .vtd-button{position:relative;border-radius:0;}
+.vtd-button-group .vtd-button:hover,.vtd-button-group .vtd-button:focus-visible{z-index:1;}
+.vtd-button-group-horizontal .vtd-button:not(:first-child){margin-inline-start:-1px;}
+.vtd-button-group-horizontal .vtd-button:first-child{border-start-start-radius:0.25rem;border-end-start-radius:0.25rem;}
+.vtd-button-group-horizontal .vtd-button:last-child{border-start-end-radius:0.25rem;border-end-end-radius:0.25rem;}
+.vtd-button-group-vertical .vtd-button:not(:first-child){margin-block-start:-1px;}
+.vtd-button-group-vertical .vtd-button:first-child{border-start-start-radius:0.25rem;border-start-end-radius:0.25rem;}
+.vtd-button-group-vertical .vtd-button:last-child{border-end-start-radius:0.25rem;border-end-end-radius:0.25rem;}
 `, "vtd/ButtonGroup")
     }
 

@@ -1,21 +1,23 @@
 
 
-import { type RenderBasic, Component, type RenderableElements, type ChildrenAttr, type FunctionComponent, type EmptyAttrs, type AnchorElement, type StylePassthroughAttrs, type IdAttr, passthroughAttrsToElement } from "@velotype/velotype"
+import { type RenderBasic, Component, type RenderableElements, type ChildrenAttr, type FunctionComponent, type AnchorElement, type StylePassthroughAttrs, type IdAttr, passthroughAttrsToElement } from "@velotype/velotype"
 import { Button } from "./button.tsx"
-import { TextBox, type TextBoxTypeType } from "./text-box.tsx"
+import { TextBox, type TextBoxType } from "./text-box.tsx"
+import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
 /**
  * Options to customize `<TextFormField/>` Component Theme
  */
-export const TextFormFieldOptions: {
-    check: FunctionComponent<EmptyAttrs>
-    xmark: FunctionComponent<EmptyAttrs>
-    edit: FunctionComponent<EmptyAttrs>
-} = {
-    check: function(){return "✓"},
-    xmark: function(){return "✗"},
-    edit: function(){return "✎"}
-}
+export const TextFormFieldThemeOptions: {
+    /** Confirms an inline edit. Defaults to `CommonThemeOptions.confirmSymbol` */
+    confirmSymbol: ThemeSymbol
+    /** Cancels an inline edit. Defaults to `CommonThemeOptions.cancelSymbol` */
+    cancelSymbol: ThemeSymbol
+    /** Starts an inline edit. No counterpart elsewhere in the package, so it stays local */
+    editSymbol: ThemeSymbol
+} = themeOptions({confirmSymbol: "confirmSymbol", cancelSymbol: "cancelSymbol"}, {
+    editSymbol: function(){return "✎"}
+})
 
 /**
  * Attrs type for `<TextNonEditableField/>` Component
@@ -36,8 +38,8 @@ export const TextNonEditableField: FunctionComponent<TextNonEditableFieldAttrsTy
 /**
  * Attrs type for `<TextFormField/>` Component
  */
-export type TextFormFieldAttrTypes = {
-    type?: TextBoxTypeType
+export type TextFormFieldAttrsType = {
+    type?: TextBoxType
     required?: boolean
     field: RenderBasic<string>
     /** If the `field` should have it's value updated each time onInput triggers (default: `true`) */
@@ -48,9 +50,9 @@ export type TextFormFieldAttrTypes = {
 /**
  * Display a label/value pair where the value is a `<TextBox/>` with value to be provided by the user
  */
-export class TextFormField extends Component<TextFormFieldAttrTypes> {
+export class TextFormField extends Component<TextFormFieldAttrsType> {
     /** Render this Component */
-    override render(attrs: TextFormFieldAttrTypes, children: RenderableElements[]): HTMLDivElement {
+    override render(attrs: TextFormFieldAttrsType, children: RenderableElements[]): HTMLDivElement {
         const updateOnInput = (attrs.updateOnInput === undefined) ? true : attrs.updateOnInput
         return passthroughAttrsToElement(<div style={{marginBlockStart: "1ex",marginBlockEnd: "1ex",display:"flex",alignItems:"center"}}>
             <label for={`vtd-${this.vtKey}`}>
@@ -80,7 +82,7 @@ export class TextFormField extends Component<TextFormFieldAttrTypes> {
  */
 export type TextEditableFieldAttrsType = {
     fieldName?: string
-    type?: TextBoxTypeType
+    type?: TextBoxType
     field: RenderBasic<string>
 } & IdAttr & StylePassthroughAttrs & ChildrenAttr
 /**
@@ -110,18 +112,18 @@ export class TextEditableField extends Component<TextEditableFieldAttrsType> {
             <Button type="secondary" onClick={() => {
                 attrs.field.value = this.#editValue
                 currentControls = this.replaceChild(currentControls, viewControls())
-            }}><TextFormFieldOptions.check/></Button>
+            }}><TextFormFieldThemeOptions.confirmSymbol/></Button>
             <Button type="secondary" onClick={() => {
                 this.#editValue = attrs.field.value
                 currentControls = this.replaceChild(currentControls, viewControls())
-            }}><TextFormFieldOptions.xmark/></Button>
+            }}><TextFormFieldThemeOptions.cancelSymbol/></Button>
         </span>
         const viewControls = (): HTMLSpanElement => {
             return <span style={{display:"inline-flex",alignItems:"center",gap:"4px"}}>
                 <span style={{marginInlineStart: "1em"}}>{attrs.field}</span>
                 <Button type="secondary" onClick={() => {
                     currentControls = this.replaceChild(currentControls, editControls)
-                }}><TextFormFieldOptions.edit/></Button>
+                }}><TextFormFieldThemeOptions.editSymbol/></Button>
             </span>
         }
         let currentControls: AnchorElement = viewControls()

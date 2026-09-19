@@ -1,6 +1,6 @@
 import { setStylesheet } from "@velotype/velotype"
-import type { EmptyAttrs, FunctionComponent } from "@velotype/velotype"
 import { createElementNSHelper, setAttributeHelper } from "../core/utilities.ts"
+import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
 /**
  * Shared internals for every chart in this package.
@@ -43,9 +43,9 @@ export function svgEl(tag: string, attrs?: Record<string, string | number | unde
  */
 export const ChartThemeOptions: {
     seriesColors: string[]
-    /** Shown in place of a chart with no data. `∅`, matching `EmptyThemeOptions.image` */
-    emptySymbol: FunctionComponent<EmptyAttrs>
-} = {
+    /** Shown in place of a chart with no data. Defaults to `CommonThemeOptions.emptySymbol`, which is what keeps it matching `Empty` and both tables */
+    emptySymbol: ThemeSymbol
+} = themeOptions({emptySymbol: "emptySymbol"}, {
     seriesColors: [
         "var(--primary)",
         "var(--secondary)",
@@ -55,9 +55,8 @@ export const ChartThemeOptions: {
         "var(--secondary-7)",
         "var(--accent-7)",
         "var(--warning-7)"
-    ],
-    emptySymbol: function() {return "∅"}
-}
+    ]
+})
 
 /** Resolves a series' color: its own if it set one, otherwise its slot in the palette */
 export function seriesColor(index: number, explicit?: string): string {

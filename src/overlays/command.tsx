@@ -1,6 +1,7 @@
 import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
 import type { RenderableElements, IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
 import { highlightMatch, searchHighlightCss } from "../core/search-highlight.tsx"
+import { CommonThemeOptions } from "../core/theme-options.ts"
 
 /**
  * A single entry in a `<Command/>` palette
@@ -25,6 +26,12 @@ export type CommandAttrsType = {
     items: CommandItemType[]
     /** Placeholder text for the search input */
     placeholder?: string
+    /**
+     * Shown in the list when the query matches no item (default:
+     * `CommonThemeOptions.emptySymbol` - a glyph, not English text, so the library doesn't assume
+     * a language). Set it to real wording for your users.
+     */
+    noMatchMessage?: RenderableElements
 } & IdAttr & StylePassthroughAttrs
 
 let areCommandStylesMounted = false
@@ -87,7 +94,7 @@ export class Command extends Component<CommandAttrsType> {
             this.#highlightedIndex = Math.max(0, items.length - 1)
         }
         if (items.length == 0) {
-            this.#list.replaceChildren(<li class="vtd-command-empty">No results</li>)
+            this.#list.replaceChildren(<li class="vtd-command-empty">{this.#attrs.noMatchMessage ?? <CommonThemeOptions.emptySymbol/>}</li>)
             return
         }
         const query = this.#query.trim()

@@ -1,14 +1,14 @@
 import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
-import type { ChildrenAttr, EmptyAttrs, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
 /**
  * Options to customize `<Tag/>` Component Theme
  */
 export const TagThemeOptions: {
-    removeSymbol: FunctionComponent<EmptyAttrs>
-} = {
-    removeSymbol: function(){return "x"}
-}
+    /** Content of the remove button, shown only when `onRemove` is set. Defaults to `CommonThemeOptions.closeSymbol` */
+    closeSymbol: ThemeSymbol
+} = themeOptions({closeSymbol: "closeSymbol"})
 
 /**
  * Various types of `<Tag/>`s
@@ -72,7 +72,7 @@ opacity:0.7;
         {attrs.onRemove && <button type="button" class="vtd-tag-remove" aria-label={attrs.removeLabel} onClick={() => {
             attrs.onRemove?.()
             tagElement.remove()
-        }}><TagThemeOptions.removeSymbol/></button>}
+        }}><TagThemeOptions.closeSymbol/></button>}
     </span>
     return passthroughAttrsToElement<HTMLSpanElement>(tagElement, attrs)
 }

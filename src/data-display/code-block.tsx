@@ -43,7 +43,7 @@ export type CodeBlockAttrsType = {
 
 /** One highlighted run of source text */
 type Token = {
-    /** Class suffix, e.g. `"string"` for `vtd-codeblock-string`; empty for unstyled text */
+    /** Class suffix, e.g. `"string"` for `vtd-code-block-string`; empty for unstyled text */
     kind: string
     text: string
 }
@@ -69,13 +69,28 @@ const KEYWORDS = new Set([
 const TSX_SCANNER = new RegExp([
     "(?<comment>\\/\\/[^\\n]*|\\/\\*[\\s\\S]*?\\*\\/)",
     "(?<string>\"(?:[^\"\\\\\\n]|\\\\.)*\"|'(?:[^'\\\\\\n]|\\\\.)*'|`(?:[^`\\\\]|\\\\.)*`)",
-    // A tag name only after < or </, so a less-than comparison is not mistaken for one
-    "(?<tagOpen><\\/?)(?<tag>[A-Za-z][\\w.]*)",
+    /*
+     * Closing and opening tags are separate branches, because only one of them is ambiguous.
+     *
+     * `</` is never anything but a closing tag, and it routinely follows text with no space -
+     * `Open</Button>` - so it takes no lookbehind. A bare `<` does: where it directly follows an
+     * identifier, a `)` or a `]` it is a generic argument or a comparison rather than a tag
+     * (`getComponent<Command>`, `Array<string>`, `a<b`), and counting one of those as an opening
+     * element inflated the JSX depth below, turning every keyword after it into prose.
+     */
+    "(?<closeAngle><\\/)(?<closeTag>[A-Za-z][\\w.]*)",
+    "(?<!\\w|\\$|\\)|\\])(?<openAngle><)(?<openTag>[A-Za-z][\\w.]*)",
     "(?<number>\\b\\d[\\d_]*(?:\\.\\d+)?\\b)",
     // An identifier immediately followed by `=` is an attribute wherever it appears
     "(?<attr>\\b[A-Za-z_$][\\w$]*(?=\\s*=[^=]))",
     "(?<word>\\b[A-Za-z_$][\\w$]*\\b)",
-    "(?<punct>[{}()\\[\\];:,.<>/=+\\-*!?&|%^~]+)",
+    /*
+     * `<` is NOT in this class. A greedy punctuation run would otherwise swallow the `</` that the
+     * tag branch above needs, so `text.</Paragraph>` tokenized as punct(".</") plus a plain word -
+     * the closing tag simply lost its colour. Any `<` the tag branch did not take is punctuation
+     * on its own, which is the `a < b` case.
+     */
+    "(?<punct>[{}()\\[\\];:,.>/=+\\-*!?&|%^~]+|<)",
 ].join("|"), "g")
 
 const CSS_SCANNER = new RegExp([
@@ -103,31 +118,94 @@ function tokenize(code: string, language: CodeLanguage): Token[] {
         return [{kind: "", text: code}]
     }
     const scanner = language == "css" ? CSS_SCANNER : TSX_SCANNER
+    const tsx = language != "css"
     const tokens: Token[] = []
     let last = 0
     scanner.lastIndex = 0
+
+    /*
+     * Just enough state to know whether we are looking at code or at the prose between JSX tags.
+     *
+     * Without it, a sentence sitting inside <Paragraph>...</Paragraph> got the code treatment: "so
+     * two blocks of prose set side by side" highlighted `of`, `set` and `as` as keywords, because
+     * they are also TypeScript keywords. An apostrophe in "package's" can likewise pair with a
+     * later one and paint half a sentence as a string.
+     *
+     * This is not a parser - it tracks element depth, whether we are inside a tag's angle brackets,
+     * and `{}` nesting within text (an expression is code again). That covers the snippets this
+     * package actually shows; anything more would be a JSX parser, which a syntax highlighter in a
+     * design system has no business being.
+     */
+    let elementDepth = 0
+    let insideTag = false
+    let braceDepth = 0
+    const inJsxText = () => tsx && elementDepth > 0 && !insideTag && braceDepth == 0
+
     let match: RegExpExecArray | null
     while ((match = scanner.exec(code)) !== null) {
         if (match.index > last) {
             tokens.push({kind: "", text: code.slice(last, match.index)})
         }
         const groups = match.groups ?? {}
-        if (groups.tag !== undefined) {
+        const text = match[0]
+
+        const tagName = groups.closeTag ?? groups.openTag
+        if (tagName !== undefined) {
+            const closing = groups.closeTag !== undefined
+            if (tsx) {
+                // `</Foo` closes the element `<Foo` opened; a self-close is handled at its `/>`
+                elementDepth = Math.max(0, elementDepth + (closing ? -1 : 1))
+                insideTag = true
+            }
             // `<`/`</` is punctuation and the name is the tag - two tokens from one match
-            tokens.push({kind: "punct", text: groups.tagOpen ?? ""})
-            tokens.push({kind: "tag", text: groups.tag})
+            tokens.push({kind: "punct", text: closing ? "</" : "<"})
+            tokens.push({kind: "tag", text: tagName})
         } else if (groups.word !== undefined) {
-            tokens.push({kind: KEYWORDS.has(groups.word) ? "keyword" : "", text: groups.word})
+            // A keyword is only a keyword in code - in prose it is just a word
+            const keyword = !inJsxText() && KEYWORDS.has(groups.word)
+            tokens.push({kind: keyword ? "keyword" : "", text: groups.word})
         } else {
             const kind = ["comment", "string", "number", "attr", "punct"].find(k => groups[k] !== undefined)
-            tokens.push({kind: kind ?? "", text: match[0]})
+            // Strings and numbers are code constructs too: an apostrophe or a digit in a sentence
+            // is neither
+            const suppressed = inJsxText() && (kind == "string" || kind == "number")
+            tokens.push({kind: suppressed ? "" : (kind ?? ""), text})
+            if (tsx && kind == "punct") {
+                trackPunctuation(text)
+            }
         }
-        last = match.index + match[0].length
+        last = match.index + text.length
     }
     if (last < code.length) {
         tokens.push({kind: "", text: code.slice(last)})
     }
     return tokens
+
+    /**
+     * Advances the JSX state across a run of punctuation, character by character.
+     *
+     * Braces are counted everywhere, including inside a tag's own angle brackets, because an
+     * attribute's expression is full of punctuation that means nothing to JSX. The `>` of an
+     * arrow function in `onClick={() => ...}` was ending the tag early, after which the real `/>`
+     * no longer closed the element - the depth stayed up and every keyword past it was treated as
+     * prose. Only a `>` at brace depth zero actually closes a tag.
+     */
+    function trackPunctuation(run: string): void {
+        for (let index = 0; index < run.length; index++) {
+            const character = run[index]
+            if (character == "{") {
+                braceDepth++
+            } else if (character == "}") {
+                braceDepth = Math.max(0, braceDepth - 1)
+            } else if (character == ">" && insideTag && braceDepth == 0) {
+                // `/>` closes the element that its own `<Foo` opened
+                if (index > 0 && run[index - 1] == "/") {
+                    elementDepth = Math.max(0, elementDepth - 1)
+                }
+                insideTag = false
+            }
+        }
+    }
 }
 
 let areCodeBlockStylesMounted = false
@@ -150,7 +228,7 @@ export const CodeBlock: FunctionComponent<CodeBlockAttrsType> = function(attrs: 
     if (!areCodeBlockStylesMounted) {
         areCodeBlockStylesMounted = true
         setStylesheet(`
-.vtd-codeblock{
+.vtd-code-block{
 width:100%;
 box-sizing:border-box;
 margin:0;
@@ -166,31 +244,31 @@ line-height:1.6;
 tab-size:4;
 }
 /* A scrollable region is focusable, so it needs a visible focus ring like any other control */
-.vtd-codeblock:focus-visible{outline:2px solid var(--primary);outline-offset:2px;}
-.vtd-codeblock-wrap{white-space:pre-wrap;overflow-wrap:break-word;}
-.vtd-codeblock code{font:inherit;background:none;padding:0;border-radius:0;}
+.vtd-code-block:focus-visible{outline:2px solid var(--primary);outline-offset:2px;}
+.vtd-code-block-wrap{white-space:pre-wrap;overflow-wrap:break-word;}
+.vtd-code-block code{font:inherit;background:none;padding:0;border-radius:0;}
 
 /*
  * Token colours come from the theme's four hues, never a literal - the same rule the charts
  * follow. Each hue is taken at a step that keeps contrast against --background-1 in both themes,
  * since that ramp inverts between them.
  */
-.vtd-codeblock-comment{color:var(--background-6);font-style:italic;}
-.vtd-codeblock-string{color:var(--secondary-7);}
-.vtd-codeblock-keyword{color:var(--primary-7);}
-.vtd-codeblock-tag{color:var(--accent-7);}
-.vtd-codeblock-attr{color:var(--warning-7);}
-.vtd-codeblock-number{color:var(--secondary-8);}
-.vtd-codeblock-punct{color:var(--background-8);}
+.vtd-code-block-comment{color:var(--background-6);font-style:italic;}
+.vtd-code-block-string{color:var(--secondary-7);}
+.vtd-code-block-keyword{color:var(--primary-7);}
+.vtd-code-block-tag{color:var(--accent-7);}
+.vtd-code-block-attr{color:var(--warning-7);}
+.vtd-code-block-number{color:var(--secondary-8);}
+.vtd-code-block-punct{color:var(--background-8);}
 
 /*
  * Line numbers are a counter on each line rather than a second column of text, so selecting the
  * block copies the code alone - a gutter built from real text puts "1 2 3" into the clipboard.
  */
-.vtd-codeblock-numbered code{counter-reset:vtd-codeblock-line;}
-.vtd-codeblock-numbered .vtd-codeblock-line::before{
-counter-increment:vtd-codeblock-line;
-content:counter(vtd-codeblock-line);
+.vtd-code-block-numbered code{counter-reset:vtd-code-block-line;}
+.vtd-code-block-numbered .vtd-code-block-line::before{
+counter-increment:vtd-code-block-line;
+content:counter(vtd-code-block-line);
 display:inline-block;
 width:2.5em;
 margin-inline-end:1em;
@@ -198,23 +276,23 @@ text-align:right;
 color:var(--background-5);
 user-select:none;
 }
-.vtd-codeblock-line{display:block;min-height:1.6em;}
+.vtd-code-block-line{display:block;min-height:1.6em;}
 /*
  * A hanging indent, so wrap and showLineNumbers work together: without it a wrapped line's
  * continuation starts at the left edge, underneath the number, and reads as its own line. The
  * outdent is the gutter's own width (2.5em) plus its trailing gap (1em), which puts the number in
  * the outdented space and aligns every continuation with the first line's code.
  */
-.vtd-codeblock-numbered.vtd-codeblock-wrap .vtd-codeblock-line{padding-inline-start:3.5em;text-indent:-3.5em;}
+.vtd-code-block-numbered.vtd-code-block-wrap .vtd-code-block-line{padding-inline-start:3.5em;text-indent:-3.5em;}
 `, "vtd/CodeBlock")
     }
 
-    const classes = ["vtd-codeblock"]
+    const classes = ["vtd-code-block"]
     if (attrs.wrap) {
-        classes.push("vtd-codeblock-wrap")
+        classes.push("vtd-code-block-wrap")
     }
     if (attrs.showLineNumbers) {
-        classes.push("vtd-codeblock-numbered")
+        classes.push("vtd-code-block-numbered")
     }
 
     return passthroughAttrsToElement<HTMLPreElement>(<pre
@@ -229,7 +307,7 @@ user-select:none;
 /** Each token as its own span, unstyled runs as bare text */
 function renderTokens(tokens: Token[]): RenderableElements[] {
     return tokens.map(token => token.kind
-        ? <span class={`vtd-codeblock-${token.kind}`}>{token.text}</span>
+        ? <span class={`vtd-code-block-${token.kind}`}>{token.text}</span>
         : token.text)
 }
 
@@ -254,5 +332,5 @@ function renderNumberedLines(tokens: Token[]): RenderableElements[] {
             }
         })
     }
-    return lines.map(line => <span class="vtd-codeblock-line">{renderTokens(line)}</span>)
+    return lines.map(line => <span class="vtd-code-block-line">{renderTokens(line)}</span>)
 }

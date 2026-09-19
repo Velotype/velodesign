@@ -38,7 +38,7 @@ export const RadioButton: FunctionComponent<RadioButtonAttrsType> = function(att
     if (!areButtonStylesMounted) {
         areButtonStylesMounted = true
         setStylesheet(`
-.vtd-r-btn-container{
+.vtd-radio-button-container{
 cursor:pointer;
 display:inline-flex;
 align-items:center;
@@ -47,13 +47,13 @@ padding:0.25rem 0.5rem;
 border-radius:0.25rem;
 }
 
-.vtd-r-btn-container:hover{background-color:var(--background-1);}
+.vtd-radio-button-container:hover{background-color:var(--background-1);}
 
-.vtd-r-btn-container:hover .vtd-r-btn{background-color:var(--primary-2);border:1px solid var(--primary-7);}
+.vtd-radio-button-container:hover .vtd-radio-button{background-color:var(--primary-2);border:1px solid var(--primary-7);}
 
-.vtd-r-btn-input {position:absolute;opacity:0;height:0;width:0;margin:0;}
+.vtd-radio-button-input {position:absolute;opacity:0;height:0;width:0;margin:0;}
 
-.vtd-r-btn {
+.vtd-radio-button {
 position:relative;
 border-radius:1em;
 display:inline-flex;
@@ -67,12 +67,12 @@ transition:background-color 0.2s ease-in, border-color 0.2s ease-in;
 background-color:var(--background-1);border:1px solid var(--background-5);
 }
 
-.vtd-r-btn:active{background-color:var(--primary-6);}
+.vtd-radio-button:active{background-color:var(--primary-6);}
 
-.vtd-r-btn-disabled:hover{background-color:var(--background-2);border:1px solid var(--background-5);}
-.vtd-r-btn-disabled:active{background-color:var(--background-2);}
+.vtd-radio-button-disabled:hover{background-color:var(--background-2);border:1px solid var(--background-5);}
+.vtd-radio-button-disabled:active{background-color:var(--background-2);}
 
-.vtd-r-btn-check{
+.vtd-radio-button-check{
 opacity:0;
 transform:scale(0.4);
 transition:opacity 0.15s ease-in, transform 0.15s cubic-bezier(0.34,1.56,0.64,1);
@@ -82,31 +82,31 @@ height:0.65em;
 background-color:var(--primary);
 }
 
-.vtd-r-btn-input:checked ~ .vtd-r-btn .vtd-r-btn-check{
+.vtd-radio-button-input:checked ~ .vtd-radio-button .vtd-radio-button-check{
 opacity:1;
 transform:scale(1);
 }
-.vtd-r-btn-input:checked ~ .vtd-r-btn {
+.vtd-radio-button-input:checked ~ .vtd-radio-button {
 background-color:var(--primary-2);
 border-color:var(--primary-7);
 }
 
-.vtd-r-btn-container:has(> .vtd-r-btn-input:disabled){cursor:not-allowed;}
-.vtd-r-btn-input:focus-visible ~ .vtd-r-btn{border:1px solid var(--primary);outline:1px solid var(--primary)}
+.vtd-radio-button-container:has(> .vtd-radio-button-input:disabled){cursor:not-allowed;}
+.vtd-radio-button-input:focus-visible ~ .vtd-radio-button{border:1px solid var(--primary);outline:1px solid var(--primary)}
 `, "vtd/RadioButton")
     }
 
-    return passthroughAttrsToElement<HTMLLabelElement>(<label class="vtd-r-btn-container">
+    return passthroughAttrsToElement<HTMLLabelElement>(<label class="vtd-radio-button-container">
         <input
             type="radio"
             name={attrs.name}
-            class="vtd-r-btn-input"
+            class="vtd-radio-button-input"
             disabled={attrs.disabled}
             checked={attrs.checked}
             value={attrs.value}
             onChange={attrs.onChange}/>
-        <span class={`vtd-r-btn${attrs.disabled?" vtd-r-btn-disabled":""}`}>
-            <span class="vtd-r-btn-check"/>
+        <span class={`vtd-radio-button${attrs.disabled?" vtd-radio-button-disabled":""}`}>
+            <span class="vtd-radio-button-check"/>
         </span>
         {children}
     </label>, attrs)

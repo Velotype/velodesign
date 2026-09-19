@@ -3,14 +3,14 @@ import { type FunctionComponent, type IdAttr, passthroughAttrsToElement, type Re
 /**
  * The various types of TextBox Components
  */
-export type TextBoxTypeType = "password" | "new-password" | "text" | "email" | "phone"
+export type TextBoxType = "password" | "new-password" | "text" | "email" | "phone"
 
 /**
  * Attrs type for `<TextBox/>` Component
  */
 export type TextBoxAttrsType = {
     /** Type of the input */
-    type: TextBoxTypeType
+    type: TextBoxType
     /** `name` for the `<input/>` tag */
     name?: string
     /** Initial value */
@@ -33,7 +33,7 @@ export const TextBox: FunctionComponent<TextBoxAttrsType> = function(attrs: Text
     if (!areTextBoxStylesMounted) {
         areTextBoxStylesMounted = true
         setStylesheet(`
-.vtd-textbox{
+.vtd-text-box{
 padding:0.5ex 1ex;
 margin-inline-start:1ex;
 }`, "vtd/TextBox")
@@ -47,7 +47,7 @@ margin-inline-start:1ex;
             autocomplete="new-password"
         }
         return passthroughAttrsToElement<HTMLInputElement>(<input
-            class="vtd-textbox"
+            class="vtd-text-box"
             name={attrs.name}
             type="password"
             onInput={attrs.onInput}
@@ -66,7 +66,7 @@ margin-inline-start:1ex;
         autocomplete="tel"
     }
     return passthroughAttrsToElement<HTMLInputElement>(<input
-        class="vtd-textbox"
+        class="vtd-text-box"
         name={attrs.name}
         type={inputType}
         role="textbox"

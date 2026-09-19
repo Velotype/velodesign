@@ -1,13 +1,13 @@
-import { type EmptyAttrs, type FunctionComponent, type RenderableElements, setStylesheet } from "@velotype/velotype"
+import { type RenderableElements, setStylesheet } from "@velotype/velotype"
+import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
 /**
  * Options to customize `<Toast/>` Theme
  */
 export const ToastThemeOptions: {
-    dismissSymbol: FunctionComponent<EmptyAttrs>
-} = {
-    dismissSymbol: function(){return "x"}
-}
+    /** Content of the dismiss button on each toast. Defaults to `CommonThemeOptions.closeSymbol` */
+    closeSymbol: ThemeSymbol
+} = themeOptions({closeSymbol: "closeSymbol"})
 
 /**
  * Various types of Toasts
@@ -103,7 +103,7 @@ export function showToast(message: RenderableElements, options?: ToastOptions): 
         <div class="vtd-toast-body">{message}</div>
         <button type="button" class="vtd-toast-dismiss" aria-label={options?.dismissLabel} onClick={() => {
             toastElement.remove()
-        }}><ToastThemeOptions.dismissSymbol/></button>
+        }}><ToastThemeOptions.closeSymbol/></button>
     </div>
     container.appendChild(toastElement)
 

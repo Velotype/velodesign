@@ -26,7 +26,7 @@ export const ColorPicker: FunctionComponent<ColorPickerAttrsType> = function(att
     if (!areColorPickerStylesMounted) {
         areColorPickerStylesMounted = true
         setStylesheet(`
-.vtd-colorpicker{
+.vtd-color-picker{
 appearance:none;
 -webkit-appearance:none;
 width:2.5em;
@@ -37,17 +37,17 @@ border:1px solid var(--background-5);
 background-color:var(--background-1);
 cursor:pointer;
 }
-.vtd-colorpicker::-webkit-color-swatch-wrapper{padding:0;}
-.vtd-colorpicker::-webkit-color-swatch{border:none;border-radius:0.25rem;}
-.vtd-colorpicker::-moz-color-swatch{border:none;border-radius:0.25rem;}
-.vtd-colorpicker:disabled{cursor:not-allowed;opacity:0.6;}
-.vtd-colorpicker:focus-visible{border:1px solid var(--primary);outline-color:var(--primary);}
+.vtd-color-picker::-webkit-color-swatch-wrapper{padding:0;}
+.vtd-color-picker::-webkit-color-swatch{border:none;border-radius:0.25rem;}
+.vtd-color-picker::-moz-color-swatch{border:none;border-radius:0.25rem;}
+.vtd-color-picker:disabled{cursor:not-allowed;opacity:0.6;}
+.vtd-color-picker:focus-visible{border:1px solid var(--primary);outline-color:var(--primary);}
 `, "vtd/ColorPicker")
     }
 
     return passthroughAttrsToElement<HTMLInputElement>(<input
         type="color"
-        class="vtd-colorpicker"
+        class="vtd-color-picker"
         name={attrs.name}
         value={attrs.value}
         disabled={attrs.disabled}

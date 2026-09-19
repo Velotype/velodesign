@@ -133,7 +133,7 @@ align-self:flex-start;
 height:calc(100vh - 53px);
 }
 .vtd-showcase-sidebar-search{padding:0.75em;border-block-end:1px solid var(--background-4);}
-.vtd-showcase-sidebar-search .vtd-textbox{width:100%;margin-inline-start:0;box-sizing:border-box;}
+.vtd-showcase-sidebar-search .vtd-text-box{width:100%;margin-inline-start:0;box-sizing:border-box;}
 .vtd-showcase-sidebar-list{overflow-y:auto;flex-grow:1;padding-block-end:1em;}
 .vtd-showcase-sidebar-group-label{
 display:block;
@@ -158,6 +158,16 @@ font-size:0.95em;
 .vtd-showcase-sidebar-item:hover{background-color:var(--background-2);}
 .vtd-showcase-sidebar-item-active{background-color:var(--primary-2);font-weight:bold;}
 .vtd-showcase-main{flex-grow:1;min-width:0;}
+/*
+ * The frame every routed page draws itself in. It belongs to the shell rather than to any one
+ * page: the component pages and the theme builder both wear it, and while it lived in
+ * ComponentPage's stylesheet the theme builder had no padding at all until the reader happened to
+ * visit a component page first - a cold load of /theme put its heading flat against the sidebar.
+ * A page's own layout stays in that page's stylesheet; this is only the frame.
+ */
+.vtd-showcase-doc{padding:2em;max-width:62em;min-width:0;flex-grow:1;}
+/* Paragraph supplies the colour; this only sizes and spaces a page's lede */
+.vtd-showcase-doc-description{font-size:1.05em;margin-block-end:1.5em;max-width:44em;}
 `, "velodesign-showcase/AppShell")
         }
 

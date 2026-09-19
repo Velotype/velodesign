@@ -1,14 +1,14 @@
-import { type ChildrenAttr, Component, type EmptyAttrs, type FunctionComponent, type RenderableElements, setStylesheet } from "@velotype/velotype"
+import { type ChildrenAttr, Component, type RenderableElements, setStylesheet } from "@velotype/velotype"
 import { Button } from "../form/button.tsx"
+import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
 /**
  * Options to customize `<Drawer/>` Component Theme
  */
 export const DrawerThemeOptions: {
-    closeSymbol: FunctionComponent<EmptyAttrs>
-} = {
-    closeSymbol: function(){return "x"}
-}
+    /** Content of the corner close button. Defaults to `CommonThemeOptions.closeSymbol` */
+    closeSymbol: ThemeSymbol
+} = themeOptions({closeSymbol: "closeSymbol"})
 
 /**
  * An edge of the viewport - used both for where a `<Drawer/>` settles (`placement`) and which

@@ -51,10 +51,31 @@
     `core/strings.ts` holds `LocalizedString`/`S`/`T`, and `core/utilities.ts`, `core/theme.ts`,
     `charts/chart-common.ts` and the rest follow the same rule.
 
-  ⚠️ **CSS class names did not follow the filenames.** `RadioButton` still emits `vtd-radiobutton`,
-  `ColorPicker` still emits `vtd-colorpicker`, and their `setStylesheet` keys match those. Those
-  strings are public API - a consumer may target them from their own stylesheet - so changing them
-  is a breaking change rather than a tidy-up, and it was left out of the rename deliberately.
+  **A component's CSS class prefix is its own name, kebab-cased** - `RadioButton` emits
+  `vtd-radio-button`, `TableOfContents` emits `vtd-table-of-contents`, and the `setStylesheet` key
+  is the PascalCase name. Sub-parts and modifiers extend that prefix
+  (`vtd-radio-button-input`, `vtd-button-primary`).
+
+  This was not always so: fifteen prefixes were squashed or abbreviated - `vtd-btn`, `vtd-cb`,
+  `vtd-r-btn`, `vtd-tg`, `vtd-toc`, `vtd-datatable`, `vtd-datetimerange` and the rest - and an
+  earlier note here called fixing them a breaking change to be avoided. Pre-1.0 there is nothing to
+  break, and an abbreviation a consumer cannot guess from the component's name is worse than a long
+  class. 478 occurrences were renamed in one pass; the ordering matters if it is ever redone, since
+  `vtd-btn` is a substring of `vtd-r-btn` and `vtd-code` of `vtd-codeblock`.
+
+  **Exported names carry their component's prefix when the bare noun would be ambiguous.**
+  `PageSelector` exported a type called `Page` - about as collision-prone a name as a UI library can
+  put in a consumer's namespace - and it is `PageSelectorPageType` now. Same pass: `TextBoxTypeType`
+  lost its doubled suffix to become `TextBoxType`, the colour palette's `ThemeOptions` became
+  `ThemeColorOptions` (it had come to read as the base of the `XThemeOptions` family, which it is
+  not - those hold glyphs, this holds hex), and `data-table-view.tsx`'s internal `HeaderOptions`/
+  `BodyOptions` gained their `DataTable` prefix. `StepType` and `TabType` were considered and left
+  alone: the bare noun is unambiguous, and `StepsStepType` would be worse.
+
+  **Until velodesign publishes 1.0, consistency beats compatibility** - there is no downstream code
+  to protect, and every inconsistency left standing now becomes permanent the day it ships. That
+  applies to class names, exported symbols, attrs and theme-option fields alike. After 1.0 this
+  inverts and a rename needs a deprecation path.
 - `tests/basic_tests.test.ts` — a small number of real Astral (headless Chrome) assertions, not one per component.
 
 ## Component shape: `FunctionComponent` vs `Component` class
@@ -206,7 +227,7 @@ if (!areFooStylesMounted) {
 For a `Component` class, do this once in the constructor (see `Menu`), not in `render()`.
 
 Conventions inside the CSS itself:
-- Class names are all `vtd-<component>` / `vtd-<component>-<part>` / `vtd-<component>-<modifier>` (e.g. `vtd-btn`, `vtd-btn-primary`, `vtd-tabs-tab-active`). Never a bare unprefixed class.
+- Class names are all `vtd-<component>` / `vtd-<component>-<part>` / `vtd-<component>-<modifier>` (e.g. `vtd-button`, `vtd-button-primary`, `vtd-tabs-tab-active`). Never a bare unprefixed class.
 - **Never hardcode a color.** Everything reads CSS custom properties from `theme.ts`'s generated palette (light/dark aware via `[data-theme="light"|"dark"]`):
   - `--text` / `--text-alt` — main text color and its inverse.
   - `--background` (+ `-1` through `-9`, `-alt`) — a light↔dark mix ramp anchored on the page background color; use e.g. `var(--background-1)` for a very subtle hover tint, `var(--background-4)`/`var(--background-5)` for borders/dividers, `var(--background-9)` for a near-inverse accent.
@@ -232,9 +253,124 @@ velodesign doesn't assume an English-speaking (or any specific language) consume
 
 When adding a new component with any button/placeholder/label content, ask "what would a non-English-speaking consumer see by default?" before picking a default value - if the honest answer involves an English word, that's the bug.
 
-## The `XThemeOptions` escape hatch
+⚠️ **This rule was audited "across the whole package in one pass" and two violations survived it**:
+`Combobox` rendered `"No matches"` and `Command` rendered `"No results"`, each with no attr and no
+theme option to change them. Both were invisible to that audit because they are not defaults at all
+- there is no `attrs.x || "..."` to grep for, just a literal inside a `replaceChildren` call in a
+private render method. Both now take a `noMatchMessage` attr defaulting to
+`<CommonThemeOptions.emptySymbol/>`.
 
-A handful of components need a small piece of glyph/icon-ish content with no baked-in icon-font dependency: `ButtonThemeOptions.spinner`, `DataTableThemeOptions.columnsSymbol`/`.emptySymbol`, `ModalThemeOptions.closeSymbol`/`.cancelSymbol`, `AlertThemeOptions.dismissSymbol`, `TagThemeOptions.removeSymbol`, `ToastThemeOptions.dismissSymbol`, `DrawerThemeOptions.closeSymbol`, `PopconfirmThemeOptions.confirmSymbol`/`.cancelSymbol`, `PaginationThemeOptions.prevSymbol`/`.nextSymbol`, `EmptyThemeOptions.image`, `TextFormFieldOptions.check`/`.xmark`/`.edit` (note: this one predates the `XThemeOptions` naming and doesn't have "Theme" in its name — a known inconsistency, not a pattern to copy the *name* of, just be aware it exists). Each is an exported, mutable object of `FunctionComponent<EmptyAttrs>` defaults that a consumer can override wholesale (`ButtonThemeOptions.spinner = () => <MyIcon/>`) to reskin that one piece across every instance, without needing a per-instance prop. Add one of these when a component needs a small overridable visual (not for anything structural) - it's also the standard mechanism for satisfying the language-agnostic-defaults rule above whenever the default is a button/content symbol rather than a placeholder or ARIA label.
+So grep for the *rendering*, not for the defaulting. These four patterns between them find every
+shape the rule cares about, and it was the last one that hid:
+
+```sh
+grep -rnE '(\?\?|\|\|)\s*"[^"]{2,}"' src/                 # a defaulted string
+grep -rnE '(aria-label|title|placeholder|alt)="[A-Za-z]' src/  # a literal attribute
+grep -rnE '>[A-Za-z]{2,}<' src/                                # a JSX text node
+grep -rnE 'replaceChildren\("|textContent = "[A-Za-z]' src/   # an imperative write
+```
+
+## Theme options: `CommonThemeOptions` and the `XThemeOptions` escape hatch
+
+A handful of components need a small piece of glyph/icon-ish content with no baked-in icon-font
+dependency. Each such object is exported and mutable, holds `ThemeSymbol`
+(`FunctionComponent<EmptyAttrs>`) defaults, and lets a consumer reskin that piece across every
+instance without a per-instance prop. Add one when a component needs a small overridable visual
+(never for anything structural) - it is also the standard way to satisfy the
+language-agnostic-defaults rule above whenever the default is button/content text rather than a
+placeholder or an ARIA label.
+
+`core/theme-options.ts` holds the whole mechanism: `ThemeSymbol`, `CommonThemeOptions`,
+`themeOptions()` (the builder, internal) and `resetThemeOptions()`.
+
+### The consumer contract: set them at startup, and the package never watches them
+
+**A theme option is read when a component is *built*.** It is a field on a plain object, not a CSS
+custom property the browser re-resolves, so an assignment reaches the components constructed after
+it and no others. The contract is therefore: **assign during application startup, before the first
+velodesign component exists.**
+
+**Nothing in `src/` subscribes, invalidates or re-renders when one changes, and nothing should.**
+Mid-session symbol swapping is a feature approximately no application wants, and paying for it in
+every consumer's bundle and every component's build path to serve the showcase would be exactly
+backwards. A consumer who genuinely needs it re-renders the affected subtree themselves.
+
+The showcase *does* need it, and every piece of that lives in `showcase/`, not here:
+`main.tsx` re-applies the saved symbols before the first render, `theme-builder.tsx` calls
+`refresh()` after an edit, and its inputs fire on `onChange` rather than `onInput` for the same
+reason `refresh()` is safe there at all - a commit is a discrete action, a keystroke is not.
+
+### Per-component fields delegate to `CommonThemeOptions`
+
+Five components draw a "close/dismiss/remove this" control; five draw a previous/next pair. Before
+`CommonThemeOptions` each spelled its own, so changing the close glyph meant finding all five - and
+**four of the five prev/next pairs, plus `Steps`' completed-step check and `Pagination`'s gap, had
+the glyph hardcoded in the markup with no override at all**, quietly breaking the
+language-agnostic rule. The shared object is what found those.
+
+Seven shared symbols: `closeSymbol`, `cancelSymbol`, `confirmSymbol`, `emptySymbol`,
+`collapseSymbol`, `prevSymbol`, `nextSymbol`. **A symbol belongs there when two or more components
+mean the same thing by it**; a single-use glyph stays on its own component, where its name can say
+what it is - `ButtonThemeOptions.loadingSymbol`, `DataTableThemeOptions.columnsSymbol`,
+`TextFormFieldThemeOptions.editSymbol`.
+
+**Naming, and it is a rule rather than a convention: a field that delegates to
+`CommonThemeOptions.X` is itself named `X`.** One meaning had three names before this - Alert and
+Toast called it `dismissSymbol`, Tag called it `removeSymbol`, Modal and Drawer called it
+`closeSymbol` - so a reader could not tell from a field name whether two components would follow
+the same override. They are all `closeSymbol` now. A local-only field is named `<role>Symbol`. The
+showcase encodes the rule rather than restating it: `SymbolOption` carries a boolean `inherits`
+rather than the name of a shared field, so a delegating entry *cannot* be wired to a
+differently-named one.
+
+The object itself is `<Component>ThemeColorOptions` with no exceptions - `TextFormFieldOptions` was the
+lone holdout and is now `TextFormFieldThemeOptions`, its `check`/`xmark`/`edit` becoming
+`confirmSymbol`/`cancelSymbol`/`editSymbol`.
+
+Three shapes, and which one to reach for:
+
+```ts
+// 1. Delegates. Reads CommonThemeOptions live, so a consumer's startup assignment reaches it even
+//    though this module was evaluated first. Assigning here overrides just this component.
+export const AlertThemeOptions: {dismissSymbol: ThemeSymbol} = themeOptions({dismissSymbol: "closeSymbol"})
+
+// 2. Local only. No counterpart elsewhere in the package.
+export const ButtonThemeOptions: {spinner: ThemeSymbol} = themeOptions({}, {spinner: function(){return <Spinner size="1em"/>}})
+
+// 3. Wraps a shared symbol in the component's own chrome. The option is the *whole* visual, so a
+//    consumer replacing it isn't stuck inside a 2.5em span; CommonThemeOptions.emptySymbol changes
+//    only the glyph, here and in both tables and every chart at once.
+export const EmptyThemeOptions: {image: ThemeSymbol} = themeOptions({}, {
+    image: function(){return <span class="vtd-empty-icon" aria-hidden="true"><CommonThemeOptions.emptySymbol/></span>}
+})
+```
+
+A component with no object of its own reads `CommonThemeOptions` directly - that is what `Calendar`,
+`CalendarRange`, `Carousel`, `Steps` and `AsyncDataTable`'s pager do, rather than each growing an
+`XThemeOptions` object for one glyph nobody would look for.
+
+Three things about the mechanism that are easy to get wrong:
+
+- **Fields are accessors, not data.** That is what makes delegation live (a captured value would
+  freeze at module-evaluation order) and what lets `resetThemeOptions` restore a package default
+  after it has been assigned over - the original is otherwise simply gone. Assigning `undefined`
+  clears an override rather than blanking the field.
+- **`themeOptions()`'s parameters are wrapped in `NoInfer`** so `T` comes from the annotation on
+  the constant being declared. Without it TS infers the field type as `unknown` from the arguments
+  and the declared shape stops being assignable. The annotation is where the per-field doc comments
+  live, so keep it there rather than exporting a second type per component.
+- **Never `{...XThemeOptions}`.** Object spread evaluates getters, which silently converts a
+  delegating field into a frozen copy of whatever it resolved to at that moment.
+
+**Export a new object from `index.ts` in the same change.** `BreadcrumbsThemeOptions` shipped
+unexported: its name appeared in the showcase's Default column while no consumer could reach the
+object that name refers to.
+
+Each object is documented on the pages of every component that reads it
+(`ComponentDoc.themeOptions`), using the same table as the attributes, with `CommonThemeOptions`
+listed first wherever something inherits from it - a Default column reading
+`CommonThemeOptions.closeSymbol` is only useful beside a table saying what that is. All 26 editable
+glyphs are listed under **Advanced: theme options** in the theme builder, shared ones first.
 
 ## Animation
 
@@ -332,7 +468,7 @@ If a test can only pass because the thing under test never ran, it is worse than
 **Always run the interaction at least three times.** A single toggle is what hid this bug for the
 entire life of `Accordion`.
 
-## Two components sharing one look: `Collapse` / `Accordion`
+## Three components sharing one disclosure: `Collapse` / `Accordion` / `Tree`
 
 The same split, and the second time this pattern has earned its keep. `Collapse` is one section a
 consumer places anywhere and fills with `children`; `Accordion` renders a whole list from `items`
@@ -350,6 +486,20 @@ already diverged where it showed - measured live, `Accordion` animated open over
 component on the shape of its API silently chose an open/close behaviour too. `data-display/disclosure-view.tsx`
 (internal, not exported) now holds the one stylesheet, the section builder and the layout flush;
 each component keeps only what belongs to it - `Accordion`'s item spacing and group name.
+
+**`Tree` takes the mechanism and not the chrome**, which is the distinction that makes the module
+reusable rather than just shared. A tree row is not a header: it keeps its own hover, its own
+`::before` chevron and its own indentation, and must never pick up the border box, header fill or
+content padding the other two draw. Two things make that possible:
+
+- The animation rule is keyed on `details[open]:not(.vtd-disclosure-closing) > .vtd-disclosure-content`
+  rather than on `.vtd-disclosure`, so any `<details>` in the package can animate without wearing
+  the chrome. Chrome rules stay scoped under `.vtd-disclosure` - including the content padding.
+- `buildDisclosureContent` and `animateClosed` are exported from the internal module, because
+  `Tree` builds its own `<details>` and drives its own `<summary>` clicks (a click on a node's
+  label selects rather than toggles, so it cannot use `buildDisclosureSection`'s handler). Its
+  handler bails on `event.defaultPrevented`, which is how a label click stays a selection instead
+  of animating the node shut.
 
 **An open section has to look open.** Its header takes a divider and a faint fill
 (`background-1`, with hover one step further at `background-2` so hovering an open header still
@@ -505,6 +655,28 @@ Every component gets the same fan-out, even though not every component gets dedi
 5. `tests/test_modules/showcase.tsx` — a short section alongside the other components, for a combined at-a-glance view.
 6. `tests/basic_tests.test.ts` gets new `itWrap(...)` assertions **only** for components with real interactive/stateful behavior worth regression-testing (state that changes on click, a value that updates, an open/closed toggle) — not for every component. Purely visual/static ones (`Badge`, `Card`, `Divider`, `Breadcrumbs`, `Navbar`, `Sidebar`, `Spinner`, `Avatar`) are gallery-only, no assertions.
 
+## `Breadcrumbs` borrows both of its extras rather than reimplementing them
+
+Two opt-in features, each modelled on GitLab's Pajamas breadcrumb and each built out of something
+the package already has:
+
+- **`BreadcrumbItemType.leading`** puts an avatar or icon beside a crumb. A `RenderableElements`
+  slot rather than Pajamas' `avatarPath`, matching `ListItemType.leading` - a consumer is then not
+  limited to one shape of thing, and an `Icon`, a `Badge` or an `Avatar` all fit.
+- **`maxItems`** collapses the middle of a long trail behind an expander, keeping the root and the
+  current page. **The expander is a `Menu`**, so the hidden crumbs get the keyboard handling,
+  outside-click close and focus return that component already owns instead of a second, worse copy
+  of them.
+
+**Collapsing is by crumb count, not by measured width.** Pajamas collapses when the trail stops
+fitting, which means reading layout on every resize to answer a question the caller already knows,
+and it makes the same trail render differently on two screens. A count renders the same everywhere
+and a test can pin it down.
+
+Adding this surfaced a gap worth keeping: **`Menu` had no `ariaLabel`**, so a menu whose trigger is
+a glyph had no accessible name at all. It takes one now, applied to the `<summary>`, which is what
+the expander uses.
+
 ## `TableOfContents` takes items, and watches with an observer
 
 The entries are data the consumer passes, not headings scraped out of the DOM. Deriving them looks
@@ -560,6 +732,27 @@ Two properties matter more than the colours, and both have tests:
   alone. Regrouping tokens into lines has to *split* runs that straddle a newline (a block comment,
   a template literal) rather than assume tokens and lines align - they don't, and assuming so drops
   the middle of every multi-line comment.
+
+**The highlighter knows whether it is looking at code or at the prose between JSX tags**, and it
+has to. Without that, a sentence inside `<Paragraph>` got the code treatment: `of`, `set`, `as`,
+`for` and `in` are ordinary English *and* TypeScript keywords, so half a sentence lit up; an
+apostrophe in "package's" can pair with a later one and paint prose as a string; and a digit in a
+sentence became a number. `tokenize` therefore tracks element depth, whether it is inside a tag's
+angle brackets, and `{}` nesting - and suppresses keywords, strings and numbers in text. It is not
+a parser and must not become one.
+
+Three traps in that state machine, each of which produced the *opposite* symptom - real code
+rendered as prose - and each found only by checking a specific snippet rather than by eye:
+
+- **A generic is not a tag.** `getComponent<Command>` counted as an opening element, so the depth
+  never came back down and every keyword after it was treated as text. A tag's `<` never directly
+  follows an identifier, `)` or `]`.
+- **A closing tag is not ambiguous, and routinely follows text with no space** - `Open</Button>`.
+  It gets its own branch with no lookbehind; applying the generic guard to `</` lost every closing
+  tag that touched its content.
+- **`>` inside braces does not end a tag.** The `=>` in `onClick={() => ...}` ended the tag early,
+  after which the real `/>` no longer closed the element - same stuck depth, different cause. Only
+  a `>` at brace depth zero closes a tag, so braces are counted inside tags too.
 
 Do not reach for brace-balancing to parse this file's own source. An apostrophe in JSX prose
 ("doesn't") reads as a string delimiter and swallows the rest of the file - that is why the

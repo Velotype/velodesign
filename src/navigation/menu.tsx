@@ -34,6 +34,13 @@ export type MenuAttrsType = {
     trigger: RenderableElements
     /** The set of entries to show */
     items: MenuItemType[]
+    /**
+     * Accessible name for the trigger, e.g. "More actions".
+     *
+     * No default, like every other ARIA label here - see CLAUDE.md's language-agnostic rule. Worth
+     * setting whenever `trigger` is a glyph rather than words, or the control has no name at all.
+     */
+    ariaLabel?: string
     /** Closes the menu when the user clicks anywhere outside of it (default: `true`) */
     closeOnOutsideClick?: boolean
 } & IdAttr & StylePassthroughAttrs
@@ -169,7 +176,7 @@ text-decoration:none;
 `, "vtd/Menu")
         }
 
-        this.#summaryElement = <summary class="vtd-menu-trigger">{attrs.trigger}</summary>
+        this.#summaryElement = <summary class="vtd-menu-trigger" aria-label={attrs.ariaLabel}>{attrs.trigger}</summary>
 
         this.#itemEls = attrs.items.map(item => <a
             role="menuitem"

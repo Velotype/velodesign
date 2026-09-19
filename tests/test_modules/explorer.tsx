@@ -27,7 +27,7 @@ function renderControlRow(key: string, def: ControlDef, value: unknown, onChange
     if (def.kind == "number") {
         return <div class="vtd-explorer-control-row">
             <label class="vtd-explorer-control-label">{def.label}</label>
-            <input type="number" class="vtd-textbox" value={value as number} onInput={(event: Event) => {
+            <input type="number" class="vtd-text-box" value={value as number} onInput={(event: Event) => {
                 if (event.target instanceof HTMLInputElement) { onChange(key, Number(event.target.value)) }
             }}/>
         </div>
@@ -211,7 +211,7 @@ background-color:var(--background-1);
 border-inline-end:1px solid var(--background-4);
 }
 .vtd-explorer-sidebar-search{padding:0.75em;border-block-end:1px solid var(--background-4);}
-.vtd-explorer-sidebar-search .vtd-textbox{width:100%;margin-inline-start:0;box-sizing:border-box;}
+.vtd-explorer-sidebar-search .vtd-text-box{width:100%;margin-inline-start:0;box-sizing:border-box;}
 .vtd-explorer-sidebar-group-label{
 padding:0.75em 0.75em 0.25em 0.75em;
 font-size:0.75em;

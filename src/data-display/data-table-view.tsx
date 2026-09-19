@@ -1,9 +1,10 @@
 import { setStylesheet } from "@velotype/velotype"
-import type { EmptyAttrs, FunctionComponent, RenderableElements } from "@velotype/velotype"
+import type { RenderableElements } from "@velotype/velotype"
 import { Button } from "../form/button.tsx"
 import { Checkbox } from "../form/checkbox.tsx"
 import { highlightMatch, searchHighlightCss } from "../core/search-highlight.tsx"
 import { History } from "../core/history.ts"
+import { CommonThemeOptions, themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
 /**
  * Shared internals for `DataTable` and `AsyncDataTable`.
@@ -53,14 +54,14 @@ export type SortDirection = "asc" | "desc"
  * nobody can read: it is a plain optional attr on each component, exactly like `Empty`'s `title`.
  */
 export const DataTableThemeOptions: {
-    /** Content of the column-visibility button. `▥` - vertical bands, i.e. columns */
-    columnsSymbol: FunctionComponent<EmptyAttrs>
-    /** Shown in place of the rows when there are none. `∅`, matching `EmptyThemeOptions.image` */
-    emptySymbol: FunctionComponent<EmptyAttrs>
-} = {
+    /** Content of the column-visibility button. `▥` - vertical bands, i.e. columns. Nothing else in the package draws this, so it stays local */
+    columnsSymbol: ThemeSymbol
+    /** Shown in place of the rows when there are none. The whole visual, sizing included; set `CommonThemeOptions.emptySymbol` to change just the glyph, here and in `Empty` and every chart */
+    emptySymbol: ThemeSymbol
+} = themeOptions({}, {
     columnsSymbol: function() {return <span aria-hidden="true">▥</span>},
-    emptySymbol: function() {return <span class="vtd-datatable-empty-icon" aria-hidden="true">∅</span>}
-}
+    emptySymbol: function() {return <span class="vtd-data-table-empty-icon" aria-hidden="true"><CommonThemeOptions.emptySymbol/></span>}
+})
 
 let areDataTableStylesMounted = false
 
@@ -76,19 +77,19 @@ export function mountDataTableStyles(): void {
     }
     areDataTableStylesMounted = true
     setStylesheet(`
-.vtd-datatable-wrapper{width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:0.75em;}
+.vtd-data-table-wrapper{width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:0.75em;}
 /*
  * The search box and the "Columns" button share one toolbar row: search takes the leading edge
  * and absorbs the slack, the button sits at the trailing edge. flex-wrap is the escape valve
  * for a container too narrow to hold both - they stack rather than crushing the input - and the
  * search box's flex-basis is what decides when that happens.
  */
-.vtd-datatable-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5em;}
-.vtd-datatable-search-wrapper{display:flex;flex:1 1 12em;min-width:0;align-items:center;gap:0.5em;}
-.vtd-datatable-search-wrapper .vtd-textbox{width:100%;max-width:20em;margin-inline-start:0;box-sizing:border-box;}
+.vtd-data-table-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5em;}
+.vtd-data-table-search-wrapper{display:flex;flex:1 1 12em;min-width:0;align-items:center;gap:0.5em;}
+.vtd-data-table-search-wrapper .vtd-text-box{width:100%;max-width:20em;margin-inline-start:0;box-sizing:border-box;}
 /* The auto margin keeps the button trailing-aligned in the searchable={false} case, where it's the row's only child */
-.vtd-datatable-column-menu-wrapper{position:relative;margin-inline-start:auto;}
-.vtd-datatable-column-menu{
+.vtd-data-table-column-menu-wrapper{position:relative;margin-inline-start:auto;}
+.vtd-data-table-column-menu{
 position:absolute;
 top:100%;
 right:0;
@@ -104,19 +105,19 @@ display:none;
 flex-direction:column;
 gap:0.1em;
 }
-.vtd-datatable-column-menu-open{display:flex;}
-.vtd-datatable-scroll{overflow-x:auto;}
-.vtd-datatable-table{width:100%;border-collapse:collapse;}
-.vtd-datatable-table th,.vtd-datatable-table td{padding:0.6em 0.9em;text-align:start;border-block-end:1px solid var(--background-4);}
-.vtd-datatable-table th{
+.vtd-data-table-column-menu-open{display:flex;}
+.vtd-data-table-scroll{overflow-x:auto;}
+.vtd-data-table-table{width:100%;border-collapse:collapse;}
+.vtd-data-table-table th,.vtd-data-table-table td{padding:0.6em 0.9em;text-align:start;border-block-end:1px solid var(--background-4);}
+.vtd-data-table-table th{
 position:relative;
 font-weight:bold;
 color:var(--text);
 white-space:nowrap;
 user-select:none;
 }
-.vtd-datatable-sortable:hover{background-color:var(--background-1);}
-.vtd-datatable-sort-button{
+.vtd-data-table-sortable:hover{background-color:var(--background-1);}
+.vtd-data-table-sort-button{
 cursor:pointer;
 display:block;
 width:100%;
@@ -128,15 +129,15 @@ font:inherit;
 font-weight:inherit;
 padding:0;
 }
-.vtd-datatable-sort-button:focus-visible{outline:1px solid var(--primary);outline-offset:1px;}
-.vtd-datatable-header-content{display:inline-flex;align-items:center;}
-.vtd-datatable-sort-indicator{margin-inline-start:0.3em;opacity:0.6;}
-.vtd-datatable-table tbody tr{position:relative;}
-.vtd-datatable-hoverable tr:hover{background-color:var(--background-1);}
-.vtd-datatable-zebra tr:nth-child(even){background-color:var(--background-1);}
-.vtd-datatable-zebra.vtd-datatable-hoverable tr:nth-child(even):hover{background-color:var(--background-2);}
-.vtd-datatable-align-center{text-align:center;}
-.vtd-datatable-align-end{text-align:end;}
+.vtd-data-table-sort-button:focus-visible{outline:1px solid var(--primary);outline-offset:1px;}
+.vtd-data-table-header-content{display:inline-flex;align-items:center;}
+.vtd-data-table-sort-indicator{margin-inline-start:0.3em;opacity:0.6;}
+.vtd-data-table-table tbody tr{position:relative;}
+.vtd-data-table-hoverable tr:hover{background-color:var(--background-1);}
+.vtd-data-table-zebra tr:nth-child(even){background-color:var(--background-1);}
+.vtd-data-table-zebra.vtd-data-table-hoverable tr:nth-child(even):hover{background-color:var(--background-2);}
+.vtd-data-table-align-center{text-align:center;}
+.vtd-data-table-align-end{text-align:end;}
 /*
  * A "clickable row" (rowHref/onRowSelect): the link/button wraps the first visible column's
  * real content (so it keeps a natural, meaningful accessible name from that content, and
@@ -146,11 +147,11 @@ padding:0;
  * action button in a later column, say) gets position:relative + a higher stacking order here
  * so it stays clickable above that stretch, rather than the row-level link swallowing its clicks.
  */
-.vtd-datatable-row-link{color:inherit;text-decoration:none;}
-.vtd-datatable-row-link-button{display:block;width:100%;text-align:inherit;background:transparent;border:none;color:inherit;font:inherit;padding:0;cursor:pointer;}
-.vtd-datatable-row-link::after{content:"";position:absolute;inset:0;z-index:0;}
-.vtd-datatable-table td :is(a,button,input,select,textarea):not(.vtd-datatable-row-link):not(.vtd-datatable-row-link-button){position:relative;z-index:1;}
-.vtd-datatable-resize-handle{
+.vtd-data-table-row-link{color:inherit;text-decoration:none;}
+.vtd-data-table-row-link-button{display:block;width:100%;text-align:inherit;background:transparent;border:none;color:inherit;font:inherit;padding:0;cursor:pointer;}
+.vtd-data-table-row-link::after{content:"";position:absolute;inset:0;z-index:0;}
+.vtd-data-table-table td :is(a,button,input,select,textarea):not(.vtd-data-table-row-link):not(.vtd-data-table-row-link-button){position:relative;z-index:1;}
+.vtd-data-table-resize-handle{
 position:absolute;
 top:0;
 right:0;
@@ -159,23 +160,23 @@ width:0.4em;
 cursor:col-resize;
 touch-action:none;
 }
-.vtd-datatable-resize-handle:hover{background-color:var(--primary-6);}
-.vtd-datatable-empty{text-align:center;opacity:0.6;padding:2em;}
+.vtd-data-table-resize-handle:hover{background-color:var(--primary-6);}
+.vtd-data-table-empty{text-align:center;opacity:0.6;padding:2em;}
 /* Sized like Empty's own icon, so a table with no rows and an <Empty/> beside it agree */
-.vtd-datatable-empty-icon{font-size:2em;line-height:1;display:inline-block;}
-.vtd-datatable-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1em;}
-.vtd-datatable-page-size-label{display:flex;align-items:center;gap:0.5em;}
-.vtd-datatable-pagination{display:flex;justify-content:center;flex-grow:1;}
+.vtd-data-table-empty-icon{font-size:2em;line-height:1;display:inline-block;}
+.vtd-data-table-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1em;}
+.vtd-data-table-page-size-label{display:flex;align-items:center;gap:0.5em;}
+.vtd-data-table-pagination{display:flex;justify-content:center;flex-grow:1;}
 /*
  * Async-only states. A reload keeps the previous rows in place and fades them rather than
  * swapping in a spinner: replacing the table on every keystroke makes the page jump around, and
  * the stale rows are still the best answer available until the new ones land.
  */
-.vtd-datatable-body-reloading{opacity:0.45;transition:opacity 120ms ease-out;}
-.vtd-datatable-status{display:flex;align-items:center;gap:0.5em;justify-content:center;padding:2em;opacity:0.7;}
-.vtd-datatable-truncated{font-size:0.85em;color:var(--warning-8);}
+.vtd-data-table-body-reloading{opacity:0.45;transition:opacity 120ms ease-out;}
+.vtd-data-table-status{display:flex;align-items:center;gap:0.5em;justify-content:center;padding:2em;opacity:0.7;}
+.vtd-data-table-truncated{font-size:0.85em;color:var(--warning-8);}
 @media (prefers-reduced-motion: reduce){
-.vtd-datatable-body-reloading{transition:none;}
+.vtd-data-table-body-reloading{transition:none;}
 }
 ${searchHighlightCss}
 `, "vtd/DataTable")
@@ -196,7 +197,7 @@ export function buildColGroup<RowType>(
     return {colElements, cols}
 }
 
-export type HeaderOptions<RowType> = {
+export type DataTableHeaderOptions<RowType> = {
     columns: DataTableColumnBase<RowType>[]
     /** Whether this particular column offers sorting at all - locally computed or server-delegated */
     isSortable: (column: DataTableColumnBase<RowType>) => boolean
@@ -209,7 +210,7 @@ export type HeaderOptions<RowType> = {
 }
 
 /** Builds the header row's `<th>` cells */
-export function buildHeaderCells<RowType>(options: HeaderOptions<RowType>): HTMLTableCellElement[] {
+export function buildHeaderCells<RowType>(options: DataTableHeaderOptions<RowType>): HTMLTableCellElement[] {
     return options.columns.map(column => {
         const sortable = options.isSortable(column)
         const sortDirection: SortDirection | undefined = options.sortKey == column.key ? options.sortDirection : undefined
@@ -217,25 +218,25 @@ export function buildHeaderCells<RowType>(options: HeaderOptions<RowType>): HTML
         // pattern) rather than a click handler on the `<th>` itself - a `<th>` isn't natively
         // focusable/activatable, so without this a keyboard user would have no way to sort
         // at all. An unsortable column just renders the same content as a plain `<span>`.
-        const headerContent = <span class="vtd-datatable-header-content">
+        const headerContent = <span class="vtd-data-table-header-content">
             {column.header}
-            {sortDirection ? <span class="vtd-datatable-sort-indicator" aria-hidden="true">{sortDirection == "asc" ? "▲" : "▼"}</span> : null}
+            {sortDirection ? <span class="vtd-data-table-sort-indicator" aria-hidden="true">{sortDirection == "asc" ? "▲" : "▼"}</span> : null}
         </span>
         const thElement: HTMLTableCellElement = <th
-            class={`${column.align ? `vtd-datatable-align-${column.align}` : ""}${sortable ? " vtd-datatable-sortable" : ""}`}
+            class={`${column.align ? `vtd-data-table-align-${column.align}` : ""}${sortable ? " vtd-data-table-sortable" : ""}`}
             aria-sort={sortDirection ? (sortDirection == "asc" ? "ascending" : "descending") : undefined}>
             {sortable
-                ? <button type="button" class="vtd-datatable-sort-button" onClick={() => options.onSort(column)}>{headerContent}</button>
+                ? <button type="button" class="vtd-data-table-sort-button" onClick={() => options.onSort(column)}>{headerContent}</button>
                 : headerContent}
             {(column.resizable ?? true) && options.resizableColumns
-                ? <span class="vtd-datatable-resize-handle" onPointerDown={(event: PointerEvent) => options.onResizeStart(column, thElement, event)}/>
+                ? <span class="vtd-data-table-resize-handle" onPointerDown={(event: PointerEvent) => options.onResizeStart(column, thElement, event)}/>
                 : null}
         </th>
         return thElement
     })
 }
 
-export type BodyOptions<RowType> = {
+export type DataTableBodyOptions<RowType> = {
     rows: RowType[]
     columns: DataTableColumnBase<RowType>[]
     /** The active search text, used only to highlight matches in plain-text cells */
@@ -246,7 +247,7 @@ export type BodyOptions<RowType> = {
 }
 
 /** Builds the `<tr>` rows for the body */
-export function buildBodyRows<RowType>(options: BodyOptions<RowType>): HTMLTableRowElement[] {
+export function buildBodyRows<RowType>(options: DataTableBodyOptions<RowType>): HTMLTableRowElement[] {
     const searchQuery = options.searchQuery.trim()
     return options.rows.map(row => {
         const href = options.rowHref?.(row)
@@ -261,14 +262,14 @@ export function buildBodyRows<RowType>(options: BodyOptions<RowType>): HTMLTable
                 const cellContent = searchQuery && (typeof rawCellContent == "string" || typeof rawCellContent == "number" || typeof rawCellContent == "bigint")
                     ? highlightMatch(String(rawCellContent), searchQuery)
                     : rawCellContent
-                const cellClass = column.align ? `vtd-datatable-align-${column.align}` : ""
+                const cellClass = column.align ? `vtd-data-table-align-${column.align}` : ""
                 if (colIndex != 0 || (!href && !useButton)) {
                     return <td class={cellClass}>{cellContent}</td>
                 }
                 return <td class={cellClass}>
                     {href
                         ? <a
-                            class="vtd-datatable-row-link"
+                            class="vtd-data-table-row-link"
                             href={href}
                             onClick={options.rowHrefSpa ? (event: MouseEvent) => {
                                 // Only a plain left-click routes client-side. A modified click
@@ -279,7 +280,7 @@ export function buildBodyRows<RowType>(options: BodyOptions<RowType>): HTMLTable
                                 event.preventDefault()
                                 History.changeLocation(href)
                             } : undefined}>{cellContent}</a>
-                        : <button type="button" class="vtd-datatable-row-link vtd-datatable-row-link-button" onClick={() => options.onRowSelect?.(row)}>{cellContent}</button>}
+                        : <button type="button" class="vtd-data-table-row-link vtd-data-table-row-link-button" onClick={() => options.onRowSelect?.(row)}>{cellContent}</button>}
                 </td>
             })}
         </tr>
@@ -288,7 +289,7 @@ export function buildBodyRows<RowType>(options: BodyOptions<RowType>): HTMLTable
 
 /** A full-width row spanning every column - the empty, loading and error states all use one */
 export function buildStatusRow(colspan: number, content: RenderableElements): HTMLTableRowElement {
-    return <tr><td class="vtd-datatable-empty" colspan={colspan}>{content}</td></tr>
+    return <tr><td class="vtd-data-table-empty" colspan={colspan}>{content}</td></tr>
 }
 
 /**
@@ -327,7 +328,7 @@ export class ColumnMenu {
             return
         }
         this.#open = false
-        this.#panelEl.classList.remove("vtd-datatable-column-menu-open")
+        this.#panelEl.classList.remove("vtd-data-table-column-menu-open")
     }
 
     constructor(
@@ -337,16 +338,16 @@ export class ColumnMenu {
         /** Accessible name for the button - needed because its default content is a bare symbol */
         buttonLabel: string | undefined
     ) {
-        this.#panelEl = <div class="vtd-datatable-column-menu">
+        this.#panelEl = <div class="vtd-data-table-column-menu">
             {columns.map(column => column.hideable === false
                 ? <Checkbox checked disabled>{column.header}</Checkbox>
                 : <Checkbox checked onChange={() => onToggle(column.key)}>{column.header}</Checkbox>)}
         </div>
         const panelEl = this.#panelEl
-        this.element = <div class="vtd-datatable-column-menu-wrapper">
+        this.element = <div class="vtd-data-table-column-menu-wrapper">
             <Button type="secondary" ariaLabel={buttonLabel} onClick={() => {
                 this.#open = !this.#open
-                panelEl.classList.toggle("vtd-datatable-column-menu-open", this.#open)
+                panelEl.classList.toggle("vtd-data-table-column-menu-open", this.#open)
             }}>{buttonChildren}</Button>
             {panelEl}
         </div>

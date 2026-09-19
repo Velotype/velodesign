@@ -1,17 +1,17 @@
-import { type EmptyAttrs, type FunctionComponent, passthroughAttrsToElement, type RenderableElements, setStylesheet } from "@velotype/velotype"
+import { type FunctionComponent, passthroughAttrsToElement, type RenderableElements, setStylesheet } from "@velotype/velotype"
 import { Button } from "../form/button.tsx"
 import type { IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
+import { CommonThemeOptions, themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
 /**
  * Options to customize `<Pagination/>` Component Theme
  */
 export const PaginationThemeOptions: {
-    prevSymbol: FunctionComponent<EmptyAttrs>
-    nextSymbol: FunctionComponent<EmptyAttrs>
-} = {
-    prevSymbol: function(){return "‹"},
-    nextSymbol: function(){return "›"}
-}
+    /** Content of the previous-page button. Defaults to `CommonThemeOptions.prevSymbol` */
+    prevSymbol: ThemeSymbol
+    /** Content of the next-page button. Defaults to `CommonThemeOptions.nextSymbol` */
+    nextSymbol: ThemeSymbol
+} = themeOptions({prevSymbol: "prevSymbol", nextSymbol: "nextSymbol"})
 
 /**
  * Attrs type for `<Pagination/>` Component
@@ -97,7 +97,7 @@ padding:0.25rem 0.5rem;
     return passthroughAttrsToElement<HTMLElement>(<nav aria-label={attrs.ariaLabel} class="vtd-pagination">
         <Button type="secondary" disabled={page <= 1} onClick={() => attrs.onPageChange(page - 1)}>{attrs.prevButtonChildren || <PaginationThemeOptions.prevSymbol/>}</Button>
         {pageWindow.map(entry => entry == ellipsis
-            ? <span class="vtd-pagination-ellipsis" aria-hidden="true">{ellipsis}</span>
+            ? <span class="vtd-pagination-ellipsis" aria-hidden="true"><CommonThemeOptions.collapseSymbol/></span>
             : <Button
                 type="text"
                 class={entry == page ? "vtd-pagination-current" : ""}

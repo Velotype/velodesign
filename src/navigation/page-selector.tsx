@@ -2,9 +2,9 @@ import { Component } from "@velotype/velotype"
 import type { FunctionComponent, EmptyAttrs, RenderableElements } from "@velotype/velotype"
 
 /**
- * A potential Page for rendering in a `<PageSelector pages={[<Page/>]}/>`
+ * One routable page in a `<PageSelector pages={[...]}/>`
  */
-export type Page = {
+export type PageSelectorPageType = {
     /** URL to match */
     basename: string
     /** Page to render when URL matches `basename` */
@@ -16,7 +16,7 @@ export type Page = {
  */
 export type PageSelectorAttrsType = {
     /** The set of potential pages to render */
-    pages: Page[]
+    pages: PageSelectorPageType[]
     /** Fallback page if no other page matches */
     notFoundPage: typeof Component<EmptyAttrs> | FunctionComponent<EmptyAttrs>
 }
@@ -40,7 +40,7 @@ export class PageSelector extends Component<PageSelectorAttrsType> {
 
     /** Render this Component */
     override render(attrs: PageSelectorAttrsType): RenderableElements {
-        const page = attrs.pages.find(function(page: Page) {
+        const page = attrs.pages.find(function(page: PageSelectorPageType) {
             if (globalThis.location.pathname == page.basename) {
                 return true
             }

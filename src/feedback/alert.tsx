@@ -1,14 +1,14 @@
 import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
-import type { ChildrenAttr, EmptyAttrs, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
 /**
  * Options to customize `<Alert/>` Component Theme
  */
 export const AlertThemeOptions: {
-    dismissSymbol: FunctionComponent<EmptyAttrs>
-} = {
-    dismissSymbol: function(){return "x"}
-}
+    /** Content of the dismiss button, shown only when `onDismiss` is set. Defaults to `CommonThemeOptions.closeSymbol` */
+    closeSymbol: ThemeSymbol
+} = themeOptions({closeSymbol: "closeSymbol"})
 
 /**
  * Various types of `<Alert/>`s
@@ -78,7 +78,7 @@ border-radius:0.25rem;
         {attrs.onDismiss && <button type="button" class="vtd-alert-dismiss" aria-label={attrs.dismissLabel} onClick={() => {
             attrs.onDismiss?.()
             alertElement.remove()
-        }}><AlertThemeOptions.dismissSymbol/></button>}
+        }}><AlertThemeOptions.closeSymbol/></button>}
     </div>
     return passthroughAttrsToElement<HTMLDivElement>(alertElement, attrs)
 }

@@ -33,7 +33,7 @@ export type TextAttrsType = {
  */
 export const Text: FunctionComponent<TextAttrsType> = function(attrs: TextAttrsType, children: RenderableElements[]): HTMLElement {
     mountTypographyStyles()
-    const cls = textClasses(attrs.code ? "vtd-code" : "", attrs.type, attrs).trim()
+    const cls = textClasses(attrs.code ? "vtd-text-code" : "", attrs.type, attrs).trim()
     if (attrs.code) {
         return passthroughAttrsToElement<HTMLElement>(<code class={cls}>{children}</code>, attrs)
     }
