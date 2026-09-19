@@ -284,6 +284,14 @@ const functionDocs: Record<string, string> = {
 }
 
 const methodDocs: Record<string, MethodDoc[]> = {
+    Sidebar: [
+        {name: "setItems(items)", description: "Replaces the entries, rebuilding only the list. The header survives - which is what lets a search box live there without losing focus on every keystroke - as do the collapsed state and the dragged width. The open/closed state does not, since the entries are new; read it off getTree() first."},
+        {name: "setCollapsed(collapsed)", description: "Collapses to the rail or expands, and calls onCollapsedChange."},
+        {name: "isCollapsed()", description: "Is it collapsed to the rail?"},
+        {name: "setWidth(width)", description: "Sets the expanded width in px, clamped to minWidth/maxWidth."},
+        {name: "getWidth()", description: "The expanded width in px - what a drag changes, unaffected by collapsing."},
+        {name: "getTree()", description: "The Tree behind the groups, for reading or driving which are open."},
+    ],
     Tree: [
         {name: "isOpen(key)", description: "Is this branch open? A branch mid-close still carries the open attribute - it is held for the length of the collapse - and is reported as closed here, because what a caller wants is where the tree is heading."},
         {name: "getOpenKeys()", description: "Every branch currently open, in document order. Safe to call from onToggle, which runs after the change."},
@@ -343,10 +351,26 @@ const typeDefinitions: Record<string, TypeDoc> = {
     },
     SidebarItemType: {
         name: "SidebarItemType",
-        description: "One entry in a Sidebar.",
+        description: "One entry in a Sidebar - a link, or a group with children.",
         fields: [
-            {name: "label", type: "RenderableElements", required: true, description: "The entry's text."},
-            {name: "to", type: "string", required: true, description: "Target URL, matched against the current location to highlight the active entry."},
+            {name: "label", type: "RenderableElements", required: true, description: "The entry's content."},
+            {name: "to", type: "string", description: "Target URL, matched against the current location to highlight the active entry. A group with children needs none."},
+            {name: "key", type: "string", defaultValue: "the entry's to", description: "Identifies this entry. A group has no to of its own, so give those one."},
+            {name: "icon", type: "RenderableElements", description: "Shown before the label - and, once collapsed to the rail, the only thing shown, so an entry without one is unidentifiable at that width."},
+            {name: "trailing", type: "RenderableElements", description: "Content at the trailing edge of the row - a count, a Badge."},
+            {name: "children", type: "SidebarItemType[]", description: "Nested entries. An entry with children renders as a collapsible group."},
+            {name: "defaultOpen", type: "boolean", defaultValue: "false", description: "Whether this group starts expanded."},
+        ],
+    },
+    SidebarProfileType: {
+        name: "SidebarProfileType",
+        description: "The account row at the foot of a Sidebar. It is a Menu whose trigger is the row itself, so it gets that component's keyboard handling, submenus and dividers rather than a second copy of them.",
+        fields: [
+            {name: "avatar", type: "RenderableElements", required: true, description: "Shown at the leading edge, typically an Avatar. On the collapsed rail this is the whole row."},
+            {name: "name", type: "RenderableElements", required: true, description: "The account's name."},
+            {name: "detail", type: "RenderableElements", description: "A smaller supporting line beneath the name - an email, an organisation."},
+            {name: "menuItems", type: "MenuItemType[]", required: true, description: "Entries for the menu the row opens. Supports submenus and dividers, like any Menu."},
+            {name: "menuAriaLabel", type: "string", description: "Accessible name for that menu."},
         ],
     },
     MenuItemType: {
@@ -557,7 +581,7 @@ const componentTypes: Record<string, string[]> = {
     Accordion: ["AccordionItemType"],
     TableOfContents: ["TableOfContentsItemType"],
     Breadcrumbs: ["BreadcrumbItemType"],
-    Sidebar: ["SidebarItemType"],
+    Sidebar: ["SidebarItemType", "SidebarProfileType", "MenuItemType"],
     Menu: ["MenuItemType"],
     Steps: ["StepType"],
     Tabs: ["TabType"],
@@ -853,10 +877,22 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "brand", type: "RenderableElements", description: "Content shown on the left."},
     ],
     Sidebar: [
-        {name: "items", type: "SidebarItemType[]", required: true, description: "The entries to list."},
-        {name: "header", type: "RenderableElements", description: "Content shown above the list."},
+        {name: "items", type: "SidebarItemType[]", required: true, description: "The entries to list. An entry with children becomes a collapsible group."},
+        {name: "header", type: "RenderableElements", description: "Content shown above the list - a search box, a section title. It survives setItems, which is what lets a search box live here."},
+        {name: "footer", type: "RenderableElements", description: "Content pinned below the list, above the profile row and the collapse control."},
+        {name: "profile", type: "SidebarProfileType", description: "An account row at the very foot, which opens a Menu when clicked."},
         {name: "ariaLabel", type: "string", description: "Accessible label for the nav landmark."},
         {name: "spa", type: "boolean", defaultValue: "false", description: "Makes every item a client-side route change via History.changeLocation rather than a page reload. Set true inside an SPA; leave false on a multi-page site, where an item should be a real navigation."},
+        {name: "exact", type: "boolean", defaultValue: "true", description: "Forwarded to each entry's NavLink. Set false when an entry's to is a section root with pages beneath it."},
+        {name: "collapsible", type: "boolean", defaultValue: "false", description: "Adds a control that shrinks the sidebar to a rail of icons, which floats back out over the page on hover or keyboard focus."},
+        {name: "defaultCollapsed", type: "boolean", defaultValue: "false", description: "Start collapsed. Only meaningful alongside collapsible."},
+        {name: "onCollapsedChange", type: "(collapsed) => void", description: "Called when the reader collapses or expands it. Persist the value here if you want it remembered - the component does not store anything itself."},
+        {name: "collapseLabel", type: "string", description: "Accessible name for the collapse control, which is an icon and so has no name of its own."},
+        {name: "resizable", type: "boolean", defaultValue: "false", description: "Lets the reader drag the trailing edge."},
+        {name: "defaultWidth", type: "number", defaultValue: "250", description: "Starting width in px."},
+        {name: "minWidth", type: "number", defaultValue: "180", description: "Smallest width a drag can reach, in px."},
+        {name: "maxWidth", type: "number", defaultValue: "480", description: "Largest width a drag can reach, in px."},
+        {name: "onWidthChange", type: "(width) => void", description: "Called as a resize drag settles. Persist the value here if you want it remembered."},
     ],
     TableOfContents: [
         {name: "items", type: "TableOfContentsItemType[]", required: true, description: "The entries to list, in the order they appear on the page: {id, label, level?}. id is the anchor target, and level (1 being top) sets the indent."},
@@ -1559,7 +1595,60 @@ renderOption={option => <span style={{display: "flex", alignItems: "center", gap
         {label: "Default", node: () => <Navbar brand="My App"><NavLink to="/" spa>Home</NavLink><NavLink to="/docs" spa>Docs</NavLink></Navbar>, code: `<Navbar brand="My App"><NavLink to="/" spa>Home</NavLink><NavLink to="/docs" spa>Docs</NavLink></Navbar>`},
     ],
     Sidebar: [
-        {label: "Default", node: () => <Sidebar spa header="Sections" items={[{label: "Overview", to: "/"}, {label: "Settings", to: "/settings"}]}/>, code: `<Sidebar spa header="Sections" items={[{label: "Overview", to: "/"}, {label: "Settings", to: "/settings"}]}/>`},
+        {label: "Default", node: () => <div style={{display: "flex", height: "150px"}}><Sidebar spa header="Sections" items={[{label: "Overview", to: "/"}, {label: "Settings", to: "/settings"}]}/></div>, code: `<Sidebar spa header="Sections" items={[
+    {label: "Overview", to: "/"},
+    {label: "Settings", to: "/settings"}
+]}/>`},
+        {label: "Groups, a collapsible rail, a draggable edge and an account row", node: () => <div style={{display: "flex", height: "260px"}}><Sidebar
+            spa collapsible resizable
+            header="Workspace"
+            ariaLabel="Workspace"
+            collapseLabel="Collapse or expand the sidebar"
+            defaultWidth={210}
+            items={[
+                {key: "reports", label: "Reports", icon: "▤", defaultOpen: true, trailing: <Badge type="neutral">2</Badge>, children: [
+                    {label: "Daily", to: "/daily"},
+                    {label: "Weekly", to: "/weekly"},
+                ]},
+                {key: "people", label: "People", icon: "◔", children: [{label: "Members", to: "/members"}]},
+                {key: "settings", label: "Settings", icon: "◧", to: "/settings"},
+            ]}
+            profile={{
+                avatar: <Avatar initials="VD" size="1.9em"/>,
+                name: "Velo Designer",
+                detail: "design@velotype.dev",
+                menuAriaLabel: "Account",
+                menuItems: [
+                    {label: "Profile", onClick: () => {}},
+                    {label: "Appearance", children: [{label: "Light", onClick: () => {}}, {label: "Dark", onClick: () => {}}]},
+                    {label: "Sign out", dividerBefore: true, onClick: () => {}},
+                ],
+            }}/></div>, code: `<Sidebar
+    spa collapsible resizable
+    header="Workspace"
+    collapseLabel="Collapse or expand the sidebar"
+    items={[
+        {key: "reports", label: "Reports", icon: <I i="reports"/>, defaultOpen: true,
+            trailing: <Badge type="neutral">2</Badge>, children: [
+            {label: "Daily", to: "/daily"},
+            {label: "Weekly", to: "/weekly"}
+        ]},
+        {key: "settings", label: "Settings", icon: <I i="settings"/>, to: "/settings"}
+    ]}
+    profile={{
+        avatar: <Avatar initials="VD"/>,
+        name: "Velo Designer",
+        detail: "design@velotype.dev",
+        menuAriaLabel: "Account",
+        menuItems: [
+            {label: "Profile", onClick: () => {}},
+            {label: "Appearance", children: [
+                {label: "Light", onClick: () => {}},
+                {label: "Dark", onClick: () => {}}
+            ]},
+            {label: "Sign out", dividerBefore: true, onClick: () => {}}
+        ]
+    }}/>`},
     ],
     Menu: [
         {label: "Default", node: () => <Menu trigger="Actions" items={[{label: "Do a thing", onClick: () => {}}, {label: "Disabled", disabled: true}]}/>, code: `<Menu trigger="Actions" items={[{label: "Do a thing", onClick: () => {}}, {label: "Disabled", disabled: true}]}/>`},

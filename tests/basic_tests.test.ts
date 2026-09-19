@@ -1921,4 +1921,72 @@ describe('basic component rendering', () => {
         }
     })
 
+
+    /**
+     * The collapsed rail must be a clean column of icons, including for a group the reader left
+     * expanded - and it must still say which group holds the current page.
+     *
+     * The children of an open group are hidden with `display:none` rather than `visibility:hidden`
+     * for exactly this reason: under `visibility` they keep their height, so the rail grows a blank
+     * stretch where a group's entries would have been. Swapping that one declaration back reproduces
+     * it, as a gap several times the size of the others.
+     */
+    itWrap("a collapsed sidebar is an even rail of icons, and still marks the active group", "sidebar", "#full-sidebar", async (_selection: ElementHandle) => {
+        const read = () => page.evaluate(`(() => {
+            const scope = document.getElementById("showcase-theme-light").querySelector("#full-sidebar")
+            const nav = scope.querySelector("nav.vtd-sidebar")
+            const boxes = [...scope.querySelectorAll(".vtd-sidebar-icon")]
+                .map((i) => i.getBoundingClientRect()).filter((b) => b.height > 0)
+            const gaps = []
+            for (let i = 1; i < boxes.length; i++) { gaps.push(Math.round(boxes[i].top - boxes[i - 1].top)) }
+            return {
+                // The *declared* width, not the measured one: the panel transitions, and a
+                // transition never advances inside this suite, so a measured width would read as
+                // the pre-collapse value forever. The standalone check covers the geometry.
+                width: nav.style.width,
+                icons: boxes.length,
+                gaps,
+                visibleLinks: [...scope.querySelectorAll(".vtd-sidebar-link")]
+                    .filter((a) => a.checkVisibility({checkVisibilityCSS: true})).length,
+                collapseWords: scope.querySelector(".vtd-sidebar-collapse").innerText.trim(),
+            }
+        })()`) as Promise<{width: string, icons: number, gaps: number[], visibleLinks: number, collapseWords: string}>
+
+        const expanded = await read()
+        // "Reports" is defaultOpen, so its entries are on screen before anything is collapsed
+        if (expanded.visibleLinks == 0) {fail("ERROR: the expanded sidebar shows no entries at all")}
+        // The control is an icon, not a word - it cannot assume a language
+        if (expanded.collapseWords != "") {
+            fail(`ERROR: the collapse control renders text: ${JSON.stringify(expanded.collapseWords)}`)
+        }
+
+        await page.evaluate(`document.getElementById("showcase-theme-light").querySelector("#full-sidebar .vtd-sidebar-collapse").click()`)
+        // Move the pointer well clear, or hovering the rail expands it straight back
+        await page.mouse.move(700, 700)
+        const rail = await read()
+        if (rail.width != "56px") {fail(`ERROR: the collapsed rail declares a width of ${rail.width}`)}
+        if (rail.icons != 3) {fail(`ERROR: expected 3 icons on the rail, got ${rail.icons}`)}
+        if (rail.visibleLinks != 0) {
+            fail(`ERROR: ${rail.visibleLinks} entry links are still visible on the rail`)
+        }
+        const spread = Math.max(...rail.gaps) - Math.min(...rail.gaps)
+        if (spread > 4) {
+            fail(`ERROR: the rail's icons are unevenly spaced (${JSON.stringify(rail.gaps)}) - an expanded group is still taking height`)
+        }
+
+        // The active group has to be identifiable at rail width, where its label is not there to
+        // be tinted - this is the only thing saying which section the reader is in
+        const marked = await page.evaluate(`(() => {
+            const scope = document.getElementById("showcase-theme-light").querySelector("#full-sidebar")
+            const active = scope.querySelector(".vtd-sidebar-group-active")
+            if (!active) { return {count: 0, barWidth: 0} }
+            return {
+                count: scope.querySelectorAll(".vtd-sidebar-group-active").length,
+                barWidth: Math.round(parseFloat(getComputedStyle(active.querySelector(".vtd-tree-label"), "::after").width)),
+            }
+        })()`) as {count: number, barWidth: number}
+        if (marked.count != 1) {fail(`ERROR: ${marked.count} groups marked active on the rail, expected 1`)}
+        if (marked.barWidth < 1) {fail("ERROR: the active group's marker has no width on the rail")}
+    })
+
 })

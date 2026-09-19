@@ -1,9 +1,9 @@
 import { Component, getComponent, RenderBasic, setStylesheet } from "@velotype/velotype"
 import type { EmptyAttrs, RenderableElements } from "@velotype/velotype"
 
-import { Button, ColorScheme, Empty, highlightMatch, I, Link, NavLink, Navbar, searchHighlightCss, Text, TextBox, Tree } from "../../src/index.ts"
+import { Avatar, Button, ColorScheme, highlightMatch, I, Link, Navbar, searchHighlightCss, Sidebar, Text, TextBox } from "../../src/index.ts"
 import { categoryIconKey } from "./data/category-icons.ts"
-import type { TreeNodeType } from "../../src/index.ts"
+import type { SidebarItemType } from "../../src/index.ts"
 import { docBySlug, groupByGroupSlug, groupedDocs } from "./data/docs.tsx"
 import { HomePage } from "./pages/home.tsx"
 import { ComponentPage } from "./pages/component-page.tsx"
@@ -12,94 +12,46 @@ import { NotFoundPage } from "./pages/not-found.tsx"
 import { ThemeBuilderPage } from "./pages/theme-builder.tsx"
 
 /**
- * The grouped, searchable sidebar list of every documented component - a `Tree`, one branch per
- * category.
+ * The showcase's entries for `Sidebar`, rebuilt whenever the search changes.
  *
- * This is the showcase doing what it exists to do: using the package the way a consumer would. It
- * was a hand-rolled list of `<div>`s before, and moving it onto `Tree` is what surfaced three
- * things `Tree` was missing - see CLAUDE.md's Tree section.
+ * Everything this used to do by hand - the collapsible rail, the icons, the account row, the
+ * resize handle, marking the category that holds the current page - belongs to the component now.
+ * That is the point of the showcase: if a behaviour is worth having here it is worth having in the
+ * package, and a private copy is how the two drift apart.
  *
- * **No `onSelect`.** Each entry's `label` is a `NavLink`, which tracks `location.pathname` itself
- * and owns its own click; a leaf without `onSelect` is a plain container rather than something
- * claiming to be a button, so the link is the only control in the row. Passing `onSelect` here
- * would put a button around a link and fire both.
- *
- * `setFilter` rebuilds via `refresh()`, because a search edit genuinely changes which entries
- * exist. Losing the reader's expansions across that rebuild is the part that needed care:
- * `#openCategories` remembers what they opened, `getOpenKeys()` reads it back off the live tree
- * whenever they toggle, and the rebuild re-applies it through `defaultOpen`. While a filter is
- * active every surviving category opens instead, so a match is never hidden inside a collapsed
- * branch - typing "bu" opens Form so Button is visible without a second click.
+ * The open/closed state still lives here, because only this page knows what a filter means.
+ * `#openCategories` remembers what the reader expanded, read back off the live tree whenever they
+ * toggle; while a filter is active every surviving category is forced open, so a match is never
+ * hidden inside a collapsed group - typing "bu" opens Form so Button is visible without a second
+ * click.
  */
-class SidebarList extends Component<EmptyAttrs> {
-    #filterText = ""
-    /** What the reader has expanded, kept across the rebuilds a filter edit causes */
-    #openCategories = new Set<string>()
-    #tree?: Tree
-
-    setFilter(text: string) {
-        this.#filterText = text
-        this.refresh()
-    }
-
-    override render(): HTMLDivElement {
-        const filterLower = this.#filterText.trim().toLowerCase()
-        const filtering = filterLower.length > 0
-        const buckets = groupedDocs()
-            .map(bucket => ({group: bucket.group, docs: bucket.docs.filter(doc => doc.name.toLowerCase().includes(filterLower))}))
-            .filter(bucket => bucket.docs.length > 0)
-
-        if (buckets.length == 0) {
-            return <div class="vtd-showcase-sidebar-list">
-                <Empty description={`No components match "${this.#filterText}"`}/>
-            </div>
-        }
-
-        const nodes: TreeNodeType[] = buckets.map(bucket => ({
+function buildSidebarItems(filterText: string, openCategories: Set<string>): SidebarItemType[] {
+    const filterLower = filterText.trim().toLowerCase()
+    const filtering = filterLower.length > 0
+    return groupedDocs()
+        .map(bucket => ({group: bucket.group, docs: bucket.docs.filter(doc => doc.name.toLowerCase().includes(filterLower))}))
+        .filter(bucket => bucket.docs.length > 0)
+        .map(bucket => ({
             key: bucket.group,
-            // The category name links to its own page, and is also what toggles the branch: the
-            // click lands on the link, so Tree's summary handler sees defaultPrevented and leaves
-            // the toggle to the chevron and the rest of the row.
+            // The category name links to its own page and also toggles the group: the click lands
+            // on the link, so Tree's summary handler sees defaultPrevented and leaves the toggle
+            // to the chevron and the rest of the row.
             label: <Link spa to={categoryPageUrl(bucket.group)} class="vtd-showcase-sidebar-group-label">{bucket.group}</Link>,
-            // The icon is the whole row when the sidebar is collapsed to its rail, so it is not
-            // decoration - it is the only thing identifying the category at that width
-            leading: <I i={categoryIconKey(bucket.group)} class="vtd-showcase-sidebar-icon"/>,
+            icon: <I i={categoryIconKey(bucket.group)}/>,
             // Trailing, not leading: a count announced *before* the category name reads as
             // "3 Typography", and reordering a leading slot in CSS would leave that wrong for a
             // screen reader while looking right on screen
             trailing: <Text type="muted" class="vtd-showcase-sidebar-count">{bucket.docs.length}</Text>,
-            // A filter reveals every category that still has a match; otherwise the reader's own
-            // expansions are restored
-            defaultOpen: filtering || this.#openCategories.has(bucket.group),
+            defaultOpen: filtering || openCategories.has(bucket.group),
             children: bucket.docs.map(doc => ({
                 key: doc.slug,
+                to: `/components/${doc.slug}`,
                 // highlightMatch marks the substring that matched, so the reader can see *why* an
                 // entry survived the filter rather than having to work it out. It is the same
-                // helper Combobox, Command and both tables use, so a filtered list looks the same
-                // everywhere in the package.
-                label: <NavLink
-                    spa
-                    to={`/components/${doc.slug}`}
-                    activeClass="vtd-showcase-sidebar-item-active"
-                    class="vtd-showcase-sidebar-item">{highlightMatch(doc.name, filterLower)}</NavLink>,
+                // helper Combobox, Command and both tables use.
+                label: highlightMatch(doc.name, filterLower),
             })),
         }))
-
-        this.#tree = getComponent<Tree>(<Tree
-            class="vtd-showcase-sidebar-tree"
-            ariaLabel="Components by category"
-            nodes={nodes}
-            onToggle={() => {
-                // Read the whole state back rather than tracking one node's change: while a filter
-                // is active the tree holds categories the reader never opened, and only what they
-                // have open *now* should survive the filter being cleared.
-                if (this.#tree && !this.#filterText.trim()) {
-                    this.#openCategories = new Set(this.#tree.getOpenKeys())
-                }
-            }}/>)
-
-        return <div class="vtd-showcase-sidebar-list">{this.#tree}</div>
-    }
 }
 
 /** Swaps between Home / a component's detail page / Not Found based on `location.pathname` */
@@ -161,6 +113,24 @@ function saveSidebarCollapsed(collapsed: boolean) {
     } catch { /* private browsing with storage disabled - the toggle still works for this session */ }
 }
 
+const sidebarWidthKey = "vtd-showcase-sidebar-width"
+
+/** The width the reader last dragged the sidebar to */
+function loadSidebarWidth(): number {
+    try {
+        const stored = Number(localStorage.getItem(sidebarWidthKey))
+        return Number.isFinite(stored) && stored > 0 ? stored : 250
+    } catch {
+        return 250
+    }
+}
+
+function saveSidebarWidth(width: number) {
+    try {
+        localStorage.setItem(sidebarWidthKey, String(width))
+    } catch { /* as above - the drag still works, it just isn't remembered */ }
+}
+
 let areShellStylesMounted = false
 
 /**
@@ -171,7 +141,10 @@ let areShellStylesMounted = false
  */
 export class AppShell extends Component<EmptyAttrs> {
     #root: HTMLDivElement
-    #sidebarList: SidebarList
+    #sidebar: Sidebar
+    /** What the reader has expanded, kept across the item rebuilds a search edit causes */
+    #openCategories = new Set<string>()
+    #filterText = ""
 
     constructor(attrs: EmptyAttrs, children: RenderableElements[]) {
         super(attrs, children)
@@ -185,9 +158,13 @@ export class AppShell extends Component<EmptyAttrs> {
 .vtd-showcase-header-link{color:inherit;text-decoration:none;font-size:0.9em;padding:0.4em 0.6em;border-radius:0.25rem;}
 .vtd-showcase-header-link:hover{background-color:var(--background-2);}
 .vtd-showcase-body{display:flex;flex-grow:1;min-height:0;}
-.vtd-showcase-sidebar-wrapper{
-width:250px;
-flex-shrink:0;
+/*
+ * Sidebar owns the panel, the rail, the collapse control, the resize handle and the account row.
+ * What is left here is the page's placement of it - sticky under the header, in the chrome layer -
+ * plus the few things that are genuinely this site's own: the search box, the category label and
+ * the per-category count.
+ */
+.vtd-showcase-sidebar{
 position:sticky;
 top:53px;
 /* The chrome layer - see the note on .vtd-showcase-main. Same value as the header, because they
@@ -195,69 +172,8 @@ top:53px;
 z-index:1;
 align-self:flex-start;
 height:calc(100vh - 53px);
-transition:width 0.18s ease-in-out;
 }
-/*
- * The panel is absolutely positioned inside the wrapper so that expanding it on hover lays it
- * *over* the page rather than shoving the content sideways. The wrapper keeps the gutter; only
- * the panel grows. position:sticky on the wrapper makes it the containing block for this.
- */
-.vtd-showcase-sidebar-panel{
-position:absolute;
-inset-block:0;
-inset-inline-start:0;
-width:250px;
-display:flex;
-flex-direction:column;
-background-color:var(--background);
-border-inline-end:1px solid var(--background-4);
-overflow:hidden;
-transition:width 0.18s ease-in-out, box-shadow 0.18s ease-in-out;
-}
-/*
- * Collapsed, the wrapper is a 56px rail and the panel matches it - wide enough for the category
- * icons and nothing else. Hover or keyboard focus floats the full panel back out over the page;
- * focus-within matters as much as hover, or the sidebar would be unusable from the keyboard.
- */
-.vtd-showcase-sidebar-collapsed{width:56px;}
-.vtd-showcase-sidebar-collapsed .vtd-showcase-sidebar-panel{width:56px;}
-.vtd-showcase-sidebar-collapsed:hover .vtd-showcase-sidebar-panel,
-.vtd-showcase-sidebar-collapsed:focus-within .vtd-showcase-sidebar-panel{
-width:250px;
-box-shadow:0 2px 14px rgba(0,0,0,0.18);
-}
-/*
- * Everything except the icons is hidden at rail width. visibility rather than display:none:
- * the rows keep their layout, so nothing jumps as the panel slides open, and a screen reader still
- * reaches the labels.
- */
-.vtd-showcase-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-showcase-sidebar-search,
-.vtd-showcase-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-tree-label-main,
-.vtd-showcase-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-tree-trailing,
-.vtd-showcase-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-disclosure-content{
-visibility:hidden;
-}
-/* The chevron is meaningless on a rail of icons */
-.vtd-showcase-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-tree-label::before{opacity:0;}
-.vtd-showcase-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-showcase-sidebar-icon{font-size:1.35em;}
-/* The toggle sits at the foot of the panel, out of the way of the list */
-.vtd-showcase-sidebar-toggle-row{
-border-block-start:1px solid var(--background-4);
-padding:0.5em;
-flex-shrink:0;
-}
-.vtd-showcase-sidebar-toggle{width:100%;}
-.vtd-showcase-sidebar-search{padding:0.75em;border-block-end:1px solid var(--background-4);}
 .vtd-showcase-sidebar-search .vtd-text-box{width:100%;margin-inline-start:0;box-sizing:border-box;}
-.vtd-showcase-sidebar-list{overflow-y:auto;flex-grow:1;padding-block-end:1em;}
-/*
- * Tree supplies the disclosure, the chevron and the indentation; these rules restyle it for a
- * navigation sidebar rather than a file listing. Targeting Tree's classes is the supported way to
- * do that - the class is the API, the tag it happens to render is not.
- */
-.vtd-showcase-sidebar-tree{padding:0.5em 0.35em;}
-/* A category row: small caps, and the whole row is the hit target for the disclosure */
-.vtd-showcase-sidebar-tree .vtd-tree-label{padding:0.5em 0.55em;}
 .vtd-showcase-sidebar-group-label{
 font-size:0.75em;
 font-weight:bold;
@@ -267,43 +183,7 @@ color:var(--background-9);
 text-decoration:none;
 }
 .vtd-showcase-sidebar-group-label:hover{color:var(--primary-8);}
-/* Tree's own trailing slot already sits at the far edge; this only sizes it */
-.vtd-showcase-sidebar-tree .vtd-tree-trailing{font-size:0.75em;}
-/* A leaf is only a wrapper here - the NavLink inside it is the whole row */
-.vtd-showcase-sidebar-tree .vtd-tree-leaf{padding:0;margin-inline-start:0.6em;border-radius:0;}
-.vtd-showcase-sidebar-tree .vtd-tree-leaf:hover{background-color:transparent;}
-.vtd-showcase-sidebar-tree .vtd-tree-children{padding-inline-start:0.75em;}
-.vtd-showcase-sidebar-item{
-display:block;
-padding:0.35em 0.6em;
-border-radius:0.25rem;
-color:inherit;
-text-decoration:none;
-font-size:0.95em;
-}
-.vtd-showcase-sidebar-item:hover{background-color:var(--background-2);}
-.vtd-showcase-sidebar-item-active{background-color:var(--primary-2);font-weight:bold;}
-/*
- * The page's content is one layer. Two rules make that true, and they are the whole of this
- * stylesheet's stacking story - there are no other z-index values anywhere in the showcase.
- *
- * isolation:isolate makes main a stacking context, so a positioned descendant inside the page
- * cannot rank itself against anything outside it. Without this, DataTable's column menu carries
- * z-index:1000 and would paint straight over the site header.
- *
- * The chrome then sits one step above that, which is where the single remaining z-index goes. It
- * cannot be avoided: same-level positioned elements paint in DOM order, and the sidebar comes
- * *before* main in the markup because it is navigation. Moving it after main would fix the paint
- * order for free, but a keyboard user would then have to tab through the entire page to reach the
- * nav, which costs more than the declaration saves.
- *
- * What was here before was two values, 2 and 3, and neither did anything useful. The panel's 3 was
- * inert: its wrapper is position:sticky, which is already a stacking context, so the 3 only ranked
- * the panel against its own siblings inside the sidebar. Meanwhile Button is position:relative to
- * host its loading spinner, so every button in the page was a positioned element painting after
- * the aside in DOM order - which is why Save and Cancel sat on top of the expanded sidebar, and
- * why no number on the panel could have fixed it.
- */
+.vtd-showcase-sidebar-count{font-size:0.75em;}
 .vtd-showcase-main{flex-grow:1;min-width:0;isolation:isolate;}
 /*
  * The frame every routed page draws itself in. It belongs to the shell rather than to any one
@@ -324,28 +204,45 @@ ${searchHighlightCss}
             placeholder="Search components..."
             class="vtd-showcase-search"
             onInput={(event: Event) => {
-                if (event.target instanceof HTMLInputElement) { this.#sidebarList.setFilter(event.target.value) }
+                if (event.target instanceof HTMLInputElement) { this.#setFilter(event.target.value) }
             }}/>
 
-        this.#sidebarList = getComponent<SidebarList>(<SidebarList/>)
         const content = getComponent<ContentArea>(<ContentArea/>)
 
-        // The collapse toggle flips one class on the wrapper rather than re-rendering anything.
-        // Rebuilding the sidebar here would throw away the reader's expansions and their search,
-        // and the change is purely presentational - exactly the case for a class toggle.
-        const collapseLabel = new RenderBasic<string>(loadSidebarCollapsed() ? "Expand" : "Collapse")
-        const collapseToggle: HTMLButtonElement = <Button
-            type="text"
-            class="vtd-showcase-sidebar-toggle"
-            ariaLabel="Collapse or expand the sidebar"
-            onClick={() => {
-                const wrapper = collapseToggle.closest(".vtd-showcase-sidebar-wrapper") as HTMLElement
-                const collapsed = wrapper.classList.toggle("vtd-showcase-sidebar-collapsed")
-                collapseLabel.value = collapsed ? "Expand" : "Collapse"
-                collapseToggle.setAttribute("aria-expanded", collapsed ? "false" : "true")
-                saveSidebarCollapsed(collapsed)
-            }}>{collapseLabel}</Button>
-        collapseToggle.setAttribute("aria-expanded", loadSidebarCollapsed() ? "false" : "true")
+        this.#sidebar = getComponent<Sidebar>(<Sidebar
+            spa
+            collapsible
+            resizable
+            class="vtd-showcase-sidebar"
+            ariaLabel="Components by category"
+            collapseLabel="Collapse or expand the sidebar"
+            header={<div class="vtd-showcase-sidebar-search">{searchInput}</div>}
+            items={buildSidebarItems("", this.#openCategories)}
+            defaultCollapsed={loadSidebarCollapsed()}
+            onCollapsedChange={saveSidebarCollapsed}
+            defaultWidth={loadSidebarWidth()}
+            onWidthChange={saveSidebarWidth}
+            onToggle={() => {
+                // Only what the reader has open with *no* filter applied is worth remembering:
+                // while a filter is active the sidebar holds categories it forced open for them
+                if (!this.#filterText.trim()) {
+                    this.#openCategories = new Set(this.#sidebar.getTree().getOpenKeys())
+                }
+            }}
+            profile={{
+                avatar: <Avatar initials="VD" size="1.9em"/>,
+                name: "Velo Designer",
+                detail: "design@velotype.dev",
+                menuAriaLabel: "Account",
+                menuItems: [
+                    {label: "Theme builder", href: "/theme", spa: true},
+                    {label: "Appearance", children: [
+                        {label: "Light", onClick: () => ColorScheme.setColorScheme("light")},
+                        {label: "Dark", onClick: () => ColorScheme.setColorScheme("dark")},
+                    ]},
+                    {label: "velodesign on JSR", dividerBefore: true, href: "https://jsr.io/@velotype/velodesign"},
+                ],
+            }}/>)
 
         const darkModeLabel = new RenderBasic<string>(ColorScheme.getColorScheme() == "light" ? "off" : "on")
         const themeToggle = <Button type="secondary" onClick={() => {
@@ -370,16 +267,23 @@ ${searchHighlightCss}
                 {themeToggle}
             </Navbar>
             <div class="vtd-showcase-body">
-                <aside class={`vtd-showcase-sidebar-wrapper${loadSidebarCollapsed() ? " vtd-showcase-sidebar-collapsed" : ""}`}>
-                    <div class="vtd-showcase-sidebar-panel">
-                        <div class="vtd-showcase-sidebar-search">{searchInput}</div>
-                        {this.#sidebarList}
-                        <div class="vtd-showcase-sidebar-toggle-row">{collapseToggle}</div>
-                    </div>
-                </aside>
+                {this.#sidebar}
                 <main class="vtd-showcase-main">{content}</main>
             </div>
         </div>
+    }
+
+    /**
+     * Re-filters the list.
+     *
+     * `setItems` rather than a re-render: the search box lives in the sidebar's `header`, so
+     * rebuilding the whole component would destroy the input the reader is typing into.
+     */
+    #setFilter(text: string) {
+        this.#filterText = text
+        // buildSidebarItems decides what is open through defaultOpen: every surviving category
+        // while a filter is active, and otherwise whatever the reader had expanded
+        this.#sidebar.setItems(buildSidebarItems(text, this.#openCategories))
     }
 
     override render(): HTMLDivElement {
