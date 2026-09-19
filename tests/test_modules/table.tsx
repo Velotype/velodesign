@@ -26,6 +26,17 @@ class TableGallery extends Component<EmptyAttrs> {
                     {key: "status", header: "Status", render: row => <Badge type={row.status == "active" ? "secondary" : "neutral"}>{row.status}</Badge>, align: "end"},
                 ]}
                 rows={rows}/></div>
+
+            <h3>Declared column widths</h3>
+            {/* A declared width switches the table to fixed layout, so the long value in the last
+                column wraps inside its cell rather than widening the column it sits in. */}
+            <div id="sized-table"><Table<PersonRow>
+                columns={[
+                    {key: "name", header: "Name", width: "50%", render: row => row.name},
+                    {key: "role", header: "Role", width: 90, render: row => row.role},
+                    {key: "status", header: "Status", render: row => `${row.status}-with-a-deliberately-long-unbroken-value`},
+                ]}
+                rows={rows}/></div>
         </div>
     }
 }

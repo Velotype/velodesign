@@ -66,7 +66,10 @@
         "bundle-button-group": "deno bundle ./test_modules/button-group.tsx --output ./build/button-group.js --sourcemap=linked",
         "bundle-data-table": "deno bundle ./test_modules/data-table.tsx --output ./build/data-table.js --sourcemap=linked",
         "bundle-async-data-table": "deno bundle ./test_modules/async-data-table.tsx --output ./build/async-data-table.js --sourcemap=linked",
-        "bundle-charts": "deno bundle ./test_modules/charts.tsx --output ./build/charts.js --sourcemap=linked"
+        "bundle-charts": "deno bundle ./test_modules/charts.tsx --output ./build/charts.js --sourcemap=linked",
+        "bundle-typography": "deno bundle ./test_modules/typography.tsx --output ./build/typography.js --sourcemap=linked",
+        "bundle-layout": "deno bundle ./test_modules/layout.tsx --output ./build/layout.js --sourcemap=linked",
+        "bundle-code-block": "deno bundle ./test_modules/code-block.tsx --output ./build/code-block.js --sourcemap=linked"
     },
     "compilerOptions": {
         "jsx": "react-jsx",

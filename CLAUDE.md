@@ -12,11 +12,13 @@
 
   | Folder | Holds |
   |---|---|
+  | `typography/` | Heading, Text, Paragraph |
+  | `layout/` | Stack, Grid |
   | `form/` | Button, Checkbox, Select, TextBox, the text form fields … |
   | `navigation/` | NavLink, Breadcrumbs, Navbar, Sidebar, Menu, Steps, PageSelector |
   | `feedback/` | Alert, Toast, Tooltip, Spinner, Progress, Skeleton, Empty |
   | `overlays/` | Modal, Drawer, Popover, Popconfirm, ContextMenu, Command |
-  | `data-display/` | Badge, Card, Table, DataTable, AsyncDataTable, Calendar, Tree, Resizable … |
+  | `data-display/` | Badge, Card, Table, DataTable, AsyncDataTable, CodeBlock, Calendar, Tree, Resizable … |
   | `data-entry/` | DatePicker, Slider, Combobox, Upload, Rate, Form |
   | `charts/` | LineChart, AreaChart, BarChart, PieChart, Gauge, Sparkline |
   | `utility/` | Icon |
@@ -78,6 +80,37 @@ possible DOM update, so it is the first thing to rule out.
 2. **Keep every consumer-supplied panel mounted permanently, toggle which one is visible with a CSS class.** `Tabs` and `Carousel` both do this now: every tab's `content` / every carousel `slide` is built once in the constructor and stays in the DOM the whole time (same trade-off `Accordion` already made for its sections, via native `<details>`), and switching just toggles a `-active` class on the relevant button/panel pair — the previously-visible one is never torn down, so whatever state it held (typed text, scroll position, a mid-flow child component) survives being switched away from and back to. This does mean *all* panels/slides get constructed up front rather than lazily — an accepted trade-off, matching `Accordion`'s.
 
 The only components still calling `refresh()` are `Calendar` (`#changeMonth`) — its attrs (`value: Date`, `onSelectDate`) don't accept any consumer content at all, every rendered cell is self-generated, so there's no external state at risk and a full re-render is the simplest correct option.
+
+## Typography and layout are the package's primitives
+
+Everything else composes from these two, which is why they sit first in the showcase.
+
+**Typography exists to close one specific trap.** `muted` is `var(--background-6)`, never
+`var(--text-alt)` - despite the name, `--text-alt` is the *inverse* text colour, so muted text
+styled with it is nearly invisible in dark mode. That was documented in prose and rediscovered
+anyway; `<Text type="muted">` encodes it. `Heading` requires its `level` rather than defaulting,
+because a default quietly produces a second `<h1>` on a page that already has one, and size comes
+from the level so the visual hierarchy and the document outline cannot disagree.
+
+**`Stack` and `Grid` are the components that replace `style={{display: "flex", gap: "0.5rem"}}`.**
+Everything they do is a one-line CSS rule - the value is that every consumer spells it the same
+way and draws gaps from one scale, so two rows that look "the same" are. This is the gap shadcn
+doesn't have because it assumes Tailwind; a package that ships its own CSS has to own spacing or
+every consumer reinvents it.
+
+**The spacing scale is in `em`, not `px`** (`layout/spacing.ts`): a gap that doesn't scale with its
+container's type is wrong the moment a consumer scales their typography. Six steps, `none` through
+`xl`, and any component may take a raw CSS length when it genuinely needs one. If a third component
+needs spacing, take it from here rather than inventing a value.
+
+Two behaviours worth knowing before you debug them:
+
+- **A column `Stack` stretches its children** - flexbox's own default, right for stacking cards or
+  form fields, surprising for badges. `align="start"` is the fix, and the gallery shows both.
+- **`Grid` defaults to `minColumnWidth`, not `columns`.** Auto-fill reflows without a media query;
+  a fixed count has to be re-chosen at every breakpoint. A `Grid` showing one column in a narrow
+  container is working correctly - a test that asserts a track *count* rather than that the count
+  follows the width will fail at the suite's 400px viewport, which is exactly what happened here.
 
 ## Interaction must only touch the DOM that actually changed
 
@@ -202,6 +235,121 @@ When adding a new component with any button/placeholder/label content, ask "what
 ## The `XThemeOptions` escape hatch
 
 A handful of components need a small piece of glyph/icon-ish content with no baked-in icon-font dependency: `ButtonThemeOptions.spinner`, `DataTableThemeOptions.columnsSymbol`/`.emptySymbol`, `ModalThemeOptions.closeSymbol`/`.cancelSymbol`, `AlertThemeOptions.dismissSymbol`, `TagThemeOptions.removeSymbol`, `ToastThemeOptions.dismissSymbol`, `DrawerThemeOptions.closeSymbol`, `PopconfirmThemeOptions.confirmSymbol`/`.cancelSymbol`, `PaginationThemeOptions.prevSymbol`/`.nextSymbol`, `EmptyThemeOptions.image`, `TextFormFieldOptions.check`/`.xmark`/`.edit` (note: this one predates the `XThemeOptions` naming and doesn't have "Theme" in its name — a known inconsistency, not a pattern to copy the *name* of, just be aware it exists). Each is an exported, mutable object of `FunctionComponent<EmptyAttrs>` defaults that a consumer can override wholesale (`ButtonThemeOptions.spinner = () => <MyIcon/>`) to reskin that one piece across every instance, without needing a per-instance prop. Add one of these when a component needs a small overridable visual (not for anything structural) - it's also the standard mechanism for satisfying the language-agnostic-defaults rule above whenever the default is a button/content symbol rather than a placeholder or ARIA label.
+
+## Animation
+
+Every animated component in this package is subject to the following, and the first rule is the one
+that has actually bitten:
+
+### The animated element must stay rendered for the whole transition
+
+**Un-rendering an element mid-transition does not cancel that transition - it leaves it pending
+forever**, at `playState: "running"` with `startTime: null`, and that also pins the element's
+*computed* style at the values it had when it stopped rendering. The symptom is not "no animation";
+it is an animation that works once and then never again, because the next change has nothing to
+transition from.
+
+That is exactly what happened to `Collapse`/`Accordion`: removing `<details open>` stops the
+browser rendering that subtree, so the close transition never started, the computed
+`grid-template-rows` stayed at the open value, and every toggle after the first snapped. It had
+been there since `Accordion` was written and no test caught it, because every test toggled a
+disclosure exactly once.
+
+Anything that stops an element rendering does this: `display:none`, removing `<details open>`,
+closing a `<dialog>`, or detaching the node. **Where that lands in this package:**
+
+| Pattern | Components | Today |
+|---|---|---|
+| `display:none` panel | `Popover`, `Popconfirm`, `ContextMenu`, `Menu`, `SelectMenu`, `Combobox`, `Tabs` | No exit animation - safe, but adding a `transition` alone would silently do nothing |
+| `<dialog>` | `Modal`, `Drawer`, `Command` | Enter-only (`Drawer`'s keyframes); a close animation needs sequencing |
+| `<details open>` | `Collapse`, `Accordion` | Fixed - the close is sequenced in `disclosure-view.tsx`'s `animateClosed` |
+| Always-rendered element | `Tree`'s chevron (a `::before` on the `<summary>`), `Tooltip` | Safe by construction |
+
+**Three ways out, in order of preference:**
+
+1. **Animate something that never un-renders.** `Tree`'s chevron lives on the `<summary>`, which is
+   always rendered, so its rotate works every time - verified, zero stuck animations across four
+   toggles. This is why an enter-only animation (`Drawer`, `Toast`) is never a problem.
+2. **Hide with `visibility`/`opacity` rather than `display`.** `Tooltip` transitions
+   `opacity 0.15s, visibility 0.15s` - the element keeps rendering, so both directions animate.
+3. **Sequence it in JS** when the element genuinely must stop rendering: hold the rendered state,
+   apply a class that animates it to the hidden values, and only un-render on `transitionend` -
+   always with a timer fallback, since an interrupted or zero-duration transition fires no event.
+   `animateClosed` is the worked example. Reach for this last; it costs real complexity, listed
+   below.
+
+**What sequencing costs, so it is a deliberate choice:**
+
+- **State lags the interaction.** `details.open` now stays `true` for the duration of the close.
+  Anything reading it straight after a click sees the old value; an existing test asserted exactly
+  that and had to re-read.
+- **Native grouping stops being usable.** `<details name>` closes a grouped sibling itself,
+  instantly and ahead of any handler, so the displaced section snapped while the clicked one
+  animated. `Accordion` had to take the grouping over in JS.
+- **A doc comment claiming "pure CSS, no JS" becomes false.** Both files claimed it; both were
+  wrong once the close was sequenced, and both were corrected.
+
+### Honour `prefers-reduced-motion`
+
+`@media (prefers-reduced-motion: reduce){ ... transition:none; }` beside the component's own rules -
+`charts/chart-common.ts` and `data-display/data-table-view.tsx` set the pattern, and
+`disclosure-view.tsx` follows it. **Most animating components still do not**, which is a real gap
+worth closing as they are touched rather than in one sweep.
+
+A sequenced animation needs the JS side too, not just the CSS: with the transition zeroed, no
+`transitionend` fires, so `animateClosed` checks
+`matchMedia("(prefers-reduced-motion: reduce)")` and finishes immediately instead of waiting out
+its fallback timer, which would otherwise read as an unexplained delay.
+
+### Verify animation with `getAnimations()`, never by eye
+
+`element.getAnimations()` is the only check that distinguishes "finished" from "stuck": a healthy
+interaction leaves **zero** animations behind once it settles, and the bug's signature is an entry
+with `startTime == null` that never clears. A screenshot cannot see this, and neither can an
+assertion about rendered content. Read it directly rather than inferring from what the element
+looks like.
+
+⚠️ **Transitions do not progress at all inside this test suite.** `requestAnimationFrame` never
+ticks, computed values stay at their start, and any in-page promise running more than about a
+second trips Astral's own `evaluate` deadline with `RetryError` (the *function* form of
+`page.evaluate` awaits a returned promise; the string form does not - that difference cost three
+failed attempts). So split the assertion:
+
+- **In the suite**, assert the frame-independent contract: that the interaction was intercepted,
+  that it takes the transition's own wall time rather than completing instantly (throttling can
+  only stretch that, never shorten it), and that it holds on *every* cycle rather than the first.
+- **In a standalone script**, assert the visual half by sampling per frame, where rAF does tick -
+  the disclosure measured 12-13 distinct heights on every open and close.
+
+**Always run the interaction at least three times.** A single toggle is what hid this bug for the
+entire life of `Accordion`.
+
+## Two components sharing one look: `Collapse` / `Accordion`
+
+The same split, and the second time this pattern has earned its keep. `Collapse` is one section a
+consumer places anywhere and fills with `children`; `Accordion` renders a whole list from `items`
+and can group it with the native `<details name>` attribute so only one section stays open.
+
+**Neither is a special case of the other**, which is the question to answer before merging them:
+`exclusive` belongs to the *set*, so three `Collapse`es cannot express it, and `Accordion` owns the
+list (spacing, `:last-child`) and takes no `children`, so it cannot sit inline where a `Collapse`
+does. The APIs are genuinely different shapes over one widget.
+
+**The implementation was the problem, not the split.** They had a stylesheet each; five of
+`Collapse`'s eight rules were byte-identical to `Accordion`'s after unprefixing, and they had
+already diverged where it showed - measured live, `Accordion` animated open over 200ms
+(`grid-template-rows: minmax(0,0fr)` → `minmax(0,1fr)`) while `Collapse` snapped. Choosing a
+component on the shape of its API silently chose an open/close behaviour too. `data-display/disclosure-view.tsx`
+(internal, not exported) now holds the one stylesheet, the section builder and the layout flush;
+each component keeps only what belongs to it - `Accordion`'s item spacing and group name.
+
+Note this was a deliberate **behaviour change**, not pure refactoring: `Collapse` gained the 200ms
+animated open it should always have had. `basic_tests.test.ts`'s "Collapse and Accordion render the
+same disclosure widget" compares the computed transition, display, padding, chevron size, border
+and radius across the two gallery pages, so the drift cannot come back.
+
+See **Animation** below for why `Collapse`'s close needs JS at all, and what that
+costs - it is a general trap, not a disclosure one.
 
 ## Two components sharing one look: `DataTable` / `AsyncDataTable`
 
@@ -342,6 +490,139 @@ Every component gets the same fan-out, even though not every component gets dedi
 4. `tests/base_server.ts` — add `<name>` to the `setOfModules` array (nothing else in that file needs to change; routing/script-tag serving is already generic over that list).
 5. `tests/test_modules/showcase.tsx` — a short section alongside the other components, for a combined at-a-glance view.
 6. `tests/basic_tests.test.ts` gets new `itWrap(...)` assertions **only** for components with real interactive/stateful behavior worth regression-testing (state that changes on click, a value that updates, an open/closed toggle) — not for every component. Purely visual/static ones (`Badge`, `Card`, `Divider`, `Breadcrumbs`, `Navbar`, `Sidebar`, `Spinner`, `Avatar`) are gallery-only, no assertions.
+
+## A column width belongs on the column, not in the consumer's CSS
+
+`Table`'s `TableColumnType.width` takes a number (px, matching `DataTable`'s) or any CSS length
+string, so `"15%"` and `"12em"` work - `DataTable` is px-only because it does arithmetic on the
+value mid-drag, and nothing in `Table` is resizable.
+
+**Declaring a width on any column switches the whole table to `table-layout: fixed`**, and that is
+the part worth knowing: under the browser's default auto layout a column is sized to its widest
+cell and a declared width is only a hint, so one long value still widens its column and squeezes
+its neighbours. The attr would appear to do nothing in exactly the case you reached for it. Under
+fixed layout the columns that declare no width share what's left, headers stop being `nowrap` and
+cells break long words - without those two, a narrow fixed column's content overflows its own cell.
+A table that declares no widths gets neither the class nor a `<colgroup>`, so nothing changes for
+every existing caller. The showcase reached for consumer-side `nth-child` CSS first; that was the
+wrong layer, and the fix belonged here.
+
+## `CodeBlock` highlights with its own scanner, on purpose
+
+`data-display/code-block.tsx` holds a ~60-line tokenizer rather than importing Prism or
+highlight.js, because a highlighting library is a runtime dependency and this package has none.
+`CodeLanguage` is therefore three values - `tsx` (which also covers TS, JS and JSON), `css`,
+`plain` - not thirty: a grammar that is good enough to read and honest about its limits beats one
+that claims thirty languages and gets most of them subtly wrong.
+
+Two properties matter more than the colours, and both have tests:
+
+- **Tokenizing is lossless.** Every character of the input lands in exactly one token, including
+  the gaps no branch matches - those are emitted as unstyled text before the next match. A scanner
+  that drops them looks perfect until someone copies the snippet and it will not compile; deleting
+  that one `if` makes the whole sample render as `import{Button,Stack}from"..."` with every space
+  and newline gone, which is what the test asserts against.
+- **Line numbers are a CSS counter**, not a column of text, so selecting the block copies the code
+  alone. Regrouping tokens into lines has to *split* runs that straddle a newline (a block comment,
+  a template literal) rather than assume tokens and lines align - they don't, and assuming so drops
+  the middle of every multi-line comment.
+
+Do not reach for brace-balancing to parse this file's own source. An apostrophe in JSX prose
+("doesn't") reads as a string delimiter and swallows the rest of the file - that is why the
+showcase's snippet generator keys off line structure instead.
+
+### `showcase/` is built out of this package, deliberately
+
+The showcase app is a real consumer of velodesign, not a page that merely displays it: its chrome
+and every page are `Navbar`/`NavLink`/`Heading`/`Text`/`Paragraph`/`Stack`/`Grid`/`Link`/`Empty`,
+and what's left in its own `setStylesheet` blocks is six `display:flex|grid` rules, each a piece of
+structural glue no component owns (the shell's `100vh` column, the sidebar's sticky scroll column,
+the dotted example frame) and each carrying a comment saying so. **Keep it that way** - it is the
+only place the package is used the way a consumer uses it, and it earns its keep:
+
+- Dogfooding is what found `Link` rendering an `<a>` with **no class at all** - the one component a
+  consumer had nothing to target, against this file's own "never a bare unprefixed class" rule. It
+  emits `vtd-link` now, still with no stylesheet of its own.
+- A page reaching into a component should target its **class** (`.vtd-heading-2`), never the tag it
+  happens to render (`h2`). The tag is an implementation detail; the class is the API.
+- `Stack` does not replace *everything*. A row that must be a `<label>` (so clicking the text
+  focuses the control) stays a `<label>`, because `Stack` renders a `<div>` - theme-builder's
+  colour fields are the worked example.
+
+**A component page documents `children` in its own section, never as a row in the attributes
+table.** Children are passed by nesting content inside the tags; listing them beside real named
+attributes told the reader to write `children={...}`, the one thing no component here accepts.
+`ComponentDoc.children` carries that prose, and only the 8 genuinely *named* attrs that happen to
+end in `Children` (`confirmButtonChildren`, `columnToggleChildren`, …) stay in the table.
+
+**A default belongs in the `defaultValue` column, never mid-sentence in the description.** The
+table is scanned, not read, and "what happens if I leave this out" was buried in prose.
+
+**An attr has a default whenever the component behaves as though one were passed, whether or not
+the source writes it down.** The clearest case is an optional boolean: `disabled` unset is falsy,
+so `Button` behaves exactly as if given `false`, and an em dash there hid a fact the reader needed.
+All 38 such rows now say `false`, which took documented defaults from 113 to 153.
+
+Two things to do rather than assume, both of which caught something here:
+
+- **Check the inverse before bulk-applying.** Not every optional boolean is `false`:
+  `grep -rnE '\?\? true|!== false' src/` finds the ones that aren't - `showColumnToggle`,
+  `beginAtZero`, `searchable`, `resizableColumns`, `showLast`, `showPercent`, `showRange`,
+  `showDots`, `highlightOnHover`. All were already documented; had one not been, defaulting it to
+  `false` would have published the opposite of the truth.
+- **Diff the source's fallbacks against the documented defaults.** Every `attrs.x ?? y` in `src/`
+  is a default; cross-referencing those against the table found six the docs were silent on, of
+  which `Calendar.value ?? today` and `AsyncDataTable.noMatchMessage ?? emptyMessage` were real.
+  The others (`?? null`, `?? []`, `?? {}`) are absences, not values, and correctly stay em dashes.
+
+**"There is no default" has exactly one spelling: an omitted `defaultValue`, rendered as an em
+dash.** A required attr and an attr the component deliberately leaves unset (every ARIA label and
+placeholder here) are the same fact from the reader's side, and spelling one of them as the word
+"none" made the table look like it was drawing a distinction the reader then had to decode. It also
+collided with `none` as a genuine value - `resize` and `display` both take it. Conditional defaults
+("true for a row, never for a column") stay whole and un-monospaced: they are prose, and code type
+would claim they were something you could pass.
+
+**Required is a marker on the name, not prose and not a column.** 60 of 335 rows are required, so
+marking the exception keeps the signal sparse and visible; a fifth column would have been 275 em
+dashes. Optional carries no marker at all, which matches how the attrs types are written
+(`foo?: string`). It was `(required).` appended to the description before - the one place a reader
+scanning a table cannot see it.
+
+**Three things are not attributes, and none of them belong in that table.** Each got its own
+representation because putting it in a column headed "Attribute" told the reader to pass it as one:
+
+| Not an attribute | Where it goes |
+|---|---|
+| `children` | Its own Children section (see above) |
+| A method - `showModal()`, `close()` | Its own Methods section, `ComponentDoc.methods` |
+| A function - `showToast` | `kind: "function"`: a Function badge, a Signature block, and its table headed **Parameters** rather than Attributes |
+
+`Toast` is the worked example of the last one. It has no JSX tag, no attributes and no children -
+it is *called* - and its page had been documenting `showToast(message, options)` as if it were an
+attribute of a component named Toast. Anything else the package exports as a function rather than a
+component goes in `functionDocs` and gets the same treatment for free.
+
+**One row per attribute, never two.** `prevButtonChildren / nextButtonChildren` in a single row
+saved a line and cost the reader the ability to search the table for the attr they were holding -
+and it forced one description to cover two things, which is how "Input/change handlers." ended up
+saying nothing about when either fires. Splitting the twenty combined rows turned 317 rows into
+341 and is worth every one.
+
+**Every example carries a `code` snippet, and the field is required so a missing one is a type
+error.** The snippets were lifted out of the JSX that builds each example rather than hand-written,
+so they started faithful; they can still drift, because `node` is a compiled factory and there is
+no way to recover its source at runtime. Edit the two together. Prefer trimming showcase
+scaffolding (a `<div style={row}>` that only lays the preview out) over adding anything that
+teaches nothing about the component.
+
+⚠️ **`Theme` puts `transition: color 0.25s` on `body`.** Anything inheriting body's colour is
+mid-animation for a moment after a theme toggle, so a screenshot or a `getComputedStyle` taken
+right after the click reads the *previous* theme's text colour on the new theme's ground - dark on
+dark, indistinguishable from a real contrast bug, and it cost a debugging detour here. Poll until
+`getComputedStyle(document.body).color` stops changing before asserting or capturing. Note the
+element to probe is one that inherits (a `Heading`): `.vtd-text-muted` sets its own colour and
+keeps looking correct even when the inherited palette is wrong.
 
 `tests/test_modules/explorer.tsx` (+ `explorer-schema.tsx`) is a separate, Storybook-style browsing UI served at `/` — a searchable/grouped sidebar, a live canvas, and a "Controls" panel that live-edits a story's props and re-renders the real component instantly. It's additive to the gallery-page fan-out above, not a replacement: every component still gets its own `/<name>` gallery page, and `basic_tests.test.ts` still drives those routes directly, unaffected by the Explorer. If you want a new component to also show up in the Explorer, add a `ComponentStory` entry for it in `explorer-schema.tsx` (`defaultProps`/`controls`/`render`) — only genuinely scalar props (a string enum → `select`, a `boolean`, a freeform string → `text`, a number → `number`) get a control; arrays/objects/callbacks stay baked into `render` as fixed sample data, same as the gallery pages already do. A story with a click-driven internal state (like `Pagination`'s current page) should route that through the `setProp` callback `render` receives as its second argument, so it stays in sync with the same update path a Controls edit uses - see `explorer.tsx`'s `Pagination`/`Menu` entries.
 

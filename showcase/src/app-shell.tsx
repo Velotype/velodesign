@@ -1,7 +1,7 @@
 import { Component, getComponent, RenderBasic, setStylesheet } from "@velotype/velotype"
 import type { EmptyAttrs, RenderableElements } from "@velotype/velotype"
 
-import { Button, ColorScheme, History, TextBox } from "../../src/index.ts"
+import { Button, ColorScheme, Empty, History, Link, NavLink, Navbar, Text, TextBox } from "../../src/index.ts"
 import { docBySlug, groupByGroupSlug, groupedDocs } from "./data/docs.tsx"
 import { HomePage } from "./pages/home.tsx"
 import { ComponentPage } from "./pages/component-page.tsx"
@@ -9,47 +9,24 @@ import { CategoryPage, categoryPageUrl } from "./pages/category-page.tsx"
 import { NotFoundPage } from "./pages/not-found.tsx"
 import { ThemeBuilderPage } from "./pages/theme-builder.tsx"
 
-/** Extracts the active component slug (if any) from the current `location.pathname` */
-function activeSlugFromLocation(): string {
-    const pathname = globalThis.location.pathname
-    return pathname.startsWith("/components/") ? pathname.slice("/components/".length).replace(/\/$/, "") : ""
-}
-
 /**
  * The grouped, searchable sidebar list of every documented component.
  *
- * On a plain navigation (no search change), it only toggles which link carries the active
- * class - it deliberately does NOT call `this.refresh()` there. `refresh()` unmounts and
- * rebuilds this whole subtree from scratch, and a freshly-created scrollable element always
- * starts at `scrollTop: 0`, so refreshing on every click was silently resetting the sidebar's
- * scroll position and losing the user's place in a long list. `setFilter` (an actual search
- * edit, where the set of visible items really does change) still uses `refresh()` - losing
- * scroll position there is an acceptable, much rarer trade-off. Either way this stays scoped
- * to this subtree, never touching the search `TextBox` that lives in `AppShell`, so typing
- * itself never loses focus (same split `AppShell`/`SidebarList` this pattern comes from in
- * the Explorer).
+ * Every entry is a `NavLink`, which tracks the current location itself - it re-evaluates
+ * `location.pathname` on `popstate`/`locationchange` and toggles its own `activeClass`. This
+ * component used to do that by hand: a `popstate`/`locationchange` listener pair, a retained
+ * reference to its own root element, and a `querySelectorAll` that toggled the active class on
+ * every link after each navigation. All of it existed because `refresh()` would have reset the
+ * sidebar's scroll position and lost the user's place in a long list - and all of it is what
+ * `NavLink` is for.
+ *
+ * `setFilter` still uses `refresh()`: an actual search edit changes which items exist, so the
+ * list genuinely has to be rebuilt, and losing scroll position there is both acceptable and much
+ * rarer. It stays scoped to this subtree and never touches the search `TextBox` in `AppShell`, so
+ * typing never loses focus.
  */
 class SidebarList extends Component<EmptyAttrs> {
     #filterText = ""
-    /** The DOM node most recently returned by `render()`, kept so navigation can patch it directly */
-    #rootElement: HTMLDivElement | undefined
-
-    #handleLocationChange = () => {
-        if (!this.#rootElement) { return }
-        const activeSlug = activeSlugFromLocation()
-        this.#rootElement.querySelectorAll<HTMLAnchorElement>(".vtd-showcase-sidebar-item").forEach(link => {
-            link.classList.toggle("vtd-showcase-sidebar-item-active", link.getAttribute("href") == `/components/${activeSlug}`)
-        })
-    }
-
-    override mount() {
-        globalThis.addEventListener("popstate", this.#handleLocationChange)
-        globalThis.addEventListener("locationchange", this.#handleLocationChange)
-    }
-    override unmount() {
-        globalThis.removeEventListener("popstate", this.#handleLocationChange)
-        globalThis.removeEventListener("locationchange", this.#handleLocationChange)
-    }
 
     setFilter(text: string) {
         this.#filterText = text
@@ -57,30 +34,24 @@ class SidebarList extends Component<EmptyAttrs> {
     }
 
     override render(): HTMLDivElement {
-        const activeSlug = activeSlugFromLocation()
         const filterLower = this.#filterText.trim().toLowerCase()
         const buckets = groupedDocs()
             .map(bucket => ({group: bucket.group, docs: bucket.docs.filter(doc => doc.name.toLowerCase().includes(filterLower))}))
             .filter(bucket => bucket.docs.length > 0)
 
-        const root: HTMLDivElement = <div class="vtd-showcase-sidebar-list">
-            {buckets.length == 0 ? <div class="vtd-showcase-sidebar-empty">No components match "{this.#filterText}"</div> : null}
+        return <div class="vtd-showcase-sidebar-list">
+            {buckets.length == 0
+                ? <Empty description={`No components match "${this.#filterText}"`}/>
+                : null}
             {buckets.map(bucket => <div class="vtd-showcase-sidebar-group">
-                <a
-                    class="vtd-showcase-sidebar-group-label"
-                    href={categoryPageUrl(bucket.group)}
-                    onClick={(event: Event) => { event.preventDefault(); History.changeLocation(categoryPageUrl(bucket.group)) }}>{bucket.group}</a>
-                {bucket.docs.map(doc => <a
-                    href={`/components/${doc.slug}`}
-                    class={`vtd-showcase-sidebar-item${doc.slug == activeSlug ? " vtd-showcase-sidebar-item-active" : ""}`}
-                    onClick={(event: Event) => {
-                        event.preventDefault()
-                        History.changeLocation(`/components/${doc.slug}`)
-                    }}>{doc.name}</a>)}
+                <Link spa to={categoryPageUrl(bucket.group)} class="vtd-showcase-sidebar-group-label">{bucket.group}</Link>
+                {bucket.docs.map(doc => <NavLink
+                    spa
+                    to={`/components/${doc.slug}`}
+                    activeClass="vtd-showcase-sidebar-item-active"
+                    class="vtd-showcase-sidebar-item">{doc.name}</NavLink>)}
             </div>)}
         </div>
-        this.#rootElement = root
-        return root
     }
 }
 
@@ -144,24 +115,9 @@ export class AppShell extends Component<EmptyAttrs> {
             areShellStylesMounted = true
             setStylesheet(`
 .vtd-showcase-shell{display:flex;flex-direction:column;min-height:100vh;}
-.vtd-showcase-header{
-display:flex;
-align-items:center;
-gap:1em;
-padding:0.75em 1.25em;
-border-block-end:1px solid var(--background-4);
-position:sticky;
-top:0;
-background-color:var(--background);
-z-index:2;
-}
-.vtd-showcase-brand{
-font-size:1.15em;
-font-weight:bold;
-color:inherit;
-text-decoration:none;
-}
-.vtd-showcase-tagline{color:var(--background-9);font-size:0.9em;margin-inline-end:auto;}
+/* Navbar supplies the bar itself; this only makes it stick to the top of the viewport */
+.vtd-showcase-header{position:sticky;top:0;background-color:var(--background);z-index:2;}
+.vtd-showcase-brand{font-size:1.15em;font-weight:bold;color:inherit;text-decoration:none;}
 .vtd-showcase-header-link{color:inherit;text-decoration:none;font-size:0.9em;padding:0.4em 0.6em;border-radius:0.25rem;}
 .vtd-showcase-header-link:hover{background-color:var(--background-2);}
 .vtd-showcase-body{display:flex;flex-grow:1;min-height:0;}
@@ -201,7 +157,6 @@ font-size:0.95em;
 }
 .vtd-showcase-sidebar-item:hover{background-color:var(--background-2);}
 .vtd-showcase-sidebar-item-active{background-color:var(--primary-2);font-weight:bold;}
-.vtd-showcase-sidebar-empty{padding:0.9em;color:var(--background-9);}
 .vtd-showcase-main{flex-grow:1;min-width:0;}
 `, "velodesign-showcase/AppShell")
         }
@@ -229,12 +184,16 @@ font-size:0.95em;
         }}>Dark mode: {darkModeLabel}</Button>
 
         this.#root = <div class="vtd-showcase-shell">
-            <header class="vtd-showcase-header">
-                <a class="vtd-showcase-brand" href="/" onClick={(event: Event) => { event.preventDefault(); History.changeLocation("/") }}>velodesign</a>
-                <span class="vtd-showcase-tagline">Component showcase</span>
-                <a class="vtd-showcase-header-link" href="/theme" onClick={(event: Event) => { event.preventDefault(); History.changeLocation("/theme") }}>Theme builder</a>
+            {/* Navbar's own `brand` / `leading` / children slots, rather than a hand-built
+                <header>: the brand sits far left, the tagline beside it via `leading`, and
+                children are pushed to the right automatically. */}
+            <Navbar
+                class="vtd-showcase-header"
+                brand={<Link spa to="/" class="vtd-showcase-brand">velodesign</Link>}
+                leading={<Text type="muted">Component showcase</Text>}>
+                <Link spa to="/theme" class="vtd-showcase-header-link">Theme builder</Link>
                 {themeToggle}
-            </header>
+            </Navbar>
             <div class="vtd-showcase-body">
                 <aside class="vtd-showcase-sidebar-wrapper">
                     <div class="vtd-showcase-sidebar-search">{searchInput}</div>

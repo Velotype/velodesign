@@ -25,6 +25,7 @@ import { Select, type SelectAttrsType, type SelectOptionType } from "./form/sele
 import { SelectMenu, type SelectMenuAttrsType } from "./form/select-menu.tsx"
 import { Badge, type BadgeAttrsType, type BadgeType } from "./data-display/badge.tsx"
 import { Card, type CardAttrsType } from "./data-display/card.tsx"
+import { CodeBlock, type CodeBlockAttrsType, type CodeLanguage } from "./data-display/code-block.tsx"
 import { Alert, AlertThemeOptions, type AlertAttrsType, type AlertType } from "./feedback/alert.tsx"
 import { Tooltip, type TooltipAttrsType, type TooltipPlacement } from "./feedback/tooltip.tsx"
 import { Spinner, type SpinnerAttrsType } from "./feedback/spinner.tsx"
@@ -74,6 +75,13 @@ import { Calendar, type CalendarAttrsType } from "./data-display/calendar.tsx"
 import { CalendarRange, type CalendarRangeAttrsType, type DateRangeType } from "./data-display/calendar-range.tsx"
 import { Tree, type TreeAttrsType, type TreeNodeType } from "./data-display/tree.tsx"
 import { Command, type CommandAttrsType, type CommandItemType } from "./overlays/command.tsx"
+import { Heading, type HeadingAttrsType } from "./typography/heading.tsx"
+import { Text, type TextAttrsType } from "./typography/text.tsx"
+import { Paragraph, type ParagraphAttrsType } from "./typography/paragraph.tsx"
+import type { TextType } from "./typography/typography-common.ts"
+import { Stack, type StackAttrsType } from "./layout/stack.tsx"
+import { Grid, type GridAttrsType } from "./layout/grid.tsx"
+import type { GapSize, AlignItems, JustifyContent } from "./layout/spacing.ts"
 import { LineChart, AreaChart, type LineChartAttrsType, type AreaChartAttrsType } from "./charts/line-chart.ts"
 import { BarChart, type BarChartAttrsType } from "./charts/bar-chart.ts"
 import { PieChart, type PieChartAttrsType, type PieSliceType } from "./charts/pie-chart.ts"
@@ -159,6 +167,10 @@ export {
 
     Card,
     type CardAttrsType,
+
+    CodeBlock,
+    type CodeBlockAttrsType,
+    type CodeLanguage,
 
     Alert,
     AlertThemeOptions,
@@ -310,6 +322,22 @@ export {
     type AsyncDataTableQuery,
     type AsyncDataTableResult,
     DataTableThemeOptions,
+
+    Heading,
+    type HeadingAttrsType,
+    Text,
+    type TextAttrsType,
+    Paragraph,
+    type ParagraphAttrsType,
+    type TextType,
+
+    Stack,
+    type StackAttrsType,
+    Grid,
+    type GridAttrsType,
+    type GapSize,
+    type AlignItems,
+    type JustifyContent,
 
     LineChart,
     type LineChartAttrsType,

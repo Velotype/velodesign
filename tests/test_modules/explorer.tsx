@@ -47,12 +47,12 @@ function renderControlRow(key: string, def: ControlDef, value: unknown, onChange
  */
 class ControlsPanel extends Component<EmptyAttrs> {
     #story: ComponentStory | undefined
-    #props: Record<string, unknown> = {}
+    #attrs: Record<string, unknown> = {}
     #onChange: (key: string, value: unknown) => void = () => {}
 
-    switchStory(story: ComponentStory, props: Record<string, unknown>, onChange: (key: string, value: unknown) => void) {
+    switchStory(story: ComponentStory, attrs: Record<string, unknown>, onChange: (key: string, value: unknown) => void) {
         this.#story = story
-        this.#props = props
+        this.#attrs = attrs
         this.#onChange = onChange
         this.refresh()
     }
@@ -63,8 +63,8 @@ class ControlsPanel extends Component<EmptyAttrs> {
         return <div class="vtd-explorer-controls">
             <div class="vtd-explorer-controls-header">Controls</div>
             {entries.length == 0
-                ? <div class="vtd-explorer-controls-empty">This component has no editable props - see its source for the fixed sample data used here.</div>
-                : entries.map(([key, def]) => renderControlRow(key, def, this.#props[key], this.#onChange))}
+                ? <div class="vtd-explorer-controls-empty">This component has no editable attrs - see its source for the fixed sample data used here.</div>
+                : entries.map(([key, def]) => renderControlRow(key, def, this.#attrs[key], this.#onChange))}
         </div>
     }
 }
@@ -72,19 +72,19 @@ class ControlsPanel extends Component<EmptyAttrs> {
 /** Renders the live instance of the currently selected story. Only this refreshes on a control edit. */
 class StoryPreview extends Component<EmptyAttrs> {
     #story: ComponentStory | undefined
-    #props: Record<string, unknown> = {}
-    #setProp: (key: string, value: unknown) => void = () => {}
+    #attrs: Record<string, unknown> = {}
+    #setAttr: (key: string, value: unknown) => void = () => {}
 
-    setStoryAndProps(story: ComponentStory, props: Record<string, unknown>, setProp: (key: string, value: unknown) => void) {
+    setStoryAndAttrs(story: ComponentStory, attrs: Record<string, unknown>, setAttr: (key: string, value: unknown) => void) {
         this.#story = story
-        this.#props = props
-        this.#setProp = setProp
+        this.#attrs = attrs
+        this.#setAttr = setAttr
         this.refresh()
     }
 
     override render(): HTMLDivElement {
         return <div class="vtd-explorer-canvas">
-            {this.#story ? this.#story.render(this.#props, this.#setProp) : "Select a component from the sidebar."}
+            {this.#story ? this.#story.render(this.#attrs, this.#setAttr) : "Select a component from the sidebar."}
         </div>
     }
 }
@@ -145,7 +145,7 @@ let areExplorerStylesMounted = false
 
 /**
  * The Storybook-style shell: a persistent, searchable/grouped sidebar; a toolbar; a live
- * canvas; and a Controls panel that edits a story's props and re-renders the real component.
+ * canvas; and a Controls panel that edits a story's attrs and re-renders the real component.
  *
  * The whole tree is built once here in the constructor (like `Modal`/`Menu`) and never
  * refreshed as a whole - every update (search, story switch, control edit) goes through a
@@ -154,16 +154,16 @@ let areExplorerStylesMounted = false
  */
 export class ExplorerApp extends Component<EmptyAttrs> {
     #currentStory: ComponentStory
-    #currentProps: Record<string, unknown>
+    #currentAttrs: Record<string, unknown>
     #preview: StoryPreview
     #controlsPanel: ControlsPanel
     #sidebarList: SidebarList
     #toolbarTitle: HTMLElement
     #root: HTMLDivElement
 
-    #setProp = (key: string, value: unknown) => {
-        this.#currentProps = {...this.#currentProps, [key]: value}
-        this.#preview.setStoryAndProps(this.#currentStory, this.#currentProps, this.#setProp)
+    #setAttr = (key: string, value: unknown) => {
+        this.#currentAttrs = {...this.#currentAttrs, [key]: value}
+        this.#preview.setStoryAndAttrs(this.#currentStory, this.#currentAttrs, this.#setAttr)
     }
 
     #syncFromLocation = () => {
@@ -187,9 +187,9 @@ export class ExplorerApp extends Component<EmptyAttrs> {
         const story = stories.find(candidate => candidate.name == name)
         if (!story) { return }
         this.#currentStory = story
-        this.#currentProps = {...story.defaultProps}
-        this.#preview.setStoryAndProps(this.#currentStory, this.#currentProps, this.#setProp)
-        this.#controlsPanel.switchStory(this.#currentStory, this.#currentProps, this.#setProp)
+        this.#currentAttrs = {...story.defaultAttrs}
+        this.#preview.setStoryAndAttrs(this.#currentStory, this.#currentAttrs, this.#setAttr)
+        this.#controlsPanel.switchStory(this.#currentStory, this.#currentAttrs, this.#setAttr)
         this.#toolbarTitle.textContent = story.name
         this.#sidebarList.setActive(name)
         if (pushHistory) {
@@ -275,7 +275,7 @@ color:var(--background-9);
         const initialName = new URLSearchParams(globalThis.location.search).get("story") || stories[0].name
         const initialStory = stories.find(candidate => candidate.name == initialName) || stories[0]
         this.#currentStory = initialStory
-        this.#currentProps = {...initialStory.defaultProps}
+        this.#currentAttrs = {...initialStory.defaultAttrs}
 
         this.#preview = getComponent<StoryPreview>(<StoryPreview/>)
         this.#controlsPanel = getComponent<ControlsPanel>(<ControlsPanel/>)
@@ -314,8 +314,8 @@ color:var(--background-9);
             </div>
         </div>
 
-        this.#preview.setStoryAndProps(this.#currentStory, this.#currentProps, this.#setProp)
-        this.#controlsPanel.switchStory(this.#currentStory, this.#currentProps, this.#setProp)
+        this.#preview.setStoryAndAttrs(this.#currentStory, this.#currentAttrs, this.#setAttr)
+        this.#controlsPanel.switchStory(this.#currentStory, this.#currentAttrs, this.#setAttr)
     }
 
     override render(): HTMLDivElement {

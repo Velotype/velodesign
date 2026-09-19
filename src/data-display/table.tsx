@@ -18,6 +18,18 @@ export type TableColumnType<RowType> = {
     onSortClick?: () => void
     /** Text alignment for this column's cells (default: `"start"`) */
     align?: "start" | "center" | "end"
+    /**
+     * Column width - a number is px (matching `DataTable`'s `width`), a string is any CSS length,
+     * so `"15%"` and `"12em"` work too. `DataTable` is px-only because it does arithmetic on the
+     * value while a column is dragged; nothing here is resizable, so there is no reason to be.
+     *
+     * **Setting this on any column switches the whole table to `table-layout: fixed`**, because
+     * that is what makes a declared width bind: under the default auto layout a column is sized
+     * to its widest cell and a declared width is only a hint, so one long value still widens the
+     * column and squeezes its neighbours. Under fixed layout the columns that declare no width
+     * share whatever is left, and long content wraps inside its cell rather than pushing out.
+     */
+    width?: number | string
 }
 
 /**
@@ -29,6 +41,14 @@ export type TableAttrsType<RowType> = {
     /** The rows to display */
     rows: RowType[]
 } & IdAttr & StylePassthroughAttrs
+
+/** A column width as CSS: a bare number is px, a string passes straight through */
+function cssLength(width: number | string | undefined): string | undefined {
+    if (width === undefined) {
+        return undefined
+    }
+    return typeof width == "number" ? `${width}px` : width
+}
 
 let areTableStylesMounted = false
 
@@ -57,10 +77,24 @@ export function Table<RowType>(attrs: TableAttrsType<RowType>, _children: Render
 .vtd-table tbody tr:hover{background-color:var(--background-1);}
 .vtd-table-align-center{text-align:center;}
 .vtd-table-align-end{text-align:end;}
+/*
+ * Only applied when a column declares a width. Headers stop being nowrap and cells break long
+ * words, because a fixed column no longer widens to fit its content - without these, a narrow
+ * column's content overflows its own cell instead.
+ */
+.vtd-table-fixed{table-layout:fixed;}
+.vtd-table-fixed th{white-space:normal;}
+.vtd-table-fixed td{overflow-wrap:break-word;}
 `, "vtd/Table")
     }
 
-    return passthroughAttrsToElement<HTMLTableElement>(<table class="vtd-table">
+    // A declared width only binds under fixed layout - see `TableColumnType.width`
+    const hasWidths = attrs.columns.some(column => column.width !== undefined)
+
+    return passthroughAttrsToElement<HTMLTableElement>(<table class={hasWidths ? "vtd-table vtd-table-fixed" : "vtd-table"}>
+        {hasWidths ? <colgroup>
+            {attrs.columns.map(column => <col style={{width: cssLength(column.width)}}/>)}
+        </colgroup> : null}
         <thead>
             <tr>
                 {attrs.columns.map(column => <th
