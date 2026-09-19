@@ -44,15 +44,17 @@ jobs:
       - name: Publish dry run
         run: deno publish --dry-run
 
-      # The showcase's home page reads this generated file. Regenerating it must be a no-op on a
-      # branch that did not change the bundle, and any change to it must be committed rather than
-      # appearing only on whoever's machine last built the showcase.
+      # The showcase's home page reads this generated file, so a stale committed value would be a
+      # wrong number on the site for anyone who builds without the task. Only `raw` is compared:
+      # gzip output is not byte-identical across machines (the same bundle measured 43497 locally
+      # and 43496 on this runner), so asserting it would fail for reasons unrelated to the bundle.
       - name: Bundle-size file is current
         run: |
-          deno task size --write
-          if ! git diff --quiet -- showcase/src/data/bundle-size.ts; then
-            echo "::error file=showcase/src/data/bundle-size.ts::Out of date. Run 'deno task size --write' and commit the result."
-            git --no-pager diff -- showcase/src/data/bundle-size.ts
+          committed=$(grep -oE 'raw: [0-9]+' showcase/src/data/bundle-size.ts | grep -oE '[0-9]+')
+          measured=$(deno task size --json | tail -1 | grep -oE '"raw":[0-9]+' | grep -oE '[0-9]+')
+          echo "committed raw=$committed  measured raw=$measured"
+          if [ "$committed" != "$measured" ]; then
+            echo "::error file=showcase/src/data/bundle-size.ts::Stale ($committed vs $measured). Run 'deno task size --write' and commit the result."
             exit 1
           fi
 
