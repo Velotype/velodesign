@@ -31,10 +31,16 @@ export type LinkAttrsType = {
  * `spa={true}` to opt into SPA-style client-side routing via `History.changeLocation` instead;
  * see the `spa` attr's own doc comment for the full behavioral difference. Either way, `Link`
  * gives the same theming/layout benefit - it's only the navigation *mechanism* that changes.
+ *
+ * Carries `vtd-link` but mounts no stylesheet of its own: its colour comes from `Theme`'s reset
+ * (`a{color:var(--text)}`), so the class is purely a hook for a consumer - or for `Breadcrumbs`,
+ * whose crumbs are `Link`s - to style links in one place. It was the only component in the package
+ * rendering an element with no class at all, which left a consumer nothing to target.
  */
 export const Link: FunctionComponent<LinkAttrsType> = function(attrs: LinkAttrsType, children: RenderableElements[]): HTMLAnchorElement {
     const spa = attrs.spa ?? false
     return passthroughAttrsToElement<HTMLAnchorElement>(<a
+        class="vtd-link"
         href={attrs.to}
         onClick={spa ? (event: Event) => {
             event.preventDefault()

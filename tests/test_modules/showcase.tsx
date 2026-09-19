@@ -1,7 +1,7 @@
 import {replaceElementWithRoot, Component, getComponent} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
-import { Accordion, Alert, AreaChart, AsyncDataTable, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, Calendar, Card, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu, DataTable, DatePicker, Gauge, LineChart, PieChart, Sparkline, Divider, Drawer, Empty, Form, FormField, InputNumber, List, Menu, Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, Resizable, ScrollArea, Select, SelectMenu, showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, Tabs, Tag, TextBox, Theme, Timeline, Toggle, Tooltip, Tree, Upload} from "../../src/index.ts"
+import { Accordion, Alert, AreaChart, AsyncDataTable, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, Calendar, Card, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu, DataTable, DatePicker, Gauge, Grid, Heading, LineChart, Paragraph, PieChart, Sparkline, Stack, Text, Divider, Drawer, Empty, Form, FormField, InputNumber, List, Menu, Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, Resizable, ScrollArea, Select, SelectMenu, showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, Tabs, Tag, TextBox, Theme, Timeline, Toggle, Tooltip, Tree, Upload} from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 import { setThemeOnSelector } from "../../src/core/theme.ts"
 
@@ -200,6 +200,24 @@ class ShowcaseSide extends Component<EmptyAttrs> {
                     const start = (query.page - 1) * query.pageSize
                     return new Promise(resolve => setTimeout(() => resolve({rows: rows.slice(start, start + query.pageSize), total: rows.length}), 150))
                 }}/></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Typography:
+            <div style={{marginTop:"10px", maxWidth:"420px"}}>
+                <Heading level={3}>A heading</Heading>
+                <Paragraph>A paragraph of body text.</Paragraph>
+                <Paragraph type="muted">A muted paragraph.</Paragraph>
+                <Text strong>strong</Text> · <Text code>code</Text> · <Text numeric>1,234</Text>
+            </div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Stack:
+            <div style={{marginTop:"10px", maxWidth:"420px"}}><Stack gap="sm">
+                <Badge type="primary">One</Badge><Badge type="secondary">Two</Badge><Badge type="neutral">Three</Badge>
+            </Stack></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example Grid:
+            <div style={{marginTop:"10px", maxWidth:"420px"}}><Grid minColumnWidth="8em" gap="sm">
+                <Card>One</Card><Card>Two</Card><Card>Three</Card>
+            </Grid></div>
             <hr style={{marginTop:"10px"}}/>
             Example LineChart:
             <div style={{marginTop:"10px", maxWidth:"420px"}}><LineChart

@@ -33,6 +33,24 @@ describe('basic component rendering', () => {
         await server?.close('End basic tests')
     })
 
+    /**
+     * Polls an in-page expression until it is truthy.
+     *
+     * `page.evaluate` with a *string* does not await a promise the expression returns, so anything
+     * that takes time in the page (an animation, a sampling loop) has to store its result and be
+     * polled for rather than awaited directly - two tests here hung for a full minute before this.
+     */
+    const waitUntil = async (probe: () => Promise<unknown>, description: string, timeoutMs = 5000) => {
+        const start = Date.now()
+        while (Date.now() - start < timeoutMs) {
+            if (await probe()) {
+                return
+            }
+            await new Promise(resolve => setTimeout(resolve, 50))
+        }
+        fail(`ERROR: timed out after ${timeoutMs}ms waiting for ${description}`)
+    }
+
     const itWrap = (name: string, module: string, selector: string, testFn: (selection: ElementHandle) => void | Promise<void>) => {
         it({name,
             fn: async () => {
@@ -320,7 +338,13 @@ describe('basic component rendering', () => {
         await clickSummary(1)
         const afterSecondClick = await readOpenStates()
         if (!afterSecondClick.second) {fail("ERROR: expected second section to open after clicking its summary")}
-        if (afterSecondClick.first) {fail("ERROR: expected first section to close once a sibling in the exclusive group opened")}
+        // The displaced section is animated closed, so `open` stays true until that finishes -
+        // it is no longer removed synchronously with the click (see disclosure-view.tsx)
+        await waitUntil(
+            async () => !(await readOpenStates()).first,
+            "the displaced section to finish closing")
+        const afterClosing = await readOpenStates()
+        if (afterClosing.first) {fail("ERROR: expected first section to close once a sibling in the exclusive group opened")}
     })
 
     itWrap("drawer opens on trigger click and closes on its close button", "drawer", "#open-drawer-btn", async (selection: ElementHandle) => {
@@ -973,6 +997,386 @@ describe('basic component rendering', () => {
         if (churn.sweep.added != 0 || churn.sweep.removed != 0) {
             fail(`ERROR: sweeping the plot created nodes instead of updating text in place: +${churn.sweep.added}/-${churn.sweep.removed}`)
         }
+    })
+
+    itWrap("typography renders real heading elements whose size follows the level", "typography", "#typography-gallery", async (_selection: ElementHandle) => {
+        // The point of Heading is that the outline and the visual hierarchy cannot disagree, so the
+        // tag and the size both have to come from `level` - a styled <div> would pass a screenshot.
+        const state = await page.evaluate(() => {
+            const root = document.getElementById("typography-gallery") as HTMLElement
+            const heads = Array.from(root.querySelectorAll("h1,h2,h3,h4,h5,h6")).slice(0, 6)
+            return {
+                tags: heads.map(h => h.tagName),
+                sizes: heads.map(h => parseFloat(getComputedStyle(h).fontSize)),
+                codeTag: (root.querySelector("#code-text") as HTMLElement).tagName,
+                numeric: getComputedStyle(root.querySelector("#numeric-text") as HTMLElement).fontVariantNumeric,
+                lastParaMargin: getComputedStyle(root.querySelector("#last-paragraph") as HTMLElement).marginBottom
+            }
+        })
+        if (state.tags.join(",") != "H1,H2,H3,H4,H5,H6") {fail(`ERROR: expected real h1-h6, got ${state.tags}`)}
+        for (let i = 1; i < state.sizes.length; i++) {
+            if (state.sizes[i] > state.sizes[i - 1]) {
+                fail(`ERROR: heading sizes must not increase with level, got ${JSON.stringify(state.sizes)}`)
+            }
+        }
+        if (state.codeTag != "CODE") {fail(`ERROR: Text code should render a <code> element, got ${state.codeTag}`)}
+        if (!state.numeric.includes("tabular-nums")) {fail(`ERROR: Text numeric should set tabular figures, got ${state.numeric}`)}
+        if (state.lastParaMargin != "0px") {fail(`ERROR: a container's last Paragraph should drop its bottom margin, got ${state.lastParaMargin}`)}
+    })
+
+    itWrap("typography muted text is legible in both themes", "typography", "#typography-gallery", async (_selection: ElementHandle) => {
+        // The trap this component exists to close: --text-alt is the *inverse* text colour, so
+        // muted text styled with it is nearly invisible in dark mode. Check muted sits between the
+        // page background and the body text in BOTH themes rather than collapsing into either.
+        const luminance = (rgb: string) => {
+            const parts = rgb.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0]
+            const [r, g, b] = parts[0] <= 1 ? parts.map(v => v * 255) : parts
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b
+        }
+        for (const theme of ["light", "dark"]) {
+            const colors = await page.evaluate(`(() => {
+                const scope = document.querySelector('#showcase-theme-${theme}')
+                const muted = scope.querySelector('#muted-text')
+                const body = scope.querySelector('.vtd-paragraph')
+                return {
+                    muted: getComputedStyle(muted).color,
+                    body: getComputedStyle(body).color,
+                    background: getComputedStyle(scope).backgroundColor
+                }
+            })()`) as {muted: string, body: string, background: string}
+            const m = luminance(colors.muted), b = luminance(colors.body), bg = luminance(colors.background)
+            // Muted must be dimmer than body text but still clearly off the background
+            if (Math.abs(m - bg) < 40) {
+                fail(`ERROR: ${theme} muted text is too close to the background (${colors.muted} on ${colors.background})`)
+            }
+            if (Math.abs(m - b) < 10) {
+                fail(`ERROR: ${theme} muted text is indistinguishable from body text (${colors.muted} vs ${colors.body})`)
+            }
+        }
+    })
+
+    itWrap("layout Stack and Grid apply the spacing scale", "layout", "#row-stack", async (_selection: ElementHandle) => {
+        const state = await page.evaluate(() => {
+            const inner = (id: string) => getComputedStyle(document.getElementById(id)!.firstElementChild as HTMLElement)
+            return {
+                rowDirection: inner("row-stack").flexDirection,
+                columnDirection: inner("column-stack").flexDirection,
+                justify: inner("between-stack").justifyContent,
+                startAlign: inner("column-start-stack").alignItems,
+                fixedColumns: inner("fixed-grid").gridTemplateColumns.split(" ").length,
+                // An auto-fill Grid's whole point is that its track count follows its width, so
+                // measure it at two widths rather than asserting a number - at the suite's 400px
+                // viewport (split into two theme columns) one track is the *correct* answer.
+                tracksWide: (() => {
+                    const host = document.getElementById("auto-grid") as HTMLElement
+                    host.style.width = "900px"
+                    const n = getComputedStyle(host.firstElementChild as HTMLElement).gridTemplateColumns.split(" ").length
+                    host.style.width = "180px"
+                    const narrow = getComputedStyle(host.firstElementChild as HTMLElement).gridTemplateColumns.split(" ").length
+                    host.style.width = ""
+                    return {wide: n, narrow}
+                })()
+            }
+        })
+        if (state.rowDirection != "row") {fail(`ERROR: expected a row, got ${state.rowDirection}`)}
+        if (state.columnDirection != "column") {fail(`ERROR: expected a column, got ${state.columnDirection}`)}
+        if (state.justify != "space-between") {fail(`ERROR: justify="between" should be space-between, got ${state.justify}`)}
+        if (state.startAlign != "flex-start") {fail(`ERROR: align="start" should be flex-start, got ${state.startAlign}`)}
+        if (state.fixedColumns != 3) {fail(`ERROR: columns={3} should produce 3 tracks, got ${state.fixedColumns}`)}
+        if (!(state.tracksWide.wide > state.tracksWide.narrow)) {
+            fail(`ERROR: an auto-fill Grid must add tracks as it widens, got ${JSON.stringify(state.tracksWide)}`)
+        }
+    })
+
+    itWrap("layout gap scale is strictly increasing", "layout", "#row-stack", async (_selection: ElementHandle) => {
+        // A scale whose steps are not ordered is worse than no scale: "lg" reading smaller than
+        // "md" would make every consumer guess.
+        const gaps = await page.evaluate(() => {
+            const stacks = Array.from(document.querySelectorAll("#showcase-theme-light .vtd-stack"))
+            // The gap demo renders one stack per scale step, each labelled with the step's name
+            const found: Record<string, number> = {}
+            for (const stack of stacks) {
+                const label = stack.querySelector(".vtd-badge")?.textContent ?? ""
+                if (["none", "xs", "sm", "md", "lg", "xl"].includes(label)) {
+                    found[label] = parseFloat(getComputedStyle(stack as HTMLElement).gap) || 0
+                }
+            }
+            return found
+        })
+        const order = ["none", "xs", "sm", "md", "lg", "xl"]
+        const values = order.map(k => gaps[k])
+        if (values.some(v => v === undefined)) {fail(`ERROR: expected a stack per scale step, got ${JSON.stringify(gaps)}`)}
+        for (let i = 1; i < values.length; i++) {
+            if (!(values[i] > values[i - 1])) {
+                fail(`ERROR: gap scale must increase; "${order[i]}" (${values[i]}px) is not larger than "${order[i-1]}" (${values[i-1]}px)`)
+            }
+        }
+    })
+
+    itWrap("code block highlights without losing a character of the source", "code-block", "#code-tsx", async (_selection: ElementHandle) => {
+        // The property that matters most is not the colours - it is that the rendered block is a
+        // faithful copy of the input. A tokenizer that drops the gap between two matches looks
+        // perfectly fine until someone copies the snippet and it does not compile.
+        const state = await page.evaluate(() => {
+            const scope = document.querySelector("#showcase-theme-light")!
+            const block = (id: string) => scope.querySelector(`#${id} .vtd-codeblock`) as HTMLElement
+            const kinds = (id: string) => {
+                const seen = new Set<string>()
+                for (const span of block(id).querySelectorAll("span")) {
+                    for (const cls of span.classList) {
+                        if (cls.startsWith("vtd-codeblock-")) {seen.add(cls.replace("vtd-codeblock-", ""))}
+                    }
+                }
+                return [...seen]
+            }
+            return {
+                text: block("code-tsx").innerText,
+                kinds: kinds("code-tsx"),
+                plainKinds: kinds("code-plain"),
+                // A multi-line comment straddles newlines, so tokens and lines do not line up -
+                // regrouping for the number gutter must split those runs rather than drop them
+                straddleLines: block("code-straddle").querySelectorAll(".vtd-codeblock-line").length,
+                straddleText: block("code-straddle").innerText,
+                // Markup in the source must be shown, never rendered
+                renderedMarkup: !!block("code-escaped").querySelector("script,b"),
+                escapedText: block("code-escaped").innerText,
+            }
+        }) as {text: string, kinds: string[], plainKinds: string[], straddleLines: number, straddleText: string, renderedMarkup: boolean, escapedText: string}
+
+        if (!state.text.includes(`import { Button, Stack } from "@velotype/velodesign"`)) {
+            fail(`ERROR: CodeBlock dropped source text, got: ${state.text.slice(0, 120)}`)
+        }
+        if (!state.text.includes("        <Button type=\"text\">Cancel</Button>")) {
+            fail("ERROR: CodeBlock did not preserve leading indentation")
+        }
+        for (const kind of ["comment", "string", "keyword", "tag", "attr", "number", "punct"]) {
+            if (!state.kinds.includes(kind)) {
+                fail(`ERROR: tsx highlighting produced no ${kind} token (got ${state.kinds.join(",")})`)
+            }
+        }
+        if (state.plainKinds.length > 0) {
+            fail(`ERROR: language="plain" should highlight nothing, got ${state.plainKinds.join(",")}`)
+        }
+        if (state.straddleLines != 6) {
+            fail(`ERROR: a 6-line sample numbered as ${state.straddleLines} lines`)
+        }
+        if (!state.straddleText.includes("three source lines")) {
+            fail("ERROR: the middle of a multi-line comment was dropped when numbering lines")
+        }
+        if (state.renderedMarkup || !state.escapedText.includes("<script>")) {
+            fail(`ERROR: markup in the source was rendered instead of shown: ${state.escapedText}`)
+        }
+    })
+
+    itWrap("code block token colours stay distinct in both themes", "code-block", "#code-tsx", async (_selection: ElementHandle) => {
+        // Token colours come from the theme ramps, which invert between themes - a step that
+        // reads well on one background can collapse into it on the other.
+        for (const theme of ["light", "dark"]) {
+            const colors = await page.evaluate(`(() => {
+                const scope = document.querySelector('#showcase-theme-${theme}')
+                const out = {}
+                for (const kind of ["comment","string","keyword","tag","attr","number","punct"]) {
+                    const el = scope.querySelector('.vtd-codeblock-' + kind)
+                    out[kind] = el ? getComputedStyle(el).color : null
+                }
+                return out
+            })()`) as Record<string, string | null>
+            const missing = Object.entries(colors).filter(([, v]) => v == null).map(([k]) => k)
+            if (missing.length > 0) {
+                fail(`ERROR: ${theme} is missing token kinds: ${missing.join(",")}`)
+            }
+            const distinct = new Set(Object.values(colors)).size
+            if (distinct < 5) {
+                fail(`ERROR: ${theme} renders only ${distinct} distinct token colours: ${JSON.stringify(colors)}`)
+            }
+        }
+    })
+
+    itWrap("table column widths bind, and only then", "table", "#default-table", async (_selection: ElementHandle) => {
+        // A width is only a hint under the browser's default auto layout - a wide cell still wins,
+        // which is exactly the bug this attr exists to fix. It has to switch the table to fixed
+        // layout to bind, and must not do that to a table that declared no widths.
+        const state = await page.evaluate(() => {
+            const scope = document.querySelector("#showcase-theme-light")!
+            const table = (id: string) => scope.querySelector(`#${id} table`) as HTMLTableElement
+            const sized = table("sized-table")
+            const headers = [...sized.querySelectorAll("th")] as HTMLElement[]
+            return {
+                plainLayout: getComputedStyle(table("default-table")).tableLayout,
+                sizedLayout: getComputedStyle(sized).tableLayout,
+                plainHasColgroup: !!table("default-table").querySelector("colgroup"),
+                cols: [...sized.querySelectorAll("col")].map(c => (c as HTMLElement).style.width),
+                tableWidth: sized.getBoundingClientRect().width,
+                headerWidths: headers.map(h => h.getBoundingClientRect().width),
+            }
+        }) as {plainLayout: string, sizedLayout: string, plainHasColgroup: boolean, cols: string[], tableWidth: number, headerWidths: number[]}
+
+        if (state.sizedLayout != "fixed") {
+            fail(`ERROR: a table with declared widths must use fixed layout, got ${state.sizedLayout}`)
+        }
+        if (state.plainLayout == "fixed" || state.plainHasColgroup) {
+            fail("ERROR: a table that declares no widths must be left on auto layout with no colgroup")
+        }
+        if (state.cols.join(",") != "50%,90px,") {
+            fail(`ERROR: colgroup widths are ${JSON.stringify(state.cols)}, want ["50%","90px",""]`)
+        }
+        // The percentage column must actually take its share, and the px column its pixels -
+        // a column whose content is far wider must not steal the space
+        const half = state.tableWidth / 2
+        if (Math.abs(state.headerWidths[0] - half) > 4) {
+            fail(`ERROR: the 50% column measured ${state.headerWidths[0]}px of a ${state.tableWidth}px table`)
+        }
+        if (Math.abs(state.headerWidths[1] - 90) > 4) {
+            fail(`ERROR: the 90px column measured ${state.headerWidths[1]}px`)
+        }
+    })
+
+    itWrap("Collapse and Accordion render the same disclosure widget", "collapse", "#default-collapse", async (_selection: ElementHandle) => {
+        // They share `disclosure-view.tsx` precisely so they cannot drift apart again. They had a
+        // stylesheet each, five rules byte-identical between them, and had already diverged where
+        // it showed: Accordion animated open over 200ms and Collapse snapped, so a consumer
+        // choosing a component on the shape of its API silently chose an open/close behaviour too.
+        const measure = (root: string) => `(() => {
+            const scope = document.querySelector('#showcase-theme-light')
+            const details = scope.querySelector('${root}')
+            const content = details.querySelector('.vtd-disclosure-content')
+            const header = details.querySelector('.vtd-disclosure-header')
+            const chevron = details.querySelector('.vtd-disclosure-chevron')
+            const cs = getComputedStyle(content), hs = getComputedStyle(header)
+            const vs = getComputedStyle(chevron), ds = getComputedStyle(details)
+            return {
+                transition: cs.transitionProperty + '|' + cs.transitionDuration,
+                display: cs.display,
+                headerPadding: hs.padding,
+                chevronSize: vs.width + 'x' + vs.height,
+                border: ds.borderTopWidth + ' ' + ds.borderTopColor,
+                radius: ds.borderTopLeftRadius
+            }
+        })()`
+        const collapse = await page.evaluate(measure(".vtd-collapse")) as Record<string, string>
+        await page.goto(`${baseUrl}/accordion`, {waitUntil: "networkidle2"})
+        await page.waitForSelector(".vtd-accordion-item")
+        const accordion = await page.evaluate(measure(".vtd-accordion-item")) as Record<string, string>
+
+        for (const key of Object.keys(collapse)) {
+            if (collapse[key] != accordion[key]) {
+                fail(`ERROR: ${key} differs - Collapse "${collapse[key]}" vs Accordion "${accordion[key]}"`)
+            }
+        }
+        // The shared open animation is the property that had actually drifted
+        if (!collapse.transition.includes("grid-template-rows") || !collapse.transition.includes("0.2s")) {
+            fail(`ERROR: the shared animated open is missing: ${collapse.transition}`)
+        }
+    })
+
+    itWrap("a disclosure animates every toggle, not just the first", "collapse", "#default-collapse", async (_selection: ElementHandle) => {
+        // The bug this guards: removing `open` stops the browser rendering that subtree, so the
+        // close transition never gets a start time - it sits at playState "running", startTime
+        // null, *forever* - which also pins the computed style at the open values. The first open
+        // animated and every toggle after it snapped. Nothing caught it because every other test
+        // here toggles a disclosure exactly once.
+        //
+        // What is asserted here is the frame-independent half of the contract: that the close is
+        // intercepted, that it takes the transition's own time rather than happening instantly,
+        // and that it works on every cycle rather than only the first. The *visual* half - that
+        // intermediate heights are actually painted - cannot be asserted in this suite, where
+        // transitions never progress at all (requestAnimationFrame does not tick, and computed
+        // grid-template-rows stays at its start value); it was verified separately against a real
+        // browser session, which measured 12-13 distinct heights on every open and close.
+        const read = () => page.evaluate(() => {
+            const details = document.querySelector("#showcase-theme-light .vtd-collapse") as HTMLDetailsElement
+            const content = details.querySelector(".vtd-disclosure-content") as HTMLElement
+            const animations = content.getAnimations()
+            return {
+                open: details.open,
+                closing: details.classList.contains("vtd-disclosure-closing"),
+                running: animations.length,
+                unstarted: animations.filter(a => a.startTime == null).length,
+            }
+        })
+        const click = () => page.evaluate(() => {
+            const details = document.querySelector("#showcase-theme-light .vtd-collapse") as HTMLDetailsElement
+            ;(details.querySelector(".vtd-disclosure-header") as HTMLElement).click()
+        })
+
+        const before = await read()
+        if (before.open) {fail("ERROR: expected the collapse to start closed")}
+
+        for (let cycle = 1; cycle <= 3; cycle++) {
+            await click()
+            await waitUntil(async () => (await read()).open, `open ${cycle} to take effect`)
+
+            // Closing is intercepted: `open` is held set while the transition runs, which is the
+            // whole fix - without it the subtree stops rendering and the transition never starts.
+            const closeClickedAt = Date.now()
+            await click()
+            const during = await read()
+            if (!during.open || !during.closing) {
+                fail(`ERROR: close ${cycle} was not intercepted - open=${during.open} closing=${during.closing}`)
+            }
+            await waitUntil(async () => {
+                const state = await read()
+                return !state.open && !state.closing
+            }, `close ${cycle} to settle`)
+            const elapsed = Date.now() - closeClickedAt
+
+            const closed = await read()
+            if (closed.open) {fail(`ERROR: close ${cycle} left the section open`)}
+            if (closed.unstarted > 0) {
+                fail(`ERROR: close ${cycle} left ${closed.unstarted} transition(s) stuck with a null startTime`)
+            }
+            // The close must take the transition's own time rather than happening instantly.
+            // Throttling can only stretch this, never shorten it.
+            if (elapsed < 150) {
+                fail(`ERROR: close ${cycle} completed in ${elapsed}ms - it closed instantly instead of animating`)
+            }
+        }
+    })
+
+    itWrap("an exclusive Accordion keeps one section open, and the displaced one animates", "accordion", "#exclusive-accordion", async (_selection: ElementHandle) => {
+        // Exclusivity is ours rather than the native `<details name>` grouping: the browser closes
+        // a grouped sibling itself, instantly and before any handler runs, so with `name` the
+        // clicked section animated while the one it displaced snapped shut.
+        const read = () => page.evaluate(() => {
+            const group = document.querySelector("#showcase-theme-light #exclusive-accordion")!
+            const items = [...group.querySelectorAll(".vtd-accordion-item")] as HTMLDetailsElement[]
+            return {
+                open: items.filter(d => d.open).length,
+                closing: items.filter(d => d.classList.contains("vtd-disclosure-closing")).length,
+                running: items.reduce((total, d) =>
+                    total + (d.querySelector(".vtd-disclosure-content") as HTMLElement).getAnimations().length, 0),
+                nativeNames: items.filter(d => d.hasAttribute("name")).length,
+                firstOpen: items[0].open,
+            }
+        })
+        const click = (index: number) => page.evaluate((i: number) => {
+            const group = document.querySelector("#showcase-theme-light #exclusive-accordion")!
+            const items = [...group.querySelectorAll(".vtd-accordion-item")]
+            ;(items[i].querySelector(".vtd-disclosure-header") as HTMLElement).click()
+        }, {args: [index]})
+
+        if ((await read()).nativeNames != 0) {
+            fail("ERROR: sections still use native <details name> grouping, which cannot animate its close")
+        }
+
+        await click(0)
+        await waitUntil(async () => (await read()).firstOpen, "the first section to open")
+        if ((await read()).open != 1) {fail("ERROR: expected exactly one open section")}
+
+        // Opening a sibling must close the first one *through the animation*, not instantly
+        await click(1)
+        const mid = await read()
+        if (!mid.firstOpen || mid.closing != 1) {
+            fail(`ERROR: the displaced section should still be open and marked closing, got open=${mid.firstOpen} closing=${mid.closing}`)
+        }
+        await waitUntil(async () => {
+            const state = await read()
+            return !state.firstOpen && state.closing == 0
+        }, "the displaced section to finish closing")
+
+        const after = await read()
+        if (after.open != 1) {fail(`ERROR: after the swap ${after.open} sections were open, expected 1`)}
+        if (after.firstOpen) {fail("ERROR: the displaced section never closed")}
     })
 
 })

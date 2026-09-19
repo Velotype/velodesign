@@ -1,7 +1,7 @@
 import { Component, RenderBasic, setStylesheet } from "@velotype/velotype"
 import type { EmptyAttrs, RenderableElements, TargetedEvent } from "@velotype/velotype"
 
-import { Alert, Avatar, Badge, Button, Card, ColorPicker, Progress, setThemeOnSelector, type ThemeOptions } from "../../../src/index.ts"
+import { Alert, Avatar, Badge, Button, Card, ColorPicker, Heading, Paragraph, Progress, Stack, Text, setThemeOnSelector, type ThemeOptions } from "../../../src/index.ts"
 
 const storageKey = "vtd-showcase-custom-theme"
 
@@ -70,14 +70,19 @@ export class ThemeBuilderPage extends Component<EmptyAttrs> {
         if (!areThemeBuilderStylesMounted) {
             areThemeBuilderStylesMounted = true
             setStylesheet(`
-.vtd-theme-builder-actions{display:flex;gap:1em;align-items:center;margin-block:1.5em;}
-.vtd-theme-builder-columns{display:flex;gap:2.5em;flex-wrap:wrap;margin-block-end:2em;}
+/* Stack lays the row out; this is only its vertical spacing */
+.vtd-theme-builder-actions{margin-block:1.5em;}
+/* Stack lays the two columns out; this is only the space below them */
+.vtd-theme-builder-columns{margin-block-end:2em;}
+/*
+ * A field stays a <label> rather than becoming a Stack, so clicking the role's name focuses its
+ * colour input - Stack renders a <div> and would drop that for nothing.
+ */
 .vtd-theme-builder-column{flex:1;min-width:16em;}
-.vtd-theme-builder-column h3{margin-block-end:0.75em;}
+.vtd-theme-builder-column .vtd-heading-3{margin-block-end:0.75em;}
 .vtd-theme-builder-field{display:flex;align-items:center;gap:0.75em;padding:0.35em 0;}
 .vtd-theme-builder-field-label{width:9em;flex-shrink:0;}
 .vtd-theme-builder-field-hex{color:var(--background-9);font-size:0.85em;}
-.vtd-theme-builder-preview-row{display:flex;gap:1em;flex-wrap:wrap;}
 .vtd-theme-builder-preview{
 flex:1;
 min-width:18em;
@@ -88,8 +93,6 @@ color:var(--text);
 background-color:var(--background);
 }
 .vtd-theme-builder-preview-label{font-size:0.8em;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em;color:var(--background-9);margin-block-end:1em;}
-.vtd-theme-builder-preview-content{display:flex;flex-direction:column;gap:1em;}
-.vtd-theme-builder-preview-row-inline{display:flex;gap:0.5em;flex-wrap:wrap;}
 `, "velodesign-showcase/ThemeBuilderPage")
         }
     }
@@ -142,12 +145,12 @@ background-color:var(--background);
     #renderColumn(mode: Mode): RenderableElements {
         const defaults = mode == "Light" ? defaultLight : defaultDark
         return <div class="vtd-theme-builder-column">
-            <h3>{mode} mode</h3>
+            <Heading level={3}>{mode} mode</Heading>
             {roles.map(role => {
                 const key = optionKey(role.key, mode)
                 const current = (this.#options[key] as string | undefined) || defaults[role.key]
                 return <label class="vtd-theme-builder-field">
-                    <span class="vtd-theme-builder-field-label">{role.label}</span>
+                    <Text class="vtd-theme-builder-field-label">{role.label}</Text>
                     <ColorPicker value={current} onChange={(event: TargetedEvent<HTMLInputElement, Event>) => {
                         if (event.target instanceof HTMLInputElement) { this.#setColor(role.key, mode, event.target.value) }
                     }}/>
@@ -158,49 +161,49 @@ background-color:var(--background);
     }
 
     #renderPreviewContent(): RenderableElements {
-        return <div class="vtd-theme-builder-preview-content">
-            <div class="vtd-theme-builder-preview-row-inline">
+        return <Stack direction="column" gap="lg">
+            <Stack gap="sm" align="center">
                 <Button type="primary">Primary</Button>
                 <Button type="secondary">Secondary</Button>
                 <Button type="warning">Warning</Button>
                 <Button type="danger">Danger</Button>
-            </div>
-            <div class="vtd-theme-builder-preview-row-inline">
+            </Stack>
+            <Stack gap="sm" align="center">
                 <Badge type="primary">primary</Badge>
                 <Badge type="secondary">secondary</Badge>
                 <Badge type="warning">warning</Badge>
                 <Badge type="danger">danger</Badge>
-            </div>
+            </Stack>
             <Alert type="info" title="Heads up">This alert reflects your custom theme.</Alert>
             <Card header="Example card">
-                <div style={{display: "flex", alignItems: "center", gap: "0.75em"}}>
+                <Stack align="center" gap="md">
                     <Avatar initials="JR"/>
-                    <span>Card body content with an Avatar.</span>
-                </div>
+                    <Text>Card body content with an Avatar.</Text>
+                </Stack>
             </Card>
             <Progress value={65} showLabel/>
-        </div>
+        </Stack>
     }
 
     override render(): RenderableElements {
         return <div class="vtd-showcase-doc">
-            <h1>Theme builder</h1>
-            <p class="vtd-showcase-doc-description">Customize velodesign's color palette and see it applied live across
+            <Heading level={1}>Theme builder</Heading>
+            <Paragraph type="muted" class="vtd-showcase-doc-description">Customize velodesign's color palette and see it applied live across
                 this whole site. Your choices are saved in this browser and copyable as a ready-to-use
-                Theme.injectStyles() call for your own app.</p>
+                Theme.injectStyles() call for your own app.</Paragraph>
 
-            <div class="vtd-theme-builder-actions">
+            <Stack gap="sm" class="vtd-theme-builder-actions">
                 <Button type="secondary" onClick={() => this.#reset()}>Reset to defaults</Button>
                 <Button type="primary" onClick={() => this.#copyCode()}>{this.#copyLabel}</Button>
-            </div>
+            </Stack>
 
-            <div class="vtd-theme-builder-columns">
+            <Stack gap="xl" class="vtd-theme-builder-columns">
                 {this.#renderColumn("Light")}
                 {this.#renderColumn("Dark")}
-            </div>
+            </Stack>
 
-            <h2>Live preview</h2>
-            <div class="vtd-theme-builder-preview-row">
+            <Heading level={2}>Live preview</Heading>
+            <Stack gap="lg">
                 <div id="theme-builder-preview-light" data-theme="light" class="vtd-theme-builder-preview">
                     <div class="vtd-theme-builder-preview-label">Light</div>
                     {this.#renderPreviewContent()}
@@ -209,7 +212,7 @@ background-color:var(--background);
                     <div class="vtd-theme-builder-preview-label">Dark</div>
                     {this.#renderPreviewContent()}
                 </div>
-            </div>
+            </Stack>
         </div>
     }
 }
