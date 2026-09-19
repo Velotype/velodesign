@@ -2282,7 +2282,7 @@ export const componentDocs: ComponentDoc[] = stories.map(story => ({
 }))
 
 /** Display order for sidebar/nav groups */
-export const groupOrder = ["Typography", "Layout", "Form", "Navigation", "Feedback", "Overlays", "Data Display", "Charts", "Data Entry", "Utility"]
+export const groupOrder = ["Typography", "Layout", "Form", "Navigation", "Feedback", "Overlays", "Data Display", "Charts", "Data Entry"]
 
 /** `componentDocs`, bucketed by group and ordered per `groupOrder` */
 export function groupedDocs(): {group: string, docs: ComponentDoc[]}[] {

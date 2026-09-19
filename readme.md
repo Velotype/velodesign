@@ -37,7 +37,7 @@ property palette every component reads from.
 
 ## Components
 
-**Typography** - Heading, Text, Paragraph
+**Typography** - Heading, Text, Paragraph, Icon (`I`, `registerIcon`)
 
 **Layout** - Stack, Grid
 
@@ -59,8 +59,6 @@ Calendar, CalendarRange, Tree, TimeAgo, Resizable
 Combobox, Upload, Rate, Form, FormField
 
 **Charts** - LineChart, AreaChart, BarChart, PieChart, Gauge, Sparkline
-
-**Utility** - Icon (`I`, `registerIcon`)
 
 Every component's own file (`src/<name>.tsx`) documents its full prop type and any non-obvious
 design decisions inline. For a live, browsable reference with every component's variants, props,

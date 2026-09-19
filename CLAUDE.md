@@ -12,7 +12,7 @@
 
   | Folder | Holds |
   |---|---|
-  | `typography/` | Heading, Text, Paragraph |
+  | `typography/` | Heading, Text, Paragraph, Icon |
   | `layout/` | Stack, Grid |
   | `form/` | Button, Checkbox, Select, TextBox, the text form fields … |
   | `navigation/` | NavLink, Breadcrumbs, Navbar, Sidebar, TableOfContents, Menu, Steps, PageSelector |
@@ -21,12 +21,16 @@
   | `data-display/` | Badge, Card, Table, DataTable, AsyncDataTable, CodeBlock, Calendar, Tree, Resizable … |
   | `data-entry/` | DatePicker, Slider, Combobox, Upload, Rate, Form |
   | `charts/` | LineChart, AreaChart, BarChart, PieChart, Gauge, Sparkline |
-  | `utility/` | Icon |
   | `core/` | **Not a category.** Cross-cutting infrastructure imported by components in several categories, so it belongs to none of them: `utilities.ts`, `theme.ts`, `history.ts`, `strings.ts`, `license.ts`, `search-highlight.tsx`. |
 
   Two placements are judgement calls rather than showcase facts: `PageSelector` and `Resizable`
   have no story at all, so they went to `navigation/` (client-side routing) and `data-display/`
   (a layout container). Giving them stories is a real gap worth closing.
+
+  **`Icon` lives in `typography/`, and there is no `utility/` category.** An icon here is a glyph:
+  `1em` tall, `vertical-align:middle`, drawn in `currentcolor`. It sits in a line of text and
+  inherits from it exactly as a letter does, so it belongs beside `Heading`/`Text`/`Paragraph`
+  rather than in a category of one - which is what `utility/` had become.
 
 - `src/index.ts` — the only public entrypoint (`deno.json`'s `exports` field points here) and the
   only file at the root of `src/`. Every new component's value + attrs type (+ any other exported
@@ -573,7 +577,7 @@ nothing else here would share. Add it when something actually needs it.
 
 **SVG is built imperatively, never in JSX** - velotype cannot emit `<svg>` at all (gotcha 2), and
 velotype's `<SVG innerHTML="...">` can't carry the per-element event handlers hover needs. So
-`charts/chart-common.ts`'s `svgEl()` wraps `createElementNS` exactly as `utility/icon.ts` does, and every chart
+`charts/chart-common.ts`'s `svgEl()` wraps `createElementNS` exactly as `typography/icon.ts` does, and every chart
 draws through it.
 
 **Charts size themselves with a `ResizeObserver`, not a scaling `viewBox`.** Scaling one fixed
@@ -823,6 +827,32 @@ only place the package is used the way a consumer uses it, and it earns its keep
 - `Stack` does not replace *everything*. A row that must be a `<label>` (so clicking the text
   focuses the control) stays a `<label>`, because `Stack` renders a `<div>` - theme-builder's
   colour fields are the worked example.
+
+**A filter has to show *what* matched, not just that something did.** The sidebar's entries run
+their names through `highlightMatch` - the same helper `Combobox`, `Command` and both tables use,
+now exported from `index.ts` alongside `searchHighlightCss` so a consumer building their own
+filtered list gets the same treatment rather than reinventing it. A filtered list that only gets
+shorter makes the reader re-derive the match themselves.
+
+**The sidebar collapses to a 56px icon rail and floats back out on hover**, like Datadog's. Three
+details are load-bearing:
+
+- The panel is `position:absolute` inside the sticky wrapper, so expanding it lays it *over* the
+  page. Growing the wrapper instead would shove the content sideways every time the pointer
+  crossed the rail, which is unusable.
+- `:focus-within` expands it as well as `:hover`, or the sidebar is unreachable from the keyboard.
+- Collapsed rows hide with `visibility`, never `display:none`: the rows keep their boxes so nothing
+  jumps as the panel slides, and a screen reader still reaches the labels.
+
+The toggle flips one class and persists to `localStorage`. It deliberately does **not** re-render
+the sidebar - that would discard the reader's expansions and their search for a change that is
+purely presentational.
+
+**Every category has an icon, drawn in `showcase/src/data/category-icons.ts`.** They are single
+paths in a 24x24 box because that is all `Icon` carries, and solid silhouettes because a shape with
+a hole needs its inner subpath wound the opposite way to punch through under `nonzero` - easy to
+get subtly wrong, and it renders as a filled blob when it is. On the rail the icon *is* the row, so
+it is not decoration.
 
 **A component page documents `children` in its own section, never as a row in the attributes
 table.** Children are passed by nesting content inside the tags; listing them beside real named

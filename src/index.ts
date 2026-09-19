@@ -2,8 +2,9 @@ import {Button, ButtonThemeOptions} from "./form/button.tsx"
 import type {ButtonAttrsType, ButtonType} from "./form/button.tsx"
 import { ButtonGroup } from "./form/button-group.tsx"
 import type { ButtonGroupAttrsType } from "./form/button-group.tsx"
-import { Icon, I, registerIcon } from "./utility/icon.ts"
-import type {IAttrsType} from "./utility/icon.ts"
+import { Icon, I, registerIcon } from "./typography/icon.ts"
+import { highlightMatch, searchHighlightCss } from "./core/search-highlight.tsx"
+import type {IAttrsType} from "./typography/icon.ts"
 import { licenses, addLicense } from "./core/license.ts"
 import { setThemeOnSelector, Theme, ColorScheme, type ThemeColorOptions } from "./core/theme.ts"
 import { CommonThemeOptions, resetThemeOptions, type CommonThemeOptionsType, type ThemeSymbol } from "./core/theme-options.ts"
@@ -113,6 +114,8 @@ export {
     I,
     type IAttrsType,
     registerIcon,
+    highlightMatch,
+    searchHighlightCss,
 
     LocalizedString,
     T,

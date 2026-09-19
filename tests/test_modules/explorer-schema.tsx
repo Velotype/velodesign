@@ -1157,7 +1157,7 @@ export const stories: ComponentStory[] = [
 
     // --- Utility ---
     {
-        name: "Icon", group: "Utility",
+        name: "Icon", group: "Typography",
         defaultAttrs: {size: "2em"},
         controls: {
             size: {kind: "text", label: "size (style.height)"},
