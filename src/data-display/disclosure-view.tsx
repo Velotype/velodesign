@@ -76,6 +76,14 @@ gap:0.75em;
 list-style:none;
 padding:0.6em 0.9em;
 user-select:none;
+/*
+ * Always present, transparent when closed: an open section gets a real rule under its header, so
+ * the header reads as a header rather than as the first line of the content. Carrying the border
+ * at all times rather than adding it on open keeps the section from shifting by a pixel as it
+ * opens.
+ */
+border-block-end:1px solid transparent;
+transition:border-color 0.2s ease-out;
 }
 .vtd-disclosure-header::-webkit-details-marker{display:none;}
 .vtd-disclosure-header::marker{display:none;content:"";}
@@ -91,6 +99,13 @@ transition:transform 0.15s ease-in-out;
 flex-shrink:0;
 }
 .vtd-disclosure[open]:not(.vtd-disclosure-closing) .vtd-disclosure-chevron{transform:rotate(-135deg);}
+/* The open state, signalled on the header itself: a divider plus a faint fill behind it */
+.vtd-disclosure[open]:not(.vtd-disclosure-closing) .vtd-disclosure-header{
+border-block-end-color:var(--background-4);
+background-color:var(--background-1);
+}
+/* ...so hovering an open header still reads as a hover, one step further than its resting fill */
+.vtd-disclosure[open]:not(.vtd-disclosure-closing) .vtd-disclosure-header:hover{background-color:var(--background-2);}
 .vtd-disclosure-content{
 display:grid;
 content-visibility:visible;
@@ -103,9 +118,10 @@ grid-template-rows:minmax(0,1fr);
 visibility:visible;
 transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0s;
 }
-.vtd-disclosure-content-inner{overflow:hidden;min-height:0;padding:0 0.9em 0.9em 0.9em;}
+/* Equal padding all round - a zero top inset pushed the content up against the header */
+.vtd-disclosure-content-inner{overflow:hidden;min-height:0;padding:0.9em;}
 @media (prefers-reduced-motion: reduce){
-.vtd-disclosure-content,.vtd-disclosure-chevron{transition:none;}
+.vtd-disclosure-content,.vtd-disclosure-chevron,.vtd-disclosure-header{transition:none;}
 }
 `, "vtd/Disclosure")
 }

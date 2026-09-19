@@ -1267,6 +1267,37 @@ describe('basic component rendering', () => {
         if (!collapse.transition.includes("grid-template-rows") || !collapse.transition.includes("0.2s")) {
             fail(`ERROR: the shared animated open is missing: ${collapse.transition}`)
         }
+
+        // An open section must look open: the header takes a divider and a fill, or it reads as
+        // the first line of the content rather than as its header
+        const openState = await page.evaluate(() => {
+            const scope = document.querySelector("#showcase-theme-light")!
+            const details = scope.querySelector(".vtd-accordion-item") as HTMLDetailsElement
+            const header = details.querySelector(".vtd-disclosure-header") as HTMLElement
+            const inner = details.querySelector(".vtd-disclosure-content-inner") as HTMLElement
+            const closed = {
+                border: getComputedStyle(header).borderBottomColor,
+                background: getComputedStyle(header).backgroundColor,
+            }
+            header.click()
+            const open = {
+                border: getComputedStyle(header).borderBottomColor,
+                background: getComputedStyle(header).backgroundColor,
+            }
+            const padding = getComputedStyle(inner)
+            return {closed, open, padding: [padding.paddingTop, padding.paddingRight, padding.paddingBottom, padding.paddingLeft]}
+        }) as {closed: {border: string, background: string}, open: {border: string, background: string}, padding: string[]}
+
+        if (openState.open.border == openState.closed.border) {
+            fail(`ERROR: an open header shows no divider - border is ${openState.open.border} either way`)
+        }
+        if (openState.open.background == openState.closed.background) {
+            fail(`ERROR: an open header shows no fill - background is ${openState.open.background} either way`)
+        }
+        // Equal padding all round: a zero top inset pushed the content against the header
+        if (new Set(openState.padding).size != 1) {
+            fail(`ERROR: content padding is uneven: ${openState.padding.join(" ")}`)
+        }
     })
 
     itWrap("a disclosure animates every toggle, not just the first", "collapse", "#default-collapse", async (_selection: ElementHandle) => {
@@ -1377,6 +1408,106 @@ describe('basic component rendering', () => {
         const after = await read()
         if (after.open != 1) {fail(`ERROR: after the swap ${after.open} sections were open, expected 1`)}
         if (after.firstOpen) {fail("ERROR: the displaced section never closed")}
+    })
+
+    itWrap("table of contents renders indented in-page anchors", "table-of-contents", "#toc-nav", async (_selection: ElementHandle) => {
+        // Scroll tracking itself is NOT asserted here. IntersectionObserver does not deliver in
+        // this suite's reused tab, the same way requestAnimationFrame does not tick - verified by
+        // loading the same page standalone at this suite's own 400x200 viewport, where the
+        // highlight lands correctly. A scroll assertion here would either time out or, worse,
+        // pass for the wrong reason: "no DOM work while scrolling" is trivially true when the
+        // observer never fires. What is asserted here is everything that does not depend on it.
+        const state = await page.evaluate(() => {
+            const scope = document.querySelector("#showcase-theme-light")!
+            const nav = scope.querySelector(".vtd-toc") as HTMLElement
+            const links = [...scope.querySelectorAll(".vtd-toc-link")] as HTMLAnchorElement[]
+            return {
+                navRole: nav.tagName.toLowerCase(),
+                navLabel: nav.getAttribute("aria-label"),
+                header: (scope.querySelector(".vtd-toc-header") as HTMLElement | null)?.innerText.trim(),
+                count: links.length,
+                hrefs: links.map(l => l.getAttribute("href") ?? ""),
+                indents: links.map(l => Math.round(parseFloat(getComputedStyle(l).paddingInlineStart))),
+                targetsPresent: links.filter(l => !!document.getElementById((l.getAttribute("href") ?? "#").slice(1))).length,
+            }
+        }) as {navRole: string, navLabel: string | null, header?: string, count: number, hrefs: string[], indents: number[], targetsPresent: number}
+
+        if (state.navRole != "nav") {fail(`ERROR: expected a <nav> landmark, got <${state.navRole}>`)}
+        if (!state.navLabel) {fail("ERROR: the nav landmark has no accessible name")}
+        // innerText is the *rendered* text, and the header is uppercased by text-transform
+        if (state.header?.toLowerCase() != "on this page") {fail(`ERROR: header renders as ${state.header}`)}
+        if (state.count != 9) {fail(`ERROR: expected 9 entries, got ${state.count}`)}
+        if (state.hrefs.some(href => !href.startsWith("#"))) {
+            fail(`ERROR: every entry must be an in-page anchor, got ${state.hrefs.join(",")}`)
+        }
+        // Every entry must actually point at something, or the highlight can never resolve
+        if (state.targetsPresent != state.count) {
+            fail(`ERROR: only ${state.targetsPresent} of ${state.count} entries point at an element that exists`)
+        }
+        // Indent follows level: entries 0/1 are level 1, entry 2 level 2, entry 7 level 3
+        if (!(state.indents[2] > state.indents[1])) {
+            fail(`ERROR: a level-2 entry is not indented past level 1 (${state.indents.join(",")})`)
+        }
+        if (!(state.indents[7] > state.indents[2])) {
+            fail(`ERROR: a level-3 entry is not indented past level 2 (${state.indents.join(",")})`)
+        }
+    })
+
+    itWrap("clicking a table of contents entry highlights it, and re-clicking does nothing", "table-of-contents", "#toc-nav", async (_selection: ElementHandle) => {
+        // The click path is independent of the observer, so it is assertable here - and it covers
+        // the early return in #setActive, which is what keeps scrolling through a long section
+        // from touching the DOM at all.
+        const result = await page.evaluate(() => {
+            const scope = document.querySelector("#showcase-theme-light")!
+            const nav = scope.querySelector(".vtd-toc")!
+            const links = [...scope.querySelectorAll(".vtd-toc-link")] as HTMLAnchorElement[]
+            const activeHref = () => {
+                const link = scope.querySelector(".vtd-toc-link-active") as HTMLAnchorElement | null
+                return link ? link.getAttribute("href") : null
+            }
+            links[4].click()
+            const afterFirst = {href: activeHref(), current: scope.querySelectorAll("[aria-current]").length}
+
+            const observer = new MutationObserver(() => {})
+            observer.observe(nav, {childList: true, subtree: true, attributes: true, characterData: true})
+            for (let i = 0; i < 20; i++) {
+                links[4].click()
+            }
+            // Drain by hand - the callback is an async microtask and has not run in this block
+            const records = observer.takeRecords().length
+            observer.disconnect()
+
+            links[7].click()
+            return {
+                afterFirst,
+                repeatRecords: records,
+                afterSecond: {href: activeHref(), current: scope.querySelectorAll("[aria-current]").length},
+                expectedFirst: links[4].getAttribute("href"),
+                expectedSecond: links[7].getAttribute("href"),
+            }
+        }) as {
+            afterFirst: {href: string | null, current: number}
+            repeatRecords: number
+            afterSecond: {href: string | null, current: number}
+            expectedFirst: string | null
+            expectedSecond: string | null
+        }
+
+        if (result.afterFirst.href != result.expectedFirst) {
+            fail(`ERROR: clicking an entry highlighted ${result.afterFirst.href}, expected ${result.expectedFirst}`)
+        }
+        if (result.afterFirst.current != 1) {
+            fail(`ERROR: ${result.afterFirst.current} elements carry aria-current, expected 1`)
+        }
+        if (result.repeatRecords != 0) {
+            fail(`ERROR: re-clicking the already-current entry produced ${result.repeatRecords} mutation record(s); it should produce none`)
+        }
+        if (result.afterSecond.href != result.expectedSecond) {
+            fail(`ERROR: clicking a second entry highlighted ${result.afterSecond.href}, expected ${result.expectedSecond}`)
+        }
+        if (result.afterSecond.current != 1) {
+            fail(`ERROR: after moving the highlight, ${result.afterSecond.current} elements carry aria-current, expected 1`)
+        }
     })
 
 })

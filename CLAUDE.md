@@ -15,7 +15,7 @@
   | `typography/` | Heading, Text, Paragraph |
   | `layout/` | Stack, Grid |
   | `form/` | Button, Checkbox, Select, TextBox, the text form fields … |
-  | `navigation/` | NavLink, Breadcrumbs, Navbar, Sidebar, Menu, Steps, PageSelector |
+  | `navigation/` | NavLink, Breadcrumbs, Navbar, Sidebar, TableOfContents, Menu, Steps, PageSelector |
   | `feedback/` | Alert, Toast, Tooltip, Spinner, Progress, Skeleton, Empty |
   | `overlays/` | Modal, Drawer, Popover, Popconfirm, ContextMenu, Command |
   | `data-display/` | Badge, Card, Table, DataTable, AsyncDataTable, CodeBlock, Calendar, Tree, Resizable … |
@@ -309,17 +309,25 @@ with `startTime == null` that never clears. A screenshot cannot see this, and ne
 assertion about rendered content. Read it directly rather than inferring from what the element
 looks like.
 
-⚠️ **Transitions do not progress at all inside this test suite.** `requestAnimationFrame` never
-ticks, computed values stay at their start, and any in-page promise running more than about a
-second trips Astral's own `evaluate` deadline with `RetryError` (the *function* form of
-`page.evaluate` awaits a returned promise; the string form does not - that difference cost three
-failed attempts). So split the assertion:
+⚠️ **Neither transitions nor `IntersectionObserver` work inside this test suite.**
+`requestAnimationFrame` never ticks, computed values stay at their start, observer callbacks are
+never delivered, and any in-page promise running more than about a second trips Astral's own
+`evaluate` deadline with `RetryError` (the *function* form of `page.evaluate` awaits a returned
+promise; the string form does not - that difference cost three failed attempts). It is the suite's
+reused tab, not the viewport: loading the same page standalone at the suite's own 400x200 viewport
+works correctly. So split the assertion:
 
 - **In the suite**, assert the frame-independent contract: that the interaction was intercepted,
   that it takes the transition's own wall time rather than completing instantly (throttling can
   only stretch that, never shorten it), and that it holds on *every* cycle rather than the first.
 - **In a standalone script**, assert the visual half by sampling per frame, where rAF does tick -
   the disclosure measured 12-13 distinct heights on every open and close.
+
+**Beware the assertion that passes for the wrong reason.** "Scrolling produced zero mutations" is
+trivially true when the observer that would have produced them never fires - a green test proving
+nothing. `TableOfContents` asserts its *click* path in the suite instead, which is observer-
+independent and exercises the same early return, and leaves scroll tracking to a standalone script.
+If a test can only pass because the thing under test never ran, it is worse than no test.
 
 **Always run the interaction at least three times.** A single toggle is what hid this bug for the
 entire life of `Accordion`.
@@ -342,6 +350,12 @@ already diverged where it showed - measured live, `Accordion` animated open over
 component on the shape of its API silently chose an open/close behaviour too. `data-display/disclosure-view.tsx`
 (internal, not exported) now holds the one stylesheet, the section builder and the layout flush;
 each component keeps only what belongs to it - `Accordion`'s item spacing and group name.
+
+**An open section has to look open.** Its header takes a divider and a faint fill
+(`background-1`, with hover one step further at `background-2` so hovering an open header still
+reads as a hover); the border is carried at all times and merely goes transparent when closed, so
+opening doesn't shift the section by a pixel. The content's inner padding is equal on all sides -
+it was `0 0.9em 0.9em`, which pushed the first line of content up against the header.
 
 Note this was a deliberate **behaviour change**, not pure refactoring: `Collapse` gained the 200ms
 animated open it should always have had. `basic_tests.test.ts`'s "Collapse and Accordion render the
@@ -491,6 +505,26 @@ Every component gets the same fan-out, even though not every component gets dedi
 5. `tests/test_modules/showcase.tsx` — a short section alongside the other components, for a combined at-a-glance view.
 6. `tests/basic_tests.test.ts` gets new `itWrap(...)` assertions **only** for components with real interactive/stateful behavior worth regression-testing (state that changes on click, a value that updates, an open/closed toggle) — not for every component. Purely visual/static ones (`Badge`, `Card`, `Divider`, `Breadcrumbs`, `Navbar`, `Sidebar`, `Spinner`, `Avatar`) are gallery-only, no assertions.
 
+## `TableOfContents` takes items, and watches with an observer
+
+The entries are data the consumer passes, not headings scraped out of the DOM. Deriving them looks
+convenient and is a lifecycle hazard - it has to run after the content it describes is mounted and
+silently yields an empty list when it doesn't. The page already knows its own sections; the
+showcase builds its list from the same `ComponentDoc` it renders, so the two cannot disagree.
+
+**Which entry is current comes from an `IntersectionObserver`, never a `scroll` listener.** A
+scroll handler fires at display rate and would read layout on every event to answer the same
+question - exactly what "Interaction must only touch the DOM that actually changed" rules out. The
+observer reports only on a crossing, and `#setActive` still returns early when the entry is
+unchanged, so scrolling the length of one long section produces **zero** mutation records.
+
+One case needs scroll geometry anyway, and it is worth knowing before someone "simplifies" it away:
+**a page that ends shortly after its last section clamps the scroll before that section can reach
+the band**, so some earlier section stays in it and the final entry could never highlight however
+far the reader scrolled. `#isScrolledToBottom` is checked *first* for that reason, guarded by a
+scrollable check - on a page too short to scroll, every position is "the bottom", and without the
+guard the highlight would pin to the last entry forever.
+
 ## A column width belongs on the column, not in the consumer's CSS
 
 `Table`'s `TableColumnType.width` takes a number (px, matching `DataTable`'s) or any CSS length
@@ -554,6 +588,22 @@ table.** Children are passed by nesting content inside the tags; listing them be
 attributes told the reader to write `children={...}`, the one thing no component here accepts.
 `ComponentDoc.children` carries that prose, and only the 8 genuinely *named* attrs that happen to
 end in `Children` (`confirmButtonChildren`, `columnToggleChildren`, …) stay in the table.
+
+**A named type an attribute refers to gets its own documented shape.** A row reading
+`items: AccordionItemType[]` gave the reader a name and nothing else. `ComponentDoc.types` carries
+those shapes, rendered below the attribute table with *the same columns* - a field of
+`AccordionItemType` is the same kind of row as an attribute of `Accordion`, and a table that looked
+different would suggest otherwise, so both call `attrColumns()`. `typeDefinitions` holds each type
+once and `componentTypes` maps components to them, because the three cartesian charts all point at
+`ChartPointType` and a copy per component is how copies drift. Read the fields off the real
+`export type` rather than from memory - two of them are a shared base intersected with per-table
+additions and are easy to get wrong.
+
+**Headings step one level at a time, in the contents and in the outline.** A level-2 entry with no
+level-1 above it has nothing to nest under, which is what an "Examples" heading fixes: the page is
+`h1` name → `h2` Examples → `h3` each example, and the contents mirror it. The example labels are
+real `<h3>`s styled back down to caption weight rather than loose `Text`, so the document outline
+can see them at all.
 
 **A default belongs in the `defaultValue` column, never mid-sentence in the description.** The
 table is scanned, not read, and "what happens if I leave this out" was buried in prose.

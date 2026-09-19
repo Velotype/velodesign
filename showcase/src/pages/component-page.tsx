@@ -1,8 +1,10 @@
 import { Component, setStylesheet } from "@velotype/velotype"
 import type { RenderableElements } from "@velotype/velotype"
 
-import { Badge, Breadcrumbs, CodeBlock, Heading, Link, Paragraph, Stack, Table, Text } from "../../../src/index.ts"
-import { componentDocs, type ComponentDoc, type AttrDoc, type MethodDoc } from "../data/docs.tsx"
+import { Badge, Breadcrumbs, CodeBlock, Heading, Link, Paragraph, Stack, Table, TableOfContents, Text } from "../../../src/index.ts"
+import type { TableColumnType } from "../../../src/index.ts"
+import type { TableOfContentsItemType } from "../../../src/index.ts"
+import { componentDocs, type ComponentDoc, type AttrDoc, type MethodDoc, type TypeDoc } from "../data/docs.tsx"
 
 export type ComponentPageAttrsType = {
     doc: ComponentDoc
@@ -32,6 +34,84 @@ function breakAtDots(value: string): RenderableElements {
     return <span>{parts.map((part, index) => index == 0 ? part : <span>.<wbr/>{part}</span>)}</span>
 }
 
+/**
+ * The columns an attribute table renders with.
+ *
+ * Shared by the Attributes table and by each named type's field table, so the two read identically
+ * - a field of `AccordionItemType` is the same kind of row as an attribute of `Accordion`, and
+ * documenting it in a table that looked different would suggest otherwise.
+ */
+function attrColumns(nameHeader: string): TableColumnType<AttrDoc>[] {
+    return [
+        {key: "name", header: nameHeader, width: "23%", render: (row: AttrDoc) =>
+            // Only required is marked. Optional is the default state - it is how every attrs type
+            // is written (`foo?: string`), so a marker on those would be noise the eye must filter.
+            row.required
+                ? <Stack inline gap="xs" align="center"><Text>{row.name}</Text><Badge type="warning">required</Badge></Stack>
+                : <Text>{row.name}</Text>},
+        {key: "type", header: "Type", width: "22%", render: (row: AttrDoc) => row.type},
+        {key: "default", header: "Default", width: "15%", render: (row: AttrDoc) => {
+            // One representation for "there is no default", whatever the reason - the attr is
+            // required, or the component deliberately falls back to nothing. Those were once an em
+            // dash and the word "none" separately, which read as a distinction to decode.
+            if (!row.defaultValue) {
+                return <Text type="muted">—</Text>
+            }
+            // A conditional default ("true for a row, never for a column") is prose. Monospacing
+            // it would claim it is something you could pass.
+            const isLiteral = !/\s/.test(row.defaultValue) || /^\[.*\]$/.test(row.defaultValue)
+            return isLiteral ? <Text code>{breakAtDots(row.defaultValue)}</Text> : <Text>{row.defaultValue}</Text>
+        }},
+        {key: "description", header: "Description", render: (row: AttrDoc) => row.description},
+    ]
+}
+
+/** The id for a named type's own section */
+function typeId(name: string): string {
+    return "type-" + name.toLowerCase()
+}
+
+/** A stable id for an example, from its label - the anchor the table of contents points at */
+function exampleId(label: string): string {
+    return "example-" + label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+}
+
+/**
+ * The page's sections, in the order they are rendered.
+ *
+ * Built from the same data the page renders rather than scraped back out of the DOM, so the two
+ * cannot disagree - which is exactly why `TableOfContents` takes items rather than querying for
+ * headings itself.
+ */
+function tocItems(doc: ComponentDoc): TableOfContentsItemType[] {
+    const items: TableOfContentsItemType[] = []
+    if (doc.signature) {
+        items.push({id: "signature", label: "Signature", level: 1})
+    }
+    if (doc.examples.length > 0) {
+        items.push({id: "examples", label: "Examples", level: 1})
+        for (const example of doc.examples) {
+            items.push({id: exampleId(example.label), label: example.label, level: 2})
+        }
+    }
+    if (doc.attrs.length > 0) {
+        items.push({id: "attributes", label: doc.kind == "function" ? "Parameters" : "Attributes", level: 1})
+    }
+    if (doc.types && doc.types.length > 0) {
+        items.push({id: "types", label: "Types", level: 1})
+        for (const type of doc.types) {
+            items.push({id: typeId(type.name), label: type.name, level: 2})
+        }
+    }
+    if (doc.methods && doc.methods.length > 0) {
+        items.push({id: "methods", label: "Methods", level: 1})
+    }
+    if (doc.children) {
+        items.push({id: "children", label: "Children", level: 1})
+    }
+    return items
+}
+
 export class ComponentPage extends Component<ComponentPageAttrsType> {
     constructor(attrs: ComponentPageAttrsType, children: RenderableElements[]) {
         super(attrs, children)
@@ -44,12 +124,37 @@ export class ComponentPage extends Component<ComponentPageAttrsType> {
  * without breaking it mid-word. The lede paragraph below is capped separately so the prose itself
  * still reads at a sane measure.
  */
-.vtd-showcase-doc{padding:2em;max-width:62em;}
+/*
+ * Content plus a sticky table of contents. The nav hides rather than wrapping under the content
+ * on a narrow viewport: it is a shortcut to sections the reader can already scroll to, so losing
+ * it costs nothing, where a full-width copy of it above the page would cost a screenful.
+ */
+.vtd-showcase-doc-layout{display:flex;align-items:flex-start;gap:2em;}
+.vtd-showcase-doc-toc{
+width:14em;
+flex-shrink:0;
+position:sticky;
+/* Clears the sticky header, matching the sidebar */
+top:calc(53px + 2em);
+padding-block-end:2em;
+}
+@media (max-width:75em){
+.vtd-showcase-doc-toc{display:none;}
+}
+.vtd-showcase-doc{padding:2em;max-width:62em;min-width:0;flex-grow:1;}
 /* Paragraph supplies the colour; this only sizes and spaces the page's lede */
 .vtd-showcase-doc-description{font-size:1.05em;margin-block-end:1.5em;max-width:44em;}
 .vtd-showcase-examples{margin-block-end:2em;}
-/* Text carries the colour and weight; this is the label's own size and spacing */
-.vtd-showcase-example-label{font-size:0.85em;margin-block-end:0.5em;}
+/*
+ * The example labels are real <h3>s for the sake of the outline, but they are captions rather than
+ * section titles - this puts them back to caption weight. Needs to out-specify .vtd-heading-3.
+ */
+.vtd-showcase-doc .vtd-showcase-example-label{
+font-size:0.85em;
+font-weight:bold;
+color:var(--background-6);
+margin-block:0 0.5em;
+}
 .vtd-showcase-example-preview{
 border:1px solid var(--background-4);
 /* Square off the edge the code block butts against - the two read as one unit */
@@ -66,6 +171,10 @@ background-size:16px 16px;
 .vtd-showcase-example-code{border-radius:0 0 0.5rem 0.5rem;}
 .vtd-showcase-attrs{margin-block-end:2em;}
 .vtd-showcase-methods{margin-block-end:2em;}
+.vtd-showcase-types{margin-block-end:2em;}
+.vtd-showcase-type{margin-block-end:1.5em;}
+/* The type name is a heading, but it is an identifier - keep it at body size and monospaced */
+.vtd-showcase-doc .vtd-showcase-type .vtd-heading-3{font-size:1em;margin-block:0 0.4em;}
 .vtd-showcase-children{margin-block-end:2em;}
 .vtd-showcase-signature{margin-block-end:2em;}
 .vtd-showcase-page-nav{border-block-start:1px solid var(--background-4);padding-block-start:1.5em;}
@@ -81,7 +190,10 @@ background-size:16px 16px;
         const prev = index > 0 ? componentDocs[index - 1] : undefined
         const next = index >= 0 && index < componentDocs.length - 1 ? componentDocs[index + 1] : undefined
 
-        return <div class="vtd-showcase-doc">
+        const sections = tocItems(doc)
+
+        return <div class="vtd-showcase-doc-layout">
+            <div class="vtd-showcase-doc">
             <Breadcrumbs spa items={[{label: "Home", to: "/"}, {label: doc.group}, {label: doc.name}]}/>
             <Stack align="center" gap="sm">
                 <Heading level={1}>{doc.name}</Heading>
@@ -90,53 +202,47 @@ background-size:16px 16px;
             <Paragraph type="muted" class="vtd-showcase-doc-description">{doc.description}</Paragraph>
 
             {doc.signature ? <div class="vtd-showcase-signature">
-                <Heading level={2}>Signature</Heading>
+                <Heading level={2} id="signature">Signature</Heading>
                 <CodeBlock code={doc.signature} ariaLabel={`How to call ${doc.name}`}/>
             </div> : null}
 
+            {doc.examples.length > 0 ? <Heading level={2} id="examples">Examples</Heading> : null}
             {doc.examples.length > 0 ? <Stack direction="column" gap="lg" class="vtd-showcase-examples">
                 {doc.examples.map(example => <div>
-                    <div class="vtd-showcase-example-label"><Text type="muted" strong>{example.label}</Text></div>
+                    {/* A real heading, so the document outline cascades h1 > h2 > h3 rather than
+                        leaving each example's label as loose text the outline cannot see */}
+                    <Heading level={3} id={exampleId(example.label)} class="vtd-showcase-example-label">{example.label}</Heading>
                     <div class="vtd-showcase-example-preview">{example.node()}</div>
                     <CodeBlock
                         class="vtd-showcase-example-code"
+                        showLineNumbers
+                        wrap
                         code={example.code}
                         ariaLabel={`${doc.name} - ${example.label} source`}/>
                 </div>)}
             </Stack> : <div class="vtd-showcase-example-preview" style={{marginBlockEnd: "2em"}}>{doc.render(doc.defaultAttrs, () => {})}</div>}
 
             {doc.attrs.length > 0 ? <div class="vtd-showcase-attrs">
-                <Heading level={2}>{doc.kind == "function" ? "Parameters" : "Attributes"}</Heading>
+                <Heading level={2} id="attributes">{doc.kind == "function" ? "Parameters" : "Attributes"}</Heading>
                 <Table<AttrDoc>
-                    columns={[
-                        {key: "name", header: doc.kind == "function" ? "Parameter" : "Attribute", width: "23%", render: (row: AttrDoc) =>
-                            // Only required is marked. Optional is the default state - it is how
-                            // every attrs type is written (`foo?: string`) and it is 282 of 341
-                            // rows, so a marker on those would be noise the eye has to filter.
-                            row.required
-                                ? <Stack inline gap="xs" align="center"><Text>{row.name}</Text><Badge type="warning">required</Badge></Stack>
-                                : <Text>{row.name}</Text>},
-                        {key: "type", header: "Type", width: "22%", render: (row: AttrDoc) => row.type},
-                        {key: "default", header: "Default", width: "15%", render: (row: AttrDoc) => {
-                            // One representation for "there is no default", whatever the reason -
-                            // the attr is required, or the component deliberately falls back to
-                            // nothing. Those were once an em dash and the word "none" separately,
-                            // which read as a distinction the reader then had to work out.
-                            if (!row.defaultValue) {
-                                return <Text type="muted">—</Text>
-                            }
-                            // A conditional default ("true for a row, never for a column") is
-                            // prose. Monospacing it would claim it is something you could pass.
-                            const isLiteral = !/\s/.test(row.defaultValue) || /^\[.*\]$/.test(row.defaultValue)
-                            return isLiteral ? <Text code>{breakAtDots(row.defaultValue)}</Text> : <Text>{row.defaultValue}</Text>
-                        }},
-                        {key: "description", header: "Description", render: (row: AttrDoc) => row.description},
-                    ]}
+                    columns={attrColumns(doc.kind == "function" ? "Parameter" : "Attribute")}
                     rows={doc.attrs}/>
             </div> : null}
 
+            {doc.types && doc.types.length > 0 ? <div class="vtd-showcase-types">
+                <Heading level={2} id="types">Types</Heading>
+                <Paragraph type="muted">Shapes this component's attributes refer to by name.</Paragraph>
+                {doc.types.map(type => <div class="vtd-showcase-type">
+                    <Heading level={3} id={typeId(type.name)}><Text code>{type.name}</Text></Heading>
+                    {type.description ? <Paragraph type="muted">{type.description}</Paragraph> : null}
+                    <Table<AttrDoc>
+                        columns={attrColumns("Field")}
+                        rows={type.fields}/>
+                </div>)}
+            </div> : null}
+
             {doc.methods && doc.methods.length > 0 ? <div class="vtd-showcase-methods">
-                <Heading level={2}>Methods</Heading>
+                <Heading level={2} id="methods">Methods</Heading>
                 <Paragraph type="muted">Called on the component, not passed to it.</Paragraph>
                 <Table<MethodDoc>
                     columns={[
@@ -147,7 +253,7 @@ background-size:16px 16px;
             </div> : null}
 
             {doc.children ? <div class="vtd-showcase-children">
-                <Heading level={2}>Children</Heading>
+                <Heading level={2} id="children">Children</Heading>
                 <Paragraph>{doc.children}</Paragraph>
             </div> : null}
 
@@ -155,6 +261,15 @@ background-size:16px 16px;
                 {prev ? <Link spa to={`/components/${prev.slug}`}>← {prev.name}</Link> : <span/>}
                 {next ? <Link spa to={`/components/${next.slug}`}>{next.name} →</Link> : <span/>}
             </Stack>
+            </div>
+
+            {sections.length > 0 ? <div class="vtd-showcase-doc-toc">
+                <TableOfContents
+                    header="On this page"
+                    ariaLabel="On this page"
+                    topOffset={60}
+                    items={sections}/>
+            </div> : null}
         </div>
     }
 }

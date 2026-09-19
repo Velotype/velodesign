@@ -36,6 +36,7 @@ import { Breadcrumbs, type BreadcrumbItemType, type BreadcrumbsAttrsType } from 
 import { Pagination, PaginationThemeOptions, type PaginationAttrsType } from "./navigation/pagination.tsx"
 import { Navbar, type NavbarAttrsType } from "./navigation/navbar.tsx"
 import { Sidebar, type SidebarAttrsType, type SidebarItemType } from "./navigation/sidebar.tsx"
+import { TableOfContents, type TableOfContentsAttrsType, type TableOfContentsItemType } from "./navigation/table-of-contents.tsx"
 import { Menu, type MenuAttrsType, type MenuItemType } from "./navigation/menu.tsx"
 import { showToast, ToastThemeOptions, type ToastOptions, type ToastType } from "./feedback/toast.tsx"
 import { Accordion, type AccordionAttrsType, type AccordionItemType } from "./data-display/accordion.tsx"
@@ -206,6 +207,10 @@ export {
     type NavbarAttrsType,
 
     Sidebar,
+
+    TableOfContents,
+    type TableOfContentsAttrsType,
+    type TableOfContentsItemType,
     type SidebarAttrsType,
     type SidebarItemType,
 
