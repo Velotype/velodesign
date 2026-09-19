@@ -1866,4 +1866,59 @@ describe('basic component rendering', () => {
         }
     })
 
+
+    /**
+     * A submenu's entries must not be reachable until it is opened, and a divider must belong to
+     * the entry below it.
+     *
+     * The reachable set is queried from the DOM on every keypress rather than captured once,
+     * because opening a submenu changes it - a list built at construction either skips the
+     * submenu's entries or offers entries nobody can see.
+     */
+    itWrap("menu submenus stay closed until asked, and dividers group what follows", "menu", "#nested-menu", async (_selection: ElementHandle) => {
+        const read = () => page.evaluate(`(() => {
+            const menu = document.getElementById("showcase-theme-light").querySelector("#nested-menu")
+            const parent = menu.querySelector(".vtd-menu-item-parent")
+            return {
+                open: menu.open,
+                visible: [...menu.querySelectorAll(".vtd-menu-item")]
+                    .filter((el) => el.checkVisibility({checkVisibilityCSS: true}))
+                    .map((el) => el.innerText.trim()),
+                expanded: parent.getAttribute("aria-expanded"),
+                dividers: menu.querySelectorAll(".vtd-menu-entry-divided").length,
+                dividerOn: menu.querySelector(".vtd-menu-entry-divided .vtd-menu-item").innerText.trim(),
+            }
+        })()`) as Promise<{open: boolean, visible: string[], expanded: string, dividers: number, dividerOn: string}>
+
+        await page.evaluate(`document.getElementById("showcase-theme-light").querySelector("#nested-menu .vtd-menu-trigger").click()`)
+        const opened = await read()
+        if (!opened.open) {fail("ERROR: the menu did not open")}
+        if (opened.visible.includes("Members")) {
+            fail(`ERROR: a submenu's entries are reachable before it opens: ${JSON.stringify(opened.visible)}`)
+        }
+        if (opened.expanded != "false") {fail(`ERROR: a closed submenu reports aria-expanded=${opened.expanded}`)}
+        // "Sign out" carries dividerBefore; the first entry's would be ignored, so exactly one rule
+        if (opened.dividers != 1) {fail(`ERROR: expected 1 divider, got ${opened.dividers}`)}
+        if (opened.dividerOn != "Sign out") {fail(`ERROR: the divider landed on ${JSON.stringify(opened.dividerOn)}`)}
+
+        // ArrowRight enters the submenu, ArrowLeft comes back out and closes it behind itself
+        await page.evaluate(`(() => {
+            const parent = document.getElementById("showcase-theme-light").querySelector("#nested-menu .vtd-menu-item-parent")
+            parent.focus()
+            parent.dispatchEvent(new KeyboardEvent("keydown", {key: "ArrowRight", bubbles: true}))
+        })()`)
+        const entered = await read()
+        if (!entered.visible.includes("Members")) {
+            fail(`ERROR: ArrowRight did not open the submenu: ${JSON.stringify(entered.visible)}`)
+        }
+        if (entered.visible.includes("Europe")) {fail("ERROR: a second-level submenu opened unasked")}
+        if (entered.expanded != "true") {fail(`ERROR: an open submenu reports aria-expanded=${entered.expanded}`)}
+
+        await page.evaluate(`document.activeElement.dispatchEvent(new KeyboardEvent("keydown", {key: "ArrowLeft", bubbles: true}))`)
+        const left = await read()
+        if (left.visible.includes("Members")) {
+            fail(`ERROR: ArrowLeft left the submenu open: ${JSON.stringify(left.visible)}`)
+        }
+    })
+
 })

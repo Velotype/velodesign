@@ -358,6 +358,8 @@ const typeDefinitions: Record<string, TypeDoc> = {
             {name: "spa", type: "boolean", defaultValue: "false", description: "Client-side route change rather than a page load, for an href inside an SPA."},
             {name: "onClick", type: "() => void", description: "Called when the entry is chosen. May be combined with href."},
             {name: "disabled", type: "boolean", defaultValue: "false", description: "Renders the entry unavailable and ignores clicks."},
+            {name: "children", type: "MenuItemType[]", description: "Nested entries. An entry with children opens a submenu beside itself rather than acting, so its own href and onClick are ignored."},
+            {name: "dividerBefore", type: "boolean", defaultValue: "false", description: "Draws a divider immediately above this entry, separating it from what came before. Ignored on the first entry, so a group's first item can carry it unconditionally."},
         ],
     },
     StepType: {

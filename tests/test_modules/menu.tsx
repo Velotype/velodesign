@@ -22,6 +22,21 @@ class MenuGallery extends Component<EmptyAttrs> {
                 {label: "Widgets", href: "/menu/widgets"},
                 {label: "Gadgets", href: "/menu/gadgets"}
             ]}/>
+            {/* Submenus nest to any depth, and dividers group what follows them */}
+            <Menu id="nested-menu" trigger="Account" items={[
+                {label: "Profile", onClick: () => {this.clicks.value += 1}},
+                {label: "Workspace", children: [
+                    {label: "Invite someone", onClick: () => {this.clicks.value += 1}},
+                    {label: "Members", href: "/menu/members"},
+                    {label: "Billing", href: "/menu/billing"},
+                    {label: "Regions", children: [
+                        {label: "Europe", href: "/menu/eu"},
+                        {label: "Americas", href: "/menu/us"}
+                    ]}
+                ]},
+                {label: "Preferences", onClick: () => {this.clicks.value += 1}},
+                {label: "Sign out", dividerBefore: true, onClick: () => {this.clicks.value += 1}}
+            ]}/>
         </div>
     }
 }
