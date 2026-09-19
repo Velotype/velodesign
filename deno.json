@@ -13,8 +13,18 @@
         ]
     },
     "tasks": {
+        "size": "deno run --allow-read --allow-write --allow-run --allow-env ./scripts/bundle-size.ts",
         "test": "cd ./tests/ && deno run 'bundle*' && cd .. && deno test --allow-read --allow-net --allow-sys --allow-env --allow-write --allow-run",
         "test-manual": "cd ./tests/ && deno run 'bundle*' && cd .. && deno run --allow-read --allow-net --allow-sys ./tests/manual_server.ts"
+    },
+    "lint": {
+        "rules": {
+            // velotype's JSX has no `key` prop at all, so every list render trips this React rule -
+            // 72 findings, none of them real. Excluded so `deno lint` can be a CI gate.
+            "exclude": [
+                "jsx-key"
+            ]
+        }
     },
     "compilerOptions": {
         "jsx": "react-jsx",

@@ -185,7 +185,7 @@ single column - for a reading that never changed. It now measures zero.
 
 ## Attrs types
 
-Every component's attrs type is named `<Name>AttrsType` (or, for a couple of older ones, `<Name>AttrTypes` / `Type<Name>AttrsType` — check the neighbor you're copying) and is built from these shared mixins, **folded into the type alias itself**, not repeated at each usage site:
+Every component's attrs type is named `<Name>AttrsType`, with no exceptions left, and is built from these shared mixins, **folded into the type alias itself**, not repeated at each usage site:
 
 ```ts
 export type FooAttrsType = {
@@ -323,7 +323,7 @@ showcase encodes the rule rather than restating it: `SymbolOption` carries a boo
 rather than the name of a shared field, so a delegating entry *cannot* be wired to a
 differently-named one.
 
-The object itself is `<Component>ThemeColorOptions` with no exceptions - `TextFormFieldOptions` was the
+The object itself is `<Component>ThemeOptions` with no exceptions - `TextFormFieldOptions` was the
 lone holdout and is now `TextFormFieldThemeOptions`, its `check`/`xmark`/`edit` becoming
 `confirmSymbol`/`cancelSymbol`/`editSymbol`.
 
@@ -332,16 +332,16 @@ Three shapes, and which one to reach for:
 ```ts
 // 1. Delegates. Reads CommonThemeOptions live, so a consumer's startup assignment reaches it even
 //    though this module was evaluated first. Assigning here overrides just this component.
-export const AlertThemeOptions: {dismissSymbol: ThemeSymbol} = themeOptions({dismissSymbol: "closeSymbol"})
+export const AlertThemeOptions: {closeSymbol: ThemeSymbol} = themeOptions({closeSymbol: "closeSymbol"})
 
 // 2. Local only. No counterpart elsewhere in the package.
-export const ButtonThemeOptions: {spinner: ThemeSymbol} = themeOptions({}, {spinner: function(){return <Spinner size="1em"/>}})
+export const ButtonThemeOptions: {loadingSymbol: ThemeSymbol} = themeOptions({}, {loadingSymbol: function(){return <Spinner size="1em"/>}})
 
 // 3. Wraps a shared symbol in the component's own chrome. The option is the *whole* visual, so a
 //    consumer replacing it isn't stuck inside a 2.5em span; CommonThemeOptions.emptySymbol changes
 //    only the glyph, here and in both tables and every chart at once.
-export const EmptyThemeOptions: {image: ThemeSymbol} = themeOptions({}, {
-    image: function(){return <span class="vtd-empty-icon" aria-hidden="true"><CommonThemeOptions.emptySymbol/></span>}
+export const EmptyThemeOptions: {emptySymbol: ThemeSymbol} = themeOptions({}, {
+    emptySymbol: function(){return <span class="vtd-empty-icon" aria-hidden="true"><CommonThemeOptions.emptySymbol/></span>}
 })
 ```
 
@@ -869,7 +869,49 @@ keeps looking correct even when the inherited palette is wrong.
 
 `tests/test_modules/explorer.tsx` (+ `explorer-schema.tsx`) is a separate, Storybook-style browsing UI served at `/` — a searchable/grouped sidebar, a live canvas, and a "Controls" panel that live-edits a story's props and re-renders the real component instantly. It's additive to the gallery-page fan-out above, not a replacement: every component still gets its own `/<name>` gallery page, and `basic_tests.test.ts` still drives those routes directly, unaffected by the Explorer. If you want a new component to also show up in the Explorer, add a `ComponentStory` entry for it in `explorer-schema.tsx` (`defaultProps`/`controls`/`render`) — only genuinely scalar props (a string enum → `select`, a `boolean`, a freeform string → `text`, a number → `number`) get a control; arrays/objects/callbacks stay baked into `render` as fixed sample data, same as the gallery pages already do. A story with a click-driven internal state (like `Pagination`'s current page) should route that through the `setProp` callback `render` receives as its second argument, so it stays in sync with the same update path a Controls edit uses - see `explorer.tsx`'s `Pagination`/`Menu` entries.
 
-Running the bundler: use `deno task bundle-<name>` **one at a time**. Passing multiple task names, or a glob like `'bundle*'`, to a single `deno run`/`deno task` invocation has silently only run the first one before — don't trust a "ran clean" result from a multi-name invocation without checking every module's file actually got a fresh timestamp.
+Running the bundler: `deno run 'bundle*'` from `tests/` builds all 72 gallery modules, which is what `deno task test` and CI both rely on - verified by deleting `tests/build/` and counting what came back. An older note here said the glob silently ran only the first task; that was true of an earlier Deno and is not true of 2.9. If you are ever suspicious, delete `tests/build/` and count rather than trusting a "ran clean".
+
+## Changes reach `main` through a pull request, and CI is the reviewer
+
+`main` is protected: no direct pushes, no force-pushes, no deletion. Every change goes through a
+pull request, and because there is no second developer, **the required checks are the review** -
+nothing merges that they do not pass.
+
+| Workflow | Runs on | What it gates |
+|---|---|---|
+| `ci.yml` - *Typecheck, lint and publish dry run* | PR + push to main | `deno check` on the package, showcase and tests; `deno lint`; `deno publish --dry-run`; and that `showcase/src/data/bundle-size.ts` is current |
+| `ci.yml` - *Astral suite* | PR + push to main | `deno task test`, which bundles all 72 gallery modules and drives them |
+| `bundle-size.yml` | PR | Comments the gzip/raw size of the whole library against the base branch. Advisory - it reports, it does not block |
+| `auto-merge.yml` | PR | Turns on GitHub's auto-merge, so a PR merges itself once the required checks go green |
+| `publish.yml` | Manual | `deno publish --dry-run`, then `npx jsr publish` |
+
+Three things worth knowing before you touch any of this:
+
+- **The suite's own summary line is useless and the exit code is not.** Something in the teardown
+  path calls `Deno.exit(0)`, so the tally always reads `0 passed | 0 failed`. A failing assertion
+  still exits 1 - verified by breaking one on purpose and watching the run go red - so
+  `deno task test` is a real gate. Count the `... ok (` lines when you want a number.
+- **Auto-merge does not bypass anything.** It queues the merge and GitHub holds it until every
+  required check passes; a red check leaves the PR open. It only arms for a non-draft PR from a
+  branch in this repository opened by the repository owner, so a fork's PR still waits for a human.
+- **`deno lint` excludes `jsx-key`** in `deno.json`, because velotype's JSX has no `key` prop and
+  the rule fires on all 72 list renders. Everything else must be clean; that is why it can gate.
+
+### The bundle size is measured, not asserted
+
+`scripts/bundle-size.ts` bundles `src/index.ts` minified for the browser and reports raw and gzip
+bytes. It is the single source for both places the number appears:
+
+- `deno task size --write` regenerates `showcase/src/data/bundle-size.ts`, and the showcase's own
+  `deno task bundle` runs it first, so the figure on the home page is measured from the source the
+  site was built from and cannot go stale. CI fails if the committed file disagrees with a fresh
+  measurement.
+- The pull-request comment measures both sides. **The base is measured with the base's own copy of
+  the script**, not the branch's - otherwise a PR that changes how measuring works would report the
+  difference as if it were a size change.
+
+`src/index.ts` is the only entrypoint, so this is the honest ceiling: every component, every
+stylesheet string, nothing tree-shaken. A real app importing three components downloads far less.
 
 ### Verification checklist for a new/changed component
 

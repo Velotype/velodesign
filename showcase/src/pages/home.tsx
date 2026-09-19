@@ -3,6 +3,7 @@ import type { EmptyAttrs } from "@velotype/velotype"
 
 import { Badge, Button, Card, Grid, Heading, History, Paragraph, Stack, Statistic, Text } from "../../../src/index.ts"
 import { componentDocs, groupedDocs } from "../data/docs.tsx"
+import { bundleSize } from "../data/bundle-size.ts"
 import { categoryPageUrl } from "./category-page.tsx"
 
 let areHomeStylesMounted = false
@@ -55,6 +56,13 @@ border-block-end:1px solid var(--background-4);
                     <Statistic title="Components" value={componentDocs.length}/>
                     <Statistic title="Categories" value={groups.length}/>
                     <Statistic title="Runtime dependencies" value={0}/>
+                    {/*
+                      * Measured, not claimed: scripts/bundle-size.ts bundles src/index.ts minified
+                      * and this page's own build task regenerates the figure first, so it cannot
+                      * drift from the source it was built with. gzip is what a browser pulls down,
+                      * which is why it leads and the raw size is the suffix.
+                      */}
+                    <Statistic title="Whole library, gzipped" value={(bundleSize.gzip / 1024).toFixed(1)} suffix={<Text type="muted"> KB</Text>}/>
                 </Stack>
             </section>
 

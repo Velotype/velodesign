@@ -3,7 +3,7 @@
 import { afterAll, beforeAll, describe, it } from "@std/testing/bdd"
 import { fail, assertEquals } from "@std/assert"
 
-import {Server} from "@velotype/veloserver"
+import type {Server} from "@velotype/veloserver"
 
 import { launch } from "@astral/astral"
 import type { Browser, ElementHandle, Page } from "@astral/astral"
@@ -266,7 +266,7 @@ describe('basic component rendering', () => {
         assertEquals(await clickCount.innerText(), "clicked 1 times")
     })
 
-    itWrap("menu closes when clicking outside of it", "menu", "#actions-menu", async (selection: ElementHandle) => {
+    itWrap("menu closes when clicking outside of it", "menu", "#actions-menu", async (_selection: ElementHandle) => {
         const summary = await page.$("#actions-menu summary")
         if (!summary) {fail("ERROR: summary not found")}
         await summary.click()

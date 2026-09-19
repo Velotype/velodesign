@@ -79,7 +79,7 @@ class CodeBlockGallery extends Component<EmptyAttrs> {
             <div id="code-jsx-text"><CodeBlock code={jsxTextSample} ariaLabel="A JSX text example"/></div>
 
             <Heading level={3}>Markup is shown, never rendered</Heading>
-            <div id="code-escaped"><CodeBlock code={"<script>alert(1)</script>\n<b>not bold</b>"} ariaLabel="Markup shown as text"/></div>
+            <div id="code-escaped"><CodeBlock code={`<script>alert(1)</script>\n<b>not bold</b>`} ariaLabel="Markup shown as text"/></div>
         </div>
     }
 }

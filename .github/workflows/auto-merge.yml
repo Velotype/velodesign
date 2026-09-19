@@ -1,0 +1,29 @@
+name: Auto-merge
+
+# There is no second developer to review these, so the CI checks are the review. This turns on
+# GitHub's own auto-merge, which holds the pull request until every required check on main's
+# ruleset has passed and merges it only then - it does not bypass anything, and a failing check
+# leaves the PR sitting open.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+jobs:
+  enable:
+    name: Enable auto-merge
+    # Only for pull requests raised from a branch in this repository by its owner. A fork's PR, or
+    # anyone else's, waits for a human - otherwise "no review required" would apply to strangers.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == github.repository_owner &&
+      !github.event.pull_request.draft
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Turn on auto-merge for this pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"

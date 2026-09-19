@@ -7,7 +7,7 @@ import type { ComponentStory } from "../../../tests/test_modules/explorer-schema
 import {
     Accordion, Alert, AspectRatio, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, ButtonModal,
     Calendar, CalendarRange, Card, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu,
-    DatePicker, DateTimePicker, DateTimeRangePicker, Divider, Drawer, Empty, Form, FormField, I, InputNumber, Link, List, Menu, Modal,
+    DatePicker, DateTimePicker, DateTimeRangePicker, Divider, Drawer, Empty, Form, FormField, I, InputNumber, Link, List, Menu,
     Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, ScrollArea, Select, SelectMenu,
     showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, DataTable, Tabs, Tag, TextBox,
     LineChart, AreaChart, BarChart, PieChart, Gauge, Sparkline,
@@ -2160,12 +2160,14 @@ secondary. The last paragraph in a container drops its bottom margin.</Paragraph
             loadingLabel="Loading people"
             emptyMessage="No people yet"
             noMatchMessage="No people match that search"
-            load={async (query) => {
-                // Stands in for a real endpoint: the filtering and slicing a server would do
+            load={(query) => {
+                // Stands in for a real endpoint: the filtering and slicing a server would do.
+                // Not `async` - there is nothing to await, and `load` is typed as returning a
+                // Promise, which a plain resolved one satisfies
                 const matched = directory.filter(person =>
                     person.name.toLowerCase().includes(query.search.toLowerCase()))
                 const from = (query.page - 1) * query.pageSize
-                return {rows: matched.slice(from, from + query.pageSize), total: matched.length}
+                return Promise.resolve({rows: matched.slice(from, from + query.pageSize), total: matched.length})
             }}/>, code: `<AsyncDataTable<Person>
 columns={[
     {key: "name", header: "Name", render: (person) => person.name},
