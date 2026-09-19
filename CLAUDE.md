@@ -681,6 +681,55 @@ Adding this surfaced a gap worth keeping: **`Menu` had no `ariaLabel`**, so a me
 a glyph had no accessible name at all. It takes one now, applied to the `<summary>`, which is what
 the expander uses.
 
+## `Sidebar` is the navigation panel, and the showcase must not have its own
+
+The showcase grew a collapsible icon rail, category icons, an active-page marker and a filter - all
+of it in `showcase/src/app-shell.tsx`, none of it in the component a consumer would reach for. That
+was the failure this file's "showcase is built out of this package" rule exists to prevent, and it
+went unnoticed for three changes. **If a navigation behaviour is worth having in the showcase, it
+belongs in `Sidebar`.** What is left in the showcase is its own placement of the component, the
+search box, the category label and the per-category count.
+
+`Sidebar` is a class, and builds on `Tree` for its groups rather than repeating a disclosure - the
+animation, the keyboard handling and the open-state API all come from one place.
+
+Four things it does that a list cannot, each one optional and each with a trap behind it:
+
+- **`collapsible`** shrinks it to a rail of icons that floats out over the page on hover or
+  `:focus-within`. ⚠️ **The children of an expanded group hide with `display:none`, never
+  `visibility:hidden`.** Under `visibility` they keep their height, so the rail grows a blank
+  stretch where a group's entries would have been - measured, one 236px gap between icons that are
+  otherwise 49px apart. On the rail every top-level row also takes a `min-height`, because a
+  group's row is naturally taller than a plain link's and that difference reads as a wobble once
+  the labels are gone.
+- **The active *group*** is marked, not just the active page. On the rail there is no label and no
+  open group to show where the reader is, so without it the sidebar names the current page and
+  gives no clue which section it belongs to. `NavLink` decides what is active; `#syncActiveGroup`
+  only asks which group contains it, so the two cannot disagree. It is drawn as a leading bar
+  rather than a fill, so it survives the label being gone.
+- **`resizable`** drags the trailing edge. `Resizable` is deliberately *not* reused: it owns the
+  width of what it wraps, and this has to reconcile a dragged width with a collapsed one - two
+  owners of one property fighting over it.
+- **`profile`** pins an account row that opens a `Menu`, so it gets that component's keyboard
+  handling, submenus and dividers instead of a second copy. Its list opens *upward*; it sits at the
+  foot, and downward is off-screen.
+
+**`setItems` exists so a filterable sidebar is possible at all.** Re-rendering to re-filter
+destroys the `header` along with everything else - which is where the search box lives, so the
+reader loses focus after one character. Only the body is rebuilt; the header, the profile row, the
+collapsed state and the dragged width survive. The open/closed state does not, because the entries
+are new - read it off `getTree()` first and put it back through `defaultOpen`, which is what a
+filter wants anyway since it must force open whichever groups still hold a match.
+
+**`onToggle` is how a consumer keeps that state.** Migrating the showcase onto the component
+dropped it at first, and the reader's expansions stopped surviving a filter - caught by a check,
+not by review. Like `Tree`'s, it fires *after* the change, so reading `getOpenKeys()` inside it is
+safe.
+
+**The collapse control is an icon, not a word** - a double chevron drawn in CSS that flips to point
+the way the panel will move, the same call `Checkbox`'s tick and `Select`'s arrow make. A word
+there would be an English default, which this package does not do.
+
 ## `Menu` nests, and a divider belongs to the entry below it
 
 Two additions, each with a choice worth keeping:
