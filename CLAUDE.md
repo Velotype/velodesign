@@ -681,6 +681,29 @@ Adding this surfaced a gap worth keeping: **`Menu` had no `ariaLabel`**, so a me
 a glyph had no accessible name at all. It takes one now, applied to the `<summary>`, which is what
 the expander uses.
 
+## `Menu` nests, and a divider belongs to the entry below it
+
+Two additions, each with a choice worth keeping:
+
+- **`children` makes an entry a submenu parent, and its own `href`/`onClick` are ignored.** An
+  entry that both navigated and opened a flyout would fire whichever the pointer reached first.
+- **`dividerBefore` sits on the entry *after* the rule, not as an entry of its own.** A divider in
+  the array would force `label` to become optional, weakening every other entry's type, and would
+  let a menu open or close on a stray rule. A `dividerBefore` on the first entry is ignored, so a
+  group's first item can carry it unconditionally.
+
+**The navigable set is queried from the DOM on every keypress**, not captured at construction:
+opening a submenu changes what is reachable, so a list built once either skips the submenu's
+entries or offers entries nobody can see. `#navigableItems()` filters on
+`checkVisibility({checkVisibilityCSS: true})`, which is also what a test should assert against -
+"is it in the DOM" is not the same question.
+
+**Pointer and keyboard drive one open state, a class, rather than a `:hover` rule plus a scripted
+one.** Two mechanisms race: the pointer can open one branch while the keyboard has another open,
+and neither knows about the other. `Escape` unwinds one level at a time, which is the APG
+behaviour - inside a submenu it closes that submenu and returns focus to the row that opened it,
+and only then closes the menu.
+
 ## `Tree` is a class, because its open state has to be readable from outside
 
 `Tree` is the one data-display component that is a `class Component` rather than a
