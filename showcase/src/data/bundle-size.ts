@@ -3,9 +3,12 @@
  * edit by hand.
  *
  * The whole package bundled from its single entrypoint, minified, with nothing tree-shaken away.
+ *
+ * Deliberately carries no timestamp. A generated file that changes every day cannot be checked
+ * against a fresh measurement in CI, because the check would start failing the next morning for
+ * reasons that have nothing to do with the bundle.
  */
-export const bundleSize: {raw: number, gzip: number, measuredAt: string} = {
+export const bundleSize: {raw: number, gzip: number} = {
     raw: 163678,
-    gzip: 43497,
-    measuredAt: "2026-09-19"
+    gzip: 43497
 }

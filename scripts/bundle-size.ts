@@ -38,7 +38,15 @@ async function measure(): Promise<{raw: number, gzip: number}> {
     }
 }
 
-/** Compressed size, which is what a consumer's browser actually pulls down */
+/**
+ * Compressed size, which is what a consumer's browser actually pulls down.
+ *
+ * Worth knowing before comparing two of these: gzip output is **not** byte-identical across
+ * machines - the same bundle measured 43497 here and 43496 on an ubuntu-24.04 runner, because the
+ * zlib behind `CompressionStream` differs. `raw` is deterministic. So compare gzip only between
+ * two measurements taken on the same machine, which is what the pull-request workflow does, and
+ * never assert it against a committed value.
+ */
 async function gzipSize(bytes: Uint8Array): Promise<number> {
     const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new CompressionStream("gzip"))
     let total = 0
@@ -61,11 +69,14 @@ async function writeGenerated(sizes: {raw: number, gzip: number}) {
  * edit by hand.
  *
  * The whole package bundled from its single entrypoint, minified, with nothing tree-shaken away.
+ *
+ * Deliberately carries no timestamp. A generated file that changes every day cannot be checked
+ * against a fresh measurement in CI, because the check would start failing the next morning for
+ * reasons that have nothing to do with the bundle.
  */
-export const bundleSize: {raw: number, gzip: number, measuredAt: string} = {
+export const bundleSize: {raw: number, gzip: number} = {
     raw: ${sizes.raw},
-    gzip: ${sizes.gzip},
-    measuredAt: ${JSON.stringify(new Date().toISOString().slice(0, 10))}
+    gzip: ${sizes.gzip}
 }
 `
     await Deno.writeTextFile(generatedFile, contents)
