@@ -180,7 +180,7 @@ export class AppShell extends Component<EmptyAttrs> {
             setStylesheet(`
 .vtd-showcase-shell{display:flex;flex-direction:column;min-height:100vh;}
 /* Navbar supplies the bar itself; this only makes it stick to the top of the viewport */
-.vtd-showcase-header{position:sticky;top:0;background-color:var(--background);z-index:2;}
+.vtd-showcase-header{position:sticky;top:0;background-color:var(--background);z-index:1;}
 .vtd-showcase-brand{font-size:1.15em;font-weight:bold;color:inherit;text-decoration:none;}
 .vtd-showcase-header-link{color:inherit;text-decoration:none;font-size:0.9em;padding:0.4em 0.6em;border-radius:0.25rem;}
 .vtd-showcase-header-link:hover{background-color:var(--background-2);}
@@ -190,6 +190,9 @@ width:250px;
 flex-shrink:0;
 position:sticky;
 top:53px;
+/* The chrome layer - see the note on .vtd-showcase-main. Same value as the header, because they
+   are the same layer and never overlap each other */
+z-index:1;
 align-self:flex-start;
 height:calc(100vh - 53px);
 transition:width 0.18s ease-in-out;
@@ -222,7 +225,6 @@ transition:width 0.18s ease-in-out, box-shadow 0.18s ease-in-out;
 .vtd-showcase-sidebar-collapsed:focus-within .vtd-showcase-sidebar-panel{
 width:250px;
 box-shadow:0 2px 14px rgba(0,0,0,0.18);
-z-index:3;
 }
 /*
  * Everything except the icons is hidden at rail width. visibility rather than display:none:
@@ -281,7 +283,28 @@ font-size:0.95em;
 }
 .vtd-showcase-sidebar-item:hover{background-color:var(--background-2);}
 .vtd-showcase-sidebar-item-active{background-color:var(--primary-2);font-weight:bold;}
-.vtd-showcase-main{flex-grow:1;min-width:0;}
+/*
+ * The page's content is one layer. Two rules make that true, and they are the whole of this
+ * stylesheet's stacking story - there are no other z-index values anywhere in the showcase.
+ *
+ * isolation:isolate makes main a stacking context, so a positioned descendant inside the page
+ * cannot rank itself against anything outside it. Without this, DataTable's column menu carries
+ * z-index:1000 and would paint straight over the site header.
+ *
+ * The chrome then sits one step above that, which is where the single remaining z-index goes. It
+ * cannot be avoided: same-level positioned elements paint in DOM order, and the sidebar comes
+ * *before* main in the markup because it is navigation. Moving it after main would fix the paint
+ * order for free, but a keyboard user would then have to tab through the entire page to reach the
+ * nav, which costs more than the declaration saves.
+ *
+ * What was here before was two values, 2 and 3, and neither did anything useful. The panel's 3 was
+ * inert: its wrapper is position:sticky, which is already a stacking context, so the 3 only ranked
+ * the panel against its own siblings inside the sidebar. Meanwhile Button is position:relative to
+ * host its loading spinner, so every button in the page was a positioned element painting after
+ * the aside in DOM order - which is why Save and Cancel sat on top of the expanded sidebar, and
+ * why no number on the panel could have fixed it.
+ */
+.vtd-showcase-main{flex-grow:1;min-width:0;isolation:isolate;}
 /*
  * The frame every routed page draws itself in. It belongs to the shell rather than to any one
  * page: the component pages and the theme builder both wear it, and while it lived in
