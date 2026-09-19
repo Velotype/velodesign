@@ -72,6 +72,14 @@ jobs:
       - name: Record the browser Astral should drive
         run: echo "CHROME_PATH=$(which google-chrome || which chromium-browser || which chromium)" >> "$GITHUB_ENV"
 
+      # `deno run 'bundle*'` fans the 72 gallery modules out in parallel, and on a cold cache they
+      # race each other extracting deno's bundled esbuild binary - one run raced and died with
+      # "failed to copy esbuild binary ... No such file or directory". Materialising it once,
+      # single-threaded, removes the race. Cheap, and the alternative is an intermittently red gate.
+      - name: Warm the bundler's esbuild binary
+        run: deno task bundle-button
+        working-directory: tests
+
       # Bundles every gallery module, then drives them. tests/build/ is gitignored, so this builds
       # all 72 from scratch on every run.
       - name: Run the suite
