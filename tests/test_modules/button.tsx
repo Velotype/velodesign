@@ -1,7 +1,8 @@
 import {replaceElementWithRoot, Component, RenderBasic} from "@velotype/velotype"
 import type {EmptyAttrs, TargetedMouseEvent} from "@velotype/velotype"
 
-import {Button, ButtonType, setThemeOnSelector, Theme} from "../../src/index.ts"
+import {Button, setThemeOnSelector, Theme} from "../../src/index.ts"
+import type {ButtonType} from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 
 const renderButton = function(btype: ButtonType) {

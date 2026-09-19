@@ -1,4 +1,7 @@
-import { Server, Context, Inspector, RequestInspectorResponse, Router } from "@velotype/veloserver"
+// Server, Router, Inspector and RequestInspectorResponse are all constructed below, so they are
+// value imports; only Context is used purely as a type.
+import { Server, Router, Inspector, RequestInspectorResponse } from "@velotype/veloserver"
+import type { Context } from "@velotype/veloserver"
 
 export type ServerContextMetadata = {
     /** Request start time (`performance.now()`), set by the timing inspector below */

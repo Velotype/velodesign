@@ -1,4 +1,5 @@
-import { ChildrenAttr, Component, EmptyAttrs, RenderableElements, RenderBasic } from "@velotype/velotype/jsx-runtime"
+import { Component, RenderBasic } from "@velotype/velotype/jsx-runtime"
+import type { ChildrenAttr, EmptyAttrs, RenderableElements } from "@velotype/velotype/jsx-runtime"
 import { Button } from "../../src/form/button.tsx"
 import { ColorScheme } from "../../src/core/theme.ts"
 

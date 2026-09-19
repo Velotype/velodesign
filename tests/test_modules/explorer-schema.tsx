@@ -45,7 +45,6 @@ import {
     Progress, type ProgressType,
     RadioButton,
     Rate, type RateType,
-    Resizable,
     ScrollArea,
     Select,
     SelectMenu,

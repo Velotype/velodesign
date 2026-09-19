@@ -1,7 +1,7 @@
 import { Component, getComponent, RenderBasic, setStylesheet } from "@velotype/velotype"
 import type { EmptyAttrs, RenderableElements } from "@velotype/velotype"
 
-import { Button, ColorScheme, Empty, History, Link, NavLink, Navbar, Text, TextBox } from "../../src/index.ts"
+import { Button, ColorScheme, Empty, Link, NavLink, Navbar, Text, TextBox } from "../../src/index.ts"
 import { docBySlug, groupByGroupSlug, groupedDocs } from "./data/docs.tsx"
 import { HomePage } from "./pages/home.tsx"
 import { ComponentPage } from "./pages/component-page.tsx"
