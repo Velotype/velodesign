@@ -1,7 +1,8 @@
 import { Component, getComponent, RenderBasic, setStylesheet } from "@velotype/velotype"
 import type { EmptyAttrs, RenderableElements } from "@velotype/velotype"
 
-import { Button, ColorScheme, Empty, Link, NavLink, Navbar, Text, TextBox, Tree } from "../../src/index.ts"
+import { Button, ColorScheme, Empty, highlightMatch, I, Link, NavLink, Navbar, searchHighlightCss, Text, TextBox, Tree } from "../../src/index.ts"
+import { categoryIconKey } from "./data/category-icons.ts"
 import type { TreeNodeType } from "../../src/index.ts"
 import { docBySlug, groupByGroupSlug, groupedDocs } from "./data/docs.tsx"
 import { HomePage } from "./pages/home.tsx"
@@ -60,6 +61,9 @@ class SidebarList extends Component<EmptyAttrs> {
             // click lands on the link, so Tree's summary handler sees defaultPrevented and leaves
             // the toggle to the chevron and the rest of the row.
             label: <Link spa to={categoryPageUrl(bucket.group)} class="vtd-showcase-sidebar-group-label">{bucket.group}</Link>,
+            // The icon is the whole row when the sidebar is collapsed to its rail, so it is not
+            // decoration - it is the only thing identifying the category at that width
+            leading: <I i={categoryIconKey(bucket.group)} class="vtd-showcase-sidebar-icon"/>,
             // Trailing, not leading: a count announced *before* the category name reads as
             // "3 Typography", and reordering a leading slot in CSS would leave that wrong for a
             // screen reader while looking right on screen
@@ -69,11 +73,15 @@ class SidebarList extends Component<EmptyAttrs> {
             defaultOpen: filtering || this.#openCategories.has(bucket.group),
             children: bucket.docs.map(doc => ({
                 key: doc.slug,
+                // highlightMatch marks the substring that matched, so the reader can see *why* an
+                // entry survived the filter rather than having to work it out. It is the same
+                // helper Combobox, Command and both tables use, so a filtered list looks the same
+                // everywhere in the package.
                 label: <NavLink
                     spa
                     to={`/components/${doc.slug}`}
                     activeClass="vtd-showcase-sidebar-item-active"
-                    class="vtd-showcase-sidebar-item">{doc.name}</NavLink>,
+                    class="vtd-showcase-sidebar-item">{highlightMatch(doc.name, filterLower)}</NavLink>,
             })),
         }))
 
@@ -136,6 +144,23 @@ class ContentArea extends Component<EmptyAttrs> {
     }
 }
 
+const sidebarCollapsedKey = "vtd-showcase-sidebar-collapsed"
+
+/** Whether the reader left the sidebar collapsed to its icon rail */
+function loadSidebarCollapsed(): boolean {
+    try {
+        return localStorage.getItem(sidebarCollapsedKey) == "true"
+    } catch {
+        return false
+    }
+}
+
+function saveSidebarCollapsed(collapsed: boolean) {
+    try {
+        localStorage.setItem(sidebarCollapsedKey, String(collapsed))
+    } catch { /* private browsing with storage disabled - the toggle still works for this session */ }
+}
+
 let areShellStylesMounted = false
 
 /**
@@ -163,14 +188,63 @@ export class AppShell extends Component<EmptyAttrs> {
 .vtd-showcase-sidebar-wrapper{
 width:250px;
 flex-shrink:0;
-border-inline-end:1px solid var(--background-4);
-display:flex;
-flex-direction:column;
 position:sticky;
 top:53px;
 align-self:flex-start;
 height:calc(100vh - 53px);
+transition:width 0.18s ease-in-out;
 }
+/*
+ * The panel is absolutely positioned inside the wrapper so that expanding it on hover lays it
+ * *over* the page rather than shoving the content sideways. The wrapper keeps the gutter; only
+ * the panel grows. position:sticky on the wrapper makes it the containing block for this.
+ */
+.vtd-showcase-sidebar-panel{
+position:absolute;
+inset-block:0;
+inset-inline-start:0;
+width:250px;
+display:flex;
+flex-direction:column;
+background-color:var(--background);
+border-inline-end:1px solid var(--background-4);
+overflow:hidden;
+transition:width 0.18s ease-in-out, box-shadow 0.18s ease-in-out;
+}
+/*
+ * Collapsed, the wrapper is a 56px rail and the panel matches it - wide enough for the category
+ * icons and nothing else. Hover or keyboard focus floats the full panel back out over the page;
+ * focus-within matters as much as hover, or the sidebar would be unusable from the keyboard.
+ */
+.vtd-showcase-sidebar-collapsed{width:56px;}
+.vtd-showcase-sidebar-collapsed .vtd-showcase-sidebar-panel{width:56px;}
+.vtd-showcase-sidebar-collapsed:hover .vtd-showcase-sidebar-panel,
+.vtd-showcase-sidebar-collapsed:focus-within .vtd-showcase-sidebar-panel{
+width:250px;
+box-shadow:0 2px 14px rgba(0,0,0,0.18);
+z-index:3;
+}
+/*
+ * Everything except the icons is hidden at rail width. visibility rather than display:none:
+ * the rows keep their layout, so nothing jumps as the panel slides open, and a screen reader still
+ * reaches the labels.
+ */
+.vtd-showcase-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-showcase-sidebar-search,
+.vtd-showcase-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-tree-label-main,
+.vtd-showcase-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-tree-trailing,
+.vtd-showcase-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-disclosure-content{
+visibility:hidden;
+}
+/* The chevron is meaningless on a rail of icons */
+.vtd-showcase-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-tree-label::before{opacity:0;}
+.vtd-showcase-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-showcase-sidebar-icon{font-size:1.35em;}
+/* The toggle sits at the foot of the panel, out of the way of the list */
+.vtd-showcase-sidebar-toggle-row{
+border-block-start:1px solid var(--background-4);
+padding:0.5em;
+flex-shrink:0;
+}
+.vtd-showcase-sidebar-toggle{width:100%;}
 .vtd-showcase-sidebar-search{padding:0.75em;border-block-end:1px solid var(--background-4);}
 .vtd-showcase-sidebar-search .vtd-text-box{width:100%;margin-inline-start:0;box-sizing:border-box;}
 .vtd-showcase-sidebar-list{overflow-y:auto;flex-grow:1;padding-block-end:1em;}
@@ -218,6 +292,7 @@ font-size:0.95em;
 .vtd-showcase-doc{padding:2em;max-width:62em;min-width:0;flex-grow:1;}
 /* Paragraph supplies the colour; this only sizes and spaces a page's lede */
 .vtd-showcase-doc-description{font-size:1.05em;margin-block-end:1.5em;max-width:44em;}
+${searchHighlightCss}
 `, "velodesign-showcase/AppShell")
         }
 
@@ -231,6 +306,23 @@ font-size:0.95em;
 
         this.#sidebarList = getComponent<SidebarList>(<SidebarList/>)
         const content = getComponent<ContentArea>(<ContentArea/>)
+
+        // The collapse toggle flips one class on the wrapper rather than re-rendering anything.
+        // Rebuilding the sidebar here would throw away the reader's expansions and their search,
+        // and the change is purely presentational - exactly the case for a class toggle.
+        const collapseLabel = new RenderBasic<string>(loadSidebarCollapsed() ? "Expand" : "Collapse")
+        const collapseToggle: HTMLButtonElement = <Button
+            type="text"
+            class="vtd-showcase-sidebar-toggle"
+            ariaLabel="Collapse or expand the sidebar"
+            onClick={() => {
+                const wrapper = collapseToggle.closest(".vtd-showcase-sidebar-wrapper") as HTMLElement
+                const collapsed = wrapper.classList.toggle("vtd-showcase-sidebar-collapsed")
+                collapseLabel.value = collapsed ? "Expand" : "Collapse"
+                collapseToggle.setAttribute("aria-expanded", collapsed ? "false" : "true")
+                saveSidebarCollapsed(collapsed)
+            }}>{collapseLabel}</Button>
+        collapseToggle.setAttribute("aria-expanded", loadSidebarCollapsed() ? "false" : "true")
 
         const darkModeLabel = new RenderBasic<string>(ColorScheme.getColorScheme() == "light" ? "off" : "on")
         const themeToggle = <Button type="secondary" onClick={() => {
@@ -255,9 +347,12 @@ font-size:0.95em;
                 {themeToggle}
             </Navbar>
             <div class="vtd-showcase-body">
-                <aside class="vtd-showcase-sidebar-wrapper">
-                    <div class="vtd-showcase-sidebar-search">{searchInput}</div>
-                    {this.#sidebarList}
+                <aside class={`vtd-showcase-sidebar-wrapper${loadSidebarCollapsed() ? " vtd-showcase-sidebar-collapsed" : ""}`}>
+                    <div class="vtd-showcase-sidebar-panel">
+                        <div class="vtd-showcase-sidebar-search">{searchInput}</div>
+                        {this.#sidebarList}
+                        <div class="vtd-showcase-sidebar-toggle-row">{collapseToggle}</div>
+                    </div>
                 </aside>
                 <main class="vtd-showcase-main">{content}</main>
             </div>
