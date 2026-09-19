@@ -1,6 +1,7 @@
 import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs, TargetedEvent, TargetedInputEvent } from "@velotype/velotype"
 import { highlightMatch, searchHighlightCss } from "../core/search-highlight.tsx"
+import { CommonThemeOptions } from "../core/theme-options.ts"
 
 /**
  * A single suggestion in a `<Combobox/>`
@@ -24,6 +25,12 @@ export type ComboboxAttrsType = {
     options: ComboboxOptionType[]
     /** Placeholder text */
     placeholder?: string
+    /**
+     * Shown in the panel when the query matches no option (default:
+     * `CommonThemeOptions.emptySymbol` - a glyph, not English text, so the library doesn't assume
+     * a language). Set it to real wording for your users.
+     */
+    noMatchMessage?: RenderableElements
     /** If this field is required in a `<form/>` */
     required?: boolean
     /** Is the combobox disabled? */
@@ -119,7 +126,7 @@ export class Combobox extends Component<ComboboxAttrsType> {
         }
         if (options.length == 0) {
             this.#optionEls = []
-            this.#panelEl.replaceChildren(<li class="vtd-combobox-empty">No matches</li>)
+            this.#panelEl.replaceChildren(<li class="vtd-combobox-empty">{this.#attrs.noMatchMessage ?? <CommonThemeOptions.emptySymbol/>}</li>)
             return
         }
         const query = this.#inputEl.value.trim()

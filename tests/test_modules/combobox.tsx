@@ -20,6 +20,11 @@ class ComboboxGallery extends Component<EmptyAttrs> {
                 placeholder="Choose a country"
                 options={countryOptions}/></div>
             <div><Combobox placeholder="Disabled" disabled options={countryOptions}/></div>
+            {/* A consumer's own wording for the no-match state, which used to be a baked-in "No matches" */}
+            <div id="worded-combobox"><Combobox
+                placeholder="Choose a country"
+                noMatchMessage="Rien ne correspond"
+                options={countryOptions}/></div>
         </div>
     }
 }

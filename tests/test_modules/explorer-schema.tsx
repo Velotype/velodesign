@@ -72,7 +72,7 @@ import {
     Sparkline,
     Tabs,
     Tag, type TagType,
-    TextBox, type TextBoxTypeType,
+    TextBox, type TextBoxType,
     Textarea,
     TextEditableField,
     TextFormField,
@@ -211,7 +211,7 @@ export const stories: ComponentStory[] = [
             placeholder: {kind: "text", label: "placeholder"},
             required: {kind: "boolean", label: "required"},
         },
-        render: (attrs) => <TextBox type={attrs.type as TextBoxTypeType} placeholder={attrs.placeholder as string} required={attrs.required as boolean}/>,
+        render: (attrs) => <TextBox type={attrs.type as TextBoxType} placeholder={attrs.placeholder as string} required={attrs.required as boolean}/>,
     },
     {
         name: "Textarea", group: "Form",
@@ -275,7 +275,7 @@ export const stories: ComponentStory[] = [
             required: {kind: "boolean", label: "required"},
             children: {kind: "text", label: "children"},
         },
-        render: (attrs) => <TextFormField type={attrs.type as TextBoxTypeType} required={attrs.required as boolean} field={textFormFieldValue}>{attrs.children as string}</TextFormField>,
+        render: (attrs) => <TextFormField type={attrs.type as TextBoxType} required={attrs.required as boolean} field={textFormFieldValue}>{attrs.children as string}</TextFormField>,
     },
     {
         name: "TextEditableField", group: "Form",
@@ -284,7 +284,7 @@ export const stories: ComponentStory[] = [
             type: {kind: "select", label: "type", options: ["text", "email", "phone", "password", "new-password"]},
             children: {kind: "text", label: "children"},
         },
-        render: (attrs) => <TextEditableField type={attrs.type as TextBoxTypeType} field={textEditableFieldValue}>{attrs.children as string}</TextEditableField>,
+        render: (attrs) => <TextEditableField type={attrs.type as TextBoxType} field={textEditableFieldValue}>{attrs.children as string}</TextEditableField>,
     },
 
     // --- Navigation ---

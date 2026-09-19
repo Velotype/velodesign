@@ -16,7 +16,7 @@ export function SaveBar(attrs: {onSave: () => void}) {
 }`
 
 const cssSample = `/* Token colours only - never a literal */
-.vtd-codeblock {
+.vtd-code-block {
     background-color: var(--background-1);
     border: 1px solid var(--background-4);
     padding: 1em;
@@ -35,6 +35,21 @@ const straddlingSample = `/*
  */
 const greeting = \`hello
 world\``
+
+/*
+ * Prose between JSX tags, plus a generic and an arrow function - the three cases that each made the
+ * highlighter treat code as text or text as code. "so two blocks of prose set side by side" holds
+ * `of`, `set` and `as`, all real TypeScript keywords; "package's" is a lone apostrophe that must
+ * not open a string; `getComponent<Command>` is a generic, not a tag; and the `=>` inside an
+ * attribute must not end the tag it sits in.
+ */
+const jsxTextSample = `const palette = getComponent<Command>(<Command items={[]}/>)
+
+return <div>
+    <Paragraph>Paragraphs carry the package's line height, so two blocks of
+    prose set side by side agree about their rhythm.</Paragraph>
+    <Button onClick={() => palette.showModal()}>Open</Button>
+</div>`
 
 class CodeBlockGallery extends Component<EmptyAttrs> {
     override render() {
@@ -59,6 +74,9 @@ class CodeBlockGallery extends Component<EmptyAttrs> {
 
             <Heading level={3}>The same line, wrapped</Heading>
             <div id="code-wrapped"><CodeBlock wrap code={`const wide = ["${"alpha, beta, gamma, delta, epsilon, zeta, eta, theta".repeat(3)}"]`} ariaLabel="A long wrapped line"/></div>
+
+            <Heading level={3}>Prose between tags is not code</Heading>
+            <div id="code-jsx-text"><CodeBlock code={jsxTextSample} ariaLabel="A JSX text example"/></div>
 
             <Heading level={3}>Markup is shown, never rendered</Heading>
             <div id="code-escaped"><CodeBlock code={"<script>alert(1)</script>\n<b>not bold</b>"} ariaLabel="Markup shown as text"/></div>

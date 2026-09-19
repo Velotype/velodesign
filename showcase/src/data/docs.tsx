@@ -128,6 +128,8 @@ export type ComponentDoc = ComponentStory & {
     methods?: MethodDoc[]
     /** Named types this component's attributes refer to, shown below the attribute table */
     types?: TypeDoc[]
+    /** Overridable theme-option objects this component reads, shown in their own section */
+    themeOptions?: TypeDoc[]
     /**
      * What this component does with the children placed inside it, if it takes any.
      *
@@ -157,7 +159,7 @@ const descriptions: Record<string, string> = {
     // Navigation
     NavLink: "A Link that also knows whether it matches the current location, for highlighting active navigation items.",
     Link: "An anchor that navigates within the app via History.changeLocation instead of a full page reload.",
-    Breadcrumbs: "A navigational trail showing where the current page sits in the site hierarchy.",
+    Breadcrumbs: "A navigational trail showing where the current page sits in the site hierarchy. Crumbs can carry an avatar or icon, and a long trail collapses its middle behind an expander.",
     Pagination: "A control for navigating between pages of results, with a windowed page-number list.",
     Navbar: "A themed top navigation bar with a brand slot and a row of children (typically NavLinks).",
     Sidebar: "A themed vertical navigation list, with the current page highlighted automatically.",
@@ -212,7 +214,7 @@ const descriptions: Record<string, string> = {
     Carousel: "A single-slide-at-a-time carousel with prev/next arrows and optional dot indicators.",
     Calendar: "A month-grid date picker with prev/next month navigation and a selectable day.",
     CalendarRange: "A month-grid date-*range* picker: click a start day, then an end day, and the span between them highlights.",
-    Tree: "A hierarchical, expandable/collapsible list built on nested native details/summary pairs.",
+    Tree: "A hierarchical, expandable/collapsible list built on nested native details/summary pairs. Nodes open and close with the same animation as Collapse and Accordion.",
     // Data Entry
     DatePicker: "A themed date input, wrapping a native <input type=\"date\">.",
     DateTimePicker: "A themed date-and-time input, wrapping a native <input type=\"datetime-local\">.",
@@ -328,6 +330,7 @@ const typeDefinitions: Record<string, TypeDoc> = {
         fields: [
             {name: "label", type: "RenderableElements", required: true, description: "The crumb's text."},
             {name: "to", type: "string", description: "Target URL. The last crumb usually omits it, which renders it as plain text marked aria-current."},
+            {name: "leading", type: "RenderableElements", description: "Content shown immediately before the label - an Avatar for a project or group, an Icon for a section. It is decoration beside a label that already names the destination, so mark it aria-hidden unless it says something the label does not."},
         ],
     },
     SidebarItemType: {
@@ -563,6 +566,163 @@ const componentTypes: Record<string, string[]> = {
     Gauge: ["GaugeBandType"],
 }
 
+/**
+ * The overridable theme-option objects each component reads.
+ *
+ * These were referenced by name in Default columns - BreadcrumbsThemeOptions.collapseSymbol -
+ * with nothing on the page saying what that object was or how to change it. Documented with the
+ * same columns as an attribute table, and shared by every component that reads them, so the two
+ * tables and the six charts each point at one definition.
+ *
+ * CommonThemeOptions is listed first on every page that inherits from it, because it is the
+ * object a consumer usually wants: a Default column reading CommonThemeOptions.closeSymbol is
+ * only useful next to a table saying what that is and which other components follow it.
+ */
+const themeOptionDefinitions: Record<string, TypeDoc> = {
+    CommonThemeOptions: {
+        name: "CommonThemeOptions",
+        description: "The symbols more than one component means the same thing by. Every per-component field below that names one of these falls back to it live, so assigning here reaches each component that has not been given an override of its own.",
+        fields: [
+            {name: "closeSymbol", type: "ThemeSymbol", defaultValue: "x", description: "Dismisses or removes the thing it sits on. Read by Alert, Toast, Tag, Modal and Drawer."},
+            {name: "cancelSymbol", type: "ThemeSymbol", defaultValue: "a multiplication sign", description: "Rejects a pending action. Read by Modal's footer, Popconfirm, and an in-progress inline edit."},
+            {name: "confirmSymbol", type: "ThemeSymbol", defaultValue: "a check mark", description: "Accepts a pending action, or marks one already done. Read by Popconfirm, an inline edit, and a completed Steps step."},
+            {name: "emptySymbol", type: "ThemeSymbol", defaultValue: "the U+2205 glyph", description: "Stands in for content that isn't there. Read by Empty, both tables and every chart."},
+            {name: "collapseSymbol", type: "ThemeSymbol", defaultValue: "the U+2026 ellipsis", description: "Marks items omitted from a sequence. Read by Breadcrumbs' expander and Pagination's gap."},
+            {name: "prevSymbol", type: "ThemeSymbol", defaultValue: "a single-guillemet left", description: "Steps one back through a sequence. Read by Pagination, both calendars, Carousel and AsyncDataTable's pager."},
+            {name: "nextSymbol", type: "ThemeSymbol", defaultValue: "a single-guillemet right", description: "Steps one forward through a sequence. Read by the same five."},
+        ],
+    },
+    ButtonThemeOptions: {
+        name: "ButtonThemeOptions",
+        description: "What a Button shows while it is loading.",
+        fields: [
+            {name: "loadingSymbol", type: "ThemeSymbol", defaultValue: "a Spinner sized 1em", description: "Shown in place of the button's content once onClick starts loading, until it calls doneLoading(). Nothing else in the package draws a loading indicator, so this one stays local."},
+        ],
+    },
+    AlertThemeOptions: {
+        name: "AlertThemeOptions",
+        description: "The Alert's dismiss control.",
+        fields: [
+            {name: "closeSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.closeSymbol", description: "Content of the dismiss button, shown only when onDismiss is set."},
+        ],
+    },
+    ToastThemeOptions: {
+        name: "ToastThemeOptions",
+        description: "The toast's dismiss control.",
+        fields: [
+            {name: "closeSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.closeSymbol", description: "Content of the dismiss button on each toast."},
+        ],
+    },
+    EmptyThemeOptions: {
+        name: "EmptyThemeOptions",
+        description: "The illustration an Empty state shows.",
+        fields: [
+            {name: "emptySymbol", type: "ThemeSymbol", defaultValue: "the shared empty symbol in a 2.5em span", description: "Shown above the title. This is the whole visual, sizing included, so a real illustration isn't stuck inside that span - to change only the glyph, and change it in both tables and every chart at the same time, set CommonThemeOptions.emptySymbol instead."},
+        ],
+    },
+    TagThemeOptions: {
+        name: "TagThemeOptions",
+        description: "The Tag's remove control.",
+        fields: [
+            {name: "closeSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.closeSymbol", description: "Content of the remove button, shown only when onRemove is set."},
+        ],
+    },
+    BreadcrumbsThemeOptions: {
+        name: "BreadcrumbsThemeOptions",
+        description: "The expander a collapsed trail shows.",
+        fields: [
+            {name: "collapseSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.collapseSymbol", description: "Content of the expander that reveals the crumbs hidden by maxItems."},
+        ],
+    },
+    PaginationThemeOptions: {
+        name: "PaginationThemeOptions",
+        description: "Pagination's previous and next controls.",
+        fields: [
+            {name: "prevSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.prevSymbol", description: "Content of the previous-page button."},
+            {name: "nextSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.nextSymbol", description: "Content of the next-page button."},
+        ],
+    },
+    ModalThemeOptions: {
+        name: "ModalThemeOptions",
+        description: "The Modal's close and cancel controls.",
+        fields: [
+            {name: "closeSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.closeSymbol", description: "Content of the corner close button."},
+            {name: "cancelSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.cancelSymbol", description: "Content of the cancel button in the footer."},
+        ],
+    },
+    DrawerThemeOptions: {
+        name: "DrawerThemeOptions",
+        description: "The Drawer's close control.",
+        fields: [
+            {name: "closeSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.closeSymbol", description: "Content of the corner close button."},
+        ],
+    },
+    PopconfirmThemeOptions: {
+        name: "PopconfirmThemeOptions",
+        description: "Popconfirm's confirm and cancel controls.",
+        fields: [
+            {name: "confirmSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.confirmSymbol", description: "Content of the confirm button."},
+            {name: "cancelSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.cancelSymbol", description: "Content of the cancel button."},
+        ],
+    },
+    TextFormFieldThemeOptions: {
+        name: "TextFormFieldThemeOptions",
+        description: "The glyphs the editable text fields use.",
+        fields: [
+            {name: "confirmSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.confirmSymbol", description: "Confirms an inline edit."},
+            {name: "cancelSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.cancelSymbol", description: "Cancels an inline edit."},
+            {name: "editSymbol", type: "ThemeSymbol", defaultValue: "a pencil", description: "Starts an inline edit. No counterpart elsewhere in the package, so it stays local."},
+        ],
+    },
+    DataTableThemeOptions: {
+        name: "DataTableThemeOptions",
+        description: "Shared by both tables, so a change reaches them together.",
+        fields: [
+            {name: "columnsSymbol", type: "ThemeSymbol", defaultValue: "the U+25A5 glyph", description: "Content of the column-visibility button. Only the tables draw this, so it stays local."},
+            {name: "emptySymbol", type: "ThemeSymbol", defaultValue: "the shared empty symbol in a 2em span", description: "Shown in place of the rows when the table has none. The whole visual, sizing included; set CommonThemeOptions.emptySymbol to change just the glyph."},
+        ],
+    },
+    ChartThemeOptions: {
+        name: "ChartThemeOptions",
+        description: "Shared by every chart, which is what keeps a dashboard's series colours consistent.",
+        fields: [
+            {name: "seriesColors", type: "string[]", defaultValue: "eight slots built from the theme's four hues at two lightness steps", description: "The palette each series is drawn from, in order. Never a hex literal in a chart itself - a literal looks right in one theme and wrong in the other."},
+            {name: "emptySymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.emptySymbol", description: "Shown when a chart has nothing to draw."},
+        ],
+    },
+}
+
+/** Which theme-option objects each component's page documents */
+const componentThemeOptions: Record<string, string[]> = {
+    Button: ["ButtonThemeOptions"],
+    Alert: ["CommonThemeOptions", "AlertThemeOptions"],
+    Toast: ["CommonThemeOptions", "ToastThemeOptions"],
+    Empty: ["CommonThemeOptions", "EmptyThemeOptions"],
+    Tag: ["CommonThemeOptions", "TagThemeOptions"],
+    Breadcrumbs: ["CommonThemeOptions", "BreadcrumbsThemeOptions"],
+    Pagination: ["CommonThemeOptions", "PaginationThemeOptions"],
+    Modal: ["CommonThemeOptions", "ModalThemeOptions"],
+    Drawer: ["CommonThemeOptions", "DrawerThemeOptions"],
+    Popconfirm: ["CommonThemeOptions", "PopconfirmThemeOptions"],
+    TextFormField: ["CommonThemeOptions", "TextFormFieldThemeOptions"],
+    TextEditableField: ["CommonThemeOptions", "TextFormFieldThemeOptions"],
+    TextNonEditableField: ["CommonThemeOptions", "TextFormFieldThemeOptions"],
+    DataTable: ["CommonThemeOptions", "DataTableThemeOptions"],
+    AsyncDataTable: ["CommonThemeOptions", "DataTableThemeOptions"],
+    LineChart: ["CommonThemeOptions", "ChartThemeOptions"],
+    AreaChart: ["CommonThemeOptions", "ChartThemeOptions"],
+    BarChart: ["CommonThemeOptions", "ChartThemeOptions"],
+    PieChart: ["CommonThemeOptions", "ChartThemeOptions"],
+    Gauge: ["CommonThemeOptions", "ChartThemeOptions"],
+    Sparkline: ["CommonThemeOptions", "ChartThemeOptions"],
+    Calendar: ["CommonThemeOptions"],
+    Combobox: ["CommonThemeOptions"],
+    Command: ["CommonThemeOptions"],
+    CalendarRange: ["CommonThemeOptions"],
+    Carousel: ["CommonThemeOptions"],
+    Steps: ["CommonThemeOptions"],
+}
+
 const attrTables: Record<string, AttrDoc[]> = {
     Button: [
         {name: "type", type: '"primary" | "secondary" | "warning" | "danger" | "text"', defaultValue: "primary", description: "Sets the color."},
@@ -639,20 +799,20 @@ const attrTables: Record<string, AttrDoc[]> = {
     ],
     TextFormField: [
         {name: "field", type: "RenderBasic<string>", required: true, description: "The bound reactive value."},
-        {name: "type", type: "TextBoxTypeType", defaultValue: "text", description: "Input type."},
+        {name: "type", type: "TextBoxType", defaultValue: "text", description: "Input type."},
         {name: "required", type: "boolean", defaultValue: "false", description: "Marks the field required in a <form>."},
         {name: "updateOnInput", type: "boolean", defaultValue: "true", description: "Update field.value on every keystroke."},
         {name: "updateOnChange", type: "boolean", defaultValue: "false", description: "Update field.value on change/blur."},
     ],
     TextEditableField: [
         {name: "field", type: "RenderBasic<string>", required: true, description: "The bound reactive value."},
-        {name: "type", type: "TextBoxTypeType", defaultValue: "text", description: "Input type while editing."},
+        {name: "type", type: "TextBoxType", defaultValue: "text", description: "Input type while editing."},
         {name: "fieldName", type: "string", description: "Name for the underlying <input> while editing."},
     ],
     NavLink: [
         {name: "to", type: "string", required: true, description: "Target URL."},
         {name: "exact", type: "boolean", defaultValue: "true", description: "Match only the exact pathname vs. any path starting with to."},
-        {name: "activeClass", type: "string", defaultValue: '"vtd-navlink-active"', description: "CSS class added when active."},
+        {name: "activeClass", type: "string", defaultValue: '"vtd-nav-link-active"', description: "CSS class added when active."},
         {name: "spa", type: "boolean", defaultValue: "false", description: "Client-side route change via History.changeLocation, no page reload. Set true for an SPA; leave false for a multi-page site, where a click should be a real navigation."},
     ],
     Link: [
@@ -664,6 +824,9 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "separator", type: "RenderableElements", defaultValue: '"/"', description: "Content shown between crumbs."},
         {name: "ariaLabel", type: "string", description: "Accessible label for the nav landmark."},
         {name: "spa", type: "boolean", defaultValue: "false", description: "Makes every crumb a client-side route change via History.changeLocation rather than a page reload. Set true inside an SPA; leave false on a multi-page site, where a crumb should be a real navigation."},
+        {name: "maxItems", type: "number", description: "The most crumbs to show before the middle of the trail collapses behind an expander. A longer trail renders as the first crumb, the expander, and the last maxItems - 2 crumbs, so the root and the current page always survive. Unset, every crumb shows. Values below 3 are treated as 3."},
+        {name: "expandButtonChildren", type: "RenderableElements", defaultValue: "BreadcrumbsThemeOptions.collapseSymbol", description: "Content of the expander that reveals the collapsed crumbs. The default is a plain … glyph, not English text."},
+        {name: "expandLabel", type: "string", description: "Accessible name for the expander. Worth setting: its content is a glyph, so the control is otherwise unnamed."},
     ],
     Pagination: [
         {name: "page", type: "number", required: true, description: "Currently selected page, 1-indexed."},
@@ -765,6 +928,7 @@ const attrTables: Record<string, AttrDoc[]> = {
     Command: [
         {name: "items", type: "CommandItemType[]", required: true, description: "The full set of items, filtered client-side."},
         {name: "placeholder", type: "string", description: "Placeholder for the search input."},
+        {name: "noMatchMessage", type: "RenderableElements", defaultValue: "CommonThemeOptions.emptySymbol", description: "Shown in the list when the query matches none of the items."},
     ],
     Badge: [
         {name: "type", type: '"primary" | "secondary" | "warning" | "danger" | "neutral"', defaultValue: "neutral", description: "Sets the color."},
@@ -1034,6 +1198,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "options", type: "ComboboxOptionType[]", required: true, description: "Suggested options."},
         {name: "value", type: "string", description: "Current value."},
         {name: "placeholder", type: "string", description: "Placeholder text."},
+        {name: "noMatchMessage", type: "RenderableElements", defaultValue: "CommonThemeOptions.emptySymbol", description: "Shown in the panel when the query matches none of the options."},
         {name: "disabled", type: "boolean", defaultValue: "false", description: "Disables the combobox."},
     ],
     Upload: [
@@ -1075,7 +1240,7 @@ export function OpenCount(attrs: {items: string[]}) {
 }`
 
 const CODE_SAMPLE_CSS = `/* Token colours only - never a literal */
-.vtd-codeblock {
+.vtd-code-block {
     background-color: var(--background-1);
     border: 1px solid var(--background-4);
     padding: 1em;
@@ -1342,6 +1507,34 @@ renderOption={option => <span style={{display: "flex", alignItems: "center", gap
     ],
     Breadcrumbs: [
         {label: "Default", node: () => <Breadcrumbs spa items={[{label: "Home", to: "/"}, {label: "Library", to: "/library"}, {label: "Current page"}]}/>, code: `<Breadcrumbs spa items={[{label: "Home", to: "/"}, {label: "Library", to: "/library"}, {label: "Current page"}]}/>`},
+        {label: "With an avatar beside a crumb", node: () => <Breadcrumbs items={[
+            {label: "Home", to: "#"},
+            {label: "Acme", to: "#", leading: <Avatar initials="AC" size="1.3em"/>},
+            {label: "Settings"},
+        ]}/>, code: `<Breadcrumbs items={[
+    {label: "Home", to: "/"},
+    {label: "Acme", to: "/acme", leading: <Avatar initials="AC" size="1.3em"/>},
+    {label: "Settings"},
+]}/>`},
+        {label: "A long trail collapses its middle", node: () => <Breadcrumbs maxItems={4} expandLabel="Show the rest of the trail" items={[
+            {label: "Home", to: "#"},
+            {label: "Level two", to: "#"},
+            {label: "Level three", to: "#"},
+            {label: "Level four", to: "#"},
+            {label: "Level five", to: "#"},
+            {label: "Current page"},
+        ]}/>, code: `// One slot for the root and one for the expander, so the last two crumbs survive
+<Breadcrumbs
+    maxItems={4}
+    expandLabel="Show the rest of the trail"
+    items={[
+        {label: "Home", to: "/"},
+        {label: "Level two", to: "/two"},
+        {label: "Level three", to: "/two/three"},
+        {label: "Level four", to: "/two/three/four"},
+        {label: "Level five", to: "/two/three/four/five"},
+        {label: "Current page"},
+    ]}/>`},
     ],
     Pagination: [
         {label: "First page", node: () => <Pagination page={1} totalPages={10} onPageChange={() => {}}/>, code: `<Pagination page={1} totalPages={10} onPageChange={() => {}}/>`},
@@ -2069,6 +2262,7 @@ export const componentDocs: ComponentDoc[] = stories.map(story => ({
     attrs: attrTables[story.name] ?? [],
     methods: methodDocs[story.name],
     types: (componentTypes[story.name] ?? []).map(name => typeDefinitions[name]),
+    themeOptions: (componentThemeOptions[story.name] ?? []).map(name => themeOptionDefinitions[name]),
     children: childrenDocs[story.name],
     examples: examplesByName[story.name] ?? [],
 }))

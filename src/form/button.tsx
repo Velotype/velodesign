@@ -1,15 +1,17 @@
 import {passthroughAttrsToElement, setStylesheet} from "@velotype/velotype"
-import type {IdAttr, RenderableElements, FunctionComponent, EmptyAttrs, StylePassthroughAttrs, TargetedMouseEvent, ChildrenAttr} from "@velotype/velotype"
+import type {IdAttr, RenderableElements, FunctionComponent, StylePassthroughAttrs, TargetedMouseEvent, ChildrenAttr} from "@velotype/velotype"
 import { Spinner } from "../feedback/spinner.tsx"
+import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
 /**
  * Options to customize `<Button/>` Component Theme
  */
 export const ButtonThemeOptions: {
-    spinner: FunctionComponent<EmptyAttrs>
-} = {
-    spinner: function(){return <Spinner size="1em"/>}
-}
+    /** Shown in place of the button's content while `onClick` is loading. No counterpart elsewhere in the package, so it stays local */
+    loadingSymbol: ThemeSymbol
+} = themeOptions({}, {
+    loadingSymbol: function(){return <Spinner size="1em"/>}
+})
 
 /**
  * Various types of `<Button/>`s
@@ -49,7 +51,7 @@ export const Button: FunctionComponent<ButtonAttrsType> = function(attrs: Button
     if (!areButtonStylesMounted) {
         areButtonStylesMounted = true
         setStylesheet(`
-.vtd-btn{
+.vtd-button{
 position:relative;
 padding:0.25rem 0.5rem;
 border-radius:0.25rem;
@@ -62,27 +64,27 @@ vertical-align:middle;
 transition:color 0.25s ease-in-out, background-color 0.25s ease-in-out, border 0.25s ease-in-out;
 }
 
-.vtd-btn-primary{background-color:var(--primary);border:1px solid var(--primary-5);}
-.vtd-btn-primary:hover{background-color:var(--primary-2);border:1px solid var(--primary-7);}
-.vtd-btn-primary:active{background-color:var(--primary-6);}
-.vtd-btn-secondary{background-color:var(--secondary);border:1px solid var(--secondary-5);}
-.vtd-btn-secondary:hover{background-color:var(--secondary-2);border:1px solid var(--secondary-7);}
-.vtd-btn-secondary:active{background-color:var(--secondary-6);}
-.vtd-btn-warning{background-color:var(--warning);border:1px solid var(--warning-5);}
-.vtd-btn-warning:hover{background-color:var(--warning-2);border:1px solid var(--warning-7);}
-.vtd-btn-warning:active{background-color:var(--warning-6);}
-.vtd-btn-danger{background-color:var(--accent);border:1px solid var(--accent-5);}
-.vtd-btn-danger:hover{background-color:var(--accent-2);border:1px solid var(--accent-7);}
-.vtd-btn-danger:active{background-color:var(--accent-6);}
+.vtd-button-primary{background-color:var(--primary);border:1px solid var(--primary-5);}
+.vtd-button-primary:hover{background-color:var(--primary-2);border:1px solid var(--primary-7);}
+.vtd-button-primary:active{background-color:var(--primary-6);}
+.vtd-button-secondary{background-color:var(--secondary);border:1px solid var(--secondary-5);}
+.vtd-button-secondary:hover{background-color:var(--secondary-2);border:1px solid var(--secondary-7);}
+.vtd-button-secondary:active{background-color:var(--secondary-6);}
+.vtd-button-warning{background-color:var(--warning);border:1px solid var(--warning-5);}
+.vtd-button-warning:hover{background-color:var(--warning-2);border:1px solid var(--warning-7);}
+.vtd-button-warning:active{background-color:var(--warning-6);}
+.vtd-button-danger{background-color:var(--accent);border:1px solid var(--accent-5);}
+.vtd-button-danger:hover{background-color:var(--accent-2);border:1px solid var(--accent-7);}
+.vtd-button-danger:active{background-color:var(--accent-6);}
 
-.vtd-btn-text{background-color:transparent;border:1px solid transparent;}
-.vtd-btn-text:hover{background-color:var(--background-2);}
-.vtd-btn-text:active{background-color:var(--background-5);}
+.vtd-button-text{background-color:transparent;border:1px solid transparent;}
+.vtd-button-text:hover{background-color:var(--background-2);}
+.vtd-button-text:active{background-color:var(--background-5);}
 
-.vtd-btn:disabled{cursor:not-allowed;opacity:0.5;}
-.vtd-btn:focus-visible{border:1px solid var(--accent);}
+.vtd-button:disabled{cursor:not-allowed;opacity:0.5;}
+.vtd-button:focus-visible{border:1px solid var(--accent);}
 
-.vtd-btn-spinner{
+.vtd-button-spinner{
 position:absolute;
 top:50%;
 left:50%;
@@ -98,11 +100,11 @@ visibility:hidden;
 
     let spinnerElement: HTMLSpanElement | undefined
     if (attrs.loadingOnClick) {
-        spinnerElement = <span class="vtd-btn-spinner"><ButtonThemeOptions.spinner/></span>
+        spinnerElement = <span class="vtd-button-spinner"><ButtonThemeOptions.loadingSymbol/></span>
     }
     const childrenWrapper: HTMLSpanElement = <span>{children}</span>
     return passthroughAttrsToElement<HTMLButtonElement>(<button type="button"
-        class={`vtd-btn vtd-btn-${attrs.type||"primary"}`}
+        class={`vtd-button vtd-button-${attrs.type||"primary"}`}
         tabindex={0}
         aria-label={attrs.ariaLabel}
         disabled={attrs.disabled}

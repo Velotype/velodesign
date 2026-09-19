@@ -34,7 +34,7 @@ export const Toggle: FunctionComponent<ToggleAttrsType> = function(attrs: Toggle
     if (!areToggleStylesMounted) {
         areToggleStylesMounted = true
         setStylesheet(`
-.vtd-tg-container{
+.vtd-toggle-container{
 cursor:pointer;
 display:inline-flex;
 align-items:center;
@@ -43,11 +43,11 @@ padding:0.25rem 0.5rem;
 border-radius:0.25rem;
 }
 
-.vtd-tg-container:hover{background-color:var(--background-1);}
+.vtd-toggle-container:hover{background-color:var(--background-1);}
 
-.vtd-tg-input {position:absolute;opacity:0;height:0;width:0;margin:0;}
+.vtd-toggle-input {position:absolute;opacity:0;height:0;width:0;margin:0;}
 
-.vtd-tg-track{
+.vtd-toggle-track{
 position:relative;
 display:inline-block;
 height:1.4em;
@@ -60,7 +60,7 @@ border:1px solid var(--background-5);
 flex-shrink:0;
 }
 
-.vtd-tg-thumb{
+.vtd-toggle-thumb{
 position:absolute;
 top:50%;
 left:0.15em;
@@ -72,32 +72,32 @@ transform:translateY(-50%);
 transition:left 0.2s ease-in, background-color 0.2s ease-in;
 }
 
-.vtd-tg-input:checked ~ .vtd-tg-track{
+.vtd-toggle-input:checked ~ .vtd-toggle-track{
 background-color:var(--primary);
 border-color:var(--primary-7);
 }
-.vtd-tg-input:checked ~ .vtd-tg-track .vtd-tg-thumb{
+.vtd-toggle-input:checked ~ .vtd-toggle-track .vtd-toggle-thumb{
 left:calc(100% - 1.15em);
 background-color:var(--background);
 }
 
-.vtd-tg-disabled{opacity:0.5;cursor:not-allowed;}
-.vtd-tg-container:has(> .vtd-tg-input:disabled){cursor:not-allowed;}
-.vtd-tg-input:focus-visible ~ .vtd-tg-track{outline:1px solid var(--primary);outline-offset:1px;}
+.vtd-toggle-disabled{opacity:0.5;cursor:not-allowed;}
+.vtd-toggle-container:has(> .vtd-toggle-input:disabled){cursor:not-allowed;}
+.vtd-toggle-input:focus-visible ~ .vtd-toggle-track{outline:1px solid var(--primary);outline-offset:1px;}
 `, "vtd/Toggle")
     }
 
-    return passthroughAttrsToElement<HTMLLabelElement>(<label class="vtd-tg-container">
+    return passthroughAttrsToElement<HTMLLabelElement>(<label class="vtd-toggle-container">
         <input
             type="checkbox"
             name={attrs.name}
-            class="vtd-tg-input"
+            class="vtd-toggle-input"
             disabled={attrs.disabled}
             checked={attrs.checked}
             value={attrs.value}
             onChange={attrs.onChange}/>
-        <span class={`vtd-tg-track${attrs.disabled?" vtd-tg-disabled":""}`}>
-            <span class="vtd-tg-thumb"/>
+        <span class={`vtd-toggle-track${attrs.disabled?" vtd-toggle-disabled":""}`}>
+            <span class="vtd-toggle-thumb"/>
         </span>
         {children}
     </label>, attrs)

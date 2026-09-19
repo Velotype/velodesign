@@ -5,6 +5,7 @@ import { Badge, Breadcrumbs, CodeBlock, Heading, Link, Paragraph, Stack, Table, 
 import type { TableColumnType } from "../../../src/index.ts"
 import type { TableOfContentsItemType } from "../../../src/index.ts"
 import { componentDocs, type ComponentDoc, type AttrDoc, type MethodDoc, type TypeDoc } from "../data/docs.tsx"
+import { categoryPageUrl } from "./category-page.tsx"
 
 export type ComponentPageAttrsType = {
     doc: ComponentDoc
@@ -71,6 +72,26 @@ function typeId(name: string): string {
     return "type-" + name.toLowerCase()
 }
 
+/** The id for a theme-option object's own section */
+function themeOptionId(name: string): string {
+    return "theme-" + name.toLowerCase()
+}
+
+/**
+ * A named object rendered as a heading, an optional line of prose, and a field table.
+ *
+ * Shared by the Types and Theme options sections: both document a named shape with the same
+ * columns as an attribute table, and rendering them differently would suggest they were different
+ * kinds of thing.
+ */
+function namedShape(shape: TypeDoc, id: string): RenderableElements {
+    return <div class="vtd-showcase-type">
+        <Heading level={3} id={id}><Text code>{shape.name}</Text></Heading>
+        {shape.description ? <Paragraph type="muted">{shape.description}</Paragraph> : null}
+        <Table<AttrDoc> columns={attrColumns("Field")} rows={shape.fields}/>
+    </div>
+}
+
 /** A stable id for an example, from its label - the anchor the table of contents points at */
 function exampleId(label: string): string {
     return "example-" + label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
@@ -101,6 +122,12 @@ function tocItems(doc: ComponentDoc): TableOfContentsItemType[] {
         items.push({id: "types", label: "Types", level: 1})
         for (const type of doc.types) {
             items.push({id: typeId(type.name), label: type.name, level: 2})
+        }
+    }
+    if (doc.themeOptions && doc.themeOptions.length > 0) {
+        items.push({id: "theme-options", label: "Theme options", level: 1})
+        for (const option of doc.themeOptions) {
+            items.push({id: themeOptionId(option.name), label: option.name, level: 2})
         }
     }
     if (doc.methods && doc.methods.length > 0) {
@@ -141,9 +168,11 @@ padding-block-end:2em;
 @media (max-width:75em){
 .vtd-showcase-doc-toc{display:none;}
 }
-.vtd-showcase-doc{padding:2em;max-width:62em;min-width:0;flex-grow:1;}
-/* Paragraph supplies the colour; this only sizes and spaces the page's lede */
-.vtd-showcase-doc-description{font-size:1.05em;margin-block-end:1.5em;max-width:44em;}
+/*
+ * .vtd-showcase-doc and .vtd-showcase-doc-description are the shared page frame and live in
+ * AppShell's stylesheet - the theme builder uses them too, and a page must not depend on some
+ * other page having been visited first to get its own padding.
+ */
 .vtd-showcase-examples{margin-block-end:2em;}
 /*
  * The example labels are real <h3>s for the sake of the outline, but they are captions rather than
@@ -194,7 +223,13 @@ background-size:16px 16px;
 
         return <div class="vtd-showcase-doc-layout">
             <div class="vtd-showcase-doc">
-            <Breadcrumbs spa items={[{label: "Home", to: "/"}, {label: doc.group}, {label: doc.name}]}/>
+            {/* The category crumb links to its own page - a trail whose middle step is dead text
+                leaves the reader no way back up to the rest of the category */}
+            <Breadcrumbs spa items={[
+                {label: "Home", to: "/"},
+                {label: doc.group, to: categoryPageUrl(doc.group)},
+                {label: doc.name},
+            ]}/>
             <Stack align="center" gap="sm">
                 <Heading level={1}>{doc.name}</Heading>
                 {doc.kind == "function" ? <Badge type="secondary">Function</Badge> : null}
@@ -232,13 +267,23 @@ background-size:16px 16px;
             {doc.types && doc.types.length > 0 ? <div class="vtd-showcase-types">
                 <Heading level={2} id="types">Types</Heading>
                 <Paragraph type="muted">Shapes this component's attributes refer to by name.</Paragraph>
-                {doc.types.map(type => <div class="vtd-showcase-type">
-                    <Heading level={3} id={typeId(type.name)}><Text code>{type.name}</Text></Heading>
-                    {type.description ? <Paragraph type="muted">{type.description}</Paragraph> : null}
-                    <Table<AttrDoc>
-                        columns={attrColumns("Field")}
-                        rows={type.fields}/>
-                </div>)}
+                {doc.types.map(type => namedShape(type, typeId(type.name)))}
+            </div> : null}
+
+            {doc.themeOptions && doc.themeOptions.length > 0 ? <div class="vtd-showcase-types">
+                <Heading level={2} id="theme-options">Theme options</Heading>
+                <Paragraph type="muted">
+                    Exported, mutable objects holding the small pieces of content this component
+                    falls back to - the glyphs it uses instead of English words, and the palette the
+                    charts draw from. A field is read when a component is built, not resolved from
+                    CSS, so assign to it while your app is starting up, before the first velodesign
+                    component exists: velodesign never watches these and will not re-render anything
+                    when one changes. The matching attrs (shown above) still override a single
+                    instance. A field whose default reads CommonThemeOptions.something is following
+                    the shared object below, so setting that one reaches every component that means
+                    the same thing by it.
+                </Paragraph>
+                {doc.themeOptions.map(option => namedShape(option, themeOptionId(option.name)))}
             </div> : null}
 
             {doc.methods && doc.methods.length > 0 ? <div class="vtd-showcase-methods">

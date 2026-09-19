@@ -40,7 +40,7 @@ export const Checkbox: FunctionComponent<CheckboxAttrsType> = function(attrs: Ch
     if (!areCheckboxStylesMounted) {
         areCheckboxStylesMounted = true
         setStylesheet(`
-.vtd-cb-container{
+.vtd-checkbox-container{
 cursor:pointer;
 display:inline-flex;
 align-items:center;
@@ -49,13 +49,13 @@ padding:0.25rem 0.5rem;
 border-radius:0.25rem;
 }
 
-.vtd-cb-container:hover{background-color:var(--background-1);}
+.vtd-checkbox-container:hover{background-color:var(--background-1);}
 
-.vtd-cb-container:hover .vtd-cb{background-color:var(--primary-2);border:1px solid var(--primary-7);}
+.vtd-checkbox-container:hover .vtd-checkbox{background-color:var(--primary-2);border:1px solid var(--primary-7);}
 
-.vtd-cb-input {position:absolute;opacity:0;height:0;width:0;margin:0;}
+.vtd-checkbox-input {position:absolute;opacity:0;height:0;width:0;margin:0;}
 
-.vtd-cb {
+.vtd-checkbox {
 position:relative;
 border-radius:0.3em;
 display:inline-flex;
@@ -69,12 +69,12 @@ transition:background-color 0.2s ease-in, border-color 0.2s ease-in;
 background-color:var(--background-1);border:1px solid var(--background-5);
 }
 
-.vtd-cb:active{background-color:var(--primary-6);}
+.vtd-checkbox:active{background-color:var(--primary-6);}
 
-.vtd-cb-disabled:hover{background-color:var(--background-2);border:1px solid var(--background-5);}
-.vtd-cb-disabled:active{background-color:var(--background-2);}
+.vtd-checkbox-disabled:hover{background-color:var(--background-2);border:1px solid var(--background-5);}
+.vtd-checkbox-disabled:active{background-color:var(--background-2);}
 
-.vtd-cb-check{
+.vtd-checkbox-check{
 position:absolute;
 top:50%;
 left:50%;
@@ -87,7 +87,7 @@ border:solid var(--text);
 border-width:0 0.15em 0.15em 0;
 transform:translate(-50%,-65%) rotate(45deg);
 }
-.vtd-cb-dash{
+.vtd-checkbox-dash{
 position:absolute;
 top:50%;
 left:50%;
@@ -100,35 +100,35 @@ background-color:var(--text);
 transform:translate(-50%,-50%);
 }
 
-.vtd-cb-input:checked ~ .vtd-cb .vtd-cb-check,
-.vtd-cb-input:indeterminate ~ .vtd-cb .vtd-cb-dash{
+.vtd-checkbox-input:checked ~ .vtd-checkbox .vtd-checkbox-check,
+.vtd-checkbox-input:indeterminate ~ .vtd-checkbox .vtd-checkbox-dash{
 visibility:visible;
 opacity:1;
 }
-.vtd-cb-input:checked ~ .vtd-cb,
-.vtd-cb-input:indeterminate ~ .vtd-cb {
+.vtd-checkbox-input:checked ~ .vtd-checkbox,
+.vtd-checkbox-input:indeterminate ~ .vtd-checkbox {
 background-color:var(--primary-3);
 border-color:var(--primary-5);
 }
 
-.vtd-cb-container:has(> .vtd-cb-input:disabled){cursor:not-allowed;}
-.vtd-cb-input:focus-visible ~ .vtd-cb{border:1px solid var(--primary);outline:1px solid var(--primary)}
+.vtd-checkbox-container:has(> .vtd-checkbox-input:disabled){cursor:not-allowed;}
+.vtd-checkbox-input:focus-visible ~ .vtd-checkbox{border:1px solid var(--primary);outline:1px solid var(--primary)}
 `, "vtd/Checkbox")
     }
 
-    return passthroughAttrsToElement<HTMLLabelElement>(<label class="vtd-cb-container">
+    return passthroughAttrsToElement<HTMLLabelElement>(<label class="vtd-checkbox-container">
         <input
             type="checkbox"
             name={attrs.name}
-            class="vtd-cb-input"
+            class="vtd-checkbox-input"
             disabled={attrs.disabled}
             checked={attrs.checked}
             indeterminate={attrs.indeterminate}
             value={attrs.value}
             onChange={attrs.onChange}/>
-        <span class={`vtd-cb${attrs.disabled?" vtd-cb-disabled":""}`}>
-            <span class="vtd-cb-check"/>
-            <span class="vtd-cb-dash"/>
+        <span class={`vtd-checkbox${attrs.disabled?" vtd-checkbox-disabled":""}`}>
+            <span class="vtd-checkbox-check"/>
+            <span class="vtd-checkbox-dash"/>
         </span>
         {children}
     </label>, attrs)

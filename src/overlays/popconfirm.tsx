@@ -1,17 +1,17 @@
-import { type ChildrenAttr, Component, type EmptyAttrs, type FunctionComponent, passthroughAttrsToElement, type RenderableElements, setStylesheet } from "@velotype/velotype"
+import { type ChildrenAttr, Component, passthroughAttrsToElement, type RenderableElements, setStylesheet } from "@velotype/velotype"
 import type { IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
 import { Button } from "../form/button.tsx"
+import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
 /**
  * Options to customize `<Popconfirm/>` Component Theme
  */
 export const PopconfirmThemeOptions: {
-    confirmSymbol: FunctionComponent<EmptyAttrs>
-    cancelSymbol: FunctionComponent<EmptyAttrs>
-} = {
-    confirmSymbol: function(){return "✓"},
-    cancelSymbol: function(){return "✕"}
-}
+    /** Content of the confirm button. Defaults to `CommonThemeOptions.confirmSymbol` */
+    confirmSymbol: ThemeSymbol
+    /** Content of the cancel button. Defaults to `CommonThemeOptions.cancelSymbol` */
+    cancelSymbol: ThemeSymbol
+} = themeOptions({confirmSymbol: "confirmSymbol", cancelSymbol: "cancelSymbol"})
 
 /**
  * Attrs type for `<Popconfirm/>` Component

@@ -36,7 +36,7 @@ export const DateTimePicker: FunctionComponent<DateTimePickerAttrsType> = functi
     if (!areDateTimePickerStylesMounted) {
         areDateTimePickerStylesMounted = true
         setStylesheet(`
-.vtd-datetimepicker{
+.vtd-date-time-picker{
 padding:0.5ex 1ex;
 margin-inline-start:1ex;
 border-radius:0.25rem;
@@ -46,14 +46,14 @@ color:var(--text);
 font:inherit;
 color-scheme:inherit;
 }
-.vtd-datetimepicker:disabled{cursor:not-allowed;opacity:0.6;}
-.vtd-datetimepicker:focus-visible{border:1px solid var(--primary);outline-color:var(--primary);}
+.vtd-date-time-picker:disabled{cursor:not-allowed;opacity:0.6;}
+.vtd-date-time-picker:focus-visible{border:1px solid var(--primary);outline-color:var(--primary);}
 `, "vtd/DateTimePicker")
     }
 
     return passthroughAttrsToElement<HTMLInputElement>(<input
         type="datetime-local"
-        class="vtd-datetimepicker"
+        class="vtd-date-time-picker"
         name={attrs.name}
         value={attrs.value}
         min={attrs.min}

@@ -1,6 +1,7 @@
 import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 import { Button } from "../form/button.tsx"
+import { CommonThemeOptions } from "../core/theme-options.ts"
 
 /**
  * Attrs type for `<Carousel/>` Component
@@ -178,8 +179,8 @@ padding:0;
         this.#root = <div class="vtd-carousel">
             <div class="vtd-carousel-track">
                 {this.#slideEls}
-                {total > 1 ? <Button class="vtd-carousel-nav vtd-carousel-nav-prev" type="secondary" onClick={() => this.#handleUserGoTo(this.#currentIndex - 1, total)}>‹</Button> : null}
-                {total > 1 ? <Button class="vtd-carousel-nav vtd-carousel-nav-next" type="secondary" onClick={() => this.#handleUserGoTo(this.#currentIndex + 1, total)}>›</Button> : null}
+                {total > 1 ? <Button class="vtd-carousel-nav vtd-carousel-nav-prev" type="secondary" onClick={() => this.#handleUserGoTo(this.#currentIndex - 1, total)}><CommonThemeOptions.prevSymbol/></Button> : null}
+                {total > 1 ? <Button class="vtd-carousel-nav vtd-carousel-nav-next" type="secondary" onClick={() => this.#handleUserGoTo(this.#currentIndex + 1, total)}><CommonThemeOptions.nextSymbol/></Button> : null}
             </div>
             {dotsEl}
         </div>

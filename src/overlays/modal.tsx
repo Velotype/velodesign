@@ -1,16 +1,16 @@
-import { type ChildrenAttr, Component, type RenderableElements, setStylesheet, type EmptyAttrs, type FunctionComponent, type TargetedMouseEvent, type StylePassthroughAttrs, type IdAttr, passthroughAttrsToElement } from "@velotype/velotype"
+import { type ChildrenAttr, Component, type RenderableElements, setStylesheet, type FunctionComponent, type TargetedMouseEvent, type StylePassthroughAttrs, type IdAttr, passthroughAttrsToElement } from "@velotype/velotype"
 import { Button, type ButtonType } from "../form/button.tsx"
+import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
 /**
  * Options to customize `<Modal/>` Component Theme
  */
 export const ModalThemeOptions: {
-    closeSymbol: FunctionComponent<EmptyAttrs>
-    cancelSymbol: FunctionComponent<EmptyAttrs>
-} = {
-    closeSymbol: function(){return "x"},
-    cancelSymbol: function(){return "✕"}
-}
+    /** Content of the corner close button. Defaults to `CommonThemeOptions.closeSymbol` */
+    closeSymbol: ThemeSymbol
+    /** Content of the cancel button in the footer. Defaults to `CommonThemeOptions.cancelSymbol` */
+    cancelSymbol: ThemeSymbol
+} = themeOptions({closeSymbol: "closeSymbol", cancelSymbol: "cancelSymbol"})
 
 /**
  * Attrs type for `<Modal/>` Component

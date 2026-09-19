@@ -32,7 +32,7 @@ export const DatePicker: FunctionComponent<DatePickerAttrsType> = function(attrs
     if (!areDatePickerStylesMounted) {
         areDatePickerStylesMounted = true
         setStylesheet(`
-.vtd-datepicker{
+.vtd-date-picker{
 padding:0.5ex 1ex;
 margin-inline-start:1ex;
 border-radius:0.25rem;
@@ -42,14 +42,14 @@ color:var(--text);
 font:inherit;
 color-scheme:inherit;
 }
-.vtd-datepicker:disabled{cursor:not-allowed;opacity:0.6;}
-.vtd-datepicker:focus-visible{border:1px solid var(--primary);outline-color:var(--primary);}
+.vtd-date-picker:disabled{cursor:not-allowed;opacity:0.6;}
+.vtd-date-picker:focus-visible{border:1px solid var(--primary);outline-color:var(--primary);}
 `, "vtd/DatePicker")
     }
 
     return passthroughAttrsToElement<HTMLInputElement>(<input
         type="date"
-        class="vtd-datepicker"
+        class="vtd-date-picker"
         name={attrs.name}
         value={attrs.value}
         min={attrs.min}

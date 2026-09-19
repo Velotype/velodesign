@@ -1,6 +1,7 @@
 import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 import { Button } from "../form/button.tsx"
+import { CommonThemeOptions } from "../core/theme-options.ts"
 
 /**
  * Attrs type for `<Calendar/>` Component
@@ -106,9 +107,9 @@ cursor:pointer;
 
         this.#root = passthroughAttrsToElement<HTMLDivElement>(<div class="vtd-calendar">
             <div class="vtd-calendar-header">
-                <Button type="text" onClick={() => this.#changeMonth(-1)}>‹</Button>
+                <Button type="text" onClick={() => this.#changeMonth(-1)}><CommonThemeOptions.prevSymbol/></Button>
                 {this.#titleEl}
-                <Button type="text" onClick={() => this.#changeMonth(1)}>›</Button>
+                <Button type="text" onClick={() => this.#changeMonth(1)}><CommonThemeOptions.nextSymbol/></Button>
             </div>
             {this.#gridEl}
         </div>, attrs)

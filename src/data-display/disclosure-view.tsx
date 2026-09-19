@@ -113,13 +113,21 @@ grid-template-rows:minmax(0,0fr);
 visibility:hidden;
 transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0.2s;
 }
-.vtd-disclosure[open]:not(.vtd-disclosure-closing) .vtd-disclosure-content{
+/*
+ * Keyed on the <details> rather than on .vtd-disclosure, so the animation is available to any
+ * disclosure in the package without its chrome - Tree wants the open/close motion but not the
+ * border box, the header fill or the padding below.
+ */
+details[open]:not(.vtd-disclosure-closing) > .vtd-disclosure-content{
 grid-template-rows:minmax(0,1fr);
 visibility:visible;
 transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0s;
 }
-/* Equal padding all round - a zero top inset pushed the content up against the header */
-.vtd-disclosure-content-inner{overflow:hidden;min-height:0;padding:0.9em;}
+/* Mechanical, and required by the trick above - see mountDisclosureStyles */
+.vtd-disclosure-content-inner{overflow:hidden;min-height:0;}
+/* Equal padding all round - a zero top inset pushed the content up against the header. Scoped to
+   the chrome, because a Tree node brings its own indentation instead. */
+.vtd-disclosure .vtd-disclosure-content-inner{padding:0.9em;}
 @media (prefers-reduced-motion: reduce){
 .vtd-disclosure-content,.vtd-disclosure-chevron,.vtd-disclosure-header{transition:none;}
 }
@@ -135,6 +143,19 @@ transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0s;
  * every other component in the package names its root, and it is where a caller hangs any rule
  * that genuinely belongs to it rather than to the shared widget.
  */
+/**
+ * The two nested elements the open/close animation needs: an outer grid track that animates, and
+ * an inner wrapper that clips while the track is collapsed.
+ *
+ * Split out from `buildDisclosureSection` so a component that builds its own `<details>` - `Tree`,
+ * whose rows are not headers and whose children are a nested list - can still animate identically.
+ */
+export function buildDisclosureContent(content: RenderableElements): HTMLDivElement {
+    return <div class="vtd-disclosure-content">
+        <div class="vtd-disclosure-content-inner">{content}</div>
+    </div>
+}
+
 export function buildDisclosureSection(options: {
     header: RenderableElements
     content: RenderableElements
@@ -152,9 +173,7 @@ export function buildDisclosureSection(options: {
     /** The caller's identity class for the `<details>` itself, e.g. `"vtd-collapse"` */
     rootClass: string
 }): DisclosureSection {
-    const content: HTMLDivElement = <div class="vtd-disclosure-content">
-        <div class="vtd-disclosure-content-inner">{options.content}</div>
-    </div>
+    const content = buildDisclosureContent(options.content)
     const summary: HTMLElement = <summary class="vtd-disclosure-header">
         {options.header}
         <span class="vtd-disclosure-chevron"/>
@@ -190,6 +209,9 @@ export function buildDisclosureSection(options: {
 /**
  * Animates a section closed, then actually closes it.
  *
+ * Exported because `Tree` drives its own `<summary>` clicks - a click on a node's label selects
+ * rather than toggles - so it cannot use `buildDisclosureSection`'s handler and wires this itself.
+ *
  * **Why this needs JS at all.** Removing `open` stops the browser rendering that subtree, and an
  * element that is not rendered never gets a start time for its transitions - they sit forever at
  * `playState: "running", startTime: null`, which also pins the computed style at the open values.
@@ -204,7 +226,7 @@ export function buildDisclosureSection(options: {
  * `::details-content` (Chrome 131+) would let CSS do this alone, but it is not available widely
  * enough to rely on - this browser reports `CSS.supports("selector(::details-content)") === false`.
  */
-function animateClosed(section: DisclosureSection): void {
+export function animateClosed(section: DisclosureSection): void {
     const {details, content} = section
     if (!details.open || details.classList.contains("vtd-disclosure-closing")) {
         return

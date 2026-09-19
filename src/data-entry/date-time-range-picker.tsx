@@ -56,8 +56,8 @@ export class DateTimeRangePicker extends Component<DateTimeRangePickerAttrsType>
         if (!areDateTimeRangePickerStylesMounted) {
             areDateTimeRangePickerStylesMounted = true
             setStylesheet(`
-.vtd-datetimerange{display:inline-flex;align-items:center;gap:0.5em;}
-.vtd-datetimerange-input{
+.vtd-date-time-range-picker{display:inline-flex;align-items:center;gap:0.5em;}
+.vtd-date-time-range-picker-input{
 padding:0.5ex 1ex;
 border-radius:0.25rem;
 border:1px solid var(--background-5);
@@ -66,15 +66,15 @@ color:var(--text);
 font:inherit;
 color-scheme:inherit;
 }
-.vtd-datetimerange-input:disabled{cursor:not-allowed;opacity:0.6;}
-.vtd-datetimerange-input:focus-visible{border:1px solid var(--primary);outline-color:var(--primary);}
-.vtd-datetimerange-separator{opacity:0.6;}
+.vtd-date-time-range-picker-input:disabled{cursor:not-allowed;opacity:0.6;}
+.vtd-date-time-range-picker-input:focus-visible{border:1px solid var(--primary);outline-color:var(--primary);}
+.vtd-date-time-range-picker-separator{opacity:0.6;}
 `, "vtd/DateTimeRangePicker")
         }
 
         this.#startEl = <input
             type="datetime-local"
-            class="vtd-datetimerange-input"
+            class="vtd-date-time-range-picker-input"
             name={attrs.name ? `${attrs.name}-start` : undefined}
             value={attrs.value?.start}
             min={attrs.min}
@@ -85,7 +85,7 @@ color-scheme:inherit;
 
         this.#endEl = <input
             type="datetime-local"
-            class="vtd-datetimerange-input"
+            class="vtd-date-time-range-picker-input"
             name={attrs.name ? `${attrs.name}-end` : undefined}
             value={attrs.value?.end}
             min={attrs.value?.start || attrs.min}
@@ -94,9 +94,9 @@ color-scheme:inherit;
             disabled={attrs.disabled}
             onChange={() => this.#handleChange()}/>
 
-        this.#root = passthroughAttrsToElement<HTMLSpanElement>(<span class="vtd-datetimerange">
+        this.#root = passthroughAttrsToElement<HTMLSpanElement>(<span class="vtd-date-time-range-picker">
             {this.#startEl}
-            <span class="vtd-datetimerange-separator" aria-hidden="true">–</span>
+            <span class="vtd-date-time-range-picker-separator" aria-hidden="true">–</span>
             {this.#endEl}
         </span>, attrs)
     }

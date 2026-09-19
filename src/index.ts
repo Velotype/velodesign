@@ -5,16 +5,17 @@ import type { ButtonGroupAttrsType } from "./form/button-group.tsx"
 import { Icon, I, registerIcon } from "./utility/icon.ts"
 import type {IAttrsType} from "./utility/icon.ts"
 import { licenses, addLicense } from "./core/license.ts"
-import { setThemeOnSelector, Theme, ColorScheme, type ThemeOptions } from "./core/theme.ts"
+import { setThemeOnSelector, Theme, ColorScheme, type ThemeColorOptions } from "./core/theme.ts"
+import { CommonThemeOptions, resetThemeOptions, type CommonThemeOptionsType, type ThemeSymbol } from "./core/theme-options.ts"
 import { History } from "./core/history.ts"
 import { Link } from "./navigation/link.tsx"
 import type { LinkAttrsType } from "./navigation/link.tsx"
 import { PageSelector } from "./navigation/page-selector.tsx"
-import type { Page, PageSelectorAttrsType } from "./navigation/page-selector.tsx"
+import type { PageSelectorPageType, PageSelectorAttrsType } from "./navigation/page-selector.tsx"
 import { TextBox } from "./form/text-box.tsx"
-import type { TextBoxAttrsType, TextBoxTypeType } from "./form/text-box.tsx"
+import type { TextBoxAttrsType, TextBoxType } from "./form/text-box.tsx"
 import { ButtonModal, type ButtonModalAttrsType, Modal, type ModalAttrsType, ModalThemeOptions } from "./overlays/modal.tsx"
-import { TextFormFieldOptions, type TextNonEditableFieldAttrsType, TextNonEditableField, type TextFormFieldAttrTypes, TextFormField, type TextEditableFieldAttrsType, TextEditableField } from "./form/text-form-field.tsx"
+import { TextFormFieldThemeOptions, type TextNonEditableFieldAttrsType, TextNonEditableField, type TextFormFieldAttrsType, TextFormField, type TextEditableFieldAttrsType, TextEditableField } from "./form/text-form-field.tsx"
 import { RadioButton, type RadioButtonAttrsType } from "./form/radio-button.tsx"
 import { TimeAgo, type TimeAgoAttrsType } from "./data-display/time-ago.ts"
 import { LocalizedString, S, T, type TAttrsType } from "./core/strings.ts"
@@ -32,7 +33,7 @@ import { Spinner, type SpinnerAttrsType } from "./feedback/spinner.tsx"
 import { Tabs, type TabsAttrsType, type TabType } from "./data-display/tabs.tsx"
 import { Divider, type DividerAttrsType } from "./data-display/divider.tsx"
 import { NavLink, type NavLinkAttrsType } from "./navigation/nav-link.tsx"
-import { Breadcrumbs, type BreadcrumbItemType, type BreadcrumbsAttrsType } from "./navigation/breadcrumbs.tsx"
+import { Breadcrumbs, BreadcrumbsThemeOptions, type BreadcrumbItemType, type BreadcrumbsAttrsType } from "./navigation/breadcrumbs.tsx"
 import { Pagination, PaginationThemeOptions, type PaginationAttrsType } from "./navigation/pagination.tsx"
 import { Navbar, type NavbarAttrsType } from "./navigation/navbar.tsx"
 import { Sidebar, type SidebarAttrsType, type SidebarItemType } from "./navigation/sidebar.tsx"
@@ -120,7 +121,7 @@ export {
 
     TextBox,
     type TextBoxAttrsType,
-    type TextBoxTypeType,
+    type TextBoxType,
 
     Textarea,
     type TextareaAttrsType,
@@ -146,18 +147,22 @@ export {
 
     Theme,
     ColorScheme,
-    type ThemeOptions,
+    type ThemeColorOptions,
+    CommonThemeOptions,
+    type CommonThemeOptionsType,
+    type ThemeSymbol,
+    resetThemeOptions,
     setThemeOnSelector,
     History,
 
-    type Page,
+    type PageSelectorPageType,
     type PageSelectorAttrsType,
     PageSelector,
 
-    TextFormFieldOptions,
+    TextFormFieldThemeOptions,
     type TextNonEditableFieldAttrsType,
     TextNonEditableField,
-    type TextFormFieldAttrTypes,
+    type TextFormFieldAttrsType,
     TextFormField,
     type TextEditableFieldAttrsType,
     TextEditableField,
@@ -196,6 +201,7 @@ export {
     type NavLinkAttrsType,
 
     Breadcrumbs,
+    BreadcrumbsThemeOptions,
     type BreadcrumbItemType,
     type BreadcrumbsAttrsType,
 

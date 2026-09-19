@@ -55,7 +55,7 @@ export type DataTableAttrsType<RowType> = {
     highlightOnHover?: boolean
     /**
      * If set, wraps each row's first visible column in a real `<a href>` spanning the row's
-     * full width - a native "stretched link" (see `.vtd-datatable-row-link` in
+     * full width - a native "stretched link" (see `.vtd-data-table-row-link` in
      * `data-table-view.tsx`), so middle-click/ctrl-click/right-click "open in new tab" all keep
      * working, unlike a JS-only click handler on the row would. Return `undefined` for a given row
      * to leave it non-navigable. Takes priority over `onRowSelect` for a row where both would apply.
@@ -130,7 +130,7 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
     #colgroupEl: HTMLTableColElement = <colgroup/>
     #theadRowEl: HTMLTableRowElement = <tr/>
     #tbodyEl: HTMLTableSectionElement = <tbody/>
-    #footerEl: HTMLDivElement = <div class="vtd-datatable-footer"/>
+    #footerEl: HTMLDivElement = <div class="vtd-data-table-footer"/>
 
     /** Called by `DataTable`'s persistent search input on every keystroke */
     setSearchQuery(query: string) {
@@ -235,13 +235,13 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
         this.#tbodyEl.replaceChildren(...(allRows.length == 0
             ? [buildStatusRow(visibleColumns.length, attrs.emptyMessage)]
             : bodyRows))
-        this.#tbodyEl.classList.toggle("vtd-datatable-zebra", attrs.zebra)
-        this.#tbodyEl.classList.toggle("vtd-datatable-hoverable", attrs.highlightOnHover)
+        this.#tbodyEl.classList.toggle("vtd-data-table-zebra", attrs.zebra)
+        this.#tbodyEl.classList.toggle("vtd-data-table-hoverable", attrs.highlightOnHover)
 
         const footerChildren: HTMLDivElement[] = []
         if (pageSize > 0 && (totalPages > 1 || attrs.showPageSizeControl)) {
-            footerChildren.push(<div class="vtd-datatable-page-size">
-                {attrs.showPageSizeControl ? <label class="vtd-datatable-page-size-label">
+            footerChildren.push(<div class="vtd-data-table-page-size">
+                {attrs.showPageSizeControl ? <label class="vtd-data-table-page-size-label">
                     {attrs.pageSizeLabel ?? null}
                     <Select
                         value={String(pageSize)}
@@ -252,7 +252,7 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
                 </label> : null}
             </div>)
             if (totalPages > 1) {
-                footerChildren.push(<div class="vtd-datatable-pagination">
+                footerChildren.push(<div class="vtd-data-table-pagination">
                     <Pagination page={currentPage} totalPages={totalPages} onPageChange={(page) => { this.#currentPage = page; this.#renderTable() }}/>
                 </div>)
             }
@@ -266,9 +266,9 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
         this.#attrs = attrs
         this.#currentPageSize = attrs.pageSize
 
-        this.#root = <div class="vtd-datatable">
-            <div class="vtd-datatable-scroll">
-                <table class="vtd-datatable-table">
+        this.#root = <div class="vtd-data-table">
+            <div class="vtd-data-table-scroll">
+                <table class="vtd-data-table-table">
                     {this.#colgroupEl}
                     <thead>{this.#theadRowEl}</thead>
                     {this.#tbodyEl}
@@ -344,7 +344,7 @@ export class DataTable<RowType> extends Component<DataTableAttrsType<RowType>> {
         if (attrs.searchable) {
             searchInput = <TextBox
                 type="text"
-                class="vtd-datatable-search"
+                class="vtd-data-table-search"
                 placeholder={attrs.searchPlaceholder}
                 onInput={(event: Event) => {
                     if (event.target instanceof HTMLInputElement) { inner.setSearchQuery(event.target.value) }
@@ -361,10 +361,10 @@ export class DataTable<RowType> extends Component<DataTableAttrsType<RowType>> {
         }
         const columnMenuEl = this.#columnMenu?.element
 
-        this.#root = <div class="vtd-datatable-wrapper">
+        this.#root = <div class="vtd-data-table-wrapper">
             {searchInput || columnMenuEl
-                ? <div class="vtd-datatable-toolbar">
-                    {searchInput ? <div class="vtd-datatable-search-wrapper">{searchInput}</div> : null}
+                ? <div class="vtd-data-table-toolbar">
+                    {searchInput ? <div class="vtd-data-table-search-wrapper">{searchInput}</div> : null}
                     {columnMenuEl ?? null}
                 </div>
                 : null}

@@ -57,7 +57,7 @@ padding:0.5em 0.75em;
 border-radius:0.25rem;
 }
 .vtd-sidebar-link:hover{background-color:var(--background-1);}
-.vtd-sidebar-link.vtd-navlink-active{background-color:var(--primary-2);}
+.vtd-sidebar-link.vtd-nav-link-active{background-color:var(--primary-2);}
 `, "vtd/Sidebar")
     }
 

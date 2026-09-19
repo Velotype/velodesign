@@ -65,7 +65,7 @@ text-wrap:balance;
 .vtd-text-strike{text-decoration:line-through;}
 /* Tabular figures, so columns of numbers line up and a changing value doesn't shift its neighbours */
 .vtd-text-numeric{font-variant-numeric:tabular-nums;}
-.vtd-code{
+.vtd-text-code{
 font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
 font-size:0.9em;
 background-color:var(--background-1);
