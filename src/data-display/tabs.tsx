@@ -1,4 +1,5 @@
-import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -102,7 +103,7 @@ export class Tabs extends Component<TabsAttrsType> {
         this.#activeKey = attrs.initialKey || attrs.tabs[0]?.key
         if (!areTabsStylesMounted) {
             areTabsStylesMounted = true
-            setStylesheet(`
+            mountStyles(`
 .vtd-tabs{
 width:100%;
 box-sizing:border-box;

@@ -1923,15 +1923,263 @@ describe('basic component rendering', () => {
 
 
     /**
+     * An entry that acts rather than navigates can ask to stay put.
+     *
+     * The default is still to close - that is what a navigational entry needs - so this asserts the
+     * opt-in specifically: the menu open, the submenu it lives in open, and the row in the same
+     * place it was clicked in. Deleting `keepOpen` from the item, or the early return from `Menu`'s
+     * click handler, fails all three.
+     */
+    itWrap("a keepOpen entry acts without closing the menu around it", "menu", "#nested-menu", async (_selection: ElementHandle) => {
+        const result = await page.evaluate(`(() => {
+            const menu = document.getElementById("showcase-theme-light").querySelector("#nested-menu")
+            menu.querySelector(".vtd-menu-trigger").click()
+            menu.querySelector(".vtd-menu-item-parent").click()
+            const items = [...menu.querySelectorAll(".vtd-menu-sublist .vtd-menu-item")]
+            const keeper = items.find((el) => el.innerText.trim() == "Compact rows")
+            const navigator = items.find((el) => el.innerText.trim() == "Members")
+            const before = Math.round(keeper.getBoundingClientRect().top)
+            const countBefore = document.getElementById("showcase-theme-light").querySelector("#menu-click-count").innerText
+            keeper.click()
+            const kept = {
+                open: menu.open,
+                submenuOpen: !!menu.querySelector(".vtd-menu-entry-open"),
+                moved: Math.round(keeper.getBoundingClientRect().top) - before,
+                counted: document.getElementById("showcase-theme-light").querySelector("#menu-click-count").innerText != countBefore,
+            }
+            // ...and the entry beside it, with no keepOpen, still closes the whole thing
+            navigator.click()
+            return {...kept, closedAfterPlainItem: !menu.open}
+        })()`) as {open: boolean, submenuOpen: boolean, moved: number, counted: boolean, closedAfterPlainItem: boolean}
+
+        if (!result.counted) {fail("ERROR: a keepOpen entry did not run its onClick")}
+        if (!result.open) {fail("ERROR: a keepOpen entry closed the menu")}
+        if (!result.submenuOpen) {fail("ERROR: a keepOpen entry closed the submenu it lives in")}
+        if (result.moved != 0) {fail(`ERROR: a keepOpen entry moved ${result.moved}px out from under the pointer`)}
+        if (!result.closedAfterPlainItem) {fail("ERROR: an ordinary entry no longer closes the menu")}
+    })
+
+    /**
+     * One focus ring, for every control on a page.
+     *
+     * It was twenty-two different treatments before - rings of 1px and 2px, offsets of 0, 1 and 2,
+     * some drawn as a border colour change, five that turned the outline off entirely, and Button
+     * marking focus with a red `--accent` border. This tabs a page holding most of the package and
+     * asserts the ring is a single shape, because the value of a focus indicator is that it is the
+     * *same* everywhere: a reader who has to learn a new one per control has been given nothing.
+     *
+     * The element that shows the ring is not always the one that has focus - Checkbox, RadioButton,
+     * Toggle, Rate and Upload all focus a 0x0 transparent input and draw the ring on the visible
+     * control beside it - so this follows that hop rather than reading the input.
+     */
+    itWrap("every control draws the same focus ring", "showcase", "body", async (_selection: ElementHandle) => {
+        const shapes = new Map<string, string[]>()
+        for (let i = 0; i < 60; i++) {
+            await page.keyboard.press("Tab")
+            const info = await page.evaluate(`(() => {
+                const el = document.activeElement
+                if (!el || el === document.body) { return null }
+                let shown = el
+                if (getComputedStyle(el).outlineStyle === "none" || el.getBoundingClientRect().width < 2) {
+                    const sib = el.parentElement ? [...el.parentElement.children].find((c) => c !== el && getComputedStyle(c).outlineStyle !== "none") : null
+                    shown = sib || el.closest(".vtd-upload") || el
+                }
+                const cls = [...shown.classList].filter((c) => c.startsWith("vtd-")).join(".")
+                const cs = getComputedStyle(shown)
+                // Only this package's own controls: a gallery page's own bare markup keeps the
+                // browser's ring, correctly
+                if (!cls) { return {skip: true} }
+                return {cls, shape: cs.outlineStyle + " " + cs.outlineWidth + " " + cs.outlineOffset}
+            })()`) as {skip?: boolean, cls?: string, shape?: string} | null
+            if (!info) { break }
+            if (info.skip || !info.shape) { continue }
+            shapes.set(info.shape, [...(shapes.get(info.shape) ?? []), info.cls!])
+        }
+        const found = [...shapes.keys()]
+        if (found.length == 0) {fail("ERROR: tabbing reached no velodesign control at all, so this proves nothing")}
+        if (found.length != 1) {
+            fail(`ERROR: ${found.length} different focus rings: ${found.map((f) => f + " on " + (shapes.get(f) ?? []).slice(0, 4).join(",")).join(" | ")}`)
+        }
+        // ...and it is the designed one, not the browser's default, which reports as "auto"
+        if (found[0] != "solid 2px 2px") {fail(`ERROR: the ring is ${JSON.stringify(found[0])}, expected a solid 2px ring offset 2px`)}
+    })
+
+    /**
+     * A code block takes a tab stop only when it has something to scroll.
+     *
+     * It used to set `tabindex="0"` and `role="region"` unconditionally, so every snippet on a page
+     * was its own tab stop with nothing to do there and announced its own landmark. Neither is set
+     * now: Chrome, Edge and Firefox make a scroll container focusable exactly when it overflows, so
+     * the assertion is that the count of focusable blocks equals the count of overflowing ones -
+     * which also fails if someone puts the static tabindex back.
+     */
+    itWrap("a code block is focusable only when it actually scrolls", "code-block", "#code-tsx", async (_selection: ElementHandle) => {
+        const counts = await page.evaluate(`(() => {
+            const scope = document.getElementById("showcase-theme-light")
+            const blocks = [...scope.querySelectorAll(".vtd-code-block")]
+            return {
+                total: blocks.length,
+                scrolls: blocks.filter((b) => b.scrollWidth > b.clientWidth + 1).length,
+                withTabindex: blocks.filter((b) => b.hasAttribute("tabindex")).length,
+                landmarks: scope.querySelectorAll("[role=region]").length,
+            }
+        })()`) as {total: number, scrolls: number, withTabindex: number, landmarks: number}
+
+        if (counts.withTabindex != 0) {fail(`ERROR: ${counts.withTabindex} code blocks set a static tabindex`)}
+        if (counts.landmarks != 0) {fail(`ERROR: ${counts.landmarks} code blocks announce themselves as landmarks`)}
+        if (counts.scrolls == 0 || counts.scrolls == counts.total) {
+            fail(`ERROR: ${counts.scrolls} of ${counts.total} blocks scroll - the fixture needs both kinds for this to prove anything`)
+        }
+
+        const stops = new Set<string>()
+        for (let i = 0; i < 60; i++) {
+            await page.keyboard.press("Tab")
+            const hit = await page.evaluate(`(() => {
+                const el = document.activeElement
+                if (!el || el === document.body) { return null }
+                const scope = document.getElementById("showcase-theme-light")
+                if (!el.classList.contains("vtd-code-block") || !scope.contains(el)) { return "" }
+                return (el.closest("div[id]") || {}).id || "?"
+            })()`) as string | null
+            if (hit === null) { break }
+            if (hit) { stops.add(hit) }
+        }
+        if (stops.size != counts.scrolls) {
+            fail(`ERROR: ${stops.size} code blocks take a tab stop but ${counts.scrolls} scroll: ${JSON.stringify([...stops])}`)
+        }
+    })
+
+    /**
+     * An element that butts straight up against the text beside it is still an element.
+     *
+     * `<div>Above<Divider/>Below</div>` lost `Divider` entirely: the guard that stops
+     * `getComponent<Tree>` being read as a tag is a lookbehind for an identifier before the `<`,
+     * and in JSX text there is one. The colour was the visible half; the damage was that with no
+     * opening tag recognised there was no open tag for the following `/>` to close, so the element
+     * depth never came back down and every keyword after it was treated as prose.
+     *
+     * Both halves are asserted, because the obvious fix - deleting the guard - trades one bug for
+     * the other, and the generic on the second line is what catches that.
+     */
+    itWrap("a self-closing tag inside JSX text is highlighted, and a generic still is not", "code-block", "#code-void-tag", async (_selection: ElementHandle) => {
+        const result = await page.evaluate(`(() => {
+            const block = document.getElementById("showcase-theme-light").querySelector("#code-void-tag")
+            const kindOf = (text) => [...block.querySelectorAll("span")]
+                .filter((el) => el.textContent == text)
+                .map((el) => el.className.replace("vtd-code-block-", ""))
+            return {
+                divider: kindOf("Divider"),
+                div: kindOf("div"),
+                tree: kindOf("Tree"),
+                // Lossless, still: every character of the input survives the round trip
+                text: block.innerText.replace(/^\s+|\s+$/g, ""),
+            }
+        })()`) as {divider: string[], div: string[], tree: string[], text: string}
+
+        if (!result.divider.includes("tag")) {
+            fail(`ERROR: a self-closing tag after JSX text is not highlighted as a tag: ${JSON.stringify(result.divider)}`)
+        }
+        if (!result.div.includes("tag")) {fail(`ERROR: the surrounding tag lost its highlight: ${JSON.stringify(result.div)}`)}
+        // "Tree" appears twice in the sample: once as the generic argument of getComponent<Tree>
+        // and once as the element after it. Exactly one of them may be a tag - and an untagged
+        // token is emitted as a bare text node rather than an unstyled span, so the count of spans
+        // saying "Tree" is the assertion. Two means the guard is gone.
+        if (result.tree.length != 1 || result.tree[0] != "tag") {
+            fail(`ERROR: expected exactly one highlighted Tree (the element, not the generic), got ${JSON.stringify(result.tree)}`)
+        }
+        if (!result.text.includes("getComponent<Tree>(<Tree nodes={nodes}/>)")) {
+            fail(`ERROR: the generic line did not survive tokenizing: ${JSON.stringify(result.text)}`)
+        }
+        if (!result.text.includes("<div>Above<Divider/>Below</div>")) {
+            fail(`ERROR: tokenizing was not lossless: ${JSON.stringify(result.text)}`)
+        }
+    })
+
+    /**
+     * A checkable group moves its own tick, and only within its own list.
+     *
+     * The scoping is the part worth pinning down: a menu may hold more than one group, and a
+     * selection that reached across the whole menu would silently clear the other one on every
+     * click. "Compact rows" sits in a sibling list with no `selected` at all, so it must keep the
+     * plain `menuitem` role and be untouched by a pick in the Density group.
+     */
+    itWrap("a checkable menu group moves its tick within its own list", "menu", "#nested-menu", async (_selection: ElementHandle) => {
+        const result = await page.evaluate(`(() => {
+            const menu = document.getElementById("showcase-theme-light").querySelector("#nested-menu")
+            menu.querySelector(".vtd-menu-trigger").click()
+            // A checkable entry renders its tick inside itself, so innerText reads "(tick)Compact"
+            // whether or not the tick is the visible one - the glyph is aria-hidden, which keeps it
+            // out of the accessible name, but innerText is not an accessibility API and sees it.
+            // Read the label past it rather than matching on the whole string.
+            const label = (el) => [...el.childNodes]
+                .filter((n) => !(n.nodeType == 1 && n.classList.contains("vtd-menu-check")))
+                .map((n) => n.textContent).join("").trim()
+            const parents = [...menu.querySelectorAll(".vtd-menu-item-parent")]
+            parents.find((el) => label(el) == "Density").click()
+            const density = [...menu.querySelectorAll(".vtd-menu-sublist .vtd-menu-item")]
+                .filter((el) => ["Comfortable", "Compact"].includes(label(el)))
+            const read = () => density.map((el) => label(el) + "=" + el.getAttribute("aria-checked"))
+            const before = read()
+            const tickShownBefore = density.map((el) => getComputedStyle(el.querySelector(".vtd-menu-check")).opacity)
+            density.find((el) => label(el) == "Compact").click()
+            return {
+                before,
+                after: read(),
+                tickShownBefore,
+                tickShownAfter: density.map((el) => getComputedStyle(el.querySelector(".vtd-menu-check")).opacity),
+                roles: density.map((el) => el.getAttribute("role")),
+                // An entry with no selected stays an ordinary menuitem with no tick of its own
+                // (no backticks in here - they close the template literal this string lives in)
+                plainRole: [...menu.querySelectorAll(".vtd-menu-item")]
+                    .find((el) => label(el) == "Compact rows").getAttribute("role"),
+                plainChecks: [...menu.querySelectorAll(".vtd-menu-item")]
+                    .find((el) => label(el) == "Compact rows").querySelectorAll(".vtd-menu-check").length,
+                stillOpen: menu.open,
+            }
+        })()`) as {before: string[], after: string[], tickShownBefore: string[], tickShownAfter: string[], roles: string[], plainRole: string, plainChecks: number, stillOpen: boolean}
+
+        if (result.roles.some((r) => r != "menuitemradio")) {
+            fail(`ERROR: a checkable entry is not a menuitemradio: ${JSON.stringify(result.roles)}`)
+        }
+        if (result.before.join(",") != "Comfortable=true,Compact=false") {
+            fail(`ERROR: the group did not start with the declared selection: ${JSON.stringify(result.before)}`)
+        }
+        if (result.after.join(",") != "Comfortable=false,Compact=true") {
+            fail(`ERROR: clicking did not move the selection: ${JSON.stringify(result.after)}`)
+        }
+        // The tick is drawn by opacity so the label never shifts - assert the visible half too,
+        // or aria-checked could be right while nothing on screen changed
+        if (result.tickShownBefore.join(",") != "1,0" || result.tickShownAfter.join(",") != "0,1") {
+            fail(`ERROR: the tick does not follow aria-checked (${JSON.stringify(result.tickShownBefore)} then ${JSON.stringify(result.tickShownAfter)})`)
+        }
+        if (result.plainRole != "menuitem") {fail(`ERROR: an entry with no selected became a ${result.plainRole}`)}
+        if (result.plainChecks != 0) {fail("ERROR: an entry with no selected reserved space for a tick")}
+        if (!result.stillOpen) {fail("ERROR: picking in a checkable group closed the menu")}
+    })
+
+
+    /**
      * The collapsed rail must be a clean column of icons, including for a group the reader left
      * expanded - and it must still say which group holds the current page.
      *
-     * The children of an open group are hidden with `display:none` rather than `visibility:hidden`
-     * for exactly this reason: under `visibility` they keep their height, so the rail grows a blank
-     * stretch where a group's entries would have been. Swapping that one declaration back reproduces
-     * it, as a gap several times the size of the others.
+     * A group's children collapse the grid track the disclosure animation already drives, rather
+     * than keeping their height (`visibility`) or leaving in one frame (`display:none`). Under
+     * `visibility` the rail grows a blank stretch where a group's entries would have been - a gap
+     * several times the size of the others, which is what the spread check below catches.
+     *
+     * **Transitions are frozen for the length of this test**, because every part of the rail is now
+     * reached by one: the panel's width, each label's opacity, the chevron's width, the children's
+     * track. A transition never advances in this suite, so without freezing them every measurement
+     * here reads the *pre-collapse* value and the whole test passes however wrong the component is.
+     * With them off, `getBoundingClientRect` reports the state the rules actually declare. The
+     * standalone check is what asserts that the motion between the two states happens at all.
      */
     itWrap("a collapsed sidebar is an even rail of icons, and still marks the active group", "sidebar", "#full-sidebar", async (_selection: ElementHandle) => {
+        await page.evaluate(`(() => {
+            const style = document.createElement("style")
+            style.textContent = "*,*::before,*::after{transition:none !important;}"
+            document.head.appendChild(style)
+        })()`)
         const read = () => page.evaluate(`(() => {
             const scope = document.getElementById("showcase-theme-light").querySelector("#full-sidebar")
             const nav = scope.querySelector("nav.vtd-sidebar")
@@ -1940,34 +2188,86 @@ describe('basic component rendering', () => {
             const gaps = []
             for (let i = 1; i < boxes.length; i++) { gaps.push(Math.round(boxes[i].top - boxes[i - 1].top)) }
             return {
-                // The *declared* width, not the measured one: the panel transitions, and a
-                // transition never advances inside this suite, so a measured width would read as
-                // the pre-collapse value forever. The standalone check covers the geometry.
-                width: nav.style.width,
+                collapsed: nav.classList.contains("vtd-sidebar-collapsed"),
+                panelWidth: Math.round(scope.querySelector(".vtd-sidebar-panel").getBoundingClientRect().width),
                 icons: boxes.length,
                 gaps,
-                visibleLinks: [...scope.querySelectorAll(".vtd-sidebar-link")]
-                    .filter((a) => a.checkVisibility({checkVisibilityCSS: true})).length,
+                // What must be gone from the rail is every entry's *text*, not its row: a top-level
+                // entry's row is the rail row, and the link is that row now - it is supposed to
+                // still be there, showing its icon and going to the same place a click on it
+                // always did. So this counts labels with a real box, not links.
+                //
+                // Two mechanisms hide one, and neither check finds both. A group's children are
+                // clipped by a grid track collapsed to zero height, so they keep a full-size box
+                // and only the visibility:hidden that goes with it gives them away. A top-level
+                // label is the opposite: capped to zero width and faded, so it stays visible to
+                // checkVisibility and only the box gives it away. Require both.
+                visibleLinks: [...scope.querySelectorAll(".vtd-sidebar-link .vtd-sidebar-label")]
+                    .filter((el) => el.checkVisibility({checkVisibilityCSS: true}))
+                    .filter((el) => el.getBoundingClientRect().width > 2).length,
+                // Nothing may leave the document either - that is what display:none would cost,
+                // and with it whatever a screen reader had to announce for the row
+                linksInDom: scope.querySelectorAll(".vtd-sidebar-link").length,
+                // The mechanism itself: an open group's content track is collapsed to no height,
+                // which is what keeps the icons below it evenly spaced
+                groupHeights: [...scope.querySelectorAll(".vtd-disclosure-content")]
+                    .map((c) => Math.round(c.getBoundingClientRect().height)),
+                // Each icon against the middle of its own row. A leaf row carries no padding, so
+                // it is the one that goes wrong first if a label is left holding any width at all.
+                offCentre: [...scope.querySelectorAll(".vtd-sidebar-icon")]
+                    .filter((i) => i.getBoundingClientRect().height > 0)
+                    .map((i) => {
+                        const icon = i.getBoundingClientRect()
+                        const row = i.closest(".vtd-tree-label, .vtd-tree-leaf").getBoundingClientRect()
+                        return Math.round(((icon.left + icon.right) / 2) - ((row.left + row.right) / 2))
+                    }),
                 collapseWords: scope.querySelector(".vtd-sidebar-collapse").innerText.trim(),
+                // The account row has to fill the sidebar the way every other row does. Menu's root
+                // is display:inline-block like every overlay trigger, and the rule making it block
+                // here is one class against one class - a tie, broken by mount order, which this
+                // component loses because Menu's stylesheet mounts inside its own constructor.
+                // Left inline-block it shrank to fit .vtd-menu-list's min-width:10em, so the row was
+                // 160px wide however wide the sidebar was.
+                profileWidth: Math.round(scope.querySelector(".vtd-sidebar-profile-menu").getBoundingClientRect().width),
+                profileSlotWidth: Math.round(scope.querySelector(".vtd-sidebar-profile").getBoundingClientRect().width),
             }
-        })()`) as Promise<{width: string, icons: number, gaps: number[], visibleLinks: number, collapseWords: string}>
+        })()`) as Promise<{collapsed: boolean, panelWidth: number, icons: number, gaps: number[], visibleLinks: number, linksInDom: number, groupHeights: number[], offCentre: number[], collapseWords: string, profileWidth: number, profileSlotWidth: number}>
 
         const expanded = await read()
         // "Reports" is defaultOpen, so its entries are on screen before anything is collapsed
-        if (expanded.visibleLinks == 0) {fail("ERROR: the expanded sidebar shows no entries at all")}
+        if (expanded.visibleLinks < 3) {fail(`ERROR: the expanded sidebar shows ${expanded.visibleLinks} entries`)}
         // The control is an icon, not a word - it cannot assume a language
         if (expanded.collapseWords != "") {
             fail(`ERROR: the collapse control renders text: ${JSON.stringify(expanded.collapseWords)}`)
+        }
+        // Its own 0.4em of padding either side is all that may separate the two
+        if (expanded.profileSlotWidth - expanded.profileWidth > 16) {
+            fail(`ERROR: the account row is ${expanded.profileWidth}px inside a ${expanded.profileSlotWidth}px sidebar - it is not filling it`)
         }
 
         await page.evaluate(`document.getElementById("showcase-theme-light").querySelector("#full-sidebar .vtd-sidebar-collapse").click()`)
         // Move the pointer well clear, or hovering the rail expands it straight back
         await page.mouse.move(700, 700)
         const rail = await read()
-        if (rail.width != "56px") {fail(`ERROR: the collapsed rail declares a width of ${rail.width}`)}
+        if (!rail.collapsed) {fail("ERROR: clicking the control did not put the sidebar into its collapsed state")}
+        if (expanded.collapsed) {fail("ERROR: the sidebar started collapsed, so the click was not what changed it")}
+        if (rail.panelWidth > 80) {fail(`ERROR: the panel is still ${rail.panelWidth}px wide on the rail`)}
         if (rail.icons != 3) {fail(`ERROR: expected 3 icons on the rail, got ${rail.icons}`)}
-        if (rail.visibleLinks != 0) {
-            fail(`ERROR: ${rail.visibleLinks} entry links are still visible on the rail`)
+        // Nothing may still be *laid out*, and nothing may have left the document either
+        if (rail.visibleLinks > 0) {
+            fail(`ERROR: ${rail.visibleLinks} entry links are still laid out on the rail`)
+        }
+        if (rail.linksInDom != expanded.linksInDom) {
+            fail(`ERROR: collapsing removed ${expanded.linksInDom - rail.linksInDom} links from the document rather than shrinking them`)
+        }
+        if (rail.groupHeights.some((h) => h > 0)) {
+            fail(`ERROR: an open group still takes height on the rail: ${JSON.stringify(rail.groupHeights)}`)
+        }
+        if (!expanded.groupHeights.some((h) => h > 0)) {
+            fail("ERROR: no group had any height before collapsing, so the check above proves nothing")
+        }
+        if (rail.offCentre.some((v) => Math.abs(v) > 2)) {
+            fail(`ERROR: the rail's icons are not centred on their rows: ${JSON.stringify(rail.offCentre)}`)
         }
         const spread = Math.max(...rail.gaps) - Math.min(...rail.gaps)
         if (spread > 4) {
@@ -1987,6 +2287,60 @@ describe('basic component rendering', () => {
         })()`) as {count: number, barWidth: number}
         if (marked.count != 1) {fail(`ERROR: ${marked.count} groups marked active on the rail, expected 1`)}
         if (marked.barWidth < 1) {fail("ERROR: the active group's marker has no width on the rail")}
+    })
+
+
+    /**
+     * The clear control appears only when there is something to clear, empties the field, and
+     * fires the same events typing does.
+     *
+     * Whether it is shown is decided by `:placeholder-shown` rather than by script - which is why
+     * a clearable field gets a placeholder of a single space when the consumer gives none, since
+     * without any placeholder that selector never matches and the control would never appear.
+     */
+    itWrap("a clearable text box shows its control only when it has a value", "text-box", "#clearable-box", async (_selection: ElementHandle) => {
+        const read = () => page.evaluate(`(() => {
+            const scope = document.getElementById("showcase-theme-light")
+            const wrapper = scope.querySelector("#clearable-box .vtd-text-box-wrapper")
+            const input = wrapper.querySelector("input.vtd-text-box")
+            const clear = wrapper.querySelector(".vtd-text-box-clear")
+            return {
+                wrapped: !!wrapper,
+                clearShown: getComputedStyle(clear).display != "none",
+                value: input.value,
+                reported: scope.querySelector("#clearable-last-input").innerText.replace("last input:", "").trim(),
+                // Exactly one field opted in, so exactly one wrapper - the other five inputs
+                // must still be bare, which is the whole point of the default being off
+                wrappers: scope.querySelectorAll(".vtd-text-box-wrapper").length,
+                bareInputs: [...scope.querySelectorAll("input.vtd-text-box")]
+                    .filter((el) => !el.closest(".vtd-text-box-wrapper")).length,
+            }
+        })()`) as Promise<{wrapped: boolean, clearShown: boolean, value: string, reported: string, wrappers: number, bareInputs: number}>
+
+        const empty = await read()
+        if (!empty.wrapped) {fail("ERROR: a clearable text box did not wrap its input")}
+        if (empty.clearShown) {fail("ERROR: the clear control is shown on an empty field")}
+        // A plain TextBox must be untouched by this - it still renders a bare input
+        if (empty.wrappers != 1) {fail(`ERROR: ${empty.wrappers} wrappers rendered, expected exactly the one clearable field`)}
+        if (empty.bareInputs != 5) {fail(`ERROR: ${empty.bareInputs} of the 5 plain text boxes are still bare inputs`)}
+
+        await page.evaluate(`(() => {
+            const input = document.getElementById("showcase-theme-light").querySelector("#clearable-box input.vtd-text-box")
+            input.value = "tabs"
+            input.dispatchEvent(new Event("input", {bubbles: true}))
+        })()`)
+        const typed = await read()
+        if (!typed.clearShown) {fail("ERROR: the clear control stayed hidden once the field had a value")}
+        if (typed.reported != "tabs") {fail(`ERROR: typing did not reach onInput, got ${JSON.stringify(typed.reported)}`)}
+
+        await page.evaluate(`document.getElementById("showcase-theme-light").querySelector("#clearable-box .vtd-text-box-clear").click()`)
+        const cleared = await read()
+        if (cleared.value != "") {fail(`ERROR: clearing left ${JSON.stringify(cleared.value)} in the field`)}
+        if (cleared.clearShown) {fail("ERROR: the clear control is still shown on a field it just emptied")}
+        // Clearing has to look like typing to whoever is listening, or a filter never re-runs
+        if (cleared.reported != "(empty)") {
+            fail(`ERROR: clearing did not fire onInput, last saw ${JSON.stringify(cleared.reported)}`)
+        }
     })
 
 })

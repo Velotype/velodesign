@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -28,7 +29,7 @@ let areProgressStylesMounted = false
 export const Progress: FunctionComponent<ProgressAttrsType> = function(attrs: ProgressAttrsType, _children: RenderableElements[]): HTMLElement {
     if (!areProgressStylesMounted) {
         areProgressStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-progress-wrapper{width:100%;box-sizing:border-box;display:flex;align-items:center;gap:0.75em;}
 .vtd-progress{
 appearance:none;

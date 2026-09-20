@@ -1,5 +1,6 @@
 
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -79,7 +80,7 @@ const TSX_SCANNER = new RegExp([
      * element inflated the JSX depth below, turning every keyword after it into prose.
      */
     "(?<closeAngle><\\/)(?<closeTag>[A-Za-z][\\w.]*)",
-    "(?<!\\w|\\$|\\)|\\])(?<openAngle><)(?<openTag>[A-Za-z][\\w.]*)",
+    "(?<openAngle><)(?<openTag>[A-Za-z][\\w.]*)",
     "(?<number>\\b\\d[\\d_]*(?:\\.\\d+)?\\b)",
     // An identifier immediately followed by `=` is an attribute wherever it appears
     "(?<attr>\\b[A-Za-z_$][\\w$]*(?=\\s*=[^=]))",
@@ -150,7 +151,13 @@ function tokenize(code: string, language: CodeLanguage): Token[] {
         const text = match[0]
 
         const tagName = groups.closeTag ?? groups.openTag
-        if (tagName !== undefined) {
+        if (tagName !== undefined && !isOpeningTag(match.index, groups.closeTag !== undefined)) {
+            // A generic argument or a comparison, not an element. Give back the same two tokens the
+            // scanner would have produced without the tag branch: the angle on its own, then an
+            // ordinary identifier.
+            tokens.push({kind: "punct", text: "<"})
+            tokens.push({kind: !inJsxText() && KEYWORDS.has(tagName) ? "keyword" : "", text: tagName})
+        } else if (tagName !== undefined) {
             const closing = groups.closeTag !== undefined
             if (tsx) {
                 // `</Foo` closes the element `<Foo` opened; a self-close is handled at its `/>`
@@ -180,6 +187,29 @@ function tokenize(code: string, language: CodeLanguage): Token[] {
         tokens.push({kind: "", text: code.slice(last)})
     }
     return tokens
+
+    /**
+     * Is this `<` opening an element, or is it a generic argument or a comparison?
+     *
+     * The test used to be a lookbehind in the pattern itself - a `<` directly after an identifier,
+     * `)` or `]` is `getComponent<Command>` or `Array<string>`, not a tag. That is right in code
+     * and wrong in JSX text, where an element routinely butts straight up against the words beside
+     * it: `<div>Above<Divider/>Below</div>` lost `Divider` entirely, and worse, with no opening tag
+     * recognised there was no `insideTag` for the following `/>` to close - so the element depth
+     * never came back down and every keyword for the rest of the snippet was treated as prose.
+     *
+     * This is the same case `</` already had its own branch for (`Open</Button>` follows text with
+     * no space too); the opening half was simply missed. A lookbehind cannot decide it because the
+     * answer depends on state the pattern cannot see, so the guard moved here, where the JSX state
+     * is known: inside JSX text a `<Name` is always a tag, because a generic cannot appear there.
+     */
+    function isOpeningTag(index: number, closing: boolean): boolean {
+        if (closing || !tsx || inJsxText()) {
+            return true
+        }
+        const previous = index > 0 ? code[index - 1] ?? "" : ""
+        return !/[\w$)\]]/.test(previous)
+    }
 
     /**
      * Advances the JSX state across a run of punctuation, character by character.
@@ -227,7 +257,7 @@ export const CodeBlock: FunctionComponent<CodeBlockAttrsType> = function(attrs: 
 
     if (!areCodeBlockStylesMounted) {
         areCodeBlockStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-code-block{
 width:100%;
 box-sizing:border-box;
@@ -243,8 +273,6 @@ font-size:0.85em;
 line-height:1.6;
 tab-size:4;
 }
-/* A scrollable region is focusable, so it needs a visible focus ring like any other control */
-.vtd-code-block:focus-visible{outline:2px solid var(--primary);outline-offset:2px;}
 .vtd-code-block-wrap{white-space:pre-wrap;overflow-wrap:break-word;}
 .vtd-code-block code{font:inherit;background:none;padding:0;border-radius:0;}
 
@@ -295,10 +323,23 @@ user-select:none;
         classes.push("vtd-code-block-numbered")
     }
 
+    /*
+     * No tabindex and no role, deliberately - both used to be set unconditionally and both were
+     * wrong for most blocks.
+     *
+     * A code block is worth focusing only when it actually scrolls, and most do not: a static
+     * tabindex made every snippet on a page its own tab stop with nothing to do there, which is a
+     * worse outcome for a keyboard reader than the one it was trying to fix. `role="region"` is a
+     * landmark, so a page of ten examples announced ten landmarks named after their captions.
+     *
+     * The platform already gets this exactly right: Chrome, Edge and Firefox make a scroll
+     * container focusable precisely when it overflows and has no focusable children, so the block
+     * that needs a stop gets one and the nine that do not are skipped. Safari does not, which is a
+     * real gap - but it is the same gap every scrolling element on the web has there, and closing
+     * it here would mean measuring overflow on every block and re-measuring on every resize.
+     */
     return passthroughAttrsToElement<HTMLPreElement>(<pre
         class={classes.join(" ")}
-        tabindex={0}
-        role="region"
         aria-label={attrs.ariaLabel}>
         <code>{attrs.showLineNumbers ? renderNumberedLines(tokens) : renderTokens(tokens)}</code>
     </pre>, attrs)

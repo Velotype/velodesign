@@ -1,10 +1,11 @@
 import { Component, setStylesheet } from "@velotype/velotype"
 import type { EmptyAttrs } from "@velotype/velotype"
 
-import { Badge, Button, Card, Grid, Heading, History, Paragraph, Stack, Statistic, Text } from "../../../src/index.ts"
+import { Badge, Button, Card, Grid, Heading, History, I, Paragraph, Stack, Statistic, Text } from "../../../src/index.ts"
 import { componentDocs, groupedDocs } from "../data/docs.tsx"
 import { bundleSize } from "../data/bundle-size.ts"
 import { categoryPageUrl } from "./category-page.tsx"
+import { categoryIconKey } from "../data/category-icons.ts"
 
 let areHomeStylesMounted = false
 
@@ -32,6 +33,9 @@ border-block-end:1px solid var(--background-4);
  * cell to its own content instead.
  */
 .vtd-showcase-category-card{cursor:pointer;}
+/* Bigger than the line it sits on, the way the sidebar's rail draws it - the icon is the card's
+   subject here, not punctuation in a sentence */
+.vtd-showcase-category-icon{font-size:1.3em;color:var(--primary-7);}
 /* The border belongs to the Card, so the hover has to reach it rather than the bare wrapper */
 .vtd-showcase-category-card:hover .vtd-card{border-color:var(--primary-6);}
 `, "velodesign-showcase/HomePage")
@@ -70,7 +74,13 @@ border-block-end:1px solid var(--background-4);
                 <Heading level={2}>Browse by category</Heading>
                 <Grid minColumnWidth="15em" gap="md" align="start">
                     {groups.map(bucket => <div class="vtd-showcase-category-card" onClick={() => History.changeLocation(categoryPageUrl(bucket.group))}>
-                        <Card header={<Stack inline gap="sm" align="center">{bucket.group}<Badge type="neutral">{bucket.docs.length}</Badge></Stack>}>
+                        <Card header={<Stack inline gap="sm" align="center">
+                            {/* The same glyph the sidebar draws for this category, so a reader who
+                                learns it in one place recognises it in the other */}
+                            <I i={categoryIconKey(bucket.group)} class="vtd-showcase-category-icon"/>
+                            {bucket.group}
+                            <Badge type="neutral">{bucket.docs.length}</Badge>
+                        </Stack>}>
                             <Text type="muted">{bucket.docs.map(doc => doc.name).join(", ")}</Text>
                         </Card>
                     </div>)}

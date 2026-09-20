@@ -1,4 +1,5 @@
-import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 import { History } from "../core/history.ts"
 
@@ -37,7 +38,7 @@ export class NavLink extends Component<NavLinkAttrsType> {
     override mount() {
         if (!areNavLinkStylesMounted) {
             areNavLinkStylesMounted = true
-            setStylesheet(`
+            mountStyles(`
 .vtd-nav-link{
 position:relative;
 color:inherit;

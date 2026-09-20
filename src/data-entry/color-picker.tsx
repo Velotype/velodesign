@@ -1,4 +1,5 @@
-import { type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, setStylesheet, type StylePassthroughAttrs, type TargetedEvent, type TargetedInputEvent } from "@velotype/velotype"
+import {type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs, type TargetedEvent, type TargetedInputEvent} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 
 /**
  * Attrs type for `<ColorPicker/>` Component
@@ -25,7 +26,7 @@ let areColorPickerStylesMounted = false
 export const ColorPicker: FunctionComponent<ColorPickerAttrsType> = function(attrs: ColorPickerAttrsType, _children: RenderableElements[]): HTMLInputElement {
     if (!areColorPickerStylesMounted) {
         areColorPickerStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-color-picker{
 appearance:none;
 -webkit-appearance:none;
@@ -41,7 +42,6 @@ cursor:pointer;
 .vtd-color-picker::-webkit-color-swatch{border:none;border-radius:0.25rem;}
 .vtd-color-picker::-moz-color-swatch{border:none;border-radius:0.25rem;}
 .vtd-color-picker:disabled{cursor:not-allowed;opacity:0.6;}
-.vtd-color-picker:focus-visible{border:1px solid var(--primary);outline-color:var(--primary);}
 `, "vtd/ColorPicker")
     }
 

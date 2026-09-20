@@ -1,4 +1,5 @@
-import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs, TargetedEvent, TargetedInputEvent } from "@velotype/velotype"
 import { highlightMatch, searchHighlightCss } from "../core/search-highlight.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
@@ -116,6 +117,10 @@ export class Combobox extends Component<ComboboxAttrsType> {
     #setHighlighted(index: number) {
         this.#highlightedIndex = index
         this.#optionEls.forEach((el, i) => el.classList.toggle("vtd-combobox-option-highlighted", i == index))
+        // The panel scrolls, so the highlight has to be brought along or arrowing down past the
+        // visible options moves something nobody can see. `nearest` leaves an already-visible
+        // highlight where it is rather than recentring the list under the reader.
+        this.#optionEls[index]?.scrollIntoView({block: "nearest"})
     }
 
     /** Rebuilds the visible suggestion list to match the input's current value and highlight */
@@ -196,7 +201,7 @@ export class Combobox extends Component<ComboboxAttrsType> {
 
         if (!areComboboxStylesMounted) {
             areComboboxStylesMounted = true
-            setStylesheet(`
+            mountStyles(`
 .vtd-combobox-wrapper{position:relative;display:inline-block;}
 .vtd-combobox{
 display:block;
@@ -210,7 +215,6 @@ color:var(--text);
 font:inherit;
 }
 .vtd-combobox:disabled{cursor:not-allowed;opacity:0.6;}
-.vtd-combobox:focus-visible{border:1px solid var(--primary);outline-color:var(--primary);}
 .vtd-combobox-panel{
 position:absolute;
 top:100%;
@@ -232,13 +236,19 @@ display:none;
 }
 .vtd-combobox-panel-open{display:block;}
 .vtd-combobox-option{padding:0.5em 0.75em;border-radius:0.25rem;cursor:pointer;}
-.vtd-combobox-option-highlighted{background-color:var(--background-2);}
+/* The keyboard's position in the list - see Menu for why this is a tint and not a ring */
+.vtd-combobox-option-highlighted{background-color:var(--primary-3);}
 .vtd-combobox-empty{padding:0.75em;text-align:center;opacity:0.6;}
 ${searchHighlightCss}
 `, "vtd/Combobox")
         }
 
-        this.#panelEl = <ul class="vtd-combobox-panel" role="listbox"/>
+        // tabindex=-1 because a scrolling listbox is otherwise a dead tab stop. Chrome makes any
+        // scrollable element focusable when it has no focusable children, which is right for a
+        // region a reader has to scroll themselves and wrong here: the arrow keys already move the
+        // highlight and bring it into view, so tabbing into the panel lands somewhere with nothing
+        // to do and one more Tab to get out of.
+        this.#panelEl = <ul class="vtd-combobox-panel" role="listbox" tabindex={-1}/>
         this.#inputEl = <input
             type="text"
             class="vtd-combobox"

@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -26,7 +27,7 @@ let areTooltipStylesMounted = false
 export const Tooltip: FunctionComponent<TooltipAttrsType> = function(attrs: TooltipAttrsType, children: RenderableElements[]): HTMLSpanElement {
     if (!areTooltipStylesMounted) {
         areTooltipStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-tooltip-wrapper{
 position:relative;
 display:inline-block;

@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, FunctionComponent, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -43,7 +44,7 @@ let rateInstanceCounter = 0
 export const Rate: FunctionComponent<RateAttrsType> = function(attrs: RateAttrsType, _children: RenderableElements[]): HTMLSpanElement {
     if (!areRateStylesMounted) {
         areRateStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-rate{
 display:inline-flex;
 flex-direction:row-reverse;
@@ -70,7 +71,7 @@ transition:color 0.1s ease-in;
 .vtd-rate-danger .vtd-rate-star:hover,
 .vtd-rate-danger .vtd-rate-star:hover ~ .vtd-rate-star{color:var(--accent-6);}
 .vtd-rate-disabled .vtd-rate-star{cursor:not-allowed;}
-.vtd-rate-input:focus-visible ~ .vtd-rate-star{outline:1px solid var(--primary);outline-offset:2px;}
+.vtd-rate-input:focus-visible ~ .vtd-rate-star{outline:2px solid var(--primary-7);outline-offset:2px;}
 `, "vtd/Rate")
     }
 

@@ -1,4 +1,5 @@
-import { type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, setStylesheet, type StylePassthroughAttrs, type TargetedEvent, type TargetedInputEvent } from "@velotype/velotype"
+import {type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs, type TargetedEvent, type TargetedInputEvent} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 
 /**
  * Attrs type for `<Textarea/>` Component
@@ -32,7 +33,7 @@ let areTextareaStylesMounted = false
 export const Textarea: FunctionComponent<TextareaAttrsType> = function(attrs: TextareaAttrsType, _children: RenderableElements[]): HTMLTextAreaElement {
     if (!areTextareaStylesMounted) {
         areTextareaStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-textarea{
 padding:0.5ex 1ex;
 margin-inline-start:1ex;
@@ -42,7 +43,6 @@ background-color:var(--background-1);
 color:var(--text);
 font:inherit;
 }
-.vtd-textarea:focus-visible{border:1px solid var(--primary);outline-color:var(--primary);}
 `, "vtd/Textarea")
     }
 

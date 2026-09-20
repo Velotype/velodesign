@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -49,7 +50,7 @@ let areListStylesMounted = false
 export const List: FunctionComponent<ListAttrsType> = function(attrs: ListAttrsType, _children: RenderableElements[]): HTMLElement {
     if (!areListStylesMounted) {
         areListStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-list{width:100%;box-sizing:border-box;list-style:none;padding:0;margin:0;}
 .vtd-list-item{
 position:relative;

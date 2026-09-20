@@ -1,4 +1,5 @@
-import { type RenderableElements, setStylesheet } from "@velotype/velotype"
+import type { RenderableElements } from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
 /**
@@ -32,7 +33,7 @@ let toastContainer: HTMLDivElement | undefined
 function ensureToastContainer(): HTMLDivElement {
     if (!areToastStylesMounted) {
         areToastStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-toast-container{
 position:fixed;
 bottom:1em;

@@ -1,4 +1,5 @@
-import {passthroughAttrsToElement, setStylesheet} from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type {IdAttr, RenderableElements, FunctionComponent, StylePassthroughAttrs, TargetedMouseEvent, ChildrenAttr} from "@velotype/velotype"
 import { Spinner } from "../feedback/spinner.tsx"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
@@ -50,7 +51,7 @@ let areButtonStylesMounted = false
 export const Button: FunctionComponent<ButtonAttrsType> = function(attrs: ButtonAttrsType, children: RenderableElements[]): HTMLButtonElement {
     if (!areButtonStylesMounted) {
         areButtonStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-button{
 position:relative;
 padding:0.25rem 0.5rem;
@@ -82,7 +83,6 @@ transition:color 0.25s ease-in-out, background-color 0.25s ease-in-out, border 0
 .vtd-button-text:active{background-color:var(--background-5);}
 
 .vtd-button:disabled{cursor:not-allowed;opacity:0.5;}
-.vtd-button:focus-visible{border:1px solid var(--accent);}
 
 .vtd-button-spinner{
 position:absolute;
