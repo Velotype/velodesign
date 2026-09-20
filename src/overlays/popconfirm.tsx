@@ -1,4 +1,5 @@
-import { type ChildrenAttr, Component, passthroughAttrsToElement, type RenderableElements, setStylesheet } from "@velotype/velotype"
+import {type ChildrenAttr, Component, passthroughAttrsToElement, type RenderableElements} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
 import { Button } from "../form/button.tsx"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
@@ -108,7 +109,7 @@ export class Popconfirm extends Component<PopconfirmAttrsType> {
         this.#attrs = attrs
         if (!arePopconfirmStylesMounted) {
             arePopconfirmStylesMounted = true
-            setStylesheet(`
+            mountStyles(`
 .vtd-popconfirm{position:relative;display:inline-block;}
 .vtd-popconfirm-trigger{cursor:pointer;display:inline-block;}
 .vtd-popconfirm-content{

@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 import { buildDisclosureSection, type DisclosureSection, flushDisclosureLayout, mountDisclosureStyles } from "./disclosure-view.tsx"
 
@@ -44,7 +45,7 @@ export const Accordion: FunctionComponent<AccordionAttrsType> = function(attrs: 
     if (!areAccordionStylesMounted) {
         areAccordionStylesMounted = true
         // Only what belongs to the list - a section's own look lives in the shared stylesheet
-        setStylesheet(`
+        mountStyles(`
 .vtd-accordion{width:100%;box-sizing:border-box;}
 .vtd-accordion-item{margin-block-end:0.5em;}
 .vtd-accordion-item:last-child{margin-block-end:0;}

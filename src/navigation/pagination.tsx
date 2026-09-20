@@ -1,4 +1,5 @@
-import { type FunctionComponent, passthroughAttrsToElement, type RenderableElements, setStylesheet } from "@velotype/velotype"
+import {type FunctionComponent, passthroughAttrsToElement, type RenderableElements} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import { Button } from "../form/button.tsx"
 import type { IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
 import { CommonThemeOptions, themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
@@ -73,7 +74,7 @@ function buildPageWindow(page: number, totalPages: number, siblingCount: number)
 export const Pagination: FunctionComponent<PaginationAttrsType> = function(attrs: PaginationAttrsType, _children: RenderableElements[]): HTMLElement {
     if (!arePaginationStylesMounted) {
         arePaginationStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-pagination{
 display:flex;
 align-items:center;

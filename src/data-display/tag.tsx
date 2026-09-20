@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
@@ -36,7 +37,7 @@ let areTagStylesMounted = false
 export const Tag: FunctionComponent<TagAttrsType> = function(attrs: TagAttrsType, children: RenderableElements[]): HTMLSpanElement {
     if (!areTagStylesMounted) {
         areTagStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-tag{
 display:inline-flex;
 align-items:center;
@@ -53,17 +54,42 @@ vertical-align:middle;
 .vtd-tag-warning{background-color:var(--warning-3);border:1px solid var(--warning-6);}
 .vtd-tag-danger{background-color:var(--accent-3);border:1px solid var(--accent-6);}
 .vtd-tag-neutral{background-color:var(--background-1);border:1px solid var(--background-6);}
+/*
+ * A real target with a real hover, not a glyph that gets slightly darker.
+ *
+ * Going from opacity 0.7 to 1 is the whole signal this used to give, which is both faint and
+ * unlike every other interactive control in the package - the sidebar's chevron, a Menu row and a
+ * TextBox's clear button all take a background on hover. An interactive element should say so the
+ * same way wherever it appears, so this now does too, and it gets a square big enough to aim at
+ * and a focus ring for the keyboard.
+ */
 .vtd-tag-remove{
 cursor:pointer;
+display:inline-flex;
+align-items:center;
+justify-content:center;
+box-sizing:border-box;
+width:1.35em;
+height:1.35em;
+margin-inline-end:-0.3em;
 background:transparent;
-border:none;
+border:1px solid transparent;
+border-radius:0.25rem;
 color:inherit;
 font:inherit;
 line-height:1;
 padding:0;
 opacity:0.7;
+transition:opacity 0.12s ease-in-out, background-color 0.12s ease-in-out;
 }
-.vtd-tag-remove:hover{opacity:1;}
+/* --background, not a step of the ramp: the tag already carries a tint of its own type, so a
+   neighbouring grey reads as muddy where the page's own background reads as a clear chip - and it
+   flips with the theme, which a fixed rgba() would not */
+.vtd-tag-remove:hover{opacity:1;background-color:var(--background);}
+.vtd-tag-remove:focus-visible{opacity:1;}
+@media (prefers-reduced-motion: reduce){
+.vtd-tag-remove{transition:none;}
+}
 `, "vtd/Tag")
     }
 

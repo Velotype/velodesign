@@ -1,4 +1,5 @@
-import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -113,7 +114,7 @@ export class ContextMenu extends Component<ContextMenuAttrsType> {
         super(attrs, children)
         if (!areContextMenuStylesMounted) {
             areContextMenuStylesMounted = true
-            setStylesheet(`
+            mountStyles(`
 .vtd-context-menu-wrapper{position:relative;}
 .vtd-context-menu{
 position:absolute;
@@ -142,7 +143,15 @@ font:inherit;
 cursor:pointer;
 }
 .vtd-context-menu-item:hover{background-color:var(--background-2);}
-.vtd-context-menu-item:focus-visible{background-color:var(--background-2);outline:none;}
+/*
+ * Keyboard position in a popup list is a tinted fill, not a ring: the rows are full-bleed inside
+ * the panel, so an offset outline would run into its edges. It must differ from hover, which is
+ * where this was wrong - Menu and ContextMenu highlighted the focused row with exactly the colour
+ * their hover already used, so moving through a menu by keyboard looked the same as pointing at it,
+ * and on a row the pointer happened to rest on it looked like nothing at all. Same tint as Command
+ * and the two listboxes, so one colour means one thing everywhere in the package.
+ */
+.vtd-context-menu-item:focus-visible{background-color:var(--primary-3);outline:none;}
 .vtd-context-menu-item-disabled{opacity:0.5;cursor:not-allowed;pointer-events:none;}
 `, "vtd/ContextMenu")
         }

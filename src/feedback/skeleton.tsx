@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -28,7 +29,7 @@ let areSkeletonStylesMounted = false
 export const Skeleton: FunctionComponent<SkeletonAttrsType> = function(attrs: SkeletonAttrsType, _children: RenderableElements[]): HTMLElement {
     if (!areSkeletonStylesMounted) {
         areSkeletonStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 @keyframes vtd-skeleton-pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
 .vtd-skeleton{
 display:block;

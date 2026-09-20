@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 import { CommonThemeOptions } from "../core/theme-options.ts"
 
@@ -33,7 +34,7 @@ let areStepsStylesMounted = false
 export const Steps: FunctionComponent<StepsAttrsType> = function(attrs: StepsAttrsType, _children: RenderableElements[]): HTMLElement {
     if (!areStepsStylesMounted) {
         areStepsStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-steps{width:100%;box-sizing:border-box;display:flex;list-style:none;padding:0;margin:0;}
 .vtd-steps-item{
 position:relative;

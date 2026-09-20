@@ -12,6 +12,12 @@ class AvatarGallery extends Component<EmptyAttrs> {
             <Avatar initials="CD" size="4em"/>
             <Avatar id="avatar-broken-src" src="/this-image-does-not-exist.png" initials="EF"/>
             <Avatar id="avatar-empty"/>
+            {/* One colour name per theme colour - the palette supplies the light and dark values */}
+            <Avatar id="avatar-primary" type="primary" initials="PR"/>
+            <Avatar id="avatar-secondary" type="secondary" initials="SE"/>
+            <Avatar id="avatar-warning" type="warning" initials="WA"/>
+            <Avatar id="avatar-danger" type="danger" initials="DA"/>
+            <Avatar id="avatar-neutral" type="neutral" initials="NE"/>
         </div>
     }
 }

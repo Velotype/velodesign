@@ -43,6 +43,14 @@ world\``
  * not open a string; `getComponent<Command>` is a generic, not a tag; and the `=>` inside an
  * attribute must not end the tag it sits in.
  */
+/*
+ * The element sits directly against the words on both sides, and there is a generic on the last
+ * line that must still NOT be read as a tag. Both halves matter: fixing one by deleting the guard
+ * breaks the other.
+ */
+const voidTagSample = `<div>Above<Divider/>Below</div>
+const tree = getComponent<Tree>(<Tree nodes={nodes}/>)`
+
 const jsxTextSample = `const palette = getComponent<Command>(<Command items={[]}/>)
 
 return <div>
@@ -79,6 +87,10 @@ class CodeBlockGallery extends Component<EmptyAttrs> {
             <div id="code-jsx-text"><CodeBlock code={jsxTextSample} ariaLabel="A JSX text example"/></div>
 
             <Heading level={3}>Markup is shown, never rendered</Heading>
+            {/* An element butting straight up against the text beside it, with no space - the case
+                the opening-tag guard used to reject, taking the element depth with it */}
+            <div id="code-void-tag"><CodeBlock code={voidTagSample} ariaLabel="A self-closing tag inside text"/></div>
+
             <div id="code-escaped"><CodeBlock code={`<script>alert(1)</script>\n<b>not bold</b>`} ariaLabel="Markup shown as text"/></div>
         </div>
     }

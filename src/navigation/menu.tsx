@@ -1,6 +1,9 @@
-import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 import { History } from "../core/history.ts"
+import { themeOptions } from "../core/theme-options.ts"
+import type { ThemeSymbol } from "../core/theme-options.ts"
 
 /**
  * A single entry in a `<Menu/>`
@@ -22,6 +25,40 @@ export type MenuItemType = {
     spa?: boolean
     /** Called when this entry is clicked (for an actions menu) */
     onClick?: () => void
+    /**
+     * Leaves the menu open after this entry is clicked (default: `false`).
+     *
+     * For an entry that *does* something rather than going somewhere, and does it in place - a
+     * theme switch, a density toggle, anything the reader may want to try twice. Closing on those
+     * takes the control out from under the pointer at the moment it takes effect, so seeing the
+     * result and changing your mind about it costs a second trip through the menu. A submenu the
+     * entry sits in stays open too, for the same reason.
+     *
+     * Navigation is the opposite case and keeps the default: the menu is gone with the page.
+     */
+    keepOpen?: boolean
+    /**
+     * Marks this entry as the chosen one among the checkable entries of **its own list**, and
+     * renders it `role="menuitemradio"` with a tick.
+     *
+     * Setting it on two or more siblings makes them a radio group, which is the shape this is for -
+     * a theme picker, a density picker, a sort order. `Menu` moves the selection itself on a click,
+     * so the tick follows the pointer without the consumer rebuilding anything; `onClick` still
+     * fires, which is where the choice gets persisted. Pair it with `keepOpen` when the reader
+     * should be able to see the result and pick again.
+     *
+     * Leaving it `undefined` is not the same as `false`: `false` is an unselected member of a
+     * group, `undefined` is an ordinary entry that is not part of one and gets no tick, no reserved
+     * space for one, and the plain `menuitem` role.
+     *
+     * **Pass a function when something outside this menu can change the same setting**, and it is
+     * re-read every time the menu opens. A plain boolean is a reading taken once, when the menu was
+     * built, so a second control for the same setting - another menu, a toolbar toggle - leaves it
+     * describing a state that is no longer true, and a wrong indicator is worse than none. A
+     * function cannot go stale: two menus over one setting both show the truth without either
+     * knowing the other exists.
+     */
+    selected?: boolean | (() => boolean)
     /** Is this entry disabled? */
     disabled?: boolean
     /**
@@ -60,6 +97,14 @@ export type MenuAttrsType = {
     closeOnOutsideClick?: boolean
 } & IdAttr & StylePassthroughAttrs
 
+/**
+ * Theme options for `<Menu/>`
+ */
+export const MenuThemeOptions: {
+    /** Marks the selected entry of a checkable group. Defaults to `CommonThemeOptions.confirmSymbol` */
+    confirmSymbol: ThemeSymbol
+} = themeOptions({confirmSymbol: "confirmSymbol"})
+
 let areMenuStylesMounted = false
 
 /**
@@ -95,6 +140,23 @@ export class Menu extends Component<MenuAttrsType> {
             }
         }
     }
+    /**
+     * Every checkable entry whose `selected` is a function, re-read each time the menu opens.
+     *
+     * On open rather than continuously: a menu that is shut has no indicator to keep right, and
+     * anything that polled would be paying for it on every page in the consumer's app.
+     */
+    #liveChecks: {row: HTMLElement, read: () => boolean}[] = []
+
+    #syncLiveChecks = () => {
+        if (!this.#detailsElement.open) {
+            return
+        }
+        for (const check of this.#liveChecks) {
+            check.row.setAttribute("aria-checked", check.read() ? "true" : "false")
+        }
+    }
+
     /** Attrs captured at construction, read by `#handleDocumentClick` (see the `Command` doc note on why this can't just close over the constructor's `attrs` parameter) */
     #attrs: MenuAttrsType
 
@@ -177,6 +239,22 @@ export class Menu extends Component<MenuAttrsType> {
         }
     }
 
+    /**
+     * Moves the selection onto one checkable entry, within its own list.
+     *
+     * Scoped to the list rather than the whole menu, because a menu may hold more than one group -
+     * a sort order and a density, say - and a selection that reached across them would clear the
+     * other group every time. Done here rather than by the consumer handing back new items: a
+     * rebuild would close whatever submenu the entry lives in, which is the one thing `keepOpen`
+     * exists to prevent.
+     */
+    #select(row: HTMLElement) {
+        const list = row.closest(".vtd-menu-list, .vtd-menu-sublist")
+        for (const sibling of list?.querySelectorAll(":scope > li > [role=menuitemradio]") ?? []) {
+            sibling.setAttribute("aria-checked", sibling == row ? "true" : "false")
+        }
+    }
+
     /** Opens one submenu, closing any sibling that was open - only one branch at a time */
     #openSubmenu(entry: Element) {
         this.#closeSubmenus(entry)
@@ -231,11 +309,15 @@ export class Menu extends Component<MenuAttrsType> {
                 return entry
             }
 
+            const checkable = item.selected !== undefined
+            const readSelected = typeof item.selected == "function" ? item.selected : undefined
+            const isSelected = readSelected ? readSelected() : item.selected === true
             const row: HTMLAnchorElement = <a
-                role="menuitem"
+                role={checkable ? "menuitemradio" : "menuitem"}
+                aria-checked={checkable ? (isSelected ? "true" : "false") : undefined}
                 href={item.href || "#"}
                 aria-disabled={item.disabled}
-                class={`vtd-menu-item${item.disabled ? " vtd-menu-item-disabled" : ""}`}
+                class={`vtd-menu-item${checkable ? " vtd-menu-item-checkable" : ""}${item.disabled ? " vtd-menu-item-disabled" : ""}`}
                 onClick={(event: Event) => {
                     if (item.disabled) {
                         event.preventDefault()
@@ -247,10 +329,22 @@ export class Menu extends Component<MenuAttrsType> {
                         event.preventDefault()
                         History.changeLocation(item.href)
                     }
+                    if (checkable) {
+                        this.#select(row)
+                    }
                     item.onClick?.()
+                    if (item.keepOpen) {
+                        return
+                    }
                     this.#closeSubmenus()
                     this.#closeMenu()
-                }}>{item.label}</a>
+                }}>
+                {checkable ? <span class="vtd-menu-check" aria-hidden="true"><MenuThemeOptions.confirmSymbol/></span> : null}
+                {item.label}
+            </a>
+            if (readSelected) {
+                this.#liveChecks.push({row, read: readSelected})
+            }
             const leaf: HTMLElement = <li class={`vtd-menu-entry${divided}`} role="none">{row}</li>
             // Moving onto a row at this level closes whatever submenu a sibling had open, so the
             // pointer never leaves a stranded flyout behind it
@@ -265,7 +359,7 @@ export class Menu extends Component<MenuAttrsType> {
         this.#attrs = attrs
         if (!areMenuStylesMounted) {
             areMenuStylesMounted = true
-            setStylesheet(`
+            mountStyles(`
 .vtd-menu{
 position:relative;
 display:inline-block;
@@ -303,8 +397,33 @@ color:inherit;
 text-decoration:none;
 }
 .vtd-menu-item:hover{background-color:var(--background-2);}
-.vtd-menu-item:focus-visible{background-color:var(--background-2);outline:none;}
+/*
+ * Keyboard position in a popup list is a tinted fill, not a ring: the rows are full-bleed inside
+ * the panel, so an offset outline would run into its edges. It must differ from hover, which is
+ * where this was wrong - Menu and ContextMenu highlighted the focused row with exactly the colour
+ * their hover already used, so moving through a menu by keyboard looked the same as pointing at it,
+ * and on a row the pointer happened to rest on it looked like nothing at all. Same tint as Command
+ * and the two listboxes, so one colour means one thing everywhere in the package.
+ */
+.vtd-menu-item:focus-visible{background-color:var(--primary-3);outline:none;}
 .vtd-menu-item-disabled{opacity:0.5;cursor:not-allowed;pointer-events:none;}
+/*
+ * The tick is always rendered and only its opacity changes, so the label sits in the same place
+ * whether or not this is the selected entry. Rendering it conditionally would move every label in
+ * the group sideways each time the reader picked a different one.
+ */
+.vtd-menu-item-checkable{display:flex;align-items:center;gap:0.4em;}
+.vtd-menu-check{
+display:inline-flex;
+align-items:center;
+justify-content:center;
+flex-shrink:0;
+width:1em;
+opacity:0;
+color:var(--primary);
+}
+.vtd-menu-item-checkable[aria-checked="true"]{font-weight:bold;}
+.vtd-menu-item-checkable[aria-checked="true"] .vtd-menu-check{opacity:1;}
 /*
  * An entry is the positioning context for its own submenu, so a flyout sits beside the row that
  * opened it rather than beside the menu as a whole.
@@ -355,7 +474,7 @@ box-shadow:0 2px 8px rgba(0,0,0,0.15);
 
         this.#summaryElement = <summary class="vtd-menu-trigger" aria-label={attrs.ariaLabel}>{attrs.trigger}</summary>
 
-        this.#detailsElement = <details class="vtd-menu" onKeyDown={this.#handleKeyDown}>
+        this.#detailsElement = <details class="vtd-menu" onToggle={this.#syncLiveChecks} onKeyDown={this.#handleKeyDown}>
             {this.#summaryElement}
             <ul class="vtd-menu-list" role="menu">
                 {this.#buildEntries(attrs.items)}

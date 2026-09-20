@@ -1,4 +1,5 @@
-import { Component, getComponent, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {Component, getComponent, passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 import { NavLink } from "./nav-link.tsx"
 import { Menu } from "./menu.tsx"
@@ -59,6 +60,17 @@ export type SidebarAttrsType = {
     items: SidebarItemType[]
     /** Optional content shown above the list (e.g. a search box or a section title) */
     header?: RenderableElements
+    /**
+     * What the header shows once collapsed to the rail - a search icon standing in for a search
+     * box, say.
+     *
+     * Setting it also **keeps the header's height**, so collapsing moves the entries sideways and
+     * not up: with nothing to put there the header has to fold away, and everything below it
+     * slides up by however tall it was. Left unset the header still folds, animated over the same
+     * moment as the width, which is the right default when there is genuinely nothing to show at
+     * 56px.
+     */
+    collapsedHeader?: RenderableElements
     /** Optional content pinned below the list, above the profile row and the collapse control */
     footer?: RenderableElements
     /** An account row at the very foot, which opens a menu when clicked */
@@ -103,6 +115,30 @@ const defaultWidthPx = 250
 const railWidthPx = 56
 
 /**
+ * The states that float a collapsed sidebar back out to its full width.
+ *
+ * Written once and interpolated into every rule that depends on it, because the list has four
+ * members and a rule that misses one is a bug you only find by doing the exact thing it missed:
+ *
+ * - `:hover` and `:has(:focus-visible)` are the pointer and the keyboard reaching for it.
+ * - `.vtd-sidebar-resizing` holds it out for the length of a drag. Dragging the trailing edge
+ *   *wider* moves the pointer off the sidebar by definition, so without this the panel collapsed
+ *   out from under the pointer mid-drag while the button was still held down.
+ * - `:has(.vtd-menu[open])` holds it out while the account menu is open, so the menu is never left
+ *   standing over the page with the panel gone from under it.
+ *
+ * `:focus-within` is deliberately not in that list: the collapse control lives *inside* the panel,
+ * so a mouse click on it leaves focus inside and would hold the panel open until the reader
+ * clicked somewhere else entirely. A mouse click does not set `:focus-visible`, so the rail
+ * collapses immediately while tabbing in still expands it.
+ */
+const floatTriggers = ":hover,:has(:focus-visible),.vtd-sidebar-resizing,:has(.vtd-menu[open])"
+/** Collapsed, and none of those - the icon rail as the reader actually sees it */
+const rail = `.vtd-sidebar-collapsed:not(${floatTriggers})`
+/** Collapsed, but floated back out over the page */
+const floated = `.vtd-sidebar-collapsed:is(${floatTriggers})`
+
+/**
  * A themed vertical navigation panel, with the current page highlighted automatically.
  *
  * Entries may nest: an item with `children` renders as a collapsible group, built on `Tree` so the
@@ -111,9 +147,10 @@ const railWidthPx = 56
  *
  * Three things it does that a plain list cannot, each optional:
  *
- * - **`collapsible`** shrinks it to a rail of icons that floats back out over the page on hover or
- *   keyboard focus. The rail shows each group's `icon` and *nothing else*, including for a group
- *   the reader left expanded - see `#syncCollapsed`.
+ * - **`collapsible`** shrinks it to a rail of icons that floats back out over the page on hover,
+ *   on keyboard focus, while its trailing edge is being dragged, and while its account menu is
+ *   open. The rail shows each group's `icon` and nothing else, including for a group the reader
+ *   left expanded - see `floatTriggers` and the collapsed rules in the stylesheet.
  * - **`resizable`** lets the trailing edge be dragged.
  * - **`profile`** pins an account row to the foot that opens a `Menu`.
  *
@@ -153,15 +190,18 @@ export class Sidebar extends Component<SidebarAttrsType> {
     /**
      * Applies the collapsed state to the DOM.
      *
-     * The rail hides a group's children with `display:none` rather than `visibility:hidden`. That
-     * is the difference between a clean column of icons and a column with gaps in it: a group the
-     * reader expanded keeps its children's height under `visibility`, so the rail ends up with
-     * blank stretches between icons for content nobody can see.
+     * Two lines, and that is the whole of it: a class and a custom property. Everything the rail
+     * looks like is a CSS rule reading one or the other, which is what lets the change *animate* -
+     * a JS-driven rail would have to decide each piece's end state itself and would land all of
+     * them in the frame of the click.
      */
     #syncCollapsed() {
         this.#root.classList.toggle("vtd-sidebar-collapsed", this.#collapsed)
-        this.#root.style.width = this.#collapsed ? `${railWidthPx}px` : `${this.#width}px`
-        this.#panel.style.width = `${this.#width}px`
+        // The dragged width goes out as a custom property and every actual width is a CSS rule
+        // reading it. Setting width inline instead pinned the panel open: an inline style beats a
+        // class, so the collapsed rule could never narrow it and hovering could never widen it -
+        // collapsing shrank the gutter and left a full-width panel sitting over the page.
+        this.#root.style.setProperty("--vtd-sidebar-width", `${this.#width}px`)
         const toggle = this.#root.querySelector(".vtd-sidebar-collapse")
         toggle?.setAttribute("aria-expanded", this.#collapsed ? "false" : "true")
     }
@@ -236,16 +276,36 @@ export class Sidebar extends Component<SidebarAttrsType> {
         globalThis.removeEventListener("locationchange", this.#syncActiveGroup)
     }
 
-    /** Builds one entry's row: the icon, the label (a `NavLink` when it has a `to`) and the trailing slot */
+    /**
+     * Builds one entry's row - the icon, the label and the trailing slot, as a single element.
+     *
+     * **The whole row is one element, and it is the link when the entry has a `to`.** `Tree`'s
+     * `leading`/`trailing` slots are deliberately not used for this: they are siblings of the
+     * label, so a link in the label covers only the text between them and the icon and the count
+     * on either side belong to the row instead. On a *group* that is the difference between two
+     * competing actions and two separate ones - the chevron toggles, and everything else is a
+     * destination you can click anywhere in, middle-click, or copy the address of. It also settles
+     * what a click on the collapsed rail means, where the icon is the only thing there: it goes to
+     * the group's own page, which is the only answer that does anything a reader can see.
+     *
+     * Reading order is still icon, label, count, so a screen reader announces "Typography 3" and
+     * not "3 Typography" - that ordering is the reason `trailing` exists on `Tree` at all, and it
+     * is kept here by markup order rather than by CSS.
+     */
     #buildRow(item: SidebarItemType): RenderableElements {
+        const content: RenderableElements[] = [
+            item.icon ? <span class="vtd-sidebar-icon">{item.icon}</span> : null,
+            <span class="vtd-sidebar-label">{item.label}</span>,
+            item.trailing ? <span class="vtd-sidebar-trailing">{item.trailing}</span> : null,
+        ]
         if (!item.to) {
-            return <span class="vtd-sidebar-label">{item.label}</span>
+            return <span class="vtd-sidebar-row">{content}</span>
         }
         return <NavLink
             to={item.to}
             spa={this.#attrs.spa}
             exact={this.#attrs.exact}
-            class="vtd-sidebar-link">{item.label}</NavLink>
+            class="vtd-sidebar-row vtd-sidebar-link">{content}</NavLink>
     }
 
     /** Maps this component's items onto the nodes `Tree` renders */
@@ -253,8 +313,6 @@ export class Sidebar extends Component<SidebarAttrsType> {
         return items.map(item => ({
             key: item.key ?? item.to ?? String(item.label),
             label: this.#buildRow(item),
-            leading: item.icon ? <span class="vtd-sidebar-icon">{item.icon}</span> : undefined,
-            trailing: item.trailing,
             defaultOpen: item.defaultOpen,
             children: item.children && item.children.length > 0 ? this.#toNodes(item.children) : undefined,
         }))
@@ -304,6 +362,12 @@ export class Sidebar extends Component<SidebarAttrsType> {
         const handle: HTMLElement = <div class="vtd-sidebar-resize" role="separator" aria-orientation="vertical"/>
         handle.addEventListener("pointerdown", (event: PointerEvent) => {
             event.preventDefault()
+            // No setPointerCapture here, deliberately: the move and up listeners go on `document`,
+            // which already sees the drag wherever the pointer goes, and capture throws outright on
+            // a pointerId that is not currently active - so it turns a synthetic pointerdown, which
+            // is how a test drives this, into a resize handle that does nothing at all. The
+            // `.vtd-sidebar-resizing` class added below is what keeps the panel from collapsing out
+            // from under a pointer that has left it, which is the thing that actually needed fixing.
             const startX = event.clientX
             const startWidth = this.#width
             const onMove = (move: PointerEvent) => { this.setWidth(startWidth + (move.clientX - startX)) }
@@ -327,55 +391,209 @@ export class Sidebar extends Component<SidebarAttrsType> {
         this.#width = attrs.defaultWidth ?? defaultWidthPx
         if (!areSidebarStylesMounted) {
             areSidebarStylesMounted = true
-            setStylesheet(`
+            mountStyles(`
+/*
+ * The root sets no position, deliberately.
+ *
+ * position says where a component sits on a page, which is the consumer's business - a
+ * navigation sidebar is usually sticky under a header, and only the page knows how tall that
+ * header is. This component used to set position:relative here, because the panel and the resize
+ * handle are absolute and needed a containing block, and that put it in direct conflict with the
+ * consumer over the same property. The consumer lost: their class has the same specificity, and
+ * this stylesheet mounts when the component is constructed - inside their own render - so it
+ * always comes later. The showcase asked for sticky, got relative, and its leftover top:53px then
+ * offset the sidebar 53px *downward* instead of pinning it, so it sat too low and scrolled away.
+ *
+ * The containing block those two children actually need is .vtd-sidebar-rail, an element this
+ * component owns outright. Nothing has to be overridden, so nothing has to out-specify anything.
+ */
 .vtd-sidebar{
 box-sizing:border-box;
-position:relative;
 flex-shrink:0;
+width:var(--vtd-sidebar-width,250px);
 transition:width 0.18s ease-in-out;
 }
+.vtd-sidebar-collapsed{width:var(--vtd-sidebar-rail-width,${railWidthPx}px);}
+/* The component's own positioning context, so the root's stays untouched */
+.vtd-sidebar-rail{position:relative;width:100%;height:100%;}
 /*
  * The panel is absolutely positioned inside the sidebar so that expanding the rail on hover lays
  * it *over* the page rather than shoving the content sideways. The sidebar keeps the gutter; only
  * the panel grows.
+ *
+ * It deliberately does not hide its overflow. Every piece of the panel narrows along with it - see
+ * the note on shrinking below - so there is nothing left to clip, and clipping cost more than it
+ * saved: the account menu opens a submenu beside its own row, past the panel's trailing edge, and
+ * a panel that clipped its overflow cut that submenu in half. The two places that genuinely have
+ * to clip - a scrolling body and a folding header or footer - each do it themselves.
  */
 .vtd-sidebar-panel{
 position:absolute;
 inset-block:0;
 inset-inline-start:0;
+width:var(--vtd-sidebar-width,250px);
 display:flex;
 flex-direction:column;
 box-sizing:border-box;
 background-color:var(--background);
 border-inline-end:1px solid var(--background-4);
-overflow:hidden;
 transition:width 0.18s ease-in-out, box-shadow 0.18s ease-in-out;
 }
-.vtd-sidebar-header{padding:0.75em;border-block-end:1px solid var(--background-4);flex-shrink:0;}
-.vtd-sidebar-body{overflow-y:auto;flex-grow:1;padding:0.4em 0.35em;}
-.vtd-sidebar-footer{flex-shrink:0;padding:0.5em;border-block-start:1px solid var(--background-4);}
-/*
- * Every row - a group's summary, a link, a plain label - takes the same padding, so each one is the
- * same height and each icon sits at the same offset. That matters most on the rail, where the
- * icons are all there is: a top-level link with its own padding put its icon out of line with the
- * groups above it, which reads as a wobble down the column.
- */
-.vtd-sidebar .vtd-tree-label,.vtd-sidebar-link,.vtd-sidebar-label{padding:0.45em 0.55em;}
-.vtd-sidebar-link{
-display:block;
-border-radius:0.25rem;
-color:inherit;
-text-decoration:none;
+/* max-height rather than display:none so the list slides up in step with the width rather than
+   jumping the instant the class lands - see the collapsed rules below */
+.vtd-sidebar-header{
+padding:0.75em;
+border-block-end:1px solid var(--background-4);
+flex-shrink:0;
+overflow:hidden;
+max-height:14em;
+transition:max-height 0.18s ease-in-out, padding 0.18s ease-in-out;
 }
+.vtd-sidebar-body{overflow-y:auto;overflow-x:hidden;flex-grow:1;padding:0.4em 0.35em;}
+.vtd-sidebar-footer{
+flex-shrink:0;
+overflow:hidden;
+max-height:14em;
+padding:0.5em;
+border-block-start:1px solid var(--background-4);
+transition:max-height 0.18s ease-in-out, padding 0.18s ease-in-out;
+}
+/*
+ * The padding goes on the row element, once, and that is what makes the row a hit target rather
+ * than just a line of text.
+ *
+ * Both containers - a group's <summary> and a leaf's wrapper - give it up entirely, so the one
+ * element inside them covers every pixel a reader would aim at. Padding the container instead
+ * leaves a ring around the row that belongs to the container, which on a group means a ring that
+ * *toggles* around a row that navigates: the two actions interleaved at the edges, which is the
+ * opposite of telling them apart. Padding both, which this once did, gave a group row twice the
+ * inset and made it 18px taller than a link row.
+ */
+.vtd-sidebar .vtd-tree-label,.vtd-sidebar .vtd-tree-leaf{padding:0;margin:0;border-radius:0;}
+.vtd-sidebar-row{
+display:flex;
+align-items:center;
+justify-content:center;
+gap:0.4em;
+flex-grow:1;
+min-width:0;
+padding:0.45em 0.55em;
+border-radius:0.25rem;
+box-sizing:border-box;
+transition:gap 0.18s ease-in-out;
+}
+.vtd-sidebar-link{color:inherit;text-decoration:none;}
+/*
+ * The hover belongs to the two things that do something, not to the container holding them.
+ *
+ * Tree gives every row a hover of its own, which is right for a tree and wrong here: a group's
+ * chevron and its link are separate controls, and a single wash across the whole row says they are
+ * one. Suppressed on the container, the row lights under the link and the chevron lights under the
+ * chevron, so which of the two a click is about to reach is visible before it happens.
+ */
+.vtd-sidebar .vtd-tree-label:hover,.vtd-sidebar .vtd-tree-leaf:hover{background-color:transparent;}
 .vtd-sidebar-link:hover{background-color:var(--background-2);}
 .vtd-sidebar-link.vtd-nav-link-active{background-color:var(--primary-2);font-weight:bold;}
-.vtd-sidebar-label{display:block;}
-/* A leaf is only a wrapper - the link inside it is the whole row, and the indent belongs to the
-   group's children rather than to each leaf, so a top-level leaf is not indented at all */
-.vtd-sidebar .vtd-tree-leaf{padding:0;margin:0;border-radius:0;}
-.vtd-sidebar .vtd-tree-leaf:hover{background-color:transparent;}
+/*
+ * The chevron is as tall as the row it splits, not as tall as the glyph inside it.
+ *
+ * Sized to its own 1.25em it was a 20px control beside a 39px one, and two hit areas of different
+ * heights sitting flush against each other read as a mistake rather than as a pair - the point of
+ * separating them is that a reader can see which is which, and that only works if each looks like
+ * a deliberate target. align-self:stretch takes the height from the flex row, so it tracks whatever
+ * padding the row has without either of them being restated.
+ */
+.vtd-sidebar .vtd-tree-chevron{
+align-self:stretch;
+height:auto;
+margin-inline-start:0.2em;
+transition:width 0.18s ease-in-out, margin 0.18s ease-in-out, opacity 0.18s ease-in-out;
+}
 .vtd-sidebar .vtd-tree-children{padding-inline-start:0.9em;}
-.vtd-sidebar-icon{display:inline-flex;align-items:center;font-size:1.05em;}
+/* A top-level leaf has no chevron, so it needs the room one would have taken or its icon sits a
+   chevron's width to the left of every group's. It collapses with the chevron on the rail. */
+.vtd-sidebar .vtd-tree > li > .vtd-tree-leaf{
+padding-inline-start:1.7em;
+transition:padding-inline-start 0.18s ease-in-out;
+}
+/*
+ * Every top-level row is one height, in *both* states - not just on the rail.
+ *
+ * A group's row is naturally taller than a plain link's, it carries a chevron and its own margin,
+ * and the rail used to add a min-height that the expanded panel did not have. So each row changed
+ * height at the moment of collapsing, and every icon below it slid to a new vertical position
+ * while the width was still animating. Pinning the height makes the icons hold still and leaves
+ * the width as the only thing moving.
+ */
+.vtd-sidebar .vtd-tree > li > .vtd-tree-node > .vtd-tree-label,
+.vtd-sidebar .vtd-tree > li > .vtd-tree-leaf{
+min-height:2em;
+box-sizing:border-box;
+display:flex;
+align-items:center;
+}
+/*
+ * NOTHING ON THE RAIL LEAVES LAYOUT. This is the single idea the collapsed rules below are built
+ * on, and it is what makes the whole transition animate rather than jump.
+ *
+ * Every row is a flex line whose text - a label, a count, the account name - may shrink to nothing
+ * (min-width:0 with overflow:hidden) while the icon holds its size (flex-shrink:0). Narrowing the
+ * panel therefore squeezes the text out continuously and leaves the icon centred on its own, and
+ * the only thing each piece still has to do for itself is *fade*. Opacity is the one property here
+ * that transitions cleanly in both directions.
+ *
+ * The previous approach took each label out of flow the instant the class landed
+ * (position:absolute + clip-path). It measured correctly and looked wrong: the text vanished in a
+ * single frame while the panel spent the next 180ms sliding, and the same jump ran backwards on
+ * the way out. That is what the reader sees as the labels popping.
+ *
+ * white-space:nowrap is what makes it safe to leave a label in flow at 56px at all. A label that
+ * wraps makes its row taller than its neighbours, and that drift - icons sliding to new vertical
+ * positions as the panel moves - is the bug this component keeps rediscovering.
+ *
+ * max-width is what takes it the last few pixels, and shrinking alone will not: flex stops
+ * shrinking the moment the line fits, so a label keeps whatever room is left over. On a group's
+ * row that leftover is a pixel or two and invisible; on a *leaf* row, which carries no padding of
+ * its own because its link is the whole row, it was 19px - and with the label holding it, the free
+ * space justify-content had to centre was all on one side and the icon sat hard against the
+ * leading edge. The cap is applied at the end of the transition rather than across it - see the
+ * collapsed rules for why that delay is load-bearing.
+ */
+.vtd-sidebar-label,.vtd-sidebar-trailing,.vtd-sidebar-profile-text{
+min-width:0;
+flex-shrink:1;
+overflow:hidden;
+max-width:100%;
+transition:opacity 0.18s ease-in-out;
+}
+.vtd-sidebar-label{flex-grow:1;white-space:nowrap;text-overflow:ellipsis;}
+/*
+ * Centring is unconditional, which is only possible because of the rule above: expanded, the label
+ * grows to fill the line and centring has nothing left to do; collapsed, the label is zero wide
+ * and the icon is the whole line. A rule that only centred on the rail would be one more thing
+ * switching state at the moment of the click.
+ */
+/*
+ * A fixed box, so the glyph inside can be drawn larger than its line without taking more room -
+ * and so the icon, not the label, is the tallest thing in a row. That makes an expanded row and a
+ * collapsed one the same height by construction rather than by a tuned min-height that only
+ * happens to match at one font size.
+ *
+ * One size in both states, and it is the larger one. It used to be scaled up by a transform only
+ * while collapsed, so the icons grew as the panel closed and shrank as it opened - a size change
+ * nobody asked for, reading as a wobble. The box is stated in the *row's* em rather than the
+ * icon's own, so raising the glyph size does not change the row: 1.15em at font-size:1.365em is
+ * the same 1.57em of the row that 1.5em at font-size:1.05em was.
+ */
+.vtd-sidebar-icon{
+display:inline-flex;
+align-items:center;
+justify-content:center;
+flex-shrink:0;
+font-size:1.365em;
+width:1.15em;
+height:1.15em;
+}
 /*
  * The group holding the current page. Drawn as a leading bar rather than a fill so it reads the
  * same on the rail, where the label it would otherwise sit beside is not there to be tinted.
@@ -394,14 +612,20 @@ background-color:var(--primary-7);
 .vtd-sidebar-resize{
 position:absolute;
 inset-block:0;
-inset-inline-end:-3px;
+/* Flush inside the panel's trailing edge, and a child of the panel rather than of the rail: against
+   the rail it tracked the *gutter*, so once collapsed it sat at 56px and stayed there while hover
+   floated the panel out to full width - a drag target stranded 200px from the edge it resizes */
+inset-inline-end:0;
 width:6px;
 cursor:col-resize;
 touch-action:none;
 }
 .vtd-sidebar-resize:hover{background-color:var(--primary-3);}
 .vtd-sidebar-resizing{user-select:none;}
-.vtd-sidebar-resizing .vtd-sidebar,.vtd-sidebar-resizing .vtd-sidebar-panel{transition:none;}
+/* The root *is* .vtd-sidebar, so this has to be a compound rather than a descendant selector.
+   Written as a descendant it silently matched nothing and the sidebar's own width trailed 180ms
+   behind the pointer for the whole drag. */
+.vtd-sidebar.vtd-sidebar-resizing,.vtd-sidebar-resizing .vtd-sidebar-panel{transition:none;}
 .vtd-sidebar-collapse-row{flex-shrink:0;padding:0.4em;border-block-start:1px solid var(--background-4);display:flex;}
 .vtd-sidebar-collapse{
 cursor:pointer;
@@ -416,7 +640,6 @@ border-radius:0.25rem;
 color:inherit;
 }
 .vtd-sidebar-collapse:hover{background-color:var(--background-2);}
-.vtd-sidebar-collapse:focus-visible{border-color:var(--primary);outline:none;}
 /*
  * A double chevron drawn in CSS rather than a glyph or an icon font, the same call Checkbox's tick
  * and Select's arrow make. It points the way the panel will move, so it flips when collapsed.
@@ -442,53 +665,152 @@ transform:rotate(-45deg);
 .vtd-sidebar-collapse-icon::after{left:0.42em;}
 .vtd-sidebar-collapsed .vtd-sidebar-collapse-icon{transform:rotate(180deg);}
 .vtd-sidebar-profile{flex-shrink:0;border-block-start:1px solid var(--background-4);padding:0.4em;}
-.vtd-sidebar-profile-menu{display:block;}
+/*
+ * Scoped under .vtd-sidebar-profile, and that is the whole point of the selector rather than an
+ * accident of how it reads.
+ *
+ * Menu is an overlay trigger, so its root is display:inline-block like every other one in the
+ * package. Here it is a row of the sidebar and has to fill it. Written as .vtd-sidebar-profile-menu
+ * this rule is *one class*, exactly like .vtd-menu, and an equal-specificity tie is broken by
+ * order - so it loses, every time, because this stylesheet mounts in Sidebar's constructor and
+ * Menu's mounts a few lines later when the profile Menu is constructed. Same trap as the root's
+ * position, one component further in.
+ *
+ * Left inline-block it shrank to fit, and what it fit was .vtd-menu-list's min-width:10em - so the
+ * account row was 160px wide inside a 250px sidebar however wide the reader dragged it, and the
+ * avatar moved *sideways* through the collapse: it drifted toward the centre of a row still pinned
+ * at 160 and then jumped back 46px in a single frame when the shrink-to-fit finally gave way.
+ */
+.vtd-sidebar-profile .vtd-menu{display:block;}
 .vtd-sidebar-profile-menu .vtd-menu-trigger{display:block;padding:0.4em;border-radius:0.25rem;}
 /* The profile's menu opens upward - it sits at the foot, and downward would be off-screen */
 .vtd-sidebar-profile-menu .vtd-menu-list{top:auto;bottom:100%;margin-block:0 0.25em;}
-.vtd-sidebar-profile-trigger{display:flex;align-items:center;gap:0.55em;min-width:0;}
-.vtd-sidebar-profile-avatar{flex-shrink:0;display:inline-flex;}
-.vtd-sidebar-profile-text{display:flex;flex-direction:column;min-width:0;}
-.vtd-sidebar-profile-name{font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.vtd-sidebar-profile-detail{font-size:0.8em;color:var(--background-9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-/*
- * Collapsed, and not being hovered or keyboard-focused: only the icons remain. The children of an
- * expanded group go with display:none rather than visibility:hidden - under visibility they keep
- * their height, and the rail ends up with blank gaps between icons for rows nobody can see.
- */
-.vtd-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-sidebar-header,
-.vtd-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-sidebar-footer,
-.vtd-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-tree-children,
-.vtd-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-disclosure-content{
-display:none;
-}
-.vtd-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-tree-label-main,
-.vtd-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-tree-trailing,
-.vtd-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-sidebar-profile-text{
-visibility:hidden;
-}
-.vtd-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-tree-label::before{opacity:0;}
-/*
- * On the rail every top-level row is the same height, so the icons step down the column evenly. A
- * group's row is naturally taller than a plain link's - it carries a chevron and its own margin -
- * and left alone that difference reads as a wobble when the labels are gone and the icons are all
- * there is to line up.
- */
-.vtd-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-tree > li > .vtd-tree-label,
-.vtd-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-tree > li > .vtd-tree-leaf{
-min-height:2.6em;
-box-sizing:border-box;
+.vtd-sidebar-profile-trigger{
 display:flex;
 align-items:center;
+justify-content:center;
+gap:0.55em;
+min-width:0;
+transition:gap 0.18s ease-in-out;
 }
-.vtd-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-tree > li > .vtd-tree-leaf > .vtd-sidebar-link{flex-grow:1;}
-.vtd-sidebar-collapsed:not(:hover):not(:focus-within) .vtd-sidebar-icon{font-size:1.35em;}
-.vtd-sidebar-collapsed:hover .vtd-sidebar-panel,
-.vtd-sidebar-collapsed:focus-within .vtd-sidebar-panel{box-shadow:0 2px 14px rgba(0,0,0,0.18);}
+.vtd-sidebar-profile-avatar{flex-shrink:0;display:inline-flex;}
+/* flex-grow so the line fills when expanded, which is what makes the justify-content:center above
+   a no-op there and a real centring on the rail */
+.vtd-sidebar-profile-text{display:flex;flex-direction:column;flex-grow:1;min-width:0;}
+.vtd-sidebar-profile-name{font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.vtd-sidebar-profile-detail{font-size:0.8em;color:var(--background-9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* ---- Collapsed to the rail, and not floated back out ---- */
+
+/*
+ * A group's children slide shut on the disclosure's own animation, by forcing to zero the very
+ * grid track its open/close transition already drives. display:none took them out in a single
+ * frame - and it had to, because under visibility they keep their height and the rail grows a
+ * blank stretch where a group's entries were (measured, one 236px gap among rows 49px apart).
+ * Collapsing the track has neither problem: no height, and it gets there over 200ms.
+ */
+${rail} .vtd-disclosure-content{
+grid-template-rows:minmax(0,0fr);
+visibility:hidden;
+transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0.2s;
+}
+/* Everything that is only text on the rail fades out in place. It keeps its box (a zero-width one,
+   see above) and stays in the accessibility tree, which is what display:none would have cost. */
+/*
+ * The cap lands at the *end* of the fade, not across it, and the delay is the whole of what keeps
+ * the icons still.
+ *
+ * Shrinking the cap over the same 180ms as the panel looks like the obvious thing and is not: the
+ * two run on independent curves, so the text gave up room faster than the row lost it, free space
+ * appeared in the middle of the transition, and justify-content:center chased it. Measured, the
+ * account avatar went 13 -> 29 -> 14: a 16px round trip to end up a pixel from where it started.
+ *
+ * Held at 100% instead, the text is shrunk by flex alone - which is driven by the row, exactly in
+ * step with it - so the line stays full, there is no free space to centre into, and nothing moves
+ * horizontally at all. The cap then closes the last couple of pixels in one frame at the end.
+ * Expanding needs no delay in the other direction: the cap lifts immediately and flex simply hands
+ * the room back as the row grows.
+ */
+${rail} .vtd-sidebar-label,
+${rail} .vtd-sidebar-trailing,
+${rail} .vtd-sidebar-profile-text{
+opacity:0;
+max-width:0;
+transition:opacity 0.18s ease-in-out, max-width 0s linear 0.18s;
+}
+${rail} .vtd-sidebar-row{gap:0;}
+${rail} .vtd-sidebar-profile-trigger{gap:0;}
+${rail} .vtd-tree-chevron{width:0;margin:0;opacity:0;}
+${rail} .vtd-tree > li > .vtd-tree-leaf{padding-inline-start:0;}
+/* With nothing to show at 56px the header folds away over the same 180ms the width takes, so the
+   icons below it move with the panel instead of snapping up the moment it is clicked */
+${rail} .vtd-sidebar-header:not(.vtd-sidebar-header-swaps){
+max-height:0;
+padding-block:0;
+border-block-end-color:transparent;
+}
+${rail} .vtd-sidebar-footer{
+max-height:0;
+padding-block:0;
+border-block-start-color:transparent;
+}
+/*
+ * Given a collapsedHeader, the header keeps its height instead and cross-fades what is inside it,
+ * so collapsing moves the entries sideways rather than up.
+ *
+ * The full content stays in flow and keeps defining that height - which is why it hides with
+ * visibility rather than display, the one place on this component where keeping the box is the
+ * point. visibility flips at the *end* of the fade on the way out and at the start on the way in,
+ * so the content is never both invisible and still tabbable. The rail content is laid over it and
+ * costs no height of its own.
+ */
+.vtd-sidebar-header-swaps{position:relative;}
+.vtd-sidebar-header-full{transition:opacity 0.18s ease-in-out, visibility 0s linear 0s;}
+.vtd-sidebar-header-rail{
+position:absolute;
+inset:0;
+display:flex;
+align-items:center;
+justify-content:center;
+opacity:0;
+visibility:hidden;
+transition:opacity 0.18s ease-in-out, visibility 0s linear 0.18s;
+}
+${rail} .vtd-sidebar-header-full{
+opacity:0;
+visibility:hidden;
+transition:opacity 0.18s ease-in-out, visibility 0s linear 0.18s;
+}
+${rail} .vtd-sidebar-header-rail{
+opacity:1;
+visibility:visible;
+transition:opacity 0.18s ease-in-out, visibility 0s linear 0s;
+}
+/* Collapsed, the panel matches the rail; any of the float triggers brings the full panel back out
+   over the page */
+.vtd-sidebar-collapsed .vtd-sidebar-panel{width:var(--vtd-sidebar-rail-width,${railWidthPx}px);}
+${floated} .vtd-sidebar-panel{
+width:var(--vtd-sidebar-width,250px);
+box-shadow:0 2px 14px rgba(0,0,0,0.18);
+}
 @media (prefers-reduced-motion: reduce){
-.vtd-sidebar,.vtd-sidebar-panel,.vtd-sidebar-collapse-icon{transition:none;}
+.vtd-sidebar,
+.vtd-sidebar-panel,
+.vtd-sidebar-collapse-icon,
+.vtd-sidebar-header,
+.vtd-sidebar-footer,
+.vtd-sidebar-header-full,
+.vtd-sidebar-header-rail,
+.vtd-sidebar-profile-trigger,
+.vtd-sidebar-profile-text,
+.vtd-sidebar-row,
+.vtd-sidebar-label,
+.vtd-sidebar-trailing,
+.vtd-sidebar .vtd-tree-chevron,
+.vtd-sidebar .vtd-tree > li > .vtd-tree-leaf,
+${rail} .vtd-disclosure-content{transition:none;}
 }
-`, "vtd/Sidebar")
+`, "vtd/Sidebar", "composite")
         }
 
         this.#tree = getComponent<Tree>(<Tree
@@ -498,16 +820,26 @@ align-items:center;
             onToggle={this.#handleToggle}/>)
 
         this.#panel = <div class="vtd-sidebar-panel">
-            {attrs.header ? <div class="vtd-sidebar-header">{attrs.header}</div> : null}
+            {attrs.header ? <div class={`vtd-sidebar-header${attrs.collapsedHeader ? " vtd-sidebar-header-swaps" : ""}`}>
+                <div class="vtd-sidebar-header-full">{attrs.header}</div>
+                {attrs.collapsedHeader ? <div class="vtd-sidebar-header-rail">{attrs.collapsedHeader}</div> : null}
+            </div> : null}
             <div class="vtd-sidebar-body">{this.#tree}</div>
             {attrs.footer ? <div class="vtd-sidebar-footer">{attrs.footer}</div> : null}
             {attrs.profile ? this.#buildProfile(attrs.profile) : null}
             {attrs.collapsible ? this.#buildCollapseControl() : null}
         </div>
 
+        if (attrs.resizable) {
+            // Inside the panel, not beside it. Against the rail the handle tracked the *gutter*, so
+            // once collapsed it sat at 56px - and stayed there while hovering floated the panel out
+            // to its full width, leaving the drag target stranded 200px from the edge it resizes.
+            this.#panel.appendChild(this.#buildResizeHandle() as HTMLElement)
+        }
         this.#root = passthroughAttrsToElement<HTMLElement>(<nav aria-label={attrs.ariaLabel} class="vtd-sidebar">
-            {this.#panel}
-            {attrs.resizable ? this.#buildResizeHandle() : null}
+            <div class="vtd-sidebar-rail">
+                {this.#panel}
+            </div>
         </nav>, attrs)
 
         this.#groups = [...this.#root.querySelectorAll(".vtd-tree-node")] as HTMLElement[]

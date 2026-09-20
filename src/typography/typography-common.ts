@@ -1,4 +1,5 @@
-import { setStylesheet } from "@velotype/velotype"
+import {} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 
 /**
  * Shared internals for `Heading`, `Text` and `Paragraph`.
@@ -27,7 +28,7 @@ export function mountTypographyStyles(): void {
         return
     }
     areTypographyStylesMounted = true
-    setStylesheet(`
+    mountStyles(`
 /*
  * WARNING: muted is var(--background-6), NOT var(--text-alt). Despite the name, --text-alt is the
  * *inverse* text colour - in dark mode it is the light theme's near-black - so muted text styled
@@ -72,7 +73,7 @@ background-color:var(--background-1);
 padding:0.1em 0.35em;
 border-radius:0.2rem;
 }
-`, "vtd/Typography")
+`, "vtd/Typography", "base")
 }
 
 /** Builds the class list for a piece of text from its semantic type and modifiers */

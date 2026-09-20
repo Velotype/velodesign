@@ -1,4 +1,5 @@
-import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 import { Button } from "../form/button.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
@@ -83,6 +84,41 @@ export class Carousel extends Component<CarouselAttrsType> {
         this.#dotEls[this.#currentIndex]?.classList.add("vtd-carousel-dot-active")
     }
 
+    /**
+     * Left/Right move between slides, Home/End jump to the ends.
+     *
+     * Scoped to this carousel's *own* controls rather than to the whole component: a slide may hold
+     * a text box or another carousel, and a handler on the region would swallow the arrow keys a
+     * reader was using to move the caret. Checking that the event started on a dot or a nav button
+     * keeps the keys where they belong without having to enumerate what they might have hit.
+     *
+     * Focus follows the selection back onto the matching dot, so holding Right walks the carousel
+     * the way holding Right walks a tab strip - moving the slide while leaving focus on a dot that
+     * no longer matches it is the thing that makes a picker feel broken.
+     */
+    #handleKeyDown = (event: KeyboardEvent) => {
+        const total = this.#attrs.slides.length
+        const target = event.target instanceof Element ? event.target.closest(".vtd-carousel-dot,.vtd-carousel-nav") : null
+        if (!target || total < 2) {
+            return
+        }
+        const step = event.key == "ArrowRight" ? 1 : event.key == "ArrowLeft" ? -1 : 0
+        let next = step == 0 ? -1 : this.#currentIndex + step
+        if (event.key == "Home") {
+            next = 0
+        } else if (event.key == "End") {
+            next = total - 1
+        }
+        if (next < 0 && step == 0) {
+            return
+        }
+        event.preventDefault()
+        this.#handleUserGoTo(next, total)
+        if (target.classList.contains("vtd-carousel-dot")) {
+            this.#dotEls[this.#currentIndex]?.focus()
+        }
+    }
+
     /** Permanently stops autoplay - called on any user-driven navigation (see class doc comment) */
     #stopAutoplay() {
         this.#autoplayActive = false
@@ -134,7 +170,7 @@ export class Carousel extends Component<CarouselAttrsType> {
         this.#autoplayActive = !!attrs.autoplay
         if (!areCarouselStylesMounted) {
             areCarouselStylesMounted = true
-            setStylesheet(`
+            mountStyles(`
 .vtd-carousel{width:100%;box-sizing:border-box;position:relative;overflow:hidden;border-radius:0.5rem;}
 .vtd-carousel-track{position:relative;}
 .vtd-carousel-slide{display:flex;align-items:center;justify-content:center;}
@@ -176,7 +212,7 @@ padding:0;
             })}
         </div> : null
 
-        this.#root = <div class="vtd-carousel">
+        this.#root = <div class="vtd-carousel" onKeyDown={this.#handleKeyDown}>
             <div class="vtd-carousel-track">
                 {this.#slideEls}
                 {total > 1 ? <Button class="vtd-carousel-nav vtd-carousel-nav-prev" type="secondary" onClick={() => this.#handleUserGoTo(this.#currentIndex - 1, total)}><CommonThemeOptions.prevSymbol/></Button> : null}

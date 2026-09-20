@@ -1,4 +1,5 @@
-import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -188,7 +189,7 @@ export class SelectMenu<OptionType> extends Component<SelectMenuAttrsType<Option
 
         if (!areSelectMenuStylesMounted) {
             areSelectMenuStylesMounted = true
-            setStylesheet(`
+            mountStyles(`
 .vtd-select-menu{position:relative;display:inline-block;}
 .vtd-select-menu-trigger{
 display:inline-flex;
@@ -207,7 +208,6 @@ text-align:start;
 cursor:pointer;
 }
 .vtd-select-menu-trigger:disabled{cursor:not-allowed;opacity:0.6;}
-.vtd-select-menu-trigger:focus-visible{border:1px solid var(--primary);outline-color:var(--primary);}
 .vtd-select-menu-value{flex-grow:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .vtd-select-menu-placeholder{opacity:0.6;}
 .vtd-select-menu-chevron{
@@ -240,7 +240,8 @@ display:none;
 }
 .vtd-select-menu-panel-open{display:block;}
 .vtd-select-menu-option{padding:0.5em 0.75em;border-radius:0.25rem;cursor:pointer;}
-.vtd-select-menu-option-highlighted{background-color:var(--background-2);}
+/* The keyboard's position in the list - see Menu for why this is a tint and not a ring */
+.vtd-select-menu-option-highlighted{background-color:var(--primary-3);}
 .vtd-select-menu-option-selected{background-color:var(--primary-3);}
 .vtd-select-menu-option-disabled{opacity:0.5;cursor:not-allowed;}
 `, "vtd/SelectMenu")
@@ -259,7 +260,12 @@ display:none;
         })
 
         this.#valueEl = <span class="vtd-select-menu-value"/>
-        this.#panelEl = <ul class="vtd-select-menu-panel" role="listbox">{this.#optionEls}</ul>
+        // tabindex=-1 because a scrolling listbox is otherwise a dead tab stop. Chrome makes any
+        // scrollable element focusable when it has no focusable children, which is right for a
+        // region a reader has to scroll themselves and wrong here: the arrow keys already move the
+        // highlight and bring it into view, so tabbing into the panel lands somewhere with nothing
+        // to do and one more Tab to get out of.
+        this.#panelEl = <ul class="vtd-select-menu-panel" role="listbox" tabindex={-1}>{this.#optionEls}</ul>
         this.#triggerEl = <button
             type="button"
             class="vtd-select-menu-trigger"

@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
@@ -37,7 +38,7 @@ let areAlertStylesMounted = false
 export const Alert: FunctionComponent<AlertAttrsType> = function(attrs: AlertAttrsType, children: RenderableElements[]): HTMLDivElement {
     if (!areAlertStylesMounted) {
         areAlertStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-alert{
 width:100%;
 box-sizing:border-box;

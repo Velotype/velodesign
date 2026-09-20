@@ -1,5 +1,5 @@
 import {
-    AlertThemeOptions, BreadcrumbsThemeOptions, ButtonThemeOptions, ChartThemeOptions,
+    AlertThemeOptions, BreadcrumbsThemeOptions, ButtonThemeOptions, ChartThemeOptions, MenuThemeOptions,
     CommonThemeOptions, DataTableThemeOptions, DrawerThemeOptions, EmptyThemeOptions,
     ModalThemeOptions, PaginationThemeOptions, PopconfirmThemeOptions, resetThemeOptions,
     TagThemeOptions, TextFormFieldThemeOptions, ToastThemeOptions,
@@ -47,6 +47,7 @@ const owners: Record<string, Record<string, ThemeSymbol>> = {
     PaginationThemeOptions: PaginationThemeOptions as unknown as Record<string, ThemeSymbol>,
     ModalThemeOptions: ModalThemeOptions as unknown as Record<string, ThemeSymbol>,
     DrawerThemeOptions: DrawerThemeOptions as unknown as Record<string, ThemeSymbol>,
+    MenuThemeOptions: MenuThemeOptions as unknown as Record<string, ThemeSymbol>,
     PopconfirmThemeOptions: PopconfirmThemeOptions as unknown as Record<string, ThemeSymbol>,
     TextFormFieldThemeOptions: TextFormFieldThemeOptions as unknown as Record<string, ThemeSymbol>,
     DataTableThemeOptions: DataTableThemeOptions as unknown as Record<string, ThemeSymbol>,
@@ -87,6 +88,7 @@ export const componentSymbolOptions: SymbolOption[] = [
     {owner: "ModalThemeOptions", field: "closeSymbol", inherits: true, fallback: "x"},
     {owner: "ModalThemeOptions", field: "cancelSymbol", inherits: true, fallback: "✕"},
     {owner: "DrawerThemeOptions", field: "closeSymbol", inherits: true, fallback: "x"},
+    {owner: "MenuThemeOptions", field: "confirmSymbol", inherits: true, fallback: "✓"},
     {owner: "PopconfirmThemeOptions", field: "confirmSymbol", inherits: true, fallback: "✓"},
     {owner: "PopconfirmThemeOptions", field: "cancelSymbol", inherits: true, fallback: "✕"},
     {owner: "TextFormFieldThemeOptions", field: "confirmSymbol", inherits: true, fallback: "✓"},

@@ -1,4 +1,5 @@
-import { type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, setStylesheet, type StylePassthroughAttrs, type TargetedEvent, type TargetedInputEvent } from "@velotype/velotype"
+import {type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs, type TargetedEvent, type TargetedInputEvent} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 
 /**
  * Attrs type for `<DatePicker/>` Component
@@ -31,7 +32,7 @@ let areDatePickerStylesMounted = false
 export const DatePicker: FunctionComponent<DatePickerAttrsType> = function(attrs: DatePickerAttrsType, _children: RenderableElements[]): HTMLInputElement {
     if (!areDatePickerStylesMounted) {
         areDatePickerStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-date-picker{
 padding:0.5ex 1ex;
 margin-inline-start:1ex;
@@ -43,7 +44,6 @@ font:inherit;
 color-scheme:inherit;
 }
 .vtd-date-picker:disabled{cursor:not-allowed;opacity:0.6;}
-.vtd-date-picker:focus-visible{border:1px solid var(--primary);outline-color:var(--primary);}
 `, "vtd/DatePicker")
     }
 

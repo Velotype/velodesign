@@ -39,10 +39,10 @@ import { Pagination, PaginationThemeOptions, type PaginationAttrsType } from "./
 import { Navbar, type NavbarAttrsType } from "./navigation/navbar.tsx"
 import { Sidebar, type SidebarAttrsType, type SidebarItemType, type SidebarProfileType } from "./navigation/sidebar.tsx"
 import { TableOfContents, type TableOfContentsAttrsType, type TableOfContentsItemType } from "./navigation/table-of-contents.tsx"
-import { Menu, type MenuAttrsType, type MenuItemType } from "./navigation/menu.tsx"
+import { Menu, MenuThemeOptions, type MenuAttrsType, type MenuItemType } from "./navigation/menu.tsx"
 import { showToast, ToastThemeOptions, type ToastOptions, type ToastType } from "./feedback/toast.tsx"
 import { Accordion, type AccordionAttrsType, type AccordionItemType } from "./data-display/accordion.tsx"
-import { Avatar, type AvatarAttrsType } from "./data-display/avatar.tsx"
+import { Avatar, type AvatarAttrsType, type AvatarType } from "./data-display/avatar.tsx"
 import { Progress, type ProgressAttrsType, type ProgressType } from "./feedback/progress.tsx"
 import { Skeleton, type SkeletonAttrsType, type SkeletonVariant } from "./feedback/skeleton.tsx"
 import { Tag, TagThemeOptions, type TagAttrsType, type TagType } from "./data-display/tag.tsx"
@@ -225,6 +225,7 @@ export {
     type SidebarProfileType,
 
     Menu,
+    MenuThemeOptions,
     type MenuAttrsType,
     type MenuItemType,
 
@@ -239,6 +240,7 @@ export {
 
     Avatar,
     type AvatarAttrsType,
+    type AvatarType,
 
     Progress,
     type ProgressAttrsType,

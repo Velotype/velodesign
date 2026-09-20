@@ -1,4 +1,5 @@
-import { type ChildrenAttr, Component, type RenderableElements, setStylesheet, type FunctionComponent, type TargetedMouseEvent, type StylePassthroughAttrs, type IdAttr, passthroughAttrsToElement } from "@velotype/velotype"
+import {type ChildrenAttr, Component, type RenderableElements, type FunctionComponent, type TargetedMouseEvent, type StylePassthroughAttrs, type IdAttr, passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import { Button, type ButtonType } from "../form/button.tsx"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
@@ -34,7 +35,7 @@ export type ModalAttrsType = {
 export class Modal extends Component<ModalAttrsType> {
     /** Mount this Component */
     override mount() {
-        setStylesheet(`
+        mountStyles(`
 .vtd-modal{
 margin:auto;
 padding:1em;

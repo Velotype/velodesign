@@ -1,4 +1,5 @@
-import { type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, setStylesheet, type StylePassthroughAttrs, type TargetedEvent } from "@velotype/velotype"
+import {type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs, type TargetedEvent} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 
 /**
  * A single option in a `<Select/>`
@@ -42,7 +43,7 @@ let areSelectStylesMounted = false
 export const Select: FunctionComponent<SelectAttrsType> = function(attrs: SelectAttrsType, _children: RenderableElements[]): HTMLSpanElement {
     if (!areSelectStylesMounted) {
         areSelectStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-select-wrapper{
 position:relative;
 display:inline-block;
@@ -59,7 +60,6 @@ font:inherit;
 cursor:pointer;
 }
 .vtd-select:disabled{cursor:not-allowed;opacity:0.6;}
-.vtd-select:focus-visible{border:1px solid var(--primary);outline-color:var(--primary);}
 .vtd-select-chevron{
 position:absolute;
 top:50%;

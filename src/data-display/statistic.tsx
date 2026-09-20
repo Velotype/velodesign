@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -23,7 +24,7 @@ let areStatisticStylesMounted = false
 export const Statistic: FunctionComponent<StatisticAttrsType> = function(attrs: StatisticAttrsType, _children: RenderableElements[]): HTMLDivElement {
     if (!areStatisticStylesMounted) {
         areStatisticStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-statistic-title{font-size:0.85em;opacity:0.7;margin-block-end:0.25em;}
 .vtd-statistic-value{font-size:1.75em;font-weight:bold;line-height:1.2;}
 .vtd-statistic-affix{font-size:0.6em;font-weight:normal;margin-inline:0.15em;}

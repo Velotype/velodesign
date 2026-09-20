@@ -2,8 +2,8 @@ import { Component, getComponent, RenderBasic, setStylesheet } from "@velotype/v
 import type { EmptyAttrs, RenderableElements } from "@velotype/velotype"
 
 import { Avatar, Button, ColorScheme, highlightMatch, I, Link, Navbar, searchHighlightCss, Sidebar, Text, TextBox } from "../../src/index.ts"
-import { categoryIconKey } from "./data/category-icons.ts"
-import type { SidebarItemType } from "../../src/index.ts"
+import { categoryIconKey, searchIconKey } from "./data/category-icons.ts"
+import type { MenuItemType, SidebarItemType } from "../../src/index.ts"
 import { docBySlug, groupByGroupSlug, groupedDocs } from "./data/docs.tsx"
 import { HomePage } from "./pages/home.tsx"
 import { ComponentPage } from "./pages/component-page.tsx"
@@ -29,14 +29,27 @@ function buildSidebarItems(filterText: string, openCategories: Set<string>): Sid
     const filterLower = filterText.trim().toLowerCase()
     const filtering = filterLower.length > 0
     return groupedDocs()
-        .map(bucket => ({group: bucket.group, docs: bucket.docs.filter(doc => doc.name.toLowerCase().includes(filterLower))}))
+        // A category name is a search term like any other, and it is the one a reader who does not
+        // yet know a component's name actually has: typing "chart" found nothing at all while every
+        // chart sat one level down inside a category called Charts. A category that matches keeps
+        // all of its components rather than none - the match is the category itself.
+        .map(bucket => ({
+            group: bucket.group,
+            docs: bucket.group.toLowerCase().includes(filterLower)
+                ? bucket.docs
+                : bucket.docs.filter(doc => doc.name.toLowerCase().includes(filterLower)),
+        }))
         .filter(bucket => bucket.docs.length > 0)
         .map(bucket => ({
             key: bucket.group,
-            // The category name links to its own page and also toggles the group: the click lands
-            // on the link, so Tree's summary handler sees defaultPrevented and leaves the toggle
-            // to the chevron and the rest of the row.
-            label: <Link spa to={categoryPageUrl(bucket.group)} class="vtd-showcase-sidebar-group-label">{bucket.group}</Link>,
+            // `to` rather than a Link inside the label, which is what this used to be. Sidebar
+            // turns an entry with a destination into one link covering the icon, the name and the
+            // count, leaving the chevron as the only thing that toggles - so the whole row goes to
+            // the category page and the two actions stop competing for the same surface. It is
+            // also what marks the group while the reader is *on* that page: NavLink decides what is
+            // active, and a plain Link never claimed to be.
+            to: categoryPageUrl(bucket.group),
+            label: highlightMatch(bucket.group, filterLower),
             icon: <I i={categoryIconKey(bucket.group)}/>,
             // Trailing, not leading: a count announced *before* the category name reads as
             // "3 Typography", and reordering a leading slot in CSS would leave that wrong for a
@@ -131,6 +144,24 @@ function saveSidebarWidth(width: number) {
     } catch { /* as above - the drag still works, it just isn't remembered */ }
 }
 
+/**
+ * The Light / Dark / System group for the account menu.
+ *
+ * `selected` is a function, not a boolean, because the header's own dark-mode button changes the
+ * same setting: a reading taken when the menu was built would describe whatever was true then, and
+ * `Menu` re-reads a function every time it opens. It reads the *preference* rather than the scheme
+ * in effect - `getColorScheme` has already resolved System to light or dark, so it would tick Light
+ * for a reader who asked to follow a browser that happens to prefer it.
+ */
+function themeMenuItems(apply: (scheme: "light" | "dark" | "default") => void): MenuItemType[] {
+    const selected = (scheme: string) => () => ColorScheme.getColorSchemePreference() == scheme
+    return [
+        {label: "Light", keepOpen: true, selected: selected("light"), onClick: () => apply("light")},
+        {label: "Dark", keepOpen: true, selected: selected("dark"), onClick: () => apply("dark")},
+        {label: "System", keepOpen: true, selected: selected("default"), onClick: () => apply("default")},
+    ]
+}
+
 let areShellStylesMounted = false
 
 /**
@@ -145,6 +176,20 @@ export class AppShell extends Component<EmptyAttrs> {
     /** What the reader has expanded, kept across the item rebuilds a search edit causes */
     #openCategories = new Set<string>()
     #filterText = ""
+    #darkModeLabel = new RenderBasic<string>(ColorScheme.getColorScheme() == "light" ? "off" : "on")
+
+    /**
+     * The one path every theme change here goes through.
+     *
+     * Two controls now set the same thing - the header's toggle and the account menu's Theme group -
+     * and each has a piece of state to keep right: the header shows on/off, the menu shows a tick.
+     * Routing both through here is what keeps them agreeing. The menu needs nothing pushed to it
+     * because its `selected` entries are functions, but the header's label is a value and does.
+     */
+    #applyColorScheme(scheme: "light" | "dark" | "default") {
+        ColorScheme.setColorScheme(scheme)
+        this.#darkModeLabel.value = ColorScheme.getColorScheme() == "light" ? "off" : "on"
+    }
 
     constructor(attrs: EmptyAttrs, children: RenderableElements[]) {
         super(attrs, children)
@@ -166,23 +211,47 @@ export class AppShell extends Component<EmptyAttrs> {
  */
 .vtd-showcase-sidebar{
 position:sticky;
-top:53px;
+/*
+ * Measured, never assumed. This was top:53px against a header that is actually 55px tall, so once
+ * the page scrolled the sidebar pinned two pixels high and painted over the header's bottom border
+ * for the width of the sidebar - the line between the two simply vanished, but only after a
+ * scroll, which is what made it look intermittent. A hardcoded offset is wrong the moment anything
+ * in the header changes size, which includes the reader's own font settings.
+ */
+top:var(--vtd-showcase-header-height,55px);
 /* The chrome layer - see the note on .vtd-showcase-main. Same value as the header, because they
    are the same layer and never overlap each other */
 z-index:1;
 align-self:flex-start;
-height:calc(100vh - 53px);
+height:calc(100vh - var(--vtd-showcase-header-height,55px));
 }
+.vtd-showcase-sidebar-search .vtd-text-box-wrapper{width:100%;}
 .vtd-showcase-sidebar-search .vtd-text-box{width:100%;margin-inline-start:0;box-sizing:border-box;}
-.vtd-showcase-sidebar-group-label{
+.vtd-showcase-sidebar-search-icon{
+display:inline-flex;
+align-items:center;
+justify-content:center;
+width:2em;
+height:2em;
+padding:0;
+background:transparent;
+border:1px solid transparent;
+border-radius:0.25rem;
+color:inherit;
+cursor:pointer;
+}
+.vtd-showcase-sidebar-search-icon:hover{background-color:var(--background-2);}
+.vtd-showcase-sidebar-search-icon:focus-visible{border-color:var(--primary);outline:none;}
+/* A category's own name, which is the label of a Tree branch - the one row shape a leaf never has */
+.vtd-showcase-sidebar .vtd-tree-label .vtd-sidebar-label{
 font-size:0.75em;
 font-weight:bold;
 text-transform:uppercase;
 letter-spacing:0.05em;
 color:var(--background-9);
-text-decoration:none;
 }
-.vtd-showcase-sidebar-group-label:hover{color:var(--primary-8);}
+.vtd-showcase-sidebar .vtd-tree-label .vtd-sidebar-link:hover .vtd-sidebar-label{color:var(--primary-8);}
+.vtd-showcase-sidebar .vtd-tree-label .vtd-nav-link-active .vtd-sidebar-label{color:var(--primary-8);}
 .vtd-showcase-sidebar-count{font-size:0.75em;}
 .vtd-showcase-main{flex-grow:1;min-width:0;isolation:isolate;}
 /*
@@ -199,8 +268,12 @@ ${searchHighlightCss}
 `, "velodesign-showcase/AppShell")
         }
 
-        const searchInput: HTMLInputElement = <TextBox
+        // clearable: this is the case it exists for - a box the reader edits repeatedly and
+        // abandons, where emptying it by hand is several keystrokes
+        const searchInput: HTMLElement = <TextBox
             type="text"
+            clearable
+            clearLabel="Clear the search"
             placeholder="Search components..."
             class="vtd-showcase-search"
             onInput={(event: Event) => {
@@ -217,6 +290,16 @@ ${searchHighlightCss}
             ariaLabel="Components by category"
             collapseLabel="Collapse or expand the sidebar"
             header={<div class="vtd-showcase-sidebar-search">{searchInput}</div>}
+            // Keeps the header's height on the rail, so collapsing slides the icons sideways
+            // rather than up. Clicking it expands the sidebar and puts the cursor in the box.
+            collapsedHeader={<button
+                type="button"
+                class="vtd-showcase-sidebar-search-icon"
+                aria-label="Search components"
+                onClick={() => {
+                    this.#sidebar.setCollapsed(false)
+                    ;(searchInput.querySelector("input") as HTMLInputElement | null)?.focus()
+                }}><I i={searchIconKey}/></button>}
             items={buildSidebarItems("", this.#openCategories)}
             defaultCollapsed={loadSidebarCollapsed()}
             onCollapsedChange={saveSidebarCollapsed}
@@ -236,24 +319,21 @@ ${searchHighlightCss}
                 menuAriaLabel: "Account",
                 menuItems: [
                     {label: "Theme builder", href: "/theme", spa: true},
-                    {label: "Appearance", children: [
-                        {label: "Light", onClick: () => ColorScheme.setColorScheme("light")},
-                        {label: "Dark", onClick: () => ColorScheme.setColorScheme("dark")},
-                    ]},
+                    // keepOpen + selected: the three are a radio group, so Menu moves the tick
+                    // itself on a click and the menu stays put - switching theme is something a
+                    // reader may well want to do twice, and closing on the click takes the choices
+                    // away at the moment the page changes colour. The selected value is read from
+                    // getColorSchemePreference, not getColorScheme: the latter has already resolved
+                    // System to light or dark, so it would show Light ticked for a reader who chose
+                    // to follow a browser that happens to prefer it.
+                    {label: "Theme", children: themeMenuItems(scheme => this.#applyColorScheme(scheme))},
                     {label: "velodesign on JSR", dividerBefore: true, href: "https://jsr.io/@velotype/velodesign"},
                 ],
             }}/>)
 
-        const darkModeLabel = new RenderBasic<string>(ColorScheme.getColorScheme() == "light" ? "off" : "on")
         const themeToggle = <Button type="secondary" onClick={() => {
-            if (ColorScheme.getColorScheme() == "light") {
-                ColorScheme.setColorScheme("dark")
-                darkModeLabel.value = "on"
-            } else {
-                ColorScheme.setColorScheme("light")
-                darkModeLabel.value = "off"
-            }
-        }}>Dark mode: {darkModeLabel}</Button>
+            this.#applyColorScheme(ColorScheme.getColorScheme() == "light" ? "dark" : "light")
+        }}>Dark mode: {this.#darkModeLabel}</Button>
 
         this.#root = <div class="vtd-showcase-shell">
             {/* Navbar's own `brand` / `leading` / children slots, rather than a hand-built
@@ -284,6 +364,30 @@ ${searchHighlightCss}
         // buildSidebarItems decides what is open through defaultOpen: every surviving category
         // while a filter is active, and otherwise whatever the reader had expanded
         this.#sidebar.setItems(buildSidebarItems(text, this.#openCategories))
+    }
+
+    /**
+     * Publishes the header's real height for the sidebar to stick under.
+     *
+     * A ResizeObserver rather than a read on scroll: it reports only when the height actually
+     * changes, so nothing measures layout on an event that fires at display rate. The value is
+     * rounded down - a fractional offset leaves a hairline of page showing through the seam.
+     */
+    #headerObserver?: ResizeObserver
+
+    override mount() {
+        const header = this.#root.querySelector(".vtd-showcase-header") as HTMLElement | null
+        if (!header) {
+            return
+        }
+        this.#headerObserver = new ResizeObserver(() => {
+            this.#root.style.setProperty("--vtd-showcase-header-height", `${Math.floor(header.getBoundingClientRect().height)}px`)
+        })
+        this.#headerObserver.observe(header)
+    }
+
+    override unmount() {
+        this.#headerObserver?.disconnect()
     }
 
     override render(): HTMLDivElement {

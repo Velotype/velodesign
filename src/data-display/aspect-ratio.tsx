@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -18,7 +19,7 @@ let areAspectRatioStylesMounted = false
 export const AspectRatio: FunctionComponent<AspectRatioAttrsType> = function(attrs: AspectRatioAttrsType, children: RenderableElements[]): HTMLDivElement {
     if (!areAspectRatioStylesMounted) {
         areAspectRatioStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-aspect-ratio{position:relative;width:100%;overflow:hidden;}
 .vtd-aspect-ratio > *{position:absolute;inset:0;width:100%;height:100%;}
 `, "vtd/AspectRatio")

@@ -1,4 +1,5 @@
-import { type ChildrenAttr, type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, setStylesheet, type StylePassthroughAttrs, type TargetedEvent } from "@velotype/velotype"
+import {type ChildrenAttr, type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs, type TargetedEvent} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 
 /**
  * Attrs type for `<Upload/>` Component
@@ -26,7 +27,7 @@ let areUploadStylesMounted = false
 export const Upload: FunctionComponent<UploadAttrsType> = function(attrs: UploadAttrsType, children: RenderableElements[]): HTMLLabelElement {
     if (!areUploadStylesMounted) {
         areUploadStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-upload{
 width:100%;
 box-sizing:border-box;
@@ -46,7 +47,7 @@ transition:background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
 .vtd-upload-input{position:absolute;opacity:0;height:0;width:0;margin:0;}
 .vtd-upload-disabled{cursor:not-allowed;opacity:0.6;}
 .vtd-upload-disabled:hover{background-color:transparent;border-color:var(--background-5);}
-.vtd-upload:has(.vtd-upload-input:focus-visible){outline:2px solid var(--primary);outline-offset:2px;}
+.vtd-upload:has(.vtd-upload-input:focus-visible){outline:2px solid var(--primary-7);outline-offset:2px;}
 `, "vtd/Upload")
     }
 

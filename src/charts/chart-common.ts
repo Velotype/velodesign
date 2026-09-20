@@ -1,4 +1,5 @@
-import { setStylesheet } from "@velotype/velotype"
+import {} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import { createElementNSHelper, setAttributeHelper } from "../core/utilities.ts"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
@@ -227,7 +228,7 @@ export function mountChartStyles(): void {
         return
     }
     areChartStylesMounted = true
-    setStylesheet(`
+    mountStyles(`
 .vtd-chart{width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:0.5em;position:relative;}
 .vtd-chart-svg{display:block;width:100%;overflow:visible;}
 /* Visually hidden, still read aloud - the standard clip pattern. This holds each chart's data as a
@@ -297,7 +298,7 @@ transition:opacity 0.1s ease-out;
 @media (prefers-reduced-motion: reduce){
 .vtd-chart-bar,.vtd-chart-arc,.vtd-chart-tooltip{transition:none;}
 }
-`, "vtd/Chart")
+`, "vtd/Chart", "base")
 }
 
 /** Builds the legend row; returns undefined when there is nothing worth labelling */

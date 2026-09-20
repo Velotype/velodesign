@@ -1,4 +1,5 @@
-import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { RenderableElements, IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
 import { highlightMatch, searchHighlightCss } from "../core/search-highlight.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
@@ -105,6 +106,11 @@ export class Command extends Component<CommandAttrsType> {
             onClick={() => { this.#highlightedIndex = index; this.#selectHighlighted() }}>
             {typeof item.label == "string" && query ? highlightMatch(item.label, query) : item.label}
         </li>))
+        // The list scrolls, so moving the highlight has to bring it with you - without this,
+        // arrowing past the sixteenth result moves a highlight nobody can see and the palette
+        // looks like it has stopped responding. `nearest` so a highlight already on screen does
+        // not yank the list around.
+        this.#list.children[this.#highlightedIndex]?.scrollIntoView({block: "nearest"})
     }
 
     /** Create a new `<Command/>` Component */
@@ -113,7 +119,7 @@ export class Command extends Component<CommandAttrsType> {
         this.#attrs = attrs
         if (!areCommandStylesMounted) {
             areCommandStylesMounted = true
-            setStylesheet(`
+            mountStyles(`
 .vtd-command{margin:10vh auto auto auto;padding:0;border:none;width:min(32em,90vw);border-radius:0.5rem;overflow:hidden;}
 .vtd-command::backdrop{background:rgba(75,75,75,0.6);backdrop-filter:blur(2px);}
 .vtd-command-input{
@@ -160,7 +166,12 @@ ${searchHighlightCss}
                     this.#selectHighlighted()
                 }
             }}/>
-        this.#list = <ul class="vtd-command-list" role="listbox"/>
+        // tabindex=-1 because a scrolling listbox is otherwise a dead tab stop. Chrome makes any
+        // scrollable element focusable when it has no focusable children, which is right for a
+        // region a reader has to scroll themselves and wrong here: the arrow keys already move the
+        // highlight and bring it into view, so tabbing into the panel lands somewhere with nothing
+        // to do and one more Tab to get out of.
+        this.#list = <ul class="vtd-command-list" role="listbox" tabindex={-1}/>
 
         this.#dialog = <dialog class="vtd-command" closedby="any">
             {this.#input}

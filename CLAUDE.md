@@ -218,17 +218,61 @@ The generic is declared `<T extends HTMLElement>`. `HTMLDetailsElement` (used th
 
 ## Styling
 
-One `setStylesheet(cssText, "vtd/ComponentName")` call per component. `setStylesheet` (from `@velotype/velotype`) already dedupes internally by its key argument — calling it on every render is *safe* — but the prevailing style in this package still guards it with a module-level boolean (`let areFooStylesMounted = false`) to skip even building the template string after the first mount, e.g.:
+One `mountStyles(cssText, "vtd/ComponentName")` call per component, from `core/styles.ts`. **Nothing
+in `src/` calls `setStylesheet` directly** - that is what makes the cascade deterministic, and the
+reason is worth understanding before adding a component.
+
+`setStylesheet` pushes each sheet onto `document.adoptedStyleSheets`, so **cascade order is the
+order sheets were attached, and a component's sheet is attached when that component is first
+constructed**. Which component constructs first depends on which page the reader lands on and how
+they navigated there, so two rules of equal specificity resolve one way on a cold load and the
+other way after a click, with no code change between them. Measured on the showcase:
+`.vtd-showcase-example-code` was attached 5th against `.vtd-code-block`'s 10th on a direct load, and
+39th against 11th when the same page was reached through a category page - so an example's code
+block had square corners on one path and round ones on the other. Nothing about the CSS was wrong;
+it was a race.
+
+**`mountStyles` puts everything this package ships inside a cascade layer**, and an unlayered rule
+beats a layered one whatever its specificity and whatever the source order. So:
+
+- **A consumer's own CSS always wins**, deterministically. That is the relationship a component
+  library wants and it previously depended on luck.
+- Inside the package, sub-layers order the pieces that genuinely stack:
+  `velodesign.reset, velodesign.theme, velodesign.base, velodesign.component, velodesign.composite`.
+  `base` is the shared internal modules (`disclosure-view`, `typography-common`, `chart-common`);
+  `composite` is a component that styles *another* component's classes and must win - `Sidebar` over
+  `Tree` and `Menu`, `CalendarRange` over `Calendar`, `ButtonGroup` over `Button`, the shared
+  data-table view over `TextBox`.
+- The layer *order* is declared once from `core/styles.ts` before any sheet is attached, because
+  layer precedence otherwise follows first appearance - which would put us straight back to
+  depending on construction order.
+
+⚠️ **A layer is not a substitute for scoping inside the package.** Two components in the same layer
+still tie on source order, so a rule about another component's class must still out-specify it -
+scope it under your own root (`.vtd-sidebar-profile .vtd-menu`, not `.vtd-sidebar-profile-menu`).
+The layer fixes library-versus-consumer; specificity still settles library-versus-library, and the
+`composite` layer is for the handful of cases where scoping alone cannot.
+
+The prevailing style still guards the call with a module-level boolean
+(`let areFooStylesMounted = false`) to skip even building the template string after the first mount:
 
 ```ts
 let areFooStylesMounted = false
 // ...
 if (!areFooStylesMounted) {
     areFooStylesMounted = true
-    setStylesheet(`...`, "vtd/Foo")
+    mountStyles(`...`, "vtd/Foo")
 }
 ```
 For a `Component` class, do this once in the constructor (see `Menu`), not in `render()`.
+
+**A consumer placing a component owns where it goes, and must measure rather than assume.** The
+showcase pinned its sidebar with `top:53px` under a header that is actually 55px tall, so once the
+page scrolled the sidebar sat two pixels high and painted over the header's bottom border for its
+own width - the line between them vanished, but only after a scroll, which is what made it look
+intermittent. It publishes the header's real height as a custom property from a `ResizeObserver`
+now. A hardcoded offset against another element's height is wrong the moment anything in it
+changes size, including the reader's own font settings.
 
 Conventions inside the CSS itself:
 - Class names are all `vtd-<component>` / `vtd-<component>-<part>` / `vtd-<component>-<modifier>` (e.g. `vtd-button`, `vtd-button-primary`, `vtd-tabs-tab-active`). Never a bare unprefixed class.
@@ -403,12 +447,12 @@ closing a `<dialog>`, or detaching the node. **Where that lands in this package:
 | `display:none` panel | `Popover`, `Popconfirm`, `ContextMenu`, `Menu`, `SelectMenu`, `Combobox`, `Tabs` | No exit animation - safe, but adding a `transition` alone would silently do nothing |
 | `<dialog>` | `Modal`, `Drawer`, `Command` | Enter-only (`Drawer`'s keyframes); a close animation needs sequencing |
 | `<details open>` | `Collapse`, `Accordion` | Fixed - the close is sequenced in `disclosure-view.tsx`'s `animateClosed` |
-| Always-rendered element | `Tree`'s chevron (a `::before` on the `<summary>`), `Tooltip` | Safe by construction |
+| Always-rendered element | `Tree`'s chevron (an element inside the `<summary>`), `Tooltip` | Safe by construction |
 
 **Three ways out, in order of preference:**
 
-1. **Animate something that never un-renders.** `Tree`'s chevron lives on the `<summary>`, which is
-   always rendered, so its rotate works every time - verified, zero stuck animations across four
+1. **Animate something that never un-renders.** `Tree`'s chevron lives inside the `<summary>`, which
+   is always rendered, so its rotate works every time - verified, zero stuck animations across four
    toggles. This is why an enter-only animation (`Drawer`, `Toast`) is never a problem.
 2. **Hide with `visibility`/`opacity` rather than `display`.** `Tooltip` transitions
    `opacity 0.15s, visibility 0.15s` - the element keeps rendering, so both directions animate.
@@ -561,6 +605,126 @@ no accessible name, which is why `Button` gained an `ariaLabel` attr and both ta
 `columnToggleLabel`; setting it is on the consumer, with no default, like every other ARIA label
 here.
 
+## `Card` is three regions, and they have to look like three regions
+
+Header, body and footer all carried the card's own background with a hairline between them, so a
+card with both slots read as one flat wash - a 1px rule cannot carry that distinction against a
+background a shade away from the page. The body is the card's *content* and keeps the plain
+surface; the header and footer are chrome around it and take a step of the background ramp.
+
+A step rather than a fill of its own: `--background-2` against `--background-1` is the same
+relationship a hover has to a resting row, which is small on purpose. A header announcing itself
+with a real colour would make every card on a page compete with its own content.
+
+## A colour attribute is a colour *name*, never a colour
+
+`Avatar` had no way to colour its initials, and the honest reason it is a palette name rather than
+a CSS colour is that a consumer passing `#e8f0ff` has specified a light-mode background and nothing
+else - not the dark-mode background, and neither text colour. A name resolves through the ramps,
+which already carry a light and a dark value each, so **one attribute covers all four colours a
+hand-specified avatar would need**, and pairing the `-3` step with plain `--text` keeps the contrast
+right in both themes without either side being stated.
+
+The set is the same one every other coloured component takes (`primary | secondary | warning |
+danger | neutral`), spelled `type` like `Badge`'s and `Tag`'s. Deriving a colour by hashing the
+initials was considered and rejected: four hues means collisions are the normal case rather than the
+exception, and a colour that silently changes when someone's name is corrected is worse than one
+that never varied.
+
+## Keyboard focus: one ring, and only where there is something to do
+
+### The ring is the package's, not the component's
+
+`core/styles.ts` mounts a single `:focus-visible` rule in the `base` layer, reaching every element
+with a `vtd-` class. A component overrides it **only when the element that takes focus is not the
+element that should show it** - `Checkbox`, `RadioButton`, `Toggle`, `Rate` and `Upload` all focus a
+0x0 transparent input and draw the ring on the visible control beside it, and a popup list marks
+the keyboard's position with a filled row instead.
+
+It was twenty-two treatments before, measured by tabbing every gallery page: rings of 1px and 2px,
+offsets of 0, 1 and 2, some drawn as a border colour change, five that turned the outline off and
+showed a faint background, and **`Button` - the most-used control here - marking focus with a red
+`--accent` border**. Most of the rest set no outline at all and inherited the browser's, which is a
+different colour in every engine and changes with the page's `color-scheme`.
+
+Three choices in that rule, each load-bearing:
+
+- **`--primary-7`, not `--primary`.** A primary-coloured ring around a primary-filled button is
+  nearly invisible. The `-7` step is darker than the mid colour in light mode and lighter in dark,
+  so it separates from a fill of its own hue in both. Measured across 336 focus stops, the weakest
+  contrast is 3.51:1 - WCAG 2.2 SC 1.4.11 asks 3:1.
+- **2px, offset 2px.** One pixel disappears against a border of the same weight; a zero offset
+  reads as a thicker border rather than a ring. The gap lets the surface behind show through, which
+  is what keeps it legible on a filled control.
+- **`outline`, never `border` or `box-shadow`.** An outline takes no space, so nothing moves when it
+  appears; it follows the element's own `border-radius`, so a round control gets a round ring free;
+  and a component that already has a `box-shadow` does not have to restate it.
+
+### Focus goes where there is something to do
+
+⚠️ **A tab stop with nothing to do at it is worse than no tab stop.** `CodeBlock` set
+`tabindex="0"` and `role="region"` on every block, so a page of ten samples was ten tab stops and
+ten landmarks, when four of them scrolled. Neither is set now: **Chrome, Edge and Firefox make a
+scroll container focusable exactly when it overflows and has no focusable children**, so the
+platform gets this right without help. Safari does not, which is a real gap - and the same gap every
+scrolling element on the web has there.
+
+The mirror image is a scroll container that is *not* a region a reader navigates: the panels behind
+`Combobox`, `SelectMenu` and `Command` scroll, so Chrome made each a tab stop, but arrow keys
+already move the highlight inside them. They carry `tabindex="-1"`.
+
+**A role you do not implement is worse than no role.** `Tree` claimed `role="tree"` and
+`role="group"` with no `treeitem` anywhere and `role="button"` on its leaves - a shape no assistive
+technology can make sense of. Those are gone; the widget is nested native `<details>`/`<summary>`,
+which already announces expanded and collapsed. A full APG treeview - one tab stop for the whole
+tree, roving `tabindex`, arrow navigation - is a deliberate non-goal: it would change `Sidebar` from
+"every entry is reachable by Tab" to "the nav is one stop", which is a worse fit for navigation.
+
+### Where arrow keys operate
+
+`Menu`, `ContextMenu`, `SelectMenu`, `Combobox`, `Command`, `Tabs`, `Calendar`, `CalendarRange` and
+now `Carousel` handle them. `Slider`, `Rate`, `RadioButton` and `Select` get them free from the
+native elements they wrap - which is the best argument for wrapping natives in the first place.
+
+Deliberately without: `Pagination`, `Breadcrumbs`, `TableOfContents`, `Steps` and `ButtonGroup` are
+sets of independent links or buttons, where Tab is the expected way through and arrows would take
+away a stop a reader expects. `DataTable` is a table, not a `grid`, so cell-by-cell arrow navigation
+is not owed and would be a large thing to own.
+
+⚠️ **Moving a highlight in a scrolling list means scrolling it into view.** `Combobox` and `Command`
+both moved a highlight without it, so arrowing past the visible options moved something nobody could
+see and the list looked like it had stopped responding. Both call
+`scrollIntoView({block: "nearest"})` now - `nearest`, so a highlight already on screen does not yank
+the list around under the reader.
+
+## Interactive means it looks interactive, everywhere
+
+`Tag`'s remove control went from `opacity:0.7` to `1` on hover and nothing else - a signal both
+faint and unlike every other control in the package, where the sidebar's chevron, a `Menu` row and
+`TextBox`'s clear button all take a background. It has a bounded square, a background on hover and a
+focus ring now. **The rule generalises: a control's hover and focus treatment is a property of the
+package, not of the component**, so a new one copies the nearest existing control rather than
+inventing a signal for itself.
+
+The hover fill is `--background` rather than a step of the ramp, because a `Tag` already carries a
+tint of its own type: a neighbouring grey reads as muddy where the page's own background reads as a
+clear chip, and it flips with the theme where a fixed `rgba()` would not.
+
+## `ColorScheme` distinguishes what is in effect from what was chosen
+
+`getColorScheme()` returns `light` or `dark` and never `default` - `default` has already resolved by
+the time anything can read it. That makes it the wrong source for a picker offering all three:
+built on it, a picker shows Light selected whether the reader chose Light or chose to follow a
+browser that prefers it. `getColorSchemePreference()` answers the other question.
+
+⚠️ **Behaviour change**: with no stored preference the scheme now follows `prefers-color-scheme`.
+It used to fall through every branch in `resetColorScheme` and leave the initial `light` in place,
+so a first visit ignored a reader whose browser asks for dark - and `default` was a value that could
+be set but was never the starting point, which made the whole option half a feature. The
+`prefers-color-scheme` branch was already written; it was simply unreachable for the no-value case.
+Note this flips the default appearance for any consumer whose users prefer dark, with no code change
+on their side.
+
 ## Charts
 
 Six components - `LineChart`, `AreaChart`, `BarChart`, `PieChart`, `Gauge`, `Sparkline` - over two
@@ -693,15 +857,173 @@ search box, the category label and the per-category count.
 `Sidebar` is a class, and builds on `Tree` for its groups rather than repeating a disclosure - the
 animation, the keyboard handling and the open-state API all come from one place.
 
+### One row, one element, and it is the link
+
+`Sidebar` deliberately does **not** use `Tree`'s `leading`/`trailing` slots. They are siblings of
+the label, so a link in the label covers only the text between them - the icon on one side and the
+count on the other belong to the row instead, and on a group that means the row's two actions are
+interleaved at the pixel level: navigate here, toggle there, navigate again. `#buildRow` puts the
+icon, the label and the trailing slot inside one element, and that element *is* the `NavLink` when
+the entry has a `to`. The chevron toggles; everything else is a destination you can click anywhere
+in, middle-click, or copy the address of.
+
+**The padding belongs to that element, not to the container.** Padding the `<summary>` instead
+leaves a ring around the row that still toggles, which is the same interleaving one layer out. Both
+containers give their padding up entirely.
+
+**The hover belongs to the two controls, not the row.** `Tree` gives every row a hover, which is
+right for a tree and wrong here - one wash across a row holding two separate controls says they are
+one. Suppressed on the container, the row lights under the link and the chevron lights under the
+chevron, so which one a click is about to reach is visible before it happens.
+
+**This is also what marks the group on a category page.** `#syncActiveGroup` asks whether a group
+contains a `.vtd-nav-link-active`, and a plain `Link` never claims to be one - so a sidebar whose
+category labels were `Link`s could mark the group while a *component* page was open and had nothing
+to say while the reader was on the category's own page. Giving the group a `to` makes its row a
+`NavLink` and the two cases become one mechanism.
+
+**And it settles what a click on the rail means.** Collapsed, the icon is the only thing there. If
+the row toggles, clicking it opens a group whose children are not rendered - nothing the reader can
+see happens. If the row navigates, it goes to the group's own page.
+
+### Nothing on the rail leaves layout, and that is what makes it animate
+
+This replaced four different hiding techniques, each of which was got wrong at least once and
+each of which *jumped*: the labels were taken out of flow with `position:absolute` + `clip-path`,
+the chevron and a group's children with `display:none`. Every one of those lands in the frame of
+the click, while the panel then spends 180ms sliding - which is exactly what the reader sees as
+the text popping in and out.
+
+The rule now is one idea: **a row is a flex line whose text may shrink to nothing while the icon
+holds its size**, so narrowing the panel squeezes the text out continuously, and each piece only
+has to fade. Four declarations do it, and none of them is optional:
+
+| Declaration | On | Without it |
+|---|---|---|
+| `min-width:0` + `overflow:hidden` | label, count, account text | A flex item will not shrink below its content, so the row overflows and the icon is pushed off the rail |
+| `white-space:nowrap` | label | A wrapping label at 56px makes its row taller than its neighbours - the drift this component keeps rediscovering |
+| `max-width:0` on the rail | the same three | Flex stops shrinking the moment the line *fits*, so the label keeps whatever is left over. On a group's row that is a pixel; on a **leaf** row, which has no padding of its own because its link is the whole row, it was 19px, and the icon sat hard against the leading edge |
+| `flex-shrink:0` | the icon box | The icon shrinks along with everything else and the rail has nothing on it |
+
+Two pieces still hide rather than shrink, and both are the right call:
+
+- **A group's children** collapse the grid track `disclosure-view.tsx` already animates
+  (`grid-template-rows:minmax(0,0fr)` + `visibility:hidden`). `visibility` alone keeps their
+  height, so the rail grows a blank stretch where a group's entries were - measured, a 236px gap
+  among 49px ones. `display:none` has no such gap and no animation either.
+- **The header's full content** hides with `visibility`, the one place the box is wanted: keeping
+  it is what holds the header's height, so collapsing moves the entries sideways rather than up.
+
+⚠️ **Neither `checkVisibility` nor `getBoundingClientRect` answers "is this hidden" on its own
+here, and each misses the piece the other catches.** A group's child is clipped by a zero-height
+track, so it keeps a full-size box and only `visibility` gives it away; a top-level link is capped
+to zero width and faded, so it stays visible to `checkVisibility` and only the box gives it away.
+Require both. And measure the label *slot* rather than the link inside it - the link reports its
+own 18px of padding from inside a container that is clipping it.
+
+**Testing a transitioned end state means switching transitions off.** Every part of the rail is now
+reached by a transition, and a transition never advances in this suite, so a measurement taken
+after the click reads the *pre-collapse* value and the test passes however wrong the component is.
+Inject `*,*::before,*::after{transition:none !important}` before the interaction and
+`getBoundingClientRect` reports what the rules actually declare; leave whether the motion happens
+at all to a standalone script, where `requestAnimationFrame` ticks.
+
+**Row heights must not depend on which state you are in.** The icon box is a fixed square stated
+in the *row's* em (`width:1.15em` at `font-size:1.365em`) so that *it*, not the label, is the
+tallest thing in a row - which makes an expanded row and a collapsed one the same height by
+construction rather than by a `min-height` that only matches at one font size. Stating the box in
+the row's em rather than the icon's own is also what lets the glyph size change without changing
+the row: it was scaled up by a transform on the rail only, so the icons grew as the panel closed
+and shrank as it opened, a size change nobody asked for. Two bugs hid behind this: a group's row
+carried the padding twice, once on the `<summary>` and again on the label span inside it, and the
+`min-height` rule aimed at `.vtd-tree > li > .vtd-tree-label` never matched anything, because a
+branch's `<summary>` lives inside the `<details>` rather than directly under the `<li>`. Its
+computed value was `0px` in both states.
+
+### What floats the rail back out is a list, and it is written once
+
+Four separate states expand a collapsed sidebar, and a rule that misses one is a bug you only find
+by doing the exact thing it missed. They live in a `floatTriggers` constant interpolated into every
+rule that depends on it - `:not(...)` for the rail, `:is(...)` for the floated panel - because
+there is no way to keep four hand-copied compound selectors honest:
+
+- `:hover` and `:has(:focus-visible)` - the pointer and the keyboard.
+- `.vtd-sidebar-resizing` - **a drag leaves the sidebar by definition.** Dragging the trailing edge
+  wider moves it out from under the pointer, and without this the panel collapsed mid-drag with the
+  button still held down.
+- `:has(.vtd-menu[open])` - an open account menu. Without it the menu was left standing over the
+  page with the panel gone from under it, clipped to 56px.
+
+**`:focus-within` is the wrong test** and is deliberately absent: the collapse control is inside the
+panel, so a mouse click on it leaves focus inside and holds the panel open until the reader clicks
+somewhere else entirely. A mouse click does not set `:focus-visible`.
+
+**No `setPointerCapture` on the drag handle.** It looks like the right call for a drag and it is
+not needed - the move and up listeners are on `document`, which already sees the pointer wherever
+it goes - and it throws outright on a `pointerId` that is not currently active, which turns a
+synthetic `pointerdown` (how a test drives this) into a handle that does nothing at all.
+
+**The panel does not hide its overflow.** Once every piece of it narrows along with it there is
+nothing left to clip, and clipping cost more than it saved: the account menu opens a submenu
+*beside* its own row, past the panel's trailing edge, and a clipping panel cut it in half. The two
+places that genuinely have to clip - the scrolling body, a folding header or footer - do it
+themselves.
+
+### The collapse state belongs to CSS, not to an inline style
+
+`#syncCollapsed` sets a `--vtd-sidebar-width` custom property and toggles a class; every actual
+width is a rule reading that property. Setting `width` inline instead - which is what it did first -
+pinned the panel open: **an inline style beats a class**, so the collapsed rule could never narrow
+the panel and `:hover` could never widen it. Collapsing shrank the gutter and left a full-width
+panel sitting over the page.
+
+**`:focus-within` is the wrong test for "should the rail stay open".** The collapse control lives
+inside the panel, so clicking it leaves focus inside and holds the panel open until the reader
+clicks somewhere else entirely. `:has(:focus-visible)` is the right one: a mouse click does not set
+`:focus-visible`, so the click collapses immediately, while tabbing in still expands.
+
+**A control that resizes the panel has to live inside the panel.** Against the rail the drag handle
+tracked the *gutter*, so once collapsed it sat at 56px and stayed there while hovering floated the
+panel out to full width - a drag target stranded 200px from the edge it resizes.
+
+### A component never sets `position` on its own root
+
+`position` answers "where does this sit on the page", which belongs to whoever places the
+component. `Sidebar` needs a containing block for its absolutely-positioned panel and resize
+handle, and took it from its own root - which put it in direct competition with the consumer over
+one property.
+
+**The consumer loses that competition every time, and it is not close.** Their class and
+`.vtd-sidebar` have the same specificity, so the later rule wins - and a component's stylesheet
+mounts when the component is *constructed*, which happens inside the consumer's own render. The
+component's rule is always later. The showcase asked for `position:sticky`, got `relative`, and its
+leftover `top:53px` then offset the sidebar 53px *downward* rather than pinning it: it sat below
+the header with a gap and scrolled away with the page. Two visible bugs, one silently lost
+declaration.
+
+**The fix is an element the component owns outright, not a specificity trick.**
+`.vtd-sidebar-rail` sits inside the root and is the containing block; the root sets no `position`
+at all, so a consumer may use `sticky`, `fixed`, `static` or nothing and none of it has to
+out-specify anything. `:where(.vtd-sidebar){position:relative}` was tried first and is worse: it
+makes the declaration beatable by *any* selector, so an unrelated consumer rule can silently take
+away the containing block the panel depends on.
+
+The rule generalises past `position`: **if a component needs a property that describes where or how
+big it is on the page, it needs its own inner element to put it on.** The root carries what the
+component *is*, never where it goes. `width` is the exception here and is why `defaultWidth` exists
+as an attr - the collapse behaviour has to own it, so it is set as an inline style and documented,
+not left in a stylesheet for a consumer to fight.
+
+
 Four things it does that a list cannot, each one optional and each with a trap behind it:
 
-- **`collapsible`** shrinks it to a rail of icons that floats out over the page on hover or
-  `:focus-within`. ⚠️ **The children of an expanded group hide with `display:none`, never
+- **`collapsible`** shrinks it to a rail of icons that floats out over the page on any of the four
+  `floatTriggers` above. ⚠️ **The children of an expanded group collapse their grid track, never
   `visibility:hidden`.** Under `visibility` they keep their height, so the rail grows a blank
   stretch where a group's entries would have been - measured, one 236px gap between icons that are
-  otherwise 49px apart. On the rail every top-level row also takes a `min-height`, because a
-  group's row is naturally taller than a plain link's and that difference reads as a wobble once
-  the labels are gone.
+  otherwise 49px apart. Every top-level row also takes a `min-height`, because a group's row is
+  naturally taller than a plain link's and that difference reads as a wobble once the labels are
+  gone.
 - **The active *group*** is marked, not just the active page. On the rail there is no label and no
   open group to show where the reader is, so without it the sidebar names the current page and
   gives no clue which section it belongs to. `NavLink` decides what is active; `#syncActiveGroup`
@@ -740,6 +1062,26 @@ Two additions, each with a choice worth keeping:
   the array would force `label` to become optional, weakening every other entry's type, and would
   let a menu open or close on a stray rule. A `dividerBefore` on the first entry is ignored, so a
   group's first item can carry it unconditionally.
+- **`selected` makes an entry one of a radio group, scoped to its own list.** `Menu` moves the tick
+  itself on a click rather than taking new items back from the consumer: a rebuild would close the
+  submenu the entry lives in, which is the one thing `keepOpen` exists to prevent. Scoped to the
+  list because a menu may hold two groups - a sort order and a density - and a selection that
+  reached across the whole menu would clear the other one on every click. `undefined` is not
+  `false`: `false` is an unselected member of a group, `undefined` is an ordinary entry with no
+  tick, no space reserved for one, and the plain `menuitem` role.
+- **Pass `selected` a function when anything else can change the same setting.** A boolean is a
+  reading taken when the menu was built, and a second control for the same setting leaves it
+  describing a state that is no longer true - a wrong indicator is worse than none. A function is
+  re-read on every open, so two controls over one setting both stay honest without either knowing
+  the other exists. ⚠️ The tick is rendered *inside* the entry, so `innerText` reads
+  `"(tick)Compact"` whether or not that tick is the visible one. It is `aria-hidden`, so the
+  accessible name is unaffected - but a test matching on `innerText` will not find the row, and two
+  of mine did not.
+- **`keepOpen` leaves the menu, and the submenu the entry sits in, open after the click.** Closing
+  is right for navigation - the menu is gone with the page - and wrong for an entry that acts in
+  place: a theme or density switch takes effect at the moment the control disappears, so trying it
+  both ways costs a second trip through the menu. Off by default, because navigation is the common
+  case.
 
 **The navigable set is queried from the DOM on every keypress**, not captured at construction:
 opening a submenu changes what is reachable, so a list built once either skips the submenu's
@@ -787,6 +1129,16 @@ only a real consumer surfaces:
   because it needs the content element they build, so iterating the map alone reports the deepest
   node first.
 
+**The chevron is a real element, not a `::before` on the `<summary>`.** A pseudo-element has no hit
+area of its own, so every click on the row had to mean the same thing - which is fine for a tree and
+breaks the moment a row is also a destination. The label's link then covered only the pixels its
+text happened to occupy while the entire rest of the row toggled, so the two actions were neither
+distinguishable nor equally easy to hit, and the one that was a *destination* had the smaller
+target. With an element the arrow gets a 1.25em box and its own hover, and a consumer can hand the
+whole rest of the row to a link. It stays inside the `<summary>`, so toggling is still the browser's
+own behaviour and needs no handler. A leaf's `margin-inline-start` has to match the chevron's full
+width or leaf content sits left of every branch's label.
+
 `leading` and `trailing` slots match `ListItemType`'s, and **`trailing` is not a leading slot moved
 with CSS `order`** - the showcase's category counts sit at the far edge, and reordering visually
 would have left a screen reader announcing "3 Typography". The row is `display:flex` for the same
@@ -797,6 +1149,13 @@ above the label.
 ⚠️ Writing that last comment reintroduced **the backtick-in-a-CSS-template-literal bug for the
 fourth time**. It was invisible because the build output had been piped to `/dev/null` - `deno
 check` had not been re-run either. Don't discard build output.
+
+**It has now happened eight times, and the eighth was not in CSS at all** - it was a prose comment
+inside the template literal passed to `page.evaluate()` in `basic_tests.test.ts`, where a
+backticked `` `selected` `` closed the string and produced `SyntaxError: Expected ',', got
+'selected'` from a line that looked like a comment. The rule is about template literals, not about
+stylesheets: **no backticks in any comment that lives inside one**, and that includes every
+`page.evaluate(...)` body in the test suite. A guard for this is still worth writing.
 
 ## `TableOfContents` takes items, and watches with an observer
 
@@ -867,7 +1226,15 @@ rendered as prose - and each found only by checking a specific snippet rather th
 
 - **A generic is not a tag.** `getComponent<Command>` counted as an opening element, so the depth
   never came back down and every keyword after it was treated as text. A tag's `<` never directly
-  follows an identifier, `)` or `]`.
+  follows an identifier, `)` or `]`. ⚠️ **But that test cannot be a lookbehind in the pattern**,
+  which is how it was first written and how it stayed wrong for the case it could not see: inside
+  JSX text an element routinely butts straight against the words beside it, so
+  `<div>Above<Divider/>Below</div>` lost `Divider` entirely - and with no opening tag recognised
+  there was no `insideTag` for the following `/>` to close, so the depth stayed up and the rest of
+  the snippet was treated as prose (the `"vertical"` in the next example lost its string colour to
+  the same cause). The answer depends on state a pattern cannot see, so the guard belongs in the
+  handler: **inside JSX text a `<Name` is always a tag, because a generic cannot appear there.**
+  This is the same case `</` already had its own branch for; the opening half was simply missed.
 - **A closing tag is not ambiguous, and routinely follows text with no space** - `Open</Button>`.
   It gets its own branch with no lookbehind; applying the generic guard to `</` lost every closing
   tag that touched its content.
@@ -935,11 +1302,29 @@ something else says `1001`. They work today because consumers rarely isolate the
 the showcase now does, which is the honest test of whether they were ever right. Worth revisiting
 as each is touched.
 
+**`TextBox`'s `clearable` is off by default, and that is a decision rather than caution.** One
+component covers every kind of field; most are typed once and submitted, where a clear control is
+noise and on a password field worse than that. It earns its place on a box the reader edits
+repeatedly and abandons - a search or filter - and those know who they are. Turning it on wraps the
+input, so the root becomes a `<span>` and **the consumer's `class` lands on the wrapper**; the
+`.vtd-text-box` class stays on the input either way, which is what a stylesheet should target.
+Whether the control shows is decided by `:placeholder-shown`, so a clearable field with no
+placeholder gets one of a single space - without any placeholder that selector never matches and
+the control would never appear.
+
 **A filter has to show *what* matched, not just that something did.** The sidebar's entries run
 their names through `highlightMatch` - the same helper `Combobox`, `Command` and both tables use,
 now exported from `index.ts` alongside `searchHighlightCss` so a consumer building their own
 filtered list gets the same treatment rather than reinventing it. A filtered list that only gets
 shorter makes the reader re-derive the match themselves.
+
+**A category name is a search term too, and it is the one a reader who does not yet know a
+component's name actually has.** Typing "chart" found nothing while every chart sat one level down
+inside a category called Charts. A category that matches keeps *all* of its components rather than
+the four whose names happen to contain the word - the match is the category itself - and the mark
+goes on the category label, which is what says why the entries under it are there. A check that
+demands a mark on every surviving entry is wrong for that reason and had to be relaxed to "marked,
+or under a marked category".
 
 **The sidebar collapses to a 56px icon rail and floats back out on hover**, like Datadog's. Three
 details are load-bearing:
@@ -947,8 +1332,9 @@ details are load-bearing:
 - The panel is `position:absolute` inside the sticky wrapper, so expanding it lays it *over* the
   page. Growing the wrapper instead would shove the content sideways every time the pointer
   crossed the rail, which is unusable.
-- `:focus-within` expands it as well as `:hover`, or the sidebar is unreachable from the keyboard.
-- Collapsed rows hide with `visibility`, never `display:none`: the rows keep their boxes so nothing
+- `:has(:focus-visible)` expands it as well as `:hover`, or the sidebar is unreachable from the
+  keyboard - and so do a drag in progress and an open account menu. See `floatTriggers`.
+- Collapsed rows shrink and fade rather than leaving layout: the rows keep their boxes so nothing
   jumps as the panel slides, and a screen reader still reaches the labels.
 
 The toggle flips one class and persists to `localStorage`. It deliberately does **not** re-render

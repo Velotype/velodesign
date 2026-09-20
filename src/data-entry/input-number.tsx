@@ -1,4 +1,5 @@
-import { type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, setStylesheet, type StylePassthroughAttrs, type TargetedEvent, type TargetedInputEvent } from "@velotype/velotype"
+import {type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs, type TargetedEvent, type TargetedInputEvent} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 
 /**
  * Attrs type for `<InputNumber/>` Component
@@ -35,7 +36,7 @@ let areInputNumberStylesMounted = false
 export const InputNumber: FunctionComponent<InputNumberAttrsType> = function(attrs: InputNumberAttrsType, _children: RenderableElements[]): HTMLInputElement {
     if (!areInputNumberStylesMounted) {
         areInputNumberStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-input-number{
 padding:0.5ex 1ex;
 margin-inline-start:1ex;
@@ -47,7 +48,6 @@ font:inherit;
 width:8em;
 }
 .vtd-input-number:disabled{cursor:not-allowed;opacity:0.6;}
-.vtd-input-number:focus-visible{border:1px solid var(--primary);outline-color:var(--primary);}
 `, "vtd/InputNumber")
     }
 

@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -19,7 +20,7 @@ let areSpinnerStylesMounted = false
 export const Spinner: FunctionComponent<SpinnerAttrsType> = function(attrs: SpinnerAttrsType, _children: RenderableElements[]): HTMLSpanElement {
     if (!areSpinnerStylesMounted) {
         areSpinnerStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 @keyframes vtd-spinner-rotate{to{transform:rotate(360deg);}}
 .vtd-spinner{
 display:inline-block;

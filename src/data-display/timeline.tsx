@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -31,7 +32,7 @@ let areTimelineStylesMounted = false
 export const Timeline: FunctionComponent<TimelineAttrsType> = function(attrs: TimelineAttrsType, _children: RenderableElements[]): HTMLElement {
     if (!areTimelineStylesMounted) {
         areTimelineStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-timeline{width:100%;box-sizing:border-box;list-style:none;padding:0;margin:0;}
 .vtd-timeline-item{
 position:relative;

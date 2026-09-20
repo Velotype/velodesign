@@ -1,4 +1,5 @@
-import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /** A (possibly incomplete) date-time range, as picked by `<DateTimeRangePicker/>` */
@@ -55,7 +56,7 @@ export class DateTimeRangePicker extends Component<DateTimeRangePickerAttrsType>
         this.#attrs = attrs
         if (!areDateTimeRangePickerStylesMounted) {
             areDateTimeRangePickerStylesMounted = true
-            setStylesheet(`
+            mountStyles(`
 .vtd-date-time-range-picker{display:inline-flex;align-items:center;gap:0.5em;}
 .vtd-date-time-range-picker-input{
 padding:0.5ex 1ex;
@@ -67,7 +68,6 @@ font:inherit;
 color-scheme:inherit;
 }
 .vtd-date-time-range-picker-input:disabled{cursor:not-allowed;opacity:0.6;}
-.vtd-date-time-range-picker-input:focus-visible{border:1px solid var(--primary);outline-color:var(--primary);}
 .vtd-date-time-range-picker-separator{opacity:0.6;}
 `, "vtd/DateTimeRangePicker")
         }

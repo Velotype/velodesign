@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -67,7 +68,7 @@ let areTableStylesMounted = false
 export function Table<RowType>(attrs: TableAttrsType<RowType>, _children: RenderableElements[]): HTMLTableElement {
     if (!areTableStylesMounted) {
         areTableStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-table{width:100%;border-collapse:collapse;}
 .vtd-table th,.vtd-table td{padding:0.6em 0.9em;text-align:start;border-block-end:1px solid var(--background-4);}
 .vtd-table th{font-weight:bold;color:var(--text);white-space:nowrap;}

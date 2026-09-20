@@ -1,4 +1,5 @@
-import { setStylesheet } from "@velotype/velotype"
+import {} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { RenderableElements } from "@velotype/velotype"
 
 /**
@@ -60,7 +61,7 @@ export function mountDisclosureStyles(): void {
         return
     }
     areDisclosureStylesMounted = true
-    setStylesheet(`
+    mountStyles(`
 .vtd-disclosure{
 width:100%;
 box-sizing:border-box;
@@ -131,7 +132,7 @@ transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0s;
 @media (prefers-reduced-motion: reduce){
 .vtd-disclosure-content,.vtd-disclosure-chevron,.vtd-disclosure-header{transition:none;}
 }
-`, "vtd/Disclosure")
+`, "vtd/Disclosure", "base")
 }
 
 /**

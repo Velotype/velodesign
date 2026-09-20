@@ -1,4 +1,5 @@
-import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -33,7 +34,7 @@ export class Resizable extends Component<ResizableAttrsType> {
         super(attrs, children)
         if (!areResizableStylesMounted) {
             areResizableStylesMounted = true
-            setStylesheet(`
+            mountStyles(`
 .vtd-resizable{position:relative;overflow:auto;}
 .vtd-resizable-handle{position:absolute;background-color:transparent;}
 .vtd-resizable-handle:hover,.vtd-resizable-handle-active{background-color:var(--primary-6);}

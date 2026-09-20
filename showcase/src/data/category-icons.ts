@@ -32,6 +32,8 @@ const categoryIcons: Record<string, string> = {
     "Charts": "M3 13h4.5v8H3zM9.75 7.5h4.5V21h-4.5zM16.5 3h4.5v18h-4.5z",
     // A pencil, nib at the lower left
     "Data Entry": "M3.5 20.5l1.2-4.4L15.9 4.9l3.2 3.2L7.9 19.3z",
+    // Not a category: the magnifier that stands in for the search box on the collapsed rail
+    "Search": "M10.5 2a8.5 8.5 0 105.2 15.2l4.6 4.6 2.1-2.1-4.6-4.6A8.5 8.5 0 0010.5 2zm0 3a5.5 5.5 0 110 11 5.5 5.5 0 010-11z",
 }
 
 let areCategoryIconsRegistered = false
@@ -54,5 +56,8 @@ export function registerCategoryIcons(): void {
 
 /** Every category an icon was drawn for, so a test can check none has been left behind */
 export function iconedCategories(): string[] {
-    return Object.keys(categoryIcons)
+    return Object.keys(categoryIcons).filter(key => key != "Search")
 }
+
+/** The magnifier shown in place of the search box once the sidebar is a rail */
+export const searchIconKey: string = categoryIconKey("Search")

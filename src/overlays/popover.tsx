@@ -1,4 +1,5 @@
-import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -105,7 +106,7 @@ export class Popover extends Component<PopoverAttrsType> {
         this.#attrs = attrs
         if (!arePopoverStylesMounted) {
             arePopoverStylesMounted = true
-            setStylesheet(`
+            mountStyles(`
 .vtd-popover{position:relative;display:inline-block;}
 .vtd-popover-trigger{cursor:pointer;display:inline-block;}
 .vtd-popover-content{

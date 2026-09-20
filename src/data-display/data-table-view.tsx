@@ -1,4 +1,5 @@
-import { setStylesheet } from "@velotype/velotype"
+import {} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { RenderableElements } from "@velotype/velotype"
 import { Button } from "../form/button.tsx"
 import { Checkbox } from "../form/checkbox.tsx"
@@ -76,7 +77,7 @@ export function mountDataTableStyles(): void {
         return
     }
     areDataTableStylesMounted = true
-    setStylesheet(`
+    mountStyles(`
 .vtd-data-table-wrapper{width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:0.75em;}
 /*
  * The search box and the "Columns" button share one toolbar row: search takes the leading edge
@@ -129,7 +130,6 @@ font:inherit;
 font-weight:inherit;
 padding:0;
 }
-.vtd-data-table-sort-button:focus-visible{outline:1px solid var(--primary);outline-offset:1px;}
 .vtd-data-table-header-content{display:inline-flex;align-items:center;}
 .vtd-data-table-sort-indicator{margin-inline-start:0.3em;opacity:0.6;}
 .vtd-data-table-table tbody tr{position:relative;}
@@ -179,7 +179,7 @@ touch-action:none;
 .vtd-data-table-body-reloading{transition:none;}
 }
 ${searchHighlightCss}
-`, "vtd/DataTable")
+`, "vtd/DataTable", "composite")
 }
 
 /** Builds the `<colgroup>` contents, returning each column's `<col>` so a resize can size it */

@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -19,7 +20,7 @@ let areFormStylesMounted = false
 export const Form: FunctionComponent<FormAttrsType> = function(attrs: FormAttrsType, children: RenderableElements[]): HTMLFormElement {
     if (!areFormStylesMounted) {
         areFormStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-form{width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:1em;}
 `, "vtd/Form")
     }
@@ -55,7 +56,7 @@ let areFormFieldStylesMounted = false
 export const FormField: FunctionComponent<FormFieldAttrsType> = function(attrs: FormFieldAttrsType, children: RenderableElements[]): HTMLDivElement {
     if (!areFormFieldStylesMounted) {
         areFormFieldStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-form-field{width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:0.35em;}
 .vtd-form-field-label{font-weight:bold;font-size:0.9em;}
 .vtd-form-field-required{color:var(--accent);margin-inline-start:0.2em;}

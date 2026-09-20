@@ -1,4 +1,5 @@
-import { type ChildrenAttr, type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, setStylesheet, type StylePassthroughAttrs } from "@velotype/velotype"
+import {type ChildrenAttr, type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 
 /**
  * Attrs type for `<Toggle/>` Component
@@ -33,7 +34,7 @@ let areToggleStylesMounted = false
 export const Toggle: FunctionComponent<ToggleAttrsType> = function(attrs: ToggleAttrsType, children: RenderableElements[]): HTMLLabelElement {
     if (!areToggleStylesMounted) {
         areToggleStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-toggle-container{
 cursor:pointer;
 display:inline-flex;
@@ -83,7 +84,7 @@ background-color:var(--background);
 
 .vtd-toggle-disabled{opacity:0.5;cursor:not-allowed;}
 .vtd-toggle-container:has(> .vtd-toggle-input:disabled){cursor:not-allowed;}
-.vtd-toggle-input:focus-visible ~ .vtd-toggle-track{outline:1px solid var(--primary);outline-offset:1px;}
+.vtd-toggle-input:focus-visible ~ .vtd-toggle-track{outline:2px solid var(--primary-7);outline-offset:2px;}
 `, "vtd/Toggle")
     }
 

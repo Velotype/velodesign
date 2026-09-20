@@ -522,16 +522,16 @@ export const stories: ComponentStory[] = [
     },
     {
         name: "TimeAgo", group: "Data Display",
-        defaultAttrs: {minutesAgo: 5, numeric: "always", timestyle: "long"},
+        defaultAttrs: {minutesAgo: 5, numeric: "always", timeStyle: "long"},
         controls: {
             minutesAgo: {kind: "number", label: "minutesAgo"},
             numeric: {kind: "select", label: "numeric", options: ["always", "auto"]},
-            timestyle: {kind: "select", label: "timestyle", options: ["long", "short", "narrow"]},
+            timeStyle: {kind: "select", label: "timeStyle", options: ["long", "short", "narrow"]},
         },
         render: (attrs) => <TimeAgo
             timestamp={new Date(Date.now() - (attrs.minutesAgo as number) * 60000)}
             numeric={attrs.numeric as "always" | "auto"}
-            timestyle={attrs.timestyle as "long" | "short" | "narrow"}/>,
+            timeStyle={attrs.timeStyle as "long" | "short" | "narrow"}/>,
     },
     {
         name: "Divider", group: "Data Display",

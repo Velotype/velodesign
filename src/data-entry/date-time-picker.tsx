@@ -1,4 +1,5 @@
-import { type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, setStylesheet, type StylePassthroughAttrs, type TargetedEvent, type TargetedInputEvent } from "@velotype/velotype"
+import {type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs, type TargetedEvent, type TargetedInputEvent} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 
 /**
  * Attrs type for `<DateTimePicker/>` Component
@@ -35,7 +36,7 @@ let areDateTimePickerStylesMounted = false
 export const DateTimePicker: FunctionComponent<DateTimePickerAttrsType> = function(attrs: DateTimePickerAttrsType, _children: RenderableElements[]): HTMLInputElement {
     if (!areDateTimePickerStylesMounted) {
         areDateTimePickerStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-date-time-picker{
 padding:0.5ex 1ex;
 margin-inline-start:1ex;
@@ -47,7 +48,6 @@ font:inherit;
 color-scheme:inherit;
 }
 .vtd-date-time-picker:disabled{cursor:not-allowed;opacity:0.6;}
-.vtd-date-time-picker:focus-visible{border:1px solid var(--primary);outline-color:var(--primary);}
 `, "vtd/DateTimePicker")
     }
 
