@@ -1,4 +1,5 @@
-import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -72,7 +73,7 @@ export class TableOfContents extends Component<TableOfContentsAttrsType> {
 
         if (!areTableOfContentsStylesMounted) {
             areTableOfContentsStylesMounted = true
-            setStylesheet(`
+            mountStyles(`
 .vtd-table-of-contents{width:100%;box-sizing:border-box;}
 .vtd-table-of-contents-header{
 font-size:0.75em;

@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -25,7 +26,7 @@ let areNavbarStylesMounted = false
 export const Navbar: FunctionComponent<NavbarAttrsType> = function(attrs: NavbarAttrsType, children: RenderableElements[]): HTMLElement {
     if (!areNavbarStylesMounted) {
         areNavbarStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-navbar{
 width:100%;
 box-sizing:border-box;

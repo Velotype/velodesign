@@ -1,4 +1,5 @@
-import { type ChildrenAttr, Component, type RenderableElements, setStylesheet } from "@velotype/velotype"
+import {type ChildrenAttr, Component, type RenderableElements} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import { Button } from "../form/button.tsx"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
@@ -39,7 +40,7 @@ export type DrawerAttrsType = {
 export class Drawer extends Component<DrawerAttrsType> {
     /** Mount this Component */
     override mount() {
-        setStylesheet(`
+        mountStyles(`
 .vtd-drawer{
 position:fixed;
 margin:0;

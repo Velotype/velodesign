@@ -1,4 +1,5 @@
-import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 import { Button } from "../form/button.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
@@ -85,7 +86,7 @@ export class CalendarRange extends Component<CalendarRangeAttrsType> {
         this.#focusedDate = anchor
         if (!areCalendarRangeStylesMounted) {
             areCalendarRangeStylesMounted = true
-            setStylesheet(`
+            mountStyles(`
 .vtd-calendar{width:20em;max-width:100%;}
 .vtd-calendar-header{display:flex;align-items:center;justify-content:space-between;margin-block-end:0.5em;}
 .vtd-calendar-title{font-weight:bold;}
@@ -103,7 +104,6 @@ font:inherit;
 cursor:pointer;
 }
 .vtd-calendar-day:hover{background-color:var(--background-1);}
-.vtd-calendar-day:focus-visible{outline:1px solid var(--primary);outline-offset:1px;}
 .vtd-calendar-day-outside{opacity:0.35;}
 /* See Calendar's identical comment for the full rationale - a subtle background tint instead of
  * a box-shadow ring, so "today" never reads as a leftover selection/range outline. */
@@ -122,7 +122,7 @@ cursor:pointer;
 .vtd-calendar-day.vtd-calendar-day-today:hover{background-color:var(--primary-2);}
 .vtd-calendar-day.vtd-calendar-day-in-range:hover{background-color:var(--primary-4);}
 .vtd-calendar-day.vtd-calendar-day-range-start:hover,.vtd-calendar-day.vtd-calendar-day-range-end:hover{background-color:var(--primary-6);}
-`, "vtd/CalendarRange")
+`, "vtd/CalendarRange", "composite")
         }
 
         this.#gridEl.addEventListener("keydown", this.#handleGridKeyDown)

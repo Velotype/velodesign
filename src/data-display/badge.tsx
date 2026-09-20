@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -22,7 +23,7 @@ let areBadgeStylesMounted = false
 export const Badge: FunctionComponent<BadgeAttrsType> = function(attrs: BadgeAttrsType, children: RenderableElements[]): HTMLSpanElement {
     if (!areBadgeStylesMounted) {
         areBadgeStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-badge{
 display:inline-block;
 padding:0.1em 0.6em;

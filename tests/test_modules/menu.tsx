@@ -29,10 +29,18 @@ class MenuGallery extends Component<EmptyAttrs> {
                     {label: "Invite someone", onClick: () => {this.clicks.value += 1}},
                     {label: "Members", href: "/menu/members"},
                     {label: "Billing", href: "/menu/billing"},
+                    // keepOpen: a setting the reader may want to try both ways, so the pair of
+                    // controls has to still be there after the first click
+                    {label: "Compact rows", keepOpen: true, onClick: () => {this.clicks.value += 1}},
                     {label: "Regions", children: [
                         {label: "Europe", href: "/menu/eu"},
                         {label: "Americas", href: "/menu/us"}
                     ]}
+                ]},
+                // A checkable group: Menu moves the tick itself, scoped to this one list
+                {label: "Density", children: [
+                    {label: "Comfortable", keepOpen: true, selected: true, onClick: () => {this.clicks.value += 1}},
+                    {label: "Compact", keepOpen: true, selected: false, onClick: () => {this.clicks.value += 1}},
                 ]},
                 {label: "Preferences", onClick: () => {this.clicks.value += 1}},
                 {label: "Sign out", dividerBefore: true, onClick: () => {this.clicks.value += 1}}

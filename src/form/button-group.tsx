@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -21,7 +22,7 @@ let areButtonGroupStylesMounted = false
 export const ButtonGroup: FunctionComponent<ButtonGroupAttrsType> = function(attrs: ButtonGroupAttrsType, children: RenderableElements[]): HTMLDivElement {
     if (!areButtonGroupStylesMounted) {
         areButtonGroupStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-button-group{display:inline-flex;}
 .vtd-button-group-vertical{flex-direction:column;}
 .vtd-button-group .vtd-button{position:relative;border-radius:0;}
@@ -32,7 +33,7 @@ export const ButtonGroup: FunctionComponent<ButtonGroupAttrsType> = function(att
 .vtd-button-group-vertical .vtd-button:not(:first-child){margin-block-start:-1px;}
 .vtd-button-group-vertical .vtd-button:first-child{border-start-start-radius:0.25rem;border-start-end-radius:0.25rem;}
 .vtd-button-group-vertical .vtd-button:last-child{border-end-start-radius:0.25rem;border-end-end-radius:0.25rem;}
-`, "vtd/ButtonGroup")
+`, "vtd/ButtonGroup", "composite")
     }
 
     const orientation = attrs.orientation || "horizontal"

@@ -381,6 +381,8 @@ const typeDefinitions: Record<string, TypeDoc> = {
             {name: "href", type: "string", description: "Target URL, making this entry a link."},
             {name: "spa", type: "boolean", defaultValue: "false", description: "Client-side route change rather than a page load, for an href inside an SPA."},
             {name: "onClick", type: "() => void", description: "Called when the entry is chosen. May be combined with href."},
+            {name: "keepOpen", type: "boolean", defaultValue: "false", description: "Leaves the menu, and any submenu the entry sits in, open after the click. For an entry that acts in place rather than navigating - a theme or density switch - where closing takes the control away at the moment it takes effect."},
+            {name: "selected", type: "boolean | (() => boolean)", description: "Marks this entry as the chosen one among the checkable entries of its own list, giving it role=\"menuitemradio\" and a tick. Set it on two or more siblings to make them a radio group; Menu moves the selection itself on a click, so the tick follows without a rebuild. Pass a function when something outside the menu can change the same setting - it is re-read every time the menu opens, so the indicator cannot go stale."},
             {name: "disabled", type: "boolean", defaultValue: "false", description: "Renders the entry unavailable and ignores clicks."},
             {name: "children", type: "MenuItemType[]", description: "Nested entries. An entry with children opens a submenu beside itself rather than acting, so its own href and onClick are ignored."},
             {name: "dividerBefore", type: "boolean", defaultValue: "false", description: "Draws a divider immediately above this entry, separating it from what came before. Ignored on the first entry, so a group's first item can carry it unconditionally."},
@@ -693,6 +695,13 @@ const themeOptionDefinitions: Record<string, TypeDoc> = {
             {name: "closeSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.closeSymbol", description: "Content of the corner close button."},
         ],
     },
+    MenuThemeOptions: {
+        name: "MenuThemeOptions",
+        description: "The tick Menu draws beside the selected entry of a checkable group.",
+        fields: [
+            {name: "confirmSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.confirmSymbol", description: "Marks the selected entry."},
+        ],
+    },
     PopconfirmThemeOptions: {
         name: "PopconfirmThemeOptions",
         description: "Popconfirm's confirm and cancel controls.",
@@ -739,6 +748,7 @@ const componentThemeOptions: Record<string, string[]> = {
     Pagination: ["CommonThemeOptions", "PaginationThemeOptions"],
     Modal: ["CommonThemeOptions", "ModalThemeOptions"],
     Drawer: ["CommonThemeOptions", "DrawerThemeOptions"],
+    Menu: ["CommonThemeOptions", "MenuThemeOptions"],
     Popconfirm: ["CommonThemeOptions", "PopconfirmThemeOptions"],
     TextFormField: ["CommonThemeOptions", "TextFormFieldThemeOptions"],
     TextEditableField: ["CommonThemeOptions", "TextFormFieldThemeOptions"],
@@ -797,8 +807,10 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "value", type: "string | number", description: "Current value."},
         {name: "placeholder", type: "string", description: "Placeholder text."},
         {name: "required", type: "boolean", defaultValue: "false", description: "Marks the field required in a <form>."},
-        {name: "onInput", type: "(event) => void", description: "Called continuously as the handle is dragged."},
-        {name: "onChange", type: "(event) => void", description: "Called once, when the handle is released."},
+        {name: "clearable", type: "boolean", defaultValue: "false", description: "Adds a control that empties the field, shown only while it has a value. Off by default: this component covers every kind of field, and on one typed once and submitted a clear button is noise - on a password field, worse. It earns its place on a search or filter box, which knows who it is. Turning it on wraps the input, so the root becomes a <span> with the <input> inside; target .vtd-text-box for the input either way."},
+        {name: "clearLabel", type: "string", description: "Accessible name for that control, which is a glyph and so has no name of its own."},
+        {name: "onInput", type: "(event) => void", description: "Called on every keystroke, and when the clear control empties the field."},
+        {name: "onChange", type: "(event) => void", description: "Called when the field is committed - on blur, or when the clear control empties it."},
     ],
     Textarea: [
         {name: "name", type: "string", description: "Name for the underlying <textarea>."},
@@ -879,6 +891,7 @@ const attrTables: Record<string, AttrDoc[]> = {
     Sidebar: [
         {name: "items", type: "SidebarItemType[]", required: true, description: "The entries to list. An entry with children becomes a collapsible group."},
         {name: "header", type: "RenderableElements", description: "Content shown above the list - a search box, a section title. It survives setItems, which is what lets a search box live here."},
+        {name: "collapsedHeader", type: "RenderableElements", description: "What the header shows once collapsed to the rail - a search icon standing in for a search box. Setting it also keeps the header's height, so collapsing moves the entries sideways rather than up; left unset the header folds away instead."},
         {name: "footer", type: "RenderableElements", description: "Content pinned below the list, above the profile row and the collapse control."},
         {name: "profile", type: "SidebarProfileType", description: "An account row at the very foot, which opens a Menu when clicked."},
         {name: "ariaLabel", type: "string", description: "Accessible label for the nav landmark."},
@@ -997,11 +1010,12 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "initials", type: "string", description: "Fallback shown when there's no image (or it fails to load)."},
         {name: "alt", type: "string", description: "Alt text for the image."},
         {name: "size", type: "string", defaultValue: '"2.5em"', description: "CSS size."},
+        {name: "type", type: "AvatarType", defaultValue: '"primary"', description: "Which theme colour the initials fallback is drawn in. A colour name rather than a colour, so the palette supplies a light and a dark value for each and the contrast holds in both themes. An avatar showing an image covers its own background anyway."},
     ],
     TimeAgo: [
         {name: "timestamp", type: "Date | string", required: true, description: "The moment to format, relative to now."},
-        {name: "numeric", type: '"always" | "auto"', description: 'Force numeric phrasing vs. allow "yesterday" etc.'},
-        {name: "timestyle", type: '"long" | "short" | "narrow"', description: "Verbosity of the formatted string."},
+        {name: "numeric", type: '"always" | "auto"', defaultValue: '"always"', description: 'Whether to always use a number. "always" gives "1 day ago"; "auto" lets the browser say "yesterday" where the reader\'s locale has a word for it.'},
+        {name: "timeStyle", type: '"long" | "short" | "narrow"', defaultValue: '"long"', description: 'How verbose the formatted string is: "3 minutes ago", "3 min. ago", or "3m ago" - per the reader\'s locale.'},
     ],
     Divider: [
         {name: "orientation", type: '"horizontal" | "vertical"', defaultValue: "horizontal", description: "Direction of the line."},
@@ -1457,6 +1471,12 @@ const examplesByName: Record<string, ExampleDoc[]> = {
 <TextBox type="email" placeholder="Email"/>
 <TextBox type="phone" placeholder="Phone"/>
 <TextBox type="password" placeholder="Password"/>`},
+        {label: "Clearable - for a field edited repeatedly, like a filter", node: () => <TextBox
+            type="text"
+            clearable
+            clearLabel="Clear"
+            value="something typed"
+            placeholder="Search..."/>, code: `<TextBox type="text" clearable clearLabel="Clear" placeholder="Search..."/>`},
     ],
     Textarea: [
         {label: "Default", node: () => <Textarea placeholder="Type something..." rows={3}/>, code: `<Textarea placeholder="Type something..." rows={3}/>`},
@@ -1944,6 +1964,17 @@ secondary. The last paragraph in a container drops its bottom margin.</Paragraph
         {label: "Sizes", node: () => <div style={row}><Avatar initials="JR" size="1.5em"/><Avatar initials="JR"/><Avatar initials="JR" size="3.5em"/></div>, code: `<Avatar initials="JR" size="1.5em"/>
 <Avatar initials="JR"/>
 <Avatar initials="JR" size="3.5em"/>`},
+        {label: "Colors", node: () => <div style={row}>
+            <Avatar initials="PR"/>
+            <Avatar initials="SE" type="secondary"/>
+            <Avatar initials="WA" type="warning"/>
+            <Avatar initials="DA" type="danger"/>
+            <Avatar initials="NE" type="neutral"/>
+        </div>, code: `<Avatar initials="PR"/>
+<Avatar initials="SE" type="secondary"/>
+<Avatar initials="WA" type="warning"/>
+<Avatar initials="DA" type="danger"/>
+<Avatar initials="NE" type="neutral"/>`},
         {label: "Image (falls back to initials if it fails to load)", node: () => <Avatar src="https://placehold.co/64x64" alt="Placeholder" initials="JR"/>, code: `<Avatar src="https://placehold.co/64x64" alt="Placeholder" initials="JR"/>`},
     ],
     TimeAgo: [

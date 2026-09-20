@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 import { Link } from "./link.tsx"
 import { Menu } from "./menu.tsx"
@@ -112,7 +113,7 @@ function splitTrail(items: BreadcrumbItemType[], maxItems: number | undefined): 
 export const Breadcrumbs: FunctionComponent<BreadcrumbsAttrsType> = function(attrs: BreadcrumbsAttrsType, _children: RenderableElements[]): HTMLElement {
     if (!areBreadcrumbsStylesMounted) {
         areBreadcrumbsStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-breadcrumbs-list{
 display:flex;
 flex-wrap:wrap;

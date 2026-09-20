@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 import { CommonThemeOptions, themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
@@ -36,7 +37,7 @@ let areEmptyStylesMounted = false
 export const Empty: FunctionComponent<EmptyAttrsType> = function(attrs: EmptyAttrsType, children: RenderableElements[]): HTMLDivElement {
     if (!areEmptyStylesMounted) {
         areEmptyStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-empty{
 width:100%;
 box-sizing:border-box;

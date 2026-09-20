@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { FunctionComponent, IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
 import { createElementNSHelper, setAttributeHelper, svgNamespace } from "../core/utilities.ts"
 
@@ -68,7 +69,7 @@ let iconStylesheetSet: boolean = false
  */
 export function registerIcon(key: string, icon: Icon) {
     if (!iconStylesheetSet) {
-        setStylesheet('.vtd-icon{height:1em;vertical-align:middle;}','Velodesign Icon')
+        mountStyles('.vtd-icon{height:1em;vertical-align:middle;}','Velodesign Icon')
         iconStylesheetSet = true
     }
     icons.set(key, icon)

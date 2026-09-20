@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 import { cssAlign, resolveGap } from "./spacing.ts"
 import type { AlignItems, GapSize } from "./spacing.ts"
@@ -40,7 +41,7 @@ let areGridStylesMounted = false
 export const Grid: FunctionComponent<GridAttrsType> = function(attrs: GridAttrsType, children: RenderableElements[]): HTMLDivElement {
     if (!areGridStylesMounted) {
         areGridStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-grid{display:grid;width:100%;box-sizing:border-box;}
 `, "vtd/Grid")
     }

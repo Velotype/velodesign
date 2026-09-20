@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -18,7 +19,7 @@ let areScrollAreaStylesMounted = false
 export const ScrollArea: FunctionComponent<ScrollAreaAttrsType> = function(attrs: ScrollAreaAttrsType, children: RenderableElements[]): HTMLDivElement {
     if (!areScrollAreaStylesMounted) {
         areScrollAreaStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-scroll-area{
 width:100%;
 box-sizing:border-box;

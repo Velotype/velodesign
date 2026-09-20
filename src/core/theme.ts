@@ -1,4 +1,5 @@
-import { setStylesheet } from "@velotype/velotype"
+import {} from "@velotype/velotype"
+import { mountStyles } from "./styles.ts"
 import { setAttributeHelper } from "./utilities.ts"
 
 //
@@ -144,8 +145,23 @@ let currentColorScheme: ColorSchemeType = light
  * A collection of functions to manage the Color scheme
  */
 export const ColorScheme: {
-    /** Get the current color scheme */
+    /**
+     * The color scheme currently *in effect*, which is only ever `light` or `dark`.
+     *
+     * `default` resolves here to whichever the browser prefers, so this answers "what does the page
+     * look like right now" and never "what did the reader ask for". For the second question - which
+     * is what a theme picker has to show as its current value - use `getColorSchemePreference`.
+     */
     getColorScheme: () => ColorSchemeType
+    /**
+     * What the reader chose: `light`, `dark`, or `default` to follow the browser.
+     *
+     * Distinct from `getColorScheme` and deliberately so. A picker offering all three has no way to
+     * say which is selected otherwise: `default` has already resolved to one of the other two by
+     * the time anything can read it, so a picker built on `getColorScheme` shows Light selected
+     * whether the reader chose Light or chose to follow a browser that prefers it.
+     */
+    getColorSchemePreference: () => ColorSchemeType
     /** Set the color scheme */
     setColorScheme: (newScheme: ColorSchemeType) => void
     /**
@@ -156,35 +172,38 @@ export const ColorScheme: {
     getColorScheme: function() {
         return currentColorScheme
     },
+    getColorSchemePreference: function() {
+        const stored = localStorage.getItem(localThemeKey)
+        if (stored == dark) {
+            return dark
+        }
+        if (stored == light) {
+            return light
+        }
+        // Anything else - nothing stored, or a value this version does not recognise - is the
+        // browser's preference, which is what resetColorScheme below actually applies
+        return defaultScheme
+    },
     setColorScheme: function(newScheme: ColorSchemeType) {
         localStorage.setItem(localThemeKey, newScheme)
         ColorScheme.resetColorScheme()
     },
     resetColorScheme: function() {
         const localColorScheme = localStorage.getItem(localThemeKey)
-        if (localColorScheme) {
-            const prefersColorSchemeLight = globalThis.matchMedia('(prefers-color-scheme: light)').matches
-            if (localColorScheme == dark) {
-                currentColorScheme = dark
-            } else if (localColorScheme == light) {
-                currentColorScheme = light
-            } else if (localColorScheme == defaultScheme) {
-                // Use browser default
-                if (prefersColorSchemeLight) {
-                    currentColorScheme = light
-                } else {
-                    currentColorScheme = dark
-                }
-            } else {
+        if (localColorScheme == dark) {
+            currentColorScheme = dark
+        } else if (localColorScheme == light) {
+            currentColorScheme = light
+        } else {
+            if (localColorScheme && localColorScheme != defaultScheme) {
                 //Invalid value, reset localStorage
                 localStorage.removeItem(localThemeKey)
-                // Use browser default
-                if (prefersColorSchemeLight) {
-                    currentColorScheme = light
-                } else {
-                    currentColorScheme = dark
-                }
             }
+            // Use browser default. This is also the no-preference case, which used to fall through
+            // every branch and leave currentColorScheme at its initial `light` - so a first visit
+            // ignored a reader whose browser asks for dark, and the `default` scheme was a value
+            // that could be set but was never the starting point.
+            currentColorScheme = globalThis.matchMedia('(prefers-color-scheme: light)').matches ? light : dark
         }
         // Set theme on the html element
         if (currentColorScheme == light) {
@@ -201,13 +220,13 @@ export const ColorScheme: {
  * Note: Selected element(s) need `data-theme="light"` or `data-theme="dark"` for theme to
  * work properly
  *
- * `setStylesheet` only applies the styles for a given `selector` once by default - calling
+ * `mountStyles` only applies the styles for a given `selector` once by default - calling
  * this again for the same `selector` with different `options` is a no-op unless `resetSheet`
  * is `true`, which replaces the previously-injected stylesheet with one built from the new
  * `options` (e.g. for a live theme editor letting a user preview color changes in real time).
  */
 export function setThemeOnSelector(selector: string, options?: ThemeColorOptions | undefined, resetSheet: boolean = false): void {
-    setStylesheet(`
+    mountStyles(`
 ${selector}[data-theme="light"]{
 ${textColors("text", options?.textLightColor || defaultTextLightColor, options?.textDarkColor || defaultTextDarkColor)}
 ${backgroundColorGradient("background", options?.backgroundLightColor || defaultBackgroundLightColor, options?.backgroundLightAltColor || defaultBackgroundLightAltColor)}
@@ -225,7 +244,7 @@ ${middleColorSpread("warning", black, options?.warningDarkColor || defaultWarnin
 ${middleColorSpread("accent", black, options?.accentDarkColor || defaultAccentDarkColor, white)}
 color-scheme:dark;}
 ${selector}{color:var(--text);background-color:var(--background);}
-${selector} a{color:var(--text)}`,`vtd/Theme on ${selector}`, resetSheet)
+${selector} a{color:var(--text)}`,`vtd/Theme on ${selector}`, "theme", resetSheet)
 }
 
 /**
@@ -247,7 +266,7 @@ export const Theme: {
             // -- https://www.joshwcomeau.com/css/custom-css-reset/
             // -- https://www.joshwcomeau.com/snippets/html/interpolate-size/
             // -- https://piccalil.li/blog/a-more-modern-css-reset/
-            setStylesheet(`*{margin:0;padding:0;line-height:calc(1em + 4px);box-sizing:border-box;}
+            mountStyles(`*{margin:0;padding:0;line-height:calc(1em + 4px);box-sizing:border-box;}
 html{-moz-text-size-adjust:none;-webkit-text-size-adjust:none;text-size-adjust:none;scroll-behavior:smooth;interpolate-size:allow-keywords;}
 body{-webkit-font-smoothing:antialiased;min-width:250px}
 img,svg{display:inline-block;max-width:100%;}
@@ -257,7 +276,7 @@ p{text-wrap:pretty;}
 h1,h2,h3{text-wrap:balance;}
 menu,ul,ol{list-style:none;}
 button{color:inherit;border:none;}
-:target{scroll-margin-block:20ex;}`,"Velodesign CSS reset")
+:target{scroll-margin-block:20ex;}`,"Velodesign CSS reset", "reset")
         }
 
         // Set Theme on `<html>` element
@@ -265,7 +284,7 @@ button{color:inherit;border:none;}
 
         // Delay setting transitions so that the page loads cleanly
         globalThis.setTimeout(function(){
-            setStylesheet(`body{transition:color 0.25s ease-in-out,background-color 0.25s ease-in-out;}`,"Velodesign Theme Color transitions")
+            mountStyles(`body{transition:color 0.25s ease-in-out,background-color 0.25s ease-in-out;}`,"Velodesign Theme Color transitions", "theme")
         },150)
 
         //Trigger initial color scheme selection

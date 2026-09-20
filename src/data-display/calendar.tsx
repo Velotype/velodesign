@@ -1,4 +1,5 @@
-import { Component, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 import { Button } from "../form/button.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
@@ -59,7 +60,7 @@ export class Calendar extends Component<CalendarAttrsType> {
         this.#focusedDate = attrs.value ?? today
         if (!areCalendarStylesMounted) {
             areCalendarStylesMounted = true
-            setStylesheet(`
+            mountStyles(`
 .vtd-calendar{width:20em;max-width:100%;}
 .vtd-calendar-header{display:flex;align-items:center;justify-content:space-between;margin-block-end:0.5em;}
 .vtd-calendar-title{font-weight:bold;}
@@ -77,7 +78,6 @@ font:inherit;
 cursor:pointer;
 }
 .vtd-calendar-day:hover{background-color:var(--background-1);}
-.vtd-calendar-day:focus-visible{outline:1px solid var(--primary);outline-offset:1px;}
 .vtd-calendar-day-outside{opacity:0.35;}
 /*
  * "Today" is a subtle background tint, not a box-shadow ring - a ring reads too much like a

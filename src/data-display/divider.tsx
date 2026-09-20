@@ -1,4 +1,5 @@
-import { passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+import {passthroughAttrsToElement} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
 
 /**
@@ -17,7 +18,7 @@ let areDividerStylesMounted = false
 export const Divider: FunctionComponent<DividerAttrsType> = function(attrs: DividerAttrsType, _children: RenderableElements[]): HTMLElement {
     if (!areDividerStylesMounted) {
         areDividerStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-divider-horizontal{
 width:100%;
 box-sizing:border-box;

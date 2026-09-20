@@ -1,4 +1,5 @@
-import { type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, setStylesheet, type StylePassthroughAttrs, type TargetedEvent, type TargetedInputEvent } from "@velotype/velotype"
+import {type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs, type TargetedEvent, type TargetedInputEvent} from "@velotype/velotype"
+import { mountStyles } from "../core/styles.ts"
 
 /**
  * Attrs type for `<Slider/>` Component
@@ -30,7 +31,7 @@ let areSliderStylesMounted = false
 export const Slider: FunctionComponent<SliderAttrsType> = function(attrs: SliderAttrsType, _children: RenderableElements[]): HTMLInputElement {
     if (!areSliderStylesMounted) {
         areSliderStylesMounted = true
-        setStylesheet(`
+        mountStyles(`
 .vtd-slider{
 appearance:none;
 -webkit-appearance:none;
@@ -62,7 +63,6 @@ height:0.35em;
 border-radius:999px;
 background-color:var(--background-3);
 }
-.vtd-slider:focus-visible{outline:1px solid var(--primary);outline-offset:2px;}
 `, "vtd/Slider")
     }
 
