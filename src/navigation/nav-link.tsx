@@ -1,6 +1,6 @@
-import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { ChildrenAttr, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { ChildrenAttr, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { History } from "../core/history.ts"
 
 /**
@@ -38,18 +38,21 @@ export class NavLink extends Component<NavLinkAttrsType> {
     override mount() {
         if (!areNavLinkStylesMounted) {
             areNavLinkStylesMounted = true
-            mountStyles(`
+            mountStyles(
+`
 .vtd-nav-link{
 position:relative;
 color:inherit;
 text-decoration:none;
 }
+` +
 /*
  * See Tabs' identical comment for the full explanation: ::after carries a permanently-bold,
  * invisible copy of the link text (via attr(data-label), set only when children is a plain
  * string) so switching a link's own weight to bold on activation - which can happen live, via
  * popstate/locationchange, while this exact element stays mounted - never shifts layout.
  */
+`
 .vtd-nav-link::after{
 content:attr(data-label);
 display:block;

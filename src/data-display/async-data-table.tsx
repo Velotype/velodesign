@@ -1,5 +1,5 @@
-import { Component, passthroughAttrsToElement } from "@velotype/velotype"
-import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import { Component, passthroughAttrsToElement } from "../core/velotype.ts"
+import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { Button } from "../form/button.tsx"
 import { ButtonGroup } from "../form/button-group.tsx"
 import { Pagination } from "../navigation/pagination.tsx"

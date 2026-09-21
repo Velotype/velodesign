@@ -1,6 +1,6 @@
-import {passthroughAttrsToElement} from "@velotype/velotype"
+import {passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { IdAttr, RenderableElements, FunctionComponent, StylePassthroughAttrs } from "@velotype/velotype"
+import type { IdAttr, RenderableElements, FunctionComponent, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /**
  * Various types of `<Rate/>`s

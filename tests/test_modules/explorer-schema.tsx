@@ -82,7 +82,7 @@ import {
     Tooltip, type TooltipPlacement,
     Tree,
     Upload,
-} from "../../src/index.ts"
+} from "@velotype/velodesign"
 
 /** A single editable control shown in the Explorer's Controls panel */
 export type ControlDef =

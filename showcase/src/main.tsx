@@ -1,6 +1,6 @@
 import { replaceElementWithRoot } from "@velotype/velotype"
 
-import { Theme } from "../../src/index.ts"
+import { Theme } from "@velotype/velodesign"
 import { AppShell } from "./app-shell.tsx"
 import { loadSavedTheme } from "./pages/theme-builder.tsx"
 import { applySymbols, loadSavedSymbols } from "./data/theme-symbols.ts"

@@ -2,7 +2,7 @@ import { ChartFrame } from "./chart-frame.ts"
 import { svgEl } from "./chart-common.ts"
 import { arcPath } from "./pie-chart.ts"
 import type { ChartBaseAttrsType, ChartDataTable } from "./chart-common.ts"
-import type { IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
+import type { IdAttr, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /** A coloured band along a gauge's track, for marking good/warning/critical ranges */
 export type GaugeBandType = {

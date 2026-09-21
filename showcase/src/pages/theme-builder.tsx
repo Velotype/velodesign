@@ -1,7 +1,7 @@
 import { Component, RenderBasic, setStylesheet } from "@velotype/velotype"
 import type { EmptyAttrs, RenderableElements, TargetedEvent } from "@velotype/velotype"
 
-import { Alert, Avatar, Badge, Button, Card, ColorPicker, Heading, Paragraph, Progress, Stack, Text, TextBox, setThemeOnSelector, type ThemeColorOptions } from "../../../src/index.ts"
+import { Alert, Avatar, Badge, Button, Card, ColorPicker, Heading, Paragraph, Progress, Stack, Text, TextBox, setThemeOnSelector, type ThemeColorOptions } from "@velotype/velodesign"
 import { commonSymbolOptions, componentSymbolOptions, effectiveFallback, loadSavedSymbols, setSymbols, symbolCode, symbolKey } from "../data/theme-symbols.ts"
 import type { SymbolOption } from "../data/theme-symbols.ts"
 

@@ -1,6 +1,6 @@
-import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { animateClosed, buildDisclosureContent, flushDisclosureLayout, mountDisclosureStyles } from "./disclosure-view.tsx"
 
 /**
@@ -92,7 +92,8 @@ export class Tree extends Component<TreeAttrsType> {
         mountDisclosureStyles()
         if (!areTreeStylesMounted) {
             areTreeStylesMounted = true
-            mountStyles(`
+            mountStyles(
+`
 .vtd-tree{width:100%;box-sizing:border-box;list-style:none;padding:0;margin:0;}
 .vtd-tree-children{list-style:none;padding-inline-start:1.25em;margin:0;}
 .vtd-tree-node{margin-block:0.1em;}
@@ -104,6 +105,7 @@ list-style:none;
 user-select:none;
 }
 .vtd-tree-leaf{display:block;}
+` +
 /*
  * The row is a flex line so the chevron and the label sit on one baseline. It has to be: with a
  * leading/trailing slot the label becomes a block-level flex container, which a plain display:block
@@ -111,9 +113,11 @@ user-select:none;
  * makes the chevron a flex item instead, and a text-only label lays out as it always did.
  * (No backticks in here - they close the template literal. CLAUDE.md, fourth occurrence.)
  */
+`
 .vtd-tree-label{display:flex;align-items:center;}
 .vtd-tree-label::-webkit-details-marker{display:none;}
 .vtd-tree-label::marker{display:none;content:"";}
+` +
 /*
  * A real element rather than a ::before on the summary, which is what it used to be.
  *
@@ -127,6 +131,7 @@ user-select:none;
  * the rest of the row to a link and the two actions are visibly separate. It stays inside the
  * <summary>, so toggling remains the browser's own behaviour and needs no handler.
  */
+`
 .vtd-tree-chevron{
 display:inline-flex;
 align-items:center;
@@ -150,16 +155,22 @@ border-width:0 0.1em 0.1em 0;
 transform:rotate(-45deg);
 transition:transform 0.15s ease-in-out;
 }
+` +
 /* Matches the chevron elsewhere: it turns back the moment a close starts, not when it finishes */
+`
 .vtd-tree-node[open]:not(.vtd-disclosure-closing) > .vtd-tree-label .vtd-tree-chevron::before{transform:rotate(45deg);}
+` +
 /* Lines a leaf's content up with a branch's label, past where that branch's chevron sits */
+`
 .vtd-tree-leaf{margin-inline-start:1.5em;}
 .vtd-tree-label:hover,.vtd-tree-leaf:hover{background-color:var(--background-1);}
+` +
 /*
  * A row with either slot becomes a flex line: leading, the label, then trailing pushed to the far
  * edge by the label's own growth. The slots sit in reading order in the markup rather than being
  * reordered in CSS, so what a screen reader announces matches what the row looks like.
  */
+`
 .vtd-tree-label-content{display:flex;align-items:center;gap:0.4em;flex-grow:1;min-width:0;}
 .vtd-tree-label-main{flex-grow:1;min-width:0;}
 .vtd-tree-leading,.vtd-tree-trailing{display:inline-flex;align-items:center;flex-shrink:0;}

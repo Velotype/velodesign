@@ -1,4 +1,4 @@
-import {type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs} from "@velotype/velotype"
+import {type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 
 /**
@@ -40,7 +40,8 @@ let areAvatarStylesMounted = false
 export const Avatar: FunctionComponent<AvatarAttrsType> = function(attrs: AvatarAttrsType, _children: RenderableElements[]): HTMLSpanElement {
     if (!areAvatarStylesMounted) {
         areAvatarStylesMounted = true
-        mountStyles(`
+        mountStyles(
+`
 .vtd-avatar{
 position:relative;
 display:inline-flex;
@@ -54,12 +55,14 @@ font-weight:bold;
 user-select:none;
 flex-shrink:0;
 }
+` +
 /*
  * The -3 step of each ramp, which is the package's "light fill" everywhere else (Badge, Tag,
  * Alert), paired with plain --text. Both sides of that pairing flip with the theme, so the
  * contrast holds in light and dark without either being stated - which is the whole reason this
  * takes a colour name rather than a colour.
  */
+`
 .vtd-avatar-primary{background-color:var(--primary-3);}
 .vtd-avatar-secondary{background-color:var(--secondary-3);}
 .vtd-avatar-warning{background-color:var(--warning-3);}

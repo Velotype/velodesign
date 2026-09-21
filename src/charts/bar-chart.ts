@@ -3,7 +3,7 @@ import { drawAxes, niceTicks, seriesColor, svgEl, yScale } from "./chart-common.
 import type {
     ChartBaseAttrsType, ChartDataTable, ChartPointType, ChartSeriesType, PlotBox, TooltipRow
 } from "./chart-common.ts"
-import type { IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
+import type { IdAttr, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /**
  * Attrs type for `<BarChart/>` Component

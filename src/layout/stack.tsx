@@ -1,6 +1,6 @@
-import {passthroughAttrsToElement} from "@velotype/velotype"
+import {passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { cssAlign, cssJustify, resolveGap } from "./spacing.ts"
 import type { AlignItems, GapSize, JustifyContent } from "./spacing.ts"
 
@@ -45,9 +45,12 @@ let areStackStylesMounted = false
 export const Stack: FunctionComponent<StackAttrsType> = function(attrs: StackAttrsType, children: RenderableElements[]): HTMLDivElement {
     if (!areStackStylesMounted) {
         areStackStylesMounted = true
-        mountStyles(`
+        mountStyles(
+`
 .vtd-stack{display:flex;width:100%;box-sizing:border-box;}
+` +
 /* An inline stack sizes to its content, like the text it sits among */
+`
 .vtd-stack-inline{display:inline-flex;width:auto;}
 `, "vtd/Stack")
     }

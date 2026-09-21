@@ -1,6 +1,6 @@
-import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { History } from "../core/history.ts"
 import { themeOptions } from "../core/theme-options.ts"
 import type { ThemeSymbol } from "../core/theme-options.ts"
@@ -359,7 +359,8 @@ export class Menu extends Component<MenuAttrsType> {
         this.#attrs = attrs
         if (!areMenuStylesMounted) {
             areMenuStylesMounted = true
-            mountStyles(`
+            mountStyles(
+`
 .vtd-menu{
 position:relative;
 display:inline-block;
@@ -397,6 +398,7 @@ color:inherit;
 text-decoration:none;
 }
 .vtd-menu-item:hover{background-color:var(--background-2);}
+` +
 /*
  * Keyboard position in a popup list is a tinted fill, not a ring: the rows are full-bleed inside
  * the panel, so an offset outline would run into its edges. It must differ from hover, which is
@@ -405,13 +407,16 @@ text-decoration:none;
  * and on a row the pointer happened to rest on it looked like nothing at all. Same tint as Command
  * and the two listboxes, so one colour means one thing everywhere in the package.
  */
+`
 .vtd-menu-item:focus-visible{background-color:var(--primary-3);outline:none;}
 .vtd-menu-item-disabled{opacity:0.5;cursor:not-allowed;pointer-events:none;}
+` +
 /*
  * The tick is always rendered and only its opacity changes, so the label sits in the same place
  * whether or not this is the selected entry. Rendering it conditionally would move every label in
  * the group sideways each time the reader picked a different one.
  */
+`
 .vtd-menu-item-checkable{display:flex;align-items:center;gap:0.4em;}
 .vtd-menu-check{
 display:inline-flex;
@@ -424,21 +429,29 @@ color:var(--primary);
 }
 .vtd-menu-item-checkable[aria-checked="true"]{font-weight:bold;}
 .vtd-menu-item-checkable[aria-checked="true"] .vtd-menu-check{opacity:1;}
+` +
 /*
  * An entry is the positioning context for its own submenu, so a flyout sits beside the row that
  * opened it rather than beside the menu as a whole.
  */
+`
 .vtd-menu-entry{position:relative;}
+` +
 /* A divider belongs to the entry below it, drawn in its margin so no row changes height */
+`
 .vtd-menu-entry-divided{
 margin-block-start:0.3em;
 padding-block-start:0.3em;
 border-block-start:1px solid var(--background-4);
 }
+` +
 /* The parent row is a div, not a link - there is nothing to navigate to, and a link that only
    opened a submenu would be announced as a destination */
+`
 .vtd-menu-item-parent{cursor:pointer;display:flex;align-items:center;gap:0.5em;}
+` +
 /* A caret drawn in CSS, for the same reason the rest of the package does: no icon-font dependency */
+`
 .vtd-menu-item-parent::after{
 content:"";
 margin-inline-start:auto;
@@ -463,10 +476,12 @@ border:1px solid var(--background-4);
 border-radius:0.25rem;
 box-shadow:0 2px 8px rgba(0,0,0,0.15);
 }
+` +
 /*
  * One open state, set by both pointer and keyboard. A :hover rule as well would race it: the
  * pointer could open one branch while the keyboard had another open, and neither would know.
  */
+`
 .vtd-menu-entry-open > .vtd-menu-sublist{display:block;}
 .vtd-menu-entry-open > .vtd-menu-item-parent{background-color:var(--background-2);}
 `, "vtd/Menu")

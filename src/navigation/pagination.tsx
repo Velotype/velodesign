@@ -1,7 +1,7 @@
-import {type FunctionComponent, passthroughAttrsToElement, type RenderableElements} from "@velotype/velotype"
+import {type FunctionComponent, passthroughAttrsToElement, type RenderableElements} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import { Button } from "../form/button.tsx"
-import type { IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
+import type { IdAttr, StylePassthroughAttrs } from "../core/velotype.ts"
 import { CommonThemeOptions, themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
 /**
