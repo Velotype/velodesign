@@ -1,5 +1,5 @@
-import { passthroughAttrsToElement } from "@velotype/velotype"
-import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import { passthroughAttrsToElement } from "../core/velotype.ts"
+import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { mountChartStyles, svgEl } from "./chart-common.ts"
 
 /** How a `<Sparkline/>` draws its values */

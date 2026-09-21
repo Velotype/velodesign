@@ -1,6 +1,6 @@
-import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { IdAttr, RenderableElements, StylePassthroughAttrs, TargetedEvent, TargetedInputEvent } from "@velotype/velotype"
+import type { IdAttr, RenderableElements, StylePassthroughAttrs, TargetedEvent, TargetedInputEvent } from "../core/velotype.ts"
 import { highlightMatch, searchHighlightCss } from "../core/search-highlight.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
 
@@ -201,7 +201,8 @@ export class Combobox extends Component<ComboboxAttrsType> {
 
         if (!areComboboxStylesMounted) {
             areComboboxStylesMounted = true
-            mountStyles(`
+            mountStyles(
+`
 .vtd-combobox-wrapper{position:relative;display:inline-block;}
 .vtd-combobox{
 display:block;
@@ -236,7 +237,9 @@ display:none;
 }
 .vtd-combobox-panel-open{display:block;}
 .vtd-combobox-option{padding:0.5em 0.75em;border-radius:0.25rem;cursor:pointer;}
+` +
 /* The keyboard's position in the list - see Menu for why this is a tint and not a ring */
+`
 .vtd-combobox-option-highlighted{background-color:var(--primary-3);}
 .vtd-combobox-empty{padding:0.75em;text-align:center;opacity:0.6;}
 ${searchHighlightCss}

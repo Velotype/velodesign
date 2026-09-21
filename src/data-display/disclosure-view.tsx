@@ -1,6 +1,6 @@
-import {} from "@velotype/velotype"
+import {} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { RenderableElements } from "@velotype/velotype"
+import type { RenderableElements } from "../core/velotype.ts"
 
 /**
  * Shared internals for `Collapse` and `Accordion`.
@@ -61,7 +61,8 @@ export function mountDisclosureStyles(): void {
         return
     }
     areDisclosureStylesMounted = true
-    mountStyles(`
+    mountStyles(
+`
 .vtd-disclosure{
 width:100%;
 box-sizing:border-box;
@@ -77,12 +78,14 @@ gap:0.75em;
 list-style:none;
 padding:0.6em 0.9em;
 user-select:none;
+` +
 /*
  * Always present, transparent when closed: an open section gets a real rule under its header, so
  * the header reads as a header rather than as the first line of the content. Carrying the border
  * at all times rather than adding it on open keeps the section from shifting by a pixel as it
  * opens.
  */
+`
 border-block-end:1px solid transparent;
 transition:border-color 0.2s ease-out;
 }
@@ -100,12 +103,16 @@ transition:transform 0.15s ease-in-out;
 flex-shrink:0;
 }
 .vtd-disclosure[open]:not(.vtd-disclosure-closing) .vtd-disclosure-chevron{transform:rotate(-135deg);}
+` +
 /* The open state, signalled on the header itself: a divider plus a faint fill behind it */
+`
 .vtd-disclosure[open]:not(.vtd-disclosure-closing) .vtd-disclosure-header{
 border-block-end-color:var(--background-4);
 background-color:var(--background-1);
 }
+` +
 /* ...so hovering an open header still reads as a hover, one step further than its resting fill */
+`
 .vtd-disclosure[open]:not(.vtd-disclosure-closing) .vtd-disclosure-header:hover{background-color:var(--background-2);}
 .vtd-disclosure-content{
 display:grid;
@@ -114,20 +121,26 @@ grid-template-rows:minmax(0,0fr);
 visibility:hidden;
 transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0.2s;
 }
+` +
 /*
  * Keyed on the <details> rather than on .vtd-disclosure, so the animation is available to any
  * disclosure in the package without its chrome - Tree wants the open/close motion but not the
  * border box, the header fill or the padding below.
  */
+`
 details[open]:not(.vtd-disclosure-closing) > .vtd-disclosure-content{
 grid-template-rows:minmax(0,1fr);
 visibility:visible;
 transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0s;
 }
+` +
 /* Mechanical, and required by the trick above - see mountDisclosureStyles */
+`
 .vtd-disclosure-content-inner{overflow:hidden;min-height:0;}
+` +
 /* Equal padding all round - a zero top inset pushed the content up against the header. Scoped to
    the chrome, because a Tree node brings its own indentation instead. */
+`
 .vtd-disclosure .vtd-disclosure-content-inner{padding:0.9em;}
 @media (prefers-reduced-motion: reduce){
 .vtd-disclosure-content,.vtd-disclosure-chevron,.vtd-disclosure-header{transition:none;}

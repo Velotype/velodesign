@@ -14,7 +14,7 @@ import {
     Heading, Text, Paragraph, Stack, Grid, CodeBlock, TableOfContents,
     Textarea, TextEditableField, TextFormField, TextNonEditableField, TimeAgo, Timeline, Toggle,
     Tooltip, Tree, Upload, AsyncDataTable,
-} from "../../../src/index.ts"
+} from "@velotype/velodesign"
 
 /** One row in a component's attribute reference table */
 export type AttrDoc = {

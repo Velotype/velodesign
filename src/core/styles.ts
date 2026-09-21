@@ -1,4 +1,4 @@
-import { setStylesheet } from "@velotype/velotype"
+import { setStylesheet } from "./velotype.ts"
 
 /**
  * Which cascade layer a stylesheet belongs to. They are ordered, and the order is the whole point.

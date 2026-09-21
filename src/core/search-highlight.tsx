@@ -1,4 +1,4 @@
-import type { RenderableElements } from "@velotype/velotype"
+import type { RenderableElements } from "./velotype.ts"
 
 /**
  * Splits `text` around the first case-insensitive occurrence of `query`, wrapping the matched

@@ -1,6 +1,6 @@
-import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { ChildrenAttr, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { ChildrenAttr, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /** A (possibly incomplete) date-time range, as picked by `<DateTimeRangePicker/>` */
 export type DateTimeRangeType = {

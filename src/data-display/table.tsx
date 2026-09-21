@@ -1,6 +1,6 @@
-import {passthroughAttrsToElement} from "@velotype/velotype"
+import {passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /**
  * A single column definition for a `<Table/>`
@@ -68,7 +68,8 @@ let areTableStylesMounted = false
 export function Table<RowType>(attrs: TableAttrsType<RowType>, _children: RenderableElements[]): HTMLTableElement {
     if (!areTableStylesMounted) {
         areTableStylesMounted = true
-        mountStyles(`
+        mountStyles(
+`
 .vtd-table{width:100%;border-collapse:collapse;}
 .vtd-table th,.vtd-table td{padding:0.6em 0.9em;text-align:start;border-block-end:1px solid var(--background-4);}
 .vtd-table th{font-weight:bold;color:var(--text);white-space:nowrap;}
@@ -78,11 +79,13 @@ export function Table<RowType>(attrs: TableAttrsType<RowType>, _children: Render
 .vtd-table tbody tr:hover{background-color:var(--background-1);}
 .vtd-table-align-center{text-align:center;}
 .vtd-table-align-end{text-align:end;}
+` +
 /*
  * Only applied when a column declares a width. Headers stop being nowrap and cells break long
  * words, because a fixed column no longer widens to fit its content - without these, a narrow
  * column's content overflows its own cell instead.
  */
+`
 .vtd-table-fixed{table-layout:fixed;}
 .vtd-table-fixed th{white-space:normal;}
 .vtd-table-fixed td{overflow-wrap:break-word;}

@@ -1,6 +1,6 @@
-import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { RenderableElements, IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
+import type { RenderableElements, IdAttr, StylePassthroughAttrs } from "../core/velotype.ts"
 import { highlightMatch, searchHighlightCss } from "../core/search-highlight.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
 

@@ -1,6 +1,6 @@
-import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { Button } from "../form/button.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
 
@@ -60,7 +60,8 @@ export class Calendar extends Component<CalendarAttrsType> {
         this.#focusedDate = attrs.value ?? today
         if (!areCalendarStylesMounted) {
             areCalendarStylesMounted = true
-            mountStyles(`
+            mountStyles(
+`
 .vtd-calendar{width:20em;max-width:100%;}
 .vtd-calendar-header{display:flex;align-items:center;justify-content:space-between;margin-block-end:0.5em;}
 .vtd-calendar-title{font-weight:bold;}
@@ -79,6 +80,7 @@ cursor:pointer;
 }
 .vtd-calendar-day:hover{background-color:var(--background-1);}
 .vtd-calendar-day-outside{opacity:0.35;}
+` +
 /*
  * "Today" is a subtle background tint, not a box-shadow ring - a ring reads too much like a
  * border/selection indicator (it was one, before this was written this way; a demo whose
@@ -90,14 +92,17 @@ cursor:pointer;
  * RadioButton/Toggle use for their own off-state background) keeps it a background, not text
  * color alone, without competing with -selected's solid --primary fill below.
  */
+`
 .vtd-calendar-day-today{font-weight:bold;background-color:var(--primary-1);}
 .vtd-calendar-day-selected{background-color:var(--primary);color:var(--text-alt);}
+` +
 /*
  * Both need to win over the plain :hover rule above by specificity (not just source order,
  * which would be one stray reorder away from silently regressing back to this) - otherwise
  * hovering either drops it back to the same neutral background :hover gives every other day,
  * making it indistinguishable from an unselected one for as long as the pointer sits on it.
  */
+`
 .vtd-calendar-day.vtd-calendar-day-today:hover{background-color:var(--primary-2);}
 .vtd-calendar-day.vtd-calendar-day-selected:hover{background-color:var(--primary-6);}
 `, "vtd/Calendar")

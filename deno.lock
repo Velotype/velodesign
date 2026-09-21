@@ -25,6 +25,7 @@
     "jsr:@std/path@1": "1.1.6",
     "jsr:@std/path@^1.0.8": "1.1.6",
     "jsr:@std/testing@^1.0.16": "1.0.20",
+    "jsr:@std/yaml@1": "1.2.0",
     "jsr:@velotype/veloserver@~0.1.5": "0.1.5",
     "jsr:@velotype/velotype@^0.0.27": "0.0.27",
     "jsr:@zip-js/zip-js@^2.7.52": "2.11.4"
@@ -113,6 +114,9 @@
         "jsr:@std/assert@^1.0.19",
         "jsr:@std/internal@^1.0.14"
       ]
+    },
+    "@std/yaml@1.2.0": {
+      "integrity": "20beb41e4983ba3437dbefac62b14061ab058e8a187596f19d28ff9035f6e6cf"
     },
     "@velotype/veloserver@0.1.5": {
       "integrity": "f34bfc7fa6b1fd9ba4b4b86a9733d00c75bafa4ea596d4885f7980358366934d",

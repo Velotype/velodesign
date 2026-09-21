@@ -1,7 +1,7 @@
 import { Component, setStylesheet } from "@velotype/velotype"
 import type { EmptyAttrs } from "@velotype/velotype"
 
-import { Badge, Button, Card, Grid, Heading, History, I, Paragraph, Stack, Statistic, Text } from "../../../src/index.ts"
+import { Badge, Button, Card, Grid, Heading, History, I, Paragraph, Stack, Statistic, Text } from "@velotype/velodesign"
 import { componentDocs, groupedDocs } from "../data/docs.tsx"
 import { bundleSize } from "../data/bundle-size.ts"
 import { categoryPageUrl } from "./category-page.tsx"
@@ -66,7 +66,10 @@ border-block-end:1px solid var(--background-4);
                       * drift from the source it was built with. gzip is what a browser pulls down,
                       * which is why it leads and the raw size is the suffix.
                       */}
-                    <Statistic title="Whole library, gzipped" value={(bundleSize.gzip / 1024).toFixed(1)} suffix={<Text type="muted"> KB</Text>}/>
+                    {/* ownGzip, not gzip: the second has velotype folded in, and a consumer does not
+                        pay that to velodesign - velotype is its own module import, which is exactly
+                        how this page is loading it, through the import map in showcase/server.ts */}
+                    <Statistic title="Whole library, gzipped" value={(bundleSize.ownGzip / 1024).toFixed(1)} suffix={<Text type="muted"> KB</Text>}/>
                 </Stack>
             </section>
 

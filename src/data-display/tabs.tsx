@@ -1,6 +1,6 @@
-import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /**
  * A single Tab within a `<Tabs/>` Component
@@ -103,7 +103,8 @@ export class Tabs extends Component<TabsAttrsType> {
         this.#activeKey = attrs.initialKey || attrs.tabs[0]?.key
         if (!areTabsStylesMounted) {
             areTabsStylesMounted = true
-            mountStyles(`
+            mountStyles(
+`
 .vtd-tabs{
 width:100%;
 box-sizing:border-box;
@@ -124,6 +125,7 @@ font:inherit;
 padding:0.5em 1em;
 margin-block-end:-1px;
 }
+` +
 /*
  * A real font-weight:bold on .vtd-tabs-tab-active would widen the label text and shift every
  * tab after it - so ::after carries a permanently-bold, invisible copy of the same label
@@ -134,6 +136,7 @@ margin-block-end:-1px;
  * data-label, so attr() resolves to an empty string and this becomes a no-op for it - the
  * label just won't have its width pre-reserved, same as before this fix.
  */
+`
 .vtd-tabs-tab::after{
 content:attr(data-label);
 display:block;

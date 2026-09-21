@@ -1,6 +1,6 @@
-import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /**
  * One entry in a `<TableOfContents/>`
@@ -73,7 +73,8 @@ export class TableOfContents extends Component<TableOfContentsAttrsType> {
 
         if (!areTableOfContentsStylesMounted) {
             areTableOfContentsStylesMounted = true
-            mountStyles(`
+            mountStyles(
+`
 .vtd-table-of-contents{width:100%;box-sizing:border-box;}
 .vtd-table-of-contents-header{
 font-size:0.75em;
@@ -87,7 +88,9 @@ padding:0 0 0.6em 0.9em;
 .vtd-table-of-contents-link{
 display:block;
 padding:0.3em 0 0.3em 0.9em;
+` +
 /* The rail: one continuous line down the list, with the current entry's segment picked out */
+`
 border-inline-start:2px solid var(--background-4);
 color:var(--background-7);
 text-decoration:none;
@@ -101,7 +104,9 @@ color:var(--primary-8);
 border-inline-start-color:var(--primary);
 font-weight:bold;
 }
+` +
 /* Each level steps in from the rail; past 6 they all sit at the same depth */
+`
 .vtd-table-of-contents-level-1{padding-inline-start:0.9em;}
 .vtd-table-of-contents-level-2{padding-inline-start:1.8em;}
 .vtd-table-of-contents-level-3{padding-inline-start:2.7em;}

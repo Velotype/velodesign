@@ -45,18 +45,25 @@ jobs:
         run: deno publish --dry-run
 
       # The showcase's home page reads this generated file, so a stale committed value would be a
-      # wrong number on the site for anyone who builds without the task. Only `raw` is compared:
-      # gzip output is not byte-identical across machines (the same bundle measured 43497 locally
-      # and 43496 on this runner), so asserting it would fail for reasons unrelated to the bundle.
+      # wrong number on the site for anyone who builds without the task. Only the raw figures are
+      # compared: gzip output is not byte-identical across machines (the same bundle measured 43497
+      # locally and 43496 on this runner), so asserting it would fail for reasons unrelated to the
+      # bundle. Both raw figures are checked rather than just the first - `ownRaw` is the one the
+      # home page actually shows, and checking only `raw` would let it go stale unnoticed.
       - name: Bundle-size file is current
         run: |
-          committed=$(grep -oE 'raw: [0-9]+' showcase/src/data/bundle-size.ts | grep -oE '[0-9]+')
-          measured=$(deno task size --json | tail -1 | grep -oE '"raw":[0-9]+' | grep -oE '[0-9]+')
-          echo "committed raw=$committed  measured raw=$measured"
-          if [ "$committed" != "$measured" ]; then
-            echo "::error file=showcase/src/data/bundle-size.ts::Stale ($committed vs $measured). Run 'deno task size --write' and commit the result."
-            exit 1
-          fi
+          measured=$(deno task size --json | tail -1)
+          status=0
+          for field in raw ownRaw; do
+            committed=$(grep -oE "(^|[^a-zA-Z])$field: [0-9]+" showcase/src/data/bundle-size.ts | grep -oE '[0-9]+')
+            fresh=$(echo "$measured" | grep -oE "\"$field\":[0-9]+" | grep -oE '[0-9]+')
+            echo "committed $field=$committed  measured $field=$fresh"
+            if [ "$committed" != "$fresh" ]; then
+              echo "::error file=showcase/src/data/bundle-size.ts::Stale $field ($committed vs $fresh). Run 'deno task size --write' and commit the result."
+              status=1
+            fi
+          done
+          exit $status
 
   test:
     name: Astral suite

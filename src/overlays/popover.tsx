@@ -1,6 +1,6 @@
-import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /**
  * Placement of a `<Popover/>`'s bubble, relative to its trigger content

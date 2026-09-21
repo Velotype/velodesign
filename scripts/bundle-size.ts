@@ -5,6 +5,24 @@
  * every component, every stylesheet string, no tree-shaking a real app would get. The gzip figure
  * is the one that matters over the wire and is what the showcase leads with.
  *
+ * **Two figures, because velotype's bytes are not velodesign's.** In production velotype is its own
+ * module import, shared with everything else built on it - the showcase loads it through an import
+ * map for exactly that reason - so a bundle with velotype folded inside reports a size no consumer
+ * pays velodesign. `own` is velodesign alone, held out with `--external`; `raw`/`gzip` are the whole
+ * graph with velotype inlined, which is what a plain `deno bundle` produces.
+ *
+ * Both `--external "@velotype/velotype"` and `--external "@velotype/velotype/jsx-runtime"` are
+ * passed. The first alone is enough today - it covers the subpath too, byte for byte - but naming
+ * both says what is meant and does not depend on that.
+ *
+ * ⚠️ **The externalized bundle must contain exactly two import statements**, and that is asserted
+ * rather than assumed. esbuild emits one per source module that imports the package and never
+ * merges them, so velodesign routes every velotype name through `src/core/velotype.ts` and its
+ * `jsx-runtime.ts` sibling; a third statement here means a module has gone around the barrel and
+ * is quietly costing every consumer bundle an import statement it cannot tree-shake away. This
+ * check replaced a transform that collapsed the duplicates after the fact, which fixed the
+ * measurement while leaving consumers to pay the bytes.
+ *
  * Three ways to run it:
  *   deno task size            - print a human summary
  *   deno task size --json     - emit JSON, which the pull-request workflow diffs
@@ -17,24 +35,58 @@
 const root = new URL("../", import.meta.url).pathname
 const entrypoint = `${root}src/index.ts`
 
-/** Bundles the package the way a browser consumer would and returns the bytes on disk */
-async function measure(): Promise<{raw: number, gzip: number}> {
+const velotypeSpecifiers = ["@velotype/velotype", "@velotype/velotype/jsx-runtime"]
+
+/** Bundles one entrypoint the way a browser consumer would and returns the text */
+async function bundleText(entry: string, external: string[]): Promise<string> {
     const outFile = await Deno.makeTempFile({suffix: ".js"})
     try {
-        const bundle = new Deno.Command(Deno.execPath(), {
-            args: ["bundle", "--minify", "--platform", "browser", "--quiet", "-o", outFile, entrypoint],
-            cwd: root,
-            stdout: "piped",
-            stderr: "piped",
-        })
+        const args = ["bundle", "--minify", "--platform", "browser", "--quiet"]
+        for (const specifier of external) {
+            args.push("--external", specifier)
+        }
+        args.push("-o", outFile, entry)
+        const bundle = new Deno.Command(Deno.execPath(), {args, cwd: root, stdout: "piped", stderr: "piped"})
         const result = await bundle.output()
         if (!result.success) {
             throw new Error(`deno bundle failed:\n${new TextDecoder().decode(result.stderr)}`)
         }
-        const bytes = await Deno.readFile(outFile)
-        return {raw: bytes.byteLength, gzip: await gzipSize(bytes)}
+        return await Deno.readTextFile(outFile)
     } finally {
         await Deno.remove(outFile).catch(() => {})
+    }
+}
+
+/**
+ * Asserts that holding velotype out leaves exactly one import statement per specifier.
+ *
+ * Nothing in `src/` may import `@velotype/velotype` except `src/core/velotype.ts` and
+ * `src/core/jsx-runtime.ts`, so a correct bundle has two statements and no more. The failure this
+ * catches is invisible otherwise: an import that goes around the barrel still compiles, still
+ * renders, and only shows up as bytes - and it shows up in *every* consumer bundle, because esbuild
+ * keeps an external import statement for every module it scanned whether or not that module
+ * survived tree-shaking. It was 150 statements and 9,415 bytes before the barrel, on a Button-only
+ * bundle as much as on the whole library.
+ */
+function assertBarrelled(text: string): void {
+    const statements = text.match(/import(?:\{[^}]*\}from)?"@velotype\/velotype(?:\/jsx-runtime)?";?/g) ?? []
+    if (statements.length != 2) {
+        throw new Error(`expected 2 velotype import statements in the externalized bundle, found ${statements.length}.` +
+            ` Something in src/ imports "@velotype/velotype" directly instead of through src/core/velotype.ts.`)
+    }
+}
+
+async function measure(): Promise<{raw: number, gzip: number, ownRaw: number, ownGzip: number}> {
+    const encoder = new TextEncoder()
+    const inlined = encoder.encode(await bundleText(entrypoint, []))
+    const ownText = await bundleText(entrypoint, velotypeSpecifiers)
+    assertBarrelled(ownText)
+    const own = encoder.encode(ownText)
+    return {
+        raw: inlined.byteLength,
+        gzip: await gzipSize(inlined),
+        ownRaw: own.byteLength,
+        ownGzip: await gzipSize(own),
     }
 }
 
@@ -63,20 +115,26 @@ export function formatBytes(bytes: number): string {
 
 const generatedFile = `${root}showcase/src/data/bundle-size.ts`
 
-async function writeGenerated(sizes: {raw: number, gzip: number}) {
+async function writeGenerated(sizes: {raw: number, gzip: number, ownRaw: number, ownGzip: number}) {
     const contents = `/**
  * Generated by \`deno task size --write\`, which the showcase's own bundle task runs first - do not
  * edit by hand.
  *
  * The whole package bundled from its single entrypoint, minified, with nothing tree-shaken away.
  *
+ * \`ownRaw\`/\`ownGzip\` are velodesign by itself, with velotype held out of the bundle the way the
+ * showcase's import map holds it out at runtime. \`raw\`/\`gzip\` have velotype folded in, which is
+ * what a plain \`deno bundle\` produces and is not what a consumer pays velodesign.
+ *
  * Deliberately carries no timestamp. A generated file that changes every day cannot be checked
  * against a fresh measurement in CI, because the check would start failing the next morning for
  * reasons that have nothing to do with the bundle.
  */
-export const bundleSize: {raw: number, gzip: number} = {
+export const bundleSize: {raw: number, gzip: number, ownRaw: number, ownGzip: number} = {
     raw: ${sizes.raw},
-    gzip: ${sizes.gzip}
+    gzip: ${sizes.gzip},
+    ownRaw: ${sizes.ownRaw},
+    ownGzip: ${sizes.ownGzip}
 }
 `
     await Deno.writeTextFile(generatedFile, contents)
@@ -90,6 +148,7 @@ if (Deno.args.includes("--json")) {
         await writeGenerated(sizes)
     }
     console.log(`velodesign bundled from src/index.ts, minified`)
-    console.log(`  raw   ${formatBytes(sizes.raw)} (${sizes.raw} bytes)`)
-    console.log(`  gzip  ${formatBytes(sizes.gzip)} (${sizes.gzip} bytes)`)
+    console.log(`  velodesign alone   raw ${formatBytes(sizes.ownRaw)}  gzip ${formatBytes(sizes.ownGzip)}`)
+    console.log(`  velotype inlined   raw ${formatBytes(sizes.raw)}  gzip ${formatBytes(sizes.gzip)}`)
+    console.log(`  velotype's share   raw ${formatBytes(sizes.raw - sizes.ownRaw)}  gzip ${formatBytes(sizes.gzip - sizes.ownGzip)}`)
 }

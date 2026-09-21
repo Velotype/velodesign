@@ -1,4 +1,4 @@
-import {type ChildrenAttr, Component, type RenderableElements} from "@velotype/velotype"
+import {type ChildrenAttr, Component, type RenderableElements} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import { Button } from "../form/button.tsx"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
@@ -40,13 +40,15 @@ export type DrawerAttrsType = {
 export class Drawer extends Component<DrawerAttrsType> {
     /** Mount this Component */
     override mount() {
-        mountStyles(`
+        mountStyles(
+`
 .vtd-drawer{
 position:fixed;
 margin:0;
 padding:1em;
 border:none;
 overflow:auto;
+` +
 /*
  * The browser's own UA stylesheet caps an open (:modal) dialog at
  * max-width/max-height: calc((100% - 6px) - 2em) by default - lower-priority than any
@@ -55,6 +57,7 @@ overflow:auto;
  * a consistent ~2em short of the true edge, which is exactly the "not full edge" symptom -
  * explicit "none" cancels it so each placement's own width/height below is unclamped.
  */
+`
 max-width:none;
 max-height:none;
 }
@@ -62,6 +65,7 @@ max-height:none;
 background:rgba(75,75,75,0.6);
 backdrop-filter: blur(2px);
 }
+` +
 /*
  * Each placement sets its own max-width/max-height instead of sharing one blanket cap on
  * .vtd-drawer - a single max-width:90vw;max-height:90vh used to apply to every placement
@@ -69,6 +73,7 @@ backdrop-filter: blur(2px);
  * 100vh edge-to-edge look height:100vh asks for) and, symmetrically, would have clamped a
  * top/bottom drawer's width to 90vw instead of the full 100vw edge.
  */
+`
 .vtd-drawer-position-left{inset-inline-start:0;inset-inline-end:auto;inset-block:0;height:100vh;width:min(24em,90vw);}
 .vtd-drawer-position-right{inset-inline-end:0;inset-inline-start:auto;inset-block:0;height:100vh;width:min(24em,90vw);}
 .vtd-drawer-position-top{inset-block-start:0;inset-block-end:auto;inset-inline:0;width:100vw;max-height:80vh;}

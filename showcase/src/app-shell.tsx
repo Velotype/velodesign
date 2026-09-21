@@ -1,9 +1,9 @@
 import { Component, getComponent, RenderBasic, setStylesheet } from "@velotype/velotype"
 import type { EmptyAttrs, RenderableElements } from "@velotype/velotype"
 
-import { Avatar, Button, ColorScheme, highlightMatch, I, Link, Navbar, searchHighlightCss, Sidebar, Text, TextBox } from "../../src/index.ts"
+import { Avatar, Button, ColorScheme, highlightMatch, I, Link, Navbar, searchHighlightCss, Sidebar, Text, TextBox } from "@velotype/velodesign"
 import { categoryIconKey, searchIconKey } from "./data/category-icons.ts"
-import type { MenuItemType, SidebarItemType } from "../../src/index.ts"
+import type { MenuItemType, SidebarItemType } from "@velotype/velodesign"
 import { docBySlug, groupByGroupSlug, groupedDocs } from "./data/docs.tsx"
 import { HomePage } from "./pages/home.tsx"
 import { ComponentPage } from "./pages/component-page.tsx"

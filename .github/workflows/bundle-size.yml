@@ -72,12 +72,22 @@ jobs:
               "",
               "The whole package bundled from `src/index.ts`, minified, nothing tree-shaken away.",
               "",
+              "**velodesign alone** - velotype held out, the way a browser loads it in production:",
+              "",
+              "| | base | this PR | change |",
+              "|---|---:|---:|---:|",
+              `| gzip | ${base && base.ownGzip ? kb(base.ownGzip) : "n/a"} | ${kb(head.ownGzip)} | ${delta(head.ownGzip, base && base.ownGzip ? base.ownGzip : null)} |`,
+              `| raw | ${base && base.ownRaw ? kb(base.ownRaw) : "n/a"} | ${kb(head.ownRaw)} | ${delta(head.ownRaw, base && base.ownRaw ? base.ownRaw : null)} |`,
+              "",
+              "With velotype inlined, which is what `deno bundle` emits and is **not** what a consumer pays velodesign:",
+              "",
               "| | base | this PR | change |",
               "|---|---:|---:|---:|",
               `| gzip | ${base ? kb(base.gzip) : "n/a"} | ${kb(head.gzip)} | ${delta(head.gzip, base ? base.gzip : null)} |`,
               `| raw | ${base ? kb(base.raw) : "n/a"} | ${kb(head.raw)} | ${delta(head.raw, base ? base.raw : null)} |`,
               "",
-              "gzip is what a browser actually pulls down, and is the figure the showcase home page shows.",
+              "gzip is what a browser actually pulls down, and the velodesign-alone figure is what the showcase home page shows.",
+              "A base measured before this split reports n/a for the first table - the older script emitted no such figure.",
             ].join("\n")
 
             // One comment per pull request, rewritten in place - a new comment per push buries the

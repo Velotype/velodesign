@@ -1,5 +1,5 @@
-import { Component, passthroughAttrsToElement } from "@velotype/velotype"
-import type { RenderableElements } from "@velotype/velotype"
+import { Component, passthroughAttrsToElement } from "../core/velotype.ts"
+import type { RenderableElements } from "../core/velotype.ts"
 import {
     buildLegend, ChartThemeOptions, ChartTooltip, mountChartStyles, svgEl
 } from "./chart-common.ts"

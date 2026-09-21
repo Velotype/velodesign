@@ -1,4 +1,4 @@
-import {} from "@velotype/velotype"
+import {} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 
 /**
@@ -28,7 +28,7 @@ export function mountTypographyStyles(): void {
         return
     }
     areTypographyStylesMounted = true
-    mountStyles(`
+    mountStyles(
 /*
  * WARNING: muted is var(--background-6), NOT var(--text-alt). Despite the name, --text-alt is the
  * *inverse* text colour - in dark mode it is the light theme's near-black - so muted text styled
@@ -36,6 +36,7 @@ export function mountTypographyStyles(): void {
  * the page background toward its contrast colour, which makes -6 a real muted foreground in both
  * themes. This is the single trap this component exists to stop every consumer rediscovering.
  */
+`
 .vtd-text-muted{color:var(--background-6);}
 .vtd-text-primary{color:var(--primary);}
 .vtd-text-secondary{color:var(--secondary);}
@@ -45,10 +46,14 @@ export function mountTypographyStyles(): void {
 .vtd-heading{
 margin-block:0.6em 0.4em;
 line-height:1.25;
+` +
 /* Headings are short and read better without one word stranded on its own line */
+`
 text-wrap:balance;
 }
+` +
 /* First heading in a block shouldn't push its container open */
+`
 .vtd-heading:first-child{margin-block-start:0;}
 .vtd-heading-1{font-size:2em;}
 .vtd-heading-2{font-size:1.5em;}
@@ -64,7 +69,9 @@ text-wrap:balance;
 .vtd-text-italic{font-style:italic;}
 .vtd-text-underline{text-decoration:underline;}
 .vtd-text-strike{text-decoration:line-through;}
+` +
 /* Tabular figures, so columns of numbers line up and a changing value doesn't shift its neighbours */
+`
 .vtd-text-numeric{font-variant-numeric:tabular-nums;}
 .vtd-text-code{
 font-family:ui-monospace,SFMono-Regular,Menlo,monospace;

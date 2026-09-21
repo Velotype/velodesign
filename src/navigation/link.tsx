@@ -1,6 +1,6 @@
 
-import { passthroughAttrsToElement } from "@velotype/velotype"
-import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import { passthroughAttrsToElement } from "../core/velotype.ts"
+import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import {History} from "../core/history.ts"
 
 /**

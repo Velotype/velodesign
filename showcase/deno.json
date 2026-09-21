@@ -1,16 +1,27 @@
 {
     "tasks": {
-        "bundle": "cd .. && deno task size --write && cd showcase && deno bundle ./src/main.tsx --output ./build/main.js --sourcemap=linked",
+        // Three modules, the way a consumer loads them: the framework, the library, and the app.
+        // Each is minified, and velodesign is bundled with the *root* config so its own
+        // jsxImportSource applies - built from showcase/deno.json it would compile under the
+        // showcase's instead and emit 73 jsx import statements rather than one.
+        "bundle": "deno task bundle:size && deno task bundle:velotype && deno task bundle:velodesign && deno task bundle:app",
+        "bundle:size": "cd .. && deno task size --write",
+        "bundle:velotype": "deno bundle ./src/velotype-module.ts --output ./build/velotype.js --minify --platform browser --sourcemap=linked",
+        "bundle:velodesign": "deno bundle ../src/index.ts --output ./build/velodesign.js --config ../deno.json --minify --platform browser --external @velotype/velotype --external @velotype/velotype/jsx-runtime --sourcemap=linked",
+        "bundle:app": "deno bundle ./src/main.tsx --output ./build/main.js --minify --platform browser --external @velotype/velodesign --external @velotype/velotype --external @velotype/velotype/jsx-runtime --sourcemap=linked",
         "dev": "deno task bundle && deno run --allow-read --allow-net --allow-sys --allow-env ./server.ts",
         "serve": "deno run --allow-read --allow-net --allow-sys --allow-env ./server.ts"
     },
     "compilerOptions": {
         "jsx": "react-jsx",
-        "jsxImportSource": "jsr:@velotype/velotype",
+        "jsxImportSource": "@velotype/velotype",
         "lib": ["dom", "deno.ns", "esnext"]
     },
     "imports": {
         "@velotype/veloserver": "jsr:@velotype/veloserver@^0.1.5",
+        "@velotype/velodesign": "../src/index.ts",
+        "@velotype/velodesign/jsx-runtime": "../src/core/jsx-runtime.ts",
+        "@velotype/velotype/jsx-runtime": "jsr:@velotype/velotype@^0.0.27",
         "@velotype/velotype": "jsr:@velotype/velotype@^0.0.27"
     },
     "lint": {

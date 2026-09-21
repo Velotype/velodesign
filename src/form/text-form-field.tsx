@@ -1,6 +1,6 @@
 
 
-import { type RenderBasic, Component, type RenderableElements, type ChildrenAttr, type FunctionComponent, type AnchorElement, type StylePassthroughAttrs, type IdAttr, passthroughAttrsToElement } from "@velotype/velotype"
+import { type RenderBasic, Component, type RenderableElements, type ChildrenAttr, type FunctionComponent, type AnchorElement, type StylePassthroughAttrs, type IdAttr, passthroughAttrsToElement } from "../core/velotype.ts"
 import { Button } from "./button.tsx"
 import { TextBox, type TextBoxType } from "./text-box.tsx"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"

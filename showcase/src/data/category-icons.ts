@@ -1,4 +1,4 @@
-import { Icon, registerIcon } from "../../../src/index.ts"
+import { Icon, registerIcon } from "@velotype/velodesign"
 
 /**
  * One icon per component category, for the sidebar.

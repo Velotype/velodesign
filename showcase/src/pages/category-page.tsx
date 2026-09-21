@@ -1,7 +1,7 @@
 import { Component, setStylesheet } from "@velotype/velotype"
 import type { RenderableElements } from "@velotype/velotype"
 
-import { Breadcrumbs, Heading, Link, Paragraph, Stack } from "../../../src/index.ts"
+import { Breadcrumbs, Heading, Link, Paragraph, Stack } from "@velotype/velodesign"
 import { groupSlug, type ComponentDoc } from "../data/docs.tsx"
 
 export type CategoryPageAttrsType = {

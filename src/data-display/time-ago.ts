@@ -1,4 +1,4 @@
-import type { FunctionComponent, RenderableElements } from "@velotype/velotype"
+import type { FunctionComponent, RenderableElements } from "../core/velotype.ts"
 
 /**
  * Attrs type for `<TimeAgo/>` Component

@@ -1,4 +1,4 @@
-import {type ChildrenAttr, type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs} from "@velotype/velotype"
+import {type ChildrenAttr, type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 
 /**
@@ -38,7 +38,8 @@ let areButtonStylesMounted = false
 export const RadioButton: FunctionComponent<RadioButtonAttrsType> = function(attrs: RadioButtonAttrsType, children: RenderableElements[]): HTMLLabelElement {
     if (!areButtonStylesMounted) {
         areButtonStylesMounted = true
-        mountStyles(`
+        mountStyles(
+`
 .vtd-radio-button-container{
 cursor:pointer;
 display:inline-flex;
@@ -93,7 +94,9 @@ border-color:var(--primary-7);
 }
 
 .vtd-radio-button-container:has(> .vtd-radio-button-input:disabled){cursor:not-allowed;}
+` +
 /* As Checkbox: the ring belongs on the visible control, not the hidden input */
+`
 .vtd-radio-button-input:focus-visible ~ .vtd-radio-button{outline:2px solid var(--primary-7);outline-offset:2px;}
 `, "vtd/RadioButton")
     }

@@ -5,7 +5,7 @@ import {
 import type {
     ChartBaseAttrsType, ChartDataTable, ChartPointType, ChartSeriesType, PlotBox, TooltipRow
 } from "./chart-common.ts"
-import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /**
  * Attrs type for `<LineChart/>` and `<AreaChart/>`

@@ -1,4 +1,4 @@
-import {type ChildrenAttr, type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs} from "@velotype/velotype"
+import {type ChildrenAttr, type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 
 /**
@@ -40,7 +40,8 @@ let areCheckboxStylesMounted = false
 export const Checkbox: FunctionComponent<CheckboxAttrsType> = function(attrs: CheckboxAttrsType, children: RenderableElements[]): HTMLLabelElement {
     if (!areCheckboxStylesMounted) {
         areCheckboxStylesMounted = true
-        mountStyles(`
+        mountStyles(
+`
 .vtd-checkbox-container{
 cursor:pointer;
 display:inline-flex;
@@ -113,7 +114,9 @@ border-color:var(--primary-5);
 }
 
 .vtd-checkbox-container:has(> .vtd-checkbox-input:disabled){cursor:not-allowed;}
+` +
 /* The input is 0x0 and transparent, so the ring has to be drawn on the box beside it */
+`
 .vtd-checkbox-input:focus-visible ~ .vtd-checkbox{outline:2px solid var(--primary-7);outline-offset:2px;}
 `, "vtd/Checkbox")
     }

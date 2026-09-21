@@ -3,8 +3,8 @@ import {
     CommonThemeOptions, DataTableThemeOptions, DrawerThemeOptions, EmptyThemeOptions,
     ModalThemeOptions, PaginationThemeOptions, PopconfirmThemeOptions, resetThemeOptions,
     TagThemeOptions, TextFormFieldThemeOptions, ToastThemeOptions,
-} from "../../../src/index.ts"
-import type { ThemeSymbol } from "../../../src/index.ts"
+} from "@velotype/velodesign"
+import type { ThemeSymbol } from "@velotype/velodesign"
 
 /**
  * Every overridable glyph the package exposes, so the theme builder can edit them and `main.tsx`

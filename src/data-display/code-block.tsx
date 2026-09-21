@@ -1,7 +1,7 @@
 
-import {passthroughAttrsToElement} from "@velotype/velotype"
+import {passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /**
  * Which grammar `CodeBlock` highlights with.
@@ -257,7 +257,8 @@ export const CodeBlock: FunctionComponent<CodeBlockAttrsType> = function(attrs: 
 
     if (!areCodeBlockStylesMounted) {
         areCodeBlockStylesMounted = true
-        mountStyles(`
+        mountStyles(
+`
 .vtd-code-block{
 width:100%;
 box-sizing:border-box;
@@ -266,7 +267,9 @@ padding:1em;
 border:1px solid var(--background-4);
 border-radius:0.5rem;
 background-color:var(--background-1);
+` +
 /* Code's own line breaks are the content, so this scrolls rather than reflowing */
+`
 overflow-x:auto;
 font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 font-size:0.85em;
@@ -275,12 +278,13 @@ tab-size:4;
 }
 .vtd-code-block-wrap{white-space:pre-wrap;overflow-wrap:break-word;}
 .vtd-code-block code{font:inherit;background:none;padding:0;border-radius:0;}
-
+` +
 /*
  * Token colours come from the theme's four hues, never a literal - the same rule the charts
  * follow. Each hue is taken at a step that keeps contrast against --background-1 in both themes,
  * since that ramp inverts between them.
  */
+`
 .vtd-code-block-comment{color:var(--background-6);font-style:italic;}
 .vtd-code-block-string{color:var(--secondary-7);}
 .vtd-code-block-keyword{color:var(--primary-7);}
@@ -288,11 +292,12 @@ tab-size:4;
 .vtd-code-block-attr{color:var(--warning-7);}
 .vtd-code-block-number{color:var(--secondary-8);}
 .vtd-code-block-punct{color:var(--background-8);}
-
+` +
 /*
  * Line numbers are a counter on each line rather than a second column of text, so selecting the
  * block copies the code alone - a gutter built from real text puts "1 2 3" into the clipboard.
  */
+`
 .vtd-code-block-numbered code{counter-reset:vtd-code-block-line;}
 .vtd-code-block-numbered .vtd-code-block-line::before{
 counter-increment:vtd-code-block-line;
@@ -305,12 +310,14 @@ color:var(--background-5);
 user-select:none;
 }
 .vtd-code-block-line{display:block;min-height:1.6em;}
+` +
 /*
  * A hanging indent, so wrap and showLineNumbers work together: without it a wrapped line's
  * continuation starts at the left edge, underneath the number, and reads as its own line. The
  * outdent is the gutter's own width (2.5em) plus its trailing gap (1em), which puts the number in
  * the outdented space and aligns every continuation with the first line's code.
  */
+`
 .vtd-code-block-numbered.vtd-code-block-wrap .vtd-code-block-line{padding-inline-start:3.5em;text-indent:-3.5em;}
 `, "vtd/CodeBlock")
     }

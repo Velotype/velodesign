@@ -1,6 +1,6 @@
-import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { Button } from "../form/button.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
 
@@ -86,7 +86,8 @@ export class CalendarRange extends Component<CalendarRangeAttrsType> {
         this.#focusedDate = anchor
         if (!areCalendarRangeStylesMounted) {
             areCalendarRangeStylesMounted = true
-            mountStyles(`
+            mountStyles(
+`
 .vtd-calendar{width:20em;max-width:100%;}
 .vtd-calendar-header{display:flex;align-items:center;justify-content:space-between;margin-block-end:0.5em;}
 .vtd-calendar-title{font-weight:bold;}
@@ -105,13 +106,16 @@ cursor:pointer;
 }
 .vtd-calendar-day:hover{background-color:var(--background-1);}
 .vtd-calendar-day-outside{opacity:0.35;}
+` +
 /* See Calendar's identical comment for the full rationale - a subtle background tint instead of
  * a box-shadow ring, so "today" never reads as a leftover selection/range outline. */
+`
 .vtd-calendar-day-today{font-weight:bold;background-color:var(--primary-1);}
 .vtd-calendar-day-in-range{background-color:var(--primary-3);border-radius:0;}
 .vtd-calendar-day-range-start,.vtd-calendar-day-range-end{background-color:var(--primary);color:var(--text-alt);}
 .vtd-calendar-day-range-start{border-start-end-radius:0;border-end-end-radius:0;}
 .vtd-calendar-day-range-end{border-start-start-radius:0;border-end-start-radius:0;}
+` +
 /*
  * All need to win over the plain :hover rule above by specificity (not source order, which
  * would be one stray reorder away from silently regressing) - otherwise hovering any of them
@@ -119,6 +123,7 @@ cursor:pointer;
  * indistinguishable from an unselected day for as long as the pointer sits on it - see
  * Calendar's identical -selected:hover fix.
  */
+`
 .vtd-calendar-day.vtd-calendar-day-today:hover{background-color:var(--primary-2);}
 .vtd-calendar-day.vtd-calendar-day-in-range:hover{background-color:var(--primary-4);}
 .vtd-calendar-day.vtd-calendar-day-range-start:hover,.vtd-calendar-day.vtd-calendar-day-range-end:hover{background-color:var(--primary-6);}

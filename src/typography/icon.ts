@@ -1,6 +1,6 @@
-import {passthroughAttrsToElement} from "@velotype/velotype"
+import {passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { FunctionComponent, IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
+import type { FunctionComponent, IdAttr, StylePassthroughAttrs } from "../core/velotype.ts"
 import { createElementNSHelper, setAttributeHelper, svgNamespace } from "../core/utilities.ts"
 
 /**

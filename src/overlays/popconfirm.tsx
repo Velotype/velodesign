@@ -1,6 +1,6 @@
-import {type ChildrenAttr, Component, passthroughAttrsToElement, type RenderableElements} from "@velotype/velotype"
+import {type ChildrenAttr, Component, passthroughAttrsToElement, type RenderableElements} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
+import type { IdAttr, StylePassthroughAttrs } from "../core/velotype.ts"
 import { Button } from "../form/button.tsx"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 

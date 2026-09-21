@@ -1,4 +1,4 @@
-import {} from "@velotype/velotype"
+import {} from "./velotype.ts"
 import { mountStyles } from "./styles.ts"
 import { setAttributeHelper } from "./utilities.ts"
 
