@@ -1,4 +1,4 @@
-import type { FunctionComponent } from "@velotype/velotype"
+import type { FunctionComponent } from "./velotype.ts"
 
 export class LocalizedString {
     key: string

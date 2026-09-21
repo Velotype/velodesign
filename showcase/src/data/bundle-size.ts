@@ -4,11 +4,17 @@
  *
  * The whole package bundled from its single entrypoint, minified, with nothing tree-shaken away.
  *
+ * `ownRaw`/`ownGzip` are velodesign by itself, with velotype held out of the bundle the way the
+ * showcase's import map holds it out at runtime. `raw`/`gzip` have velotype folded in, which is
+ * what a plain `deno bundle` produces and is not what a consumer pays velodesign.
+ *
  * Deliberately carries no timestamp. A generated file that changes every day cannot be checked
  * against a fresh measurement in CI, because the check would start failing the next morning for
  * reasons that have nothing to do with the bundle.
  */
-export const bundleSize: {raw: number, gzip: number} = {
-    raw: 200721,
-    gzip: 55426
+export const bundleSize: {raw: number, gzip: number, ownRaw: number, ownGzip: number} = {
+    raw: 172189,
+    gzip: 42861,
+    ownRaw: 163777,
+    ownGzip: 39887
 }

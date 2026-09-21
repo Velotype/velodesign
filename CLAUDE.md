@@ -21,7 +21,7 @@
   | `data-display/` | Badge, Card, Table, DataTable, AsyncDataTable, CodeBlock, Calendar, Tree, Resizable … |
   | `data-entry/` | DatePicker, Slider, Combobox, Upload, Rate, Form |
   | `charts/` | LineChart, AreaChart, BarChart, PieChart, Gauge, Sparkline |
-  | `core/` | **Not a category.** Cross-cutting infrastructure imported by components in several categories, so it belongs to none of them: `utilities.ts`, `theme.ts`, `history.ts`, `strings.ts`, `license.ts`, `search-highlight.tsx`. |
+  | `core/` | **Not a category.** Cross-cutting infrastructure imported by components in several categories, so it belongs to none of them: `utilities.ts`, `theme.ts`, `history.ts`, `strings.ts`, `license.ts`, `search-highlight.tsx`, `styles.ts`, and the two barrels `velotype.ts` / `jsx-runtime.ts` - **every velotype import in the package goes through those two**, for reasons in *The bundle size is measured, not asserted* below. |
 
   Two placements are judgement calls rather than showcase facts: `PageSelector` and `Resizable`
   have no story at all, so they went to `navigation/` (client-side routing) and `data-display/`
@@ -1150,7 +1150,11 @@ above the label.
 fourth time**. It was invisible because the build output had been piped to `/dev/null` - `deno
 check` had not been re-run either. Don't discard build output.
 
-**It has now happened eight times, and the eighth was not in CSS at all** - it was a prose comment
+**It has now happened nine times.** The ninth was a prose comment written *into the showcase's
+page-shell template literal* while adding the import map - three backticked specifiers inside
+`pageShell`, which ends the literal and turns the rest of `server.ts` into a syntax error. Caught
+immediately only because `deno check` was run on the file straight after writing it. The eighth was
+not in CSS either - it was a prose comment
 inside the template literal passed to `page.evaluate()` in `basic_tests.test.ts`, where a
 backticked `` `selected` `` closed the string and produced `SyntaxError: Expected ',', got
 'selected'` from a line that looked like a comment. The rule is about template literals, not about
@@ -1247,6 +1251,76 @@ Do not reach for brace-balancing to parse this file's own source. An apostrophe 
 showcase's snippet generator keys off line structure instead.
 
 ### `showcase/` is built out of this package, deliberately
+
+**The showcase loads three modules, the way a consumer's page does: velotype, velodesign, and the
+app.** It imports `@velotype/velodesign` by name like any other consumer - not by relative path -
+and the bundle task holds both the framework and the library out of `main.js` with `--external`, so
+an import map resolves them at runtime. All three are minified.
+
+That is not a demo detail. **It is the only place velodesign is exercised across a real module
+boundary**, and the failures that boundary produces are invisible everywhere else: a duplicated
+framework, a stylesheet registry that exists twice, a specifier that resolves one way here and
+another way for a consumer. Both bugs found while building it were of exactly that kind, and
+neither showed as an error on the page.
+
+Sizes served, which is also what a consumer downloads:
+
+| Module | Minified |
+|---|---|
+| `velotype.js` | 10.6 KB |
+| `velodesign.js` | 160.0 KB |
+| `main.js` (the showcase itself) | 202.2 KB |
+
+`velodesign.js` is bundled with the **root** config (`--config ../deno.json`), not the showcase's.
+Built under the showcase's it would compile against the showcase's `jsxImportSource` and emit 73 jsx
+import statements instead of one - the same asymmetry described under the bundle size below.
+
+Three pieces make the framework module work, and each one matters:
+
+- `showcase/src/velotype-module.ts` is a one-line `export *` that exists only to be a bundle
+  entrypoint. `deno bundle` resolves an entrypoint as a **file path rather than through the import
+  map**, so bundling velotype directly means writing `jsr:@velotype/velotype@0.0.27` into a task and
+  keeping that in step with the `imports` entry by hand. A local module is resolved the ordinary way
+  instead, so the version stays declared once.
+- `main.tsx` is bundled with `--external` for velodesign *and* both velotype specifiers, so it ships
+  bare specifiers a browser cannot resolve on its own. ⚠️ `--external` matches the specifier as
+  written, **before** the import map resolves it - which is why `@velotype/velodesign` can be held
+  out even though `showcase/deno.json` maps it at a local path, and why a bare specifier cannot be
+  used as a bundle *entrypoint* (there it is resolved as a file path and nothing matches).
+- `server.ts`'s shell carries the import map that resolves them. **Both specifiers point at one
+  file**, because velotype's `.` and `./jsx-runtime` exports are the same module - and they have to
+  stay one entry between them, or two module instances exist.
+
+⚠️ **`jsxImportSource` must be spelled the same way `--external` is, or the jsx runtime is silently
+inlined and a second velotype exists.** The showcase's was `jsr:@velotype/velotype`, which emits
+`jsr:@velotype/velotype/jsx-runtime` - not the specifier `--external` was given - so 12 of
+velotype's 25 exports, including `Component`, `createElement`, `registerEventListener` and
+`emitEvent`, were bundled into `main.js` alongside the external copy. Two registries of element and
+event state, side by side. It is now the bare `@velotype/velotype`, matching the root `deno.json`.
+
+A second one of the same family: `showcase/src/data/docs.tsx` reaches into
+`tests/test_modules/explorer-schema.tsx`, which imported velodesign by relative path - so the entire
+library was inlined into `main.js` *and* imported from it. That file names the package now.
+`main.js` went from 359 KB to 202 KB.
+
+**No browser check can see either of them**, which is the part worth remembering. A duplicate is
+tree-shaken down to whatever the importer actually reaches, so the page renders correctly, mounts
+every sheet exactly once, and logs nothing. The check has to be a build-time one over the emitted
+bundles - and ⚠️ **it has to be a content signature, not a list of declared names**: everything is
+minified, so an inlined copy keeps none of its original identifiers. Two checks were written before
+one worked, and **both earlier ones passed against the bug they were written for**:
+
+| Check | Why it passed anyway |
+|---|---|
+| Duplicate adopted stylesheets, counted in the browser | The duplicate carries no stylesheet state |
+| `main.js` declares none of `velotype.js`'s export names | Minification renamed every one of them |
+| **String literals only minification cannot touch** | Works - `"vtd/Button"` and 67 siblings for velodesign, `adoptedStyleSheets` / `"Invalid tag"` / `"vtwith"` for velotype |
+
+The velotype signature needs all three literals rather than just `adoptedStyleSheets`, because a
+partial duplicate - only the jsx factory, which is what the `jsxImportSource` bug produced - never
+reaches the stylesheet code. `"Invalid tag"` lives in `createElement`, which any duplicate must
+carry.
+
 
 The showcase app is a real consumer of velodesign, not a page that merely displays it: its chrome
 and every page are `Navbar`/`NavLink`/`Heading`/`Text`/`Paragraph`/`Stack`/`Grid`/`Link`/`Empty`,
@@ -1483,6 +1557,64 @@ bytes. It is the single source for both places the number appears:
 
 `src/index.ts` is the only entrypoint, so this is the honest ceiling: every component, every
 stylesheet string, nothing tree-shaken. A real app importing three components downloads far less.
+
+**Two figures, because velotype's bytes are not velodesign's.** `raw`/`gzip` are the whole graph
+with velotype folded in; `ownRaw`/`ownGzip` are velodesign alone, and they are what the home page
+shows. In production velotype is its own module import, shared with everything else built on it -
+which is how the showcase itself now loads it - so a figure with velotype inside reports a size no
+consumer pays velodesign. Both are kept rather than redefining `raw`/`gzip`, so the pull-request
+comment still compares like with like against a base measured before the split.
+
+⚠️ **esbuild emits one import statement per source module that imports an external package, and
+keeps it whether or not that module survived tree-shaking** - an external module might have side
+effects it cannot rule out. Importing velotype directly from 87 files therefore cost **150
+statements and 9,415 bytes in every consumer bundle**, and because the statements survive
+tree-shaking that cost was flat: a Button-only bundle measured 15,964 bytes, of which 9,415 were
+import statements for components that had been shaken out.
+
+**So `src/core/velotype.ts` is the only module in `src/` that names `@velotype/velotype`**, and
+`src/core/jsx-runtime.ts` is the only one that names `@velotype/velotype/jsx-runtime`. Everything
+else imports from the barrel, and `deno.json`'s `jsxImportSource` points at velodesign's own
+`./jsx-runtime` export so the compiler writes one specifier into all 73 `.tsx` files instead of 73.
+Two statements in the bundle, and a Button-only bundle is **6,605 bytes**.
+
+`scripts/bundle-size.ts` asserts exactly two, rather than trusting it. An import that goes around
+the barrel still compiles and still renders; it shows up only as bytes, in everyone's bundle.
+Proven to fail by pointing one component back at `@velotype/velotype` and watching the measurement
+refuse.
+
+Three things about the barrel that are easy to get wrong:
+
+- ⚠️ **Never `export *`.** Against an external package esbuild cannot enumerate the names, so it
+  emits a namespace import plus a `__reExport` helper and rewrites every call site to
+  `(0, ns.foo)()` - an indirect property access that defeats tree-shaking outright. An explicit list
+  costs nothing to keep current: a missing name is a compile error.
+- ⚠️ **The JSX barrel must re-export `JSX` as a type.** `jsxImportSource` resolves
+  `JSX.IntrinsicElements` through that module, so re-exporting only `jsx`/`jsxs`/`Fragment` leaves
+  every intrinsic element untyped - 616 `TS7026` errors, none of which point at the barrel.
+- **`./jsx-runtime` is in `exports` for resolution, not for consumers.** A config-local `#alias`
+  works when building here, but a published package is resolved by whoever imports it, and a real
+  export is one less thing that has to survive that. A consumer has velodesign's own name mapped
+  already - that is how they imported it.
+
+⚠️ **Which `jsxImportSource` applies to velodesign's own `.tsx` files depends on who compiles
+them.** Compiled as part of a consumer's graph - which is what a relative-path import makes them -
+they take the *consumer's*, and emit 73 statements rather than one. That is why the showcase builds
+`velodesign.js` as its own module with `--config ../deno.json`: under the root config velodesign's
+files take velodesign's own setting, which is also what a published package gets.
+
+A `@jsxImportSource` pragma in each file was tried as a way to make it independent of the compiling
+config. It overrides the emitted import but **not** the type resolution, so it fails to typecheck -
+`TS2875`, pointing at a module path that is fine. Don't reach for it again.
+
+Both `showcase/deno.json` and `tests/deno.json` map `@velotype/velodesign/jsx-runtime` at
+velodesign's barrel, which is what a consumer naming the package gets for free.
+
+An earlier note here said `--external` did not hold velotype out at all. That was wrong - it works,
+and `--external "@velotype/velotype"` alone covers the `/jsx-runtime` subpath too, byte for byte.
+The generated stand-in for velotype it described is gone, and so is the transform that briefly
+replaced it, which collapsed the duplicate statements *after* measuring and so fixed the number
+while leaving every consumer to pay the bytes.
 
 ### Verification checklist for a new/changed component
 

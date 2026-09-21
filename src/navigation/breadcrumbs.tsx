@@ -1,6 +1,6 @@
-import {passthroughAttrsToElement} from "@velotype/velotype"
+import {passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { Link } from "./link.tsx"
 import { Menu } from "./menu.tsx"
 import type { MenuItemType } from "./menu.tsx"
@@ -113,7 +113,8 @@ function splitTrail(items: BreadcrumbItemType[], maxItems: number | undefined): 
 export const Breadcrumbs: FunctionComponent<BreadcrumbsAttrsType> = function(attrs: BreadcrumbsAttrsType, _children: RenderableElements[]): HTMLElement {
     if (!areBreadcrumbsStylesMounted) {
         areBreadcrumbsStylesMounted = true
-        mountStyles(`
+        mountStyles(
+`
 .vtd-breadcrumbs-list{
 display:flex;
 flex-wrap:wrap;
@@ -132,7 +133,9 @@ align-items:center;
 margin-inline:0.5em;
 color:var(--background-6);
 }
+` +
 /* A crumb's label and its leading content read as one thing, so they sit on one baseline */
+`
 .vtd-breadcrumbs-crumb{display:inline-flex;align-items:center;gap:0.4em;}
 .vtd-breadcrumbs-leading{display:inline-flex;align-items:center;flex-shrink:0;}
 .vtd-breadcrumbs-expand{

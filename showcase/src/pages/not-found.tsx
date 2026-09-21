@@ -1,7 +1,7 @@
 import { Component } from "@velotype/velotype"
 import type { EmptyAttrs } from "@velotype/velotype"
 
-import { Button, Empty, History } from "../../../src/index.ts"
+import { Button, Empty, History } from "@velotype/velodesign"
 
 /** Shown when `location.pathname` doesn't match any known route */
 export class NotFoundPage extends Component<EmptyAttrs> {

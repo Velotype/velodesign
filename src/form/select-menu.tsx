@@ -1,6 +1,6 @@
-import {Component, passthroughAttrsToElement} from "@velotype/velotype"
+import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /**
  * Attrs type for `<SelectMenu/>` Component
@@ -189,7 +189,8 @@ export class SelectMenu<OptionType> extends Component<SelectMenuAttrsType<Option
 
         if (!areSelectMenuStylesMounted) {
             areSelectMenuStylesMounted = true
-            mountStyles(`
+            mountStyles(
+`
 .vtd-select-menu{position:relative;display:inline-block;}
 .vtd-select-menu-trigger{
 display:inline-flex;
@@ -240,7 +241,9 @@ display:none;
 }
 .vtd-select-menu-panel-open{display:block;}
 .vtd-select-menu-option{padding:0.5em 0.75em;border-radius:0.25rem;cursor:pointer;}
+` +
 /* The keyboard's position in the list - see Menu for why this is a tint and not a ring */
+`
 .vtd-select-menu-option-highlighted{background-color:var(--primary-3);}
 .vtd-select-menu-option-selected{background-color:var(--primary-3);}
 .vtd-select-menu-option-disabled{opacity:0.5;cursor:not-allowed;}

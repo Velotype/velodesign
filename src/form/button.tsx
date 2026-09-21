@@ -1,6 +1,6 @@
-import {passthroughAttrsToElement} from "@velotype/velotype"
+import {passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type {IdAttr, RenderableElements, FunctionComponent, StylePassthroughAttrs, TargetedMouseEvent, ChildrenAttr} from "@velotype/velotype"
+import type {IdAttr, RenderableElements, FunctionComponent, StylePassthroughAttrs, TargetedMouseEvent, ChildrenAttr} from "../core/velotype.ts"
 import { Spinner } from "../feedback/spinner.tsx"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 

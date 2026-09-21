@@ -1,4 +1,4 @@
-import {} from "@velotype/velotype"
+import {} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import { createElementNSHelper, setAttributeHelper } from "../core/utilities.ts"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
@@ -228,24 +228,33 @@ export function mountChartStyles(): void {
         return
     }
     areChartStylesMounted = true
-    mountStyles(`
+    mountStyles(
+`
 .vtd-chart{width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:0.5em;position:relative;}
 .vtd-chart-svg{display:block;width:100%;overflow:visible;}
+` +
 /* Visually hidden, still read aloud - the standard clip pattern. This holds each chart's data as a
    real table, so a screen reader gets the numbers rather than just the chart's name. */
+`
 .vtd-chart-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0;}
+` +
 /* A Sparkline is inline content, so it sits on the text baseline rather than as its own block */
+`
 .vtd-sparkline{display:inline-block;vertical-align:middle;line-height:0;}
 .vtd-sparkline .vtd-chart-svg{width:auto;}
 .vtd-chart-gridline{stroke:var(--background-3);stroke-width:1;shape-rendering:crispedges;}
 .vtd-chart-axis{stroke:var(--background-5);stroke-width:1;shape-rendering:crispedges;}
+` +
 /* em, not px: this is the only place in the package that would otherwise hardcode a text size,
    and an absolute value neither matches the page's typography nor follows a consumer who scales
    it. 0.85em is the same secondary-text size Badge, Tag and the DataTable footer already use. */
+`
 .vtd-chart-tick{fill:var(--background-6);font-size:0.85em;font-family:inherit;}
 .vtd-chart-tick-y{text-anchor:end;dominant-baseline:middle;}
 .vtd-chart-tick-x{text-anchor:middle;}
+` +
 /* Lines keep their width whatever the viewBox does, so a wide chart doesn't draw hairlines */
+`
 .vtd-chart-line{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke;}
 .vtd-chart-area{stroke:none;opacity:0.18;}
 .vtd-chart-dot{stroke:var(--background);stroke-width:2;}
@@ -262,7 +271,9 @@ color:var(--background-6);
 font-size:2em;
 line-height:1;
 }
+` +
 /* Legend */
+`
 .vtd-chart-legend{
 display:flex;
 flex-wrap:wrap;
@@ -274,7 +285,9 @@ color:var(--background-6);
 }
 .vtd-chart-legend-item{display:inline-flex;align-items:center;gap:0.4em;}
 .vtd-chart-legend-swatch{width:0.75em;height:0.75em;border-radius:0.15em;flex-shrink:0;}
+` +
 /* Tooltip - positioned by the chart, so it needs no layout of its own beyond staying on top */
+`
 .vtd-chart-tooltip{
 position:absolute;
 pointer-events:none;

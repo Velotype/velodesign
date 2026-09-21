@@ -1,6 +1,6 @@
-import {passthroughAttrsToElement} from "@velotype/velotype"
+import {passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /**
  * A single entry in a `<List/>`
@@ -50,7 +50,8 @@ let areListStylesMounted = false
 export const List: FunctionComponent<ListAttrsType> = function(attrs: ListAttrsType, _children: RenderableElements[]): HTMLElement {
     if (!areListStylesMounted) {
         areListStylesMounted = true
-        mountStyles(`
+        mountStyles(
+`
 .vtd-list{width:100%;box-sizing:border-box;list-style:none;padding:0;margin:0;}
 .vtd-list-item{
 position:relative;
@@ -69,7 +70,9 @@ border-block-end:1px solid var(--background-4);
 .vtd-list-item-title{overflow-wrap:break-word;}
 .vtd-list-item-description{font-size:0.9em;opacity:0.7;margin-block-start:0.15em;}
 .vtd-list-item-trailing{flex-shrink:0;}
+` +
 /* See DataTable's identical .vtd-data-table-row-link comment for the full rationale. */
+`
 .vtd-list-item-link{color:inherit;text-decoration:none;}
 .vtd-list-item-link-button{display:block;width:100%;text-align:inherit;background:transparent;border:none;color:inherit;font:inherit;padding:0;cursor:pointer;}
 .vtd-list-item-link::after{content:"";position:absolute;inset:0;z-index:0;}

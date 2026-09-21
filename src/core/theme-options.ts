@@ -1,4 +1,4 @@
-import type { EmptyAttrs, FunctionComponent } from "@velotype/velotype"
+import type { EmptyAttrs, FunctionComponent } from "./velotype.ts"
 
 /**
  * A piece of overridable theme content - a component taking no attrs, rendered as

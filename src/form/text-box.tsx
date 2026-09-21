@@ -1,4 +1,4 @@
-import {type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs, type TargetedEvent, type TargetedInputEvent} from "@velotype/velotype"
+import {type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs, type TargetedEvent, type TargetedInputEvent} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import { CommonThemeOptions } from "../core/theme-options.ts"
 
@@ -49,12 +49,15 @@ let areTextBoxStylesMounted = false
 export const TextBox: FunctionComponent<TextBoxAttrsType> = function(attrs: TextBoxAttrsType, _children: RenderableElements[]): HTMLElement {
     if (!areTextBoxStylesMounted) {
         areTextBoxStylesMounted = true
-        mountStyles(`
+        mountStyles(
+`
 .vtd-text-box{
 padding:0.5ex 1ex;
 margin-inline-start:1ex;
 }
+` +
 /* Only present when clearable is set - an unwrapped input is still the default shape */
+`
 .vtd-text-box-wrapper{position:relative;display:inline-flex;align-items:center;}
 .vtd-text-box-wrapper .vtd-text-box{width:100%;box-sizing:border-box;padding-inline-end:2em;}
 .vtd-text-box-clear{
@@ -73,8 +76,10 @@ color:var(--background-9);
 cursor:pointer;
 line-height:1;
 }
+` +
 /* Shown only while there is something to clear - :placeholder-shown is false once a value exists,
    so the button needs no script to decide whether it belongs on screen */
+`
 .vtd-text-box-wrapper .vtd-text-box:not(:placeholder-shown) ~ .vtd-text-box-clear{display:inline-flex;}
 .vtd-text-box-clear:hover{background-color:var(--background-2);color:var(--text);}
 `, "vtd/TextBox")

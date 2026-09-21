@@ -1,6 +1,6 @@
-import {} from "@velotype/velotype"
+import {} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { RenderableElements } from "@velotype/velotype"
+import type { RenderableElements } from "../core/velotype.ts"
 import { Button } from "../form/button.tsx"
 import { Checkbox } from "../form/checkbox.tsx"
 import { highlightMatch, searchHighlightCss } from "../core/search-highlight.tsx"
@@ -77,18 +77,23 @@ export function mountDataTableStyles(): void {
         return
     }
     areDataTableStylesMounted = true
-    mountStyles(`
+    mountStyles(
+`
 .vtd-data-table-wrapper{width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:0.75em;}
+` +
 /*
  * The search box and the "Columns" button share one toolbar row: search takes the leading edge
  * and absorbs the slack, the button sits at the trailing edge. flex-wrap is the escape valve
  * for a container too narrow to hold both - they stack rather than crushing the input - and the
  * search box's flex-basis is what decides when that happens.
  */
+`
 .vtd-data-table-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5em;}
 .vtd-data-table-search-wrapper{display:flex;flex:1 1 12em;min-width:0;align-items:center;gap:0.5em;}
 .vtd-data-table-search-wrapper .vtd-text-box{width:100%;max-width:20em;margin-inline-start:0;box-sizing:border-box;}
+` +
 /* The auto margin keeps the button trailing-aligned in the searchable={false} case, where it's the row's only child */
+`
 .vtd-data-table-column-menu-wrapper{position:relative;margin-inline-start:auto;}
 .vtd-data-table-column-menu{
 position:absolute;
@@ -138,6 +143,7 @@ padding:0;
 .vtd-data-table-zebra.vtd-data-table-hoverable tr:nth-child(even):hover{background-color:var(--background-2);}
 .vtd-data-table-align-center{text-align:center;}
 .vtd-data-table-align-end{text-align:end;}
+` +
 /*
  * A "clickable row" (rowHref/onRowSelect): the link/button wraps the first visible column's
  * real content (so it keeps a natural, meaningful accessible name from that content, and
@@ -147,6 +153,7 @@ padding:0;
  * action button in a later column, say) gets position:relative + a higher stacking order here
  * so it stays clickable above that stretch, rather than the row-level link swallowing its clicks.
  */
+`
 .vtd-data-table-row-link{color:inherit;text-decoration:none;}
 .vtd-data-table-row-link-button{display:block;width:100%;text-align:inherit;background:transparent;border:none;color:inherit;font:inherit;padding:0;cursor:pointer;}
 .vtd-data-table-row-link::after{content:"";position:absolute;inset:0;z-index:0;}
@@ -162,16 +169,20 @@ touch-action:none;
 }
 .vtd-data-table-resize-handle:hover{background-color:var(--primary-6);}
 .vtd-data-table-empty{text-align:center;opacity:0.6;padding:2em;}
+` +
 /* Sized like Empty's own icon, so a table with no rows and an <Empty/> beside it agree */
+`
 .vtd-data-table-empty-icon{font-size:2em;line-height:1;display:inline-block;}
 .vtd-data-table-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1em;}
 .vtd-data-table-page-size-label{display:flex;align-items:center;gap:0.5em;}
 .vtd-data-table-pagination{display:flex;justify-content:center;flex-grow:1;}
+` +
 /*
  * Async-only states. A reload keeps the previous rows in place and fades them rather than
  * swapping in a spinner: replacing the table on every keystroke makes the page jump around, and
  * the stale rows are still the best answer available until the new ones land.
  */
+`
 .vtd-data-table-body-reloading{opacity:0.45;transition:opacity 120ms ease-out;}
 .vtd-data-table-status{display:flex;align-items:center;gap:0.5em;justify-content:center;padding:2em;opacity:0.7;}
 .vtd-data-table-truncated{font-size:0.85em;color:var(--warning-8);}

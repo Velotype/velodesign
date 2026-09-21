@@ -1,5 +1,5 @@
-import { Component } from "@velotype/velotype"
-import type { FunctionComponent, EmptyAttrs, RenderableElements } from "@velotype/velotype"
+import { Component } from "../core/velotype.ts"
+import type { FunctionComponent, EmptyAttrs, RenderableElements } from "../core/velotype.ts"
 
 /**
  * One routable page in a `<PageSelector pages={[...]}/>`

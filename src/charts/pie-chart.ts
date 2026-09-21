@@ -1,7 +1,7 @@
 import { ChartFrame } from "./chart-frame.ts"
 import { seriesColor, svgEl } from "./chart-common.ts"
 import type { ChartBaseAttrsType, ChartDataTable, TooltipRow } from "./chart-common.ts"
-import type { IdAttr, StylePassthroughAttrs } from "@velotype/velotype"
+import type { IdAttr, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /** One wedge of a `<PieChart/>` */
 export type PieSliceType = {

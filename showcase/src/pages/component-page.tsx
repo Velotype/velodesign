@@ -1,9 +1,9 @@
 import { Component, setStylesheet } from "@velotype/velotype"
 import type { RenderableElements } from "@velotype/velotype"
 
-import { Badge, Breadcrumbs, CodeBlock, Heading, Link, Paragraph, Stack, Table, TableOfContents, Text } from "../../../src/index.ts"
-import type { TableColumnType } from "../../../src/index.ts"
-import type { TableOfContentsItemType } from "../../../src/index.ts"
+import { Badge, Breadcrumbs, CodeBlock, Heading, Link, Paragraph, Stack, Table, TableOfContents, Text } from "@velotype/velodesign"
+import type { TableColumnType } from "@velotype/velodesign"
+import type { TableOfContentsItemType } from "@velotype/velodesign"
 import { componentDocs, type ComponentDoc, type AttrDoc, type MethodDoc, type TypeDoc } from "../data/docs.tsx"
 import { categoryPageUrl } from "./category-page.tsx"
 

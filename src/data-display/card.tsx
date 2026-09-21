@@ -1,6 +1,6 @@
-import {passthroughAttrsToElement} from "@velotype/velotype"
+import {passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /**
  * Attrs type for `<Card/>` Component
@@ -20,7 +20,7 @@ let areCardStylesMounted = false
 export const Card: FunctionComponent<CardAttrsType> = function(attrs: CardAttrsType, children: RenderableElements[]): HTMLDivElement {
     if (!areCardStylesMounted) {
         areCardStylesMounted = true
-        mountStyles(`
+        mountStyles(
 /*
  * Three regions, three jobs, and they have to look like it.
  *
@@ -34,6 +34,7 @@ export const Card: FunctionComponent<CardAttrsType> = function(attrs: CardAttrsT
  * relationship a hover has to a resting row, which is small on purpose. A header that announced
  * itself with a real colour would make every card on a page compete with its own content.
  */
+`
 .vtd-card{
 width:100%;
 box-sizing:border-box;
@@ -51,11 +52,13 @@ font-weight:bold;
 .vtd-card-body{
 padding:1em;
 }
+` +
 /*
  * The footer holds actions, so it is the same chrome as the header and sits flush to the card's
  * bottom edge - a footer with the body's surface under it reads as one more paragraph with some
  * buttons in it rather than as the place the card is acted on.
  */
+`
 .vtd-card-footer{
 display:flex;
 align-items:center;

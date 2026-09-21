@@ -1,6 +1,6 @@
-import {passthroughAttrsToElement} from "@velotype/velotype"
+import {passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "@velotype/velotype"
+import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /**
  * Attrs type for `<Navbar/>` Component
@@ -26,7 +26,8 @@ let areNavbarStylesMounted = false
 export const Navbar: FunctionComponent<NavbarAttrsType> = function(attrs: NavbarAttrsType, children: RenderableElements[]): HTMLElement {
     if (!areNavbarStylesMounted) {
         areNavbarStylesMounted = true
-        mountStyles(`
+        mountStyles(
+`
 .vtd-navbar{
 width:100%;
 box-sizing:border-box;
@@ -42,8 +43,10 @@ display:flex;
 flex-wrap:wrap;
 align-items:center;
 gap:1em;
+` +
 /* The auto margin lives here rather than on the brand, so brand and leading group together on
    the left and children are pushed right whether or not leading is set. */
+`
 margin-inline-end:auto;
 }
 .vtd-navbar-brand{
