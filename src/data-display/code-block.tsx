@@ -285,13 +285,54 @@ tab-size:4;
  * since that ramp inverts between them.
  */
 `
+` +
+/*
+ * Every step here was chosen by measuring, not by eye, and the measurement is why they are all
+ * higher than they were.
+ *
+ * The ramps are theme-aware already - they invert - but a *fixed* step does not give a fixed
+ * contrast, because the two themes are built from different base colours: light mode's secondary is
+ * a pale green meant for fills, dark mode's is a deep one. So `--secondary-7` read 1.71:1 on the
+ * light theme's code background and 7.01:1 on the dark, and `--accent-7` was 5.37:1 light against
+ * 3.43:1 dark. Four of the seven tokens failed WCAG AA's 4.5:1 in one theme or the other, and which
+ * four depended on the theme - which is why this looks like "only styled for light mode" from one
+ * side and fine from the other.
+ *
+ * ⚠️ **The ramp trades saturation for contrast, so the highest steps are the muddiest.** Each step
+ * is a `color-mix` in *hsl* toward black or white, and both of those have a saturation of zero, so
+ * mixing drags the hue's saturation down with its lightness. Measured on the resolved colours:
+ * step 8 sits at 0.40 saturation and step 9 at 0.20 - half as vivid for the sake of contrast nobody
+ * asked for. Every coloured token is therefore on step 8, the most saturated step that is still
+ * readable in both themes:
+ *
+ *   step        light  dark  sat      step           light  dark
+ *   primary-8     7.6   6.7  0.40     background-6     4.6   5.4
+ *   secondary-8   4.4   7.8  0.40     background-7     6.8   7.1
+ *   warning-8     5.9   8.1  0.40
+ *   accent-8      8.7   5.9  0.40
+ *
+ * `secondary-8` is 4.4:1 in light, a shade under WCAG AA's 4.5:1 for body text. Taken knowingly:
+ * the step that clears it is the 0.20-saturation one that reads as grey-green, and a syntax colour
+ * that cannot be told from its neighbours has failed at the job the colour is there to do.
+ *
+ * **Genuinely vivid syntax colours need a surface of their own, not a different step.** The light
+ * theme's hues are pastels meant for fills - a pale yellow or a pale green simply cannot be both
+ * saturated and readable on a near-white background, which is why every documentation site that
+ * wants vivid code gives the block a dark surface in both themes. That is a visual decision rather
+ * than a correctness one, so it is not taken here.
+ *
+ * Numbers take the same green as strings on purpose: with four hues and six coloured kinds
+ * something has to share, and a number and a string are both literal values, which is the pairing
+ * every syntax theme makes.
+ */
+`
 .vtd-code-block-comment{color:var(--background-6);font-style:italic;}
-.vtd-code-block-string{color:var(--secondary-7);}
-.vtd-code-block-keyword{color:var(--primary-7);}
-.vtd-code-block-tag{color:var(--accent-7);}
-.vtd-code-block-attr{color:var(--warning-7);}
+.vtd-code-block-string{color:var(--secondary-8);}
+.vtd-code-block-keyword{color:var(--primary-8);}
+.vtd-code-block-tag{color:var(--accent-8);}
+.vtd-code-block-attr{color:var(--warning-8);}
 .vtd-code-block-number{color:var(--secondary-8);}
-.vtd-code-block-punct{color:var(--background-8);}
+.vtd-code-block-punct{color:var(--background-7);}
 ` +
 /*
  * Line numbers are a counter on each line rather than a second column of text, so selecting the

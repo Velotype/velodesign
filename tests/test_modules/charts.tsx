@@ -54,7 +54,7 @@ class ChartsGallery extends Component<EmptyAttrs> {
             </div>
             <div>
                 <h3>BarChart</h3>
-                <div id="default-bar-chart"><BarChart
+                <div id="default-bar-chart"><BarChart title="Revenue by quarter"
                     data={trend} series={twoSeries} height={200}
                     formatValue={money} ariaLabel="Revenue and costs by month"/></div>
             </div>
@@ -68,7 +68,7 @@ class ChartsGallery extends Component<EmptyAttrs> {
                 <h3>BarChart, horizontal</h3>
                 <div id="horizontal-bar-chart"><BarChart
                     data={departments} series={[{key: "headcount", label: "Headcount"}]}
-                    horizontal height={200} ariaLabel="Headcount by department"/></div>
+                    horizontal height={200} title="Headcount by department"/></div>
             </div>
             <div>
                 <h3>PieChart</h3>

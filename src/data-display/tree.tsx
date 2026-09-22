@@ -99,12 +99,27 @@ export class Tree extends Component<TreeAttrsType> {
 .vtd-tree-node{margin-block:0.1em;}
 .vtd-tree-label,.vtd-tree-leaf{
 cursor:pointer;
+min-height:24px;
+box-sizing:border-box;
 padding:0.3em 0.5em;
 border-radius:0.25rem;
 list-style:none;
 user-select:none;
 }
-.vtd-tree-leaf{display:block;}
+.vtd-tree-leaf{display:flex;align-items:center;}
+` +
+/*
+ * A link a consumer puts in a row is the thing a finger aims at, and it is its own box - a 24px row
+ * around an 18px anchor still leaves an 18px target. Stretching it to the row's height is what
+ * makes the row and the target the same thing, which is the relationship `Sidebar` builds by hand.
+ */
+`
+.vtd-tree-leaf > a,.vtd-tree-label > a,.vtd-tree-leaf > .vtd-link,.vtd-tree-label > .vtd-link{
+display:flex;
+align-items:center;
+align-self:stretch;
+min-height:24px;
+}
 ` +
 /*
  * The row is a flex line so the chevron and the label sit on one baseline. It has to be: with a

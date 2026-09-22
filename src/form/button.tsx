@@ -55,6 +55,16 @@ export const Button: FunctionComponent<ButtonAttrsType> = function(attrs: Button
 .vtd-button{
 position:relative;
 padding:0.25rem 0.5rem;
+` +
+/*
+ * A floor, not a size: every button with a word in it is already wider than this. It is the
+ * icon-only ones that need it - Pagination's prev/next, Calendar's month arrows and Carousel's
+ * navigation all draw a single narrow glyph and measured 23px across, one pixel under what
+ * WCAG 2.2 SC 2.5.8 asks. See the touch target note in CLAUDE.md for why this is in px.
+ */
+`
+min-width:24px;
+min-height:24px;
 border-radius:0.25rem;
 cursor:pointer;
 display:inline-block;

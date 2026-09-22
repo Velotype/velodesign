@@ -49,6 +49,12 @@ export abstract class ChartFrame<AttrsType extends ChartBaseAttrsType> extends C
 
         this.#root = document.createElement("div")
         this.#root.className = "vtd-chart"
+        if (attrs.title !== undefined && attrs.title !== "") {
+            const titleEl = document.createElement("div")
+            titleEl.className = "vtd-chart-title"
+            titleEl.textContent = attrs.title
+            this.#root.appendChild(titleEl)
+        }
         this.#root.appendChild(this.#svgHost)
         this.#root.appendChild(this.#srHost)
         this.#root.appendChild(this.#emptyHost)
@@ -113,11 +119,12 @@ export abstract class ChartFrame<AttrsType extends ChartBaseAttrsType> extends C
         const table = this.dataTable()
         if (table) {
             svg.setAttribute("aria-hidden", "true")
-            this.#srHost.replaceChildren(buildDataTable(attrs.ariaLabel, table))
+            this.#srHost.replaceChildren(buildDataTable(attrs.ariaLabel ?? attrs.title, table))
         } else {
             svg.setAttribute("role", "img")
-            if (attrs.ariaLabel !== undefined) {
-                svg.setAttribute("aria-label", attrs.ariaLabel)
+            const name = attrs.ariaLabel ?? attrs.title
+            if (name !== undefined) {
+                svg.setAttribute("aria-label", name)
             }
             this.#srHost.replaceChildren()
         }

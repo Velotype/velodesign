@@ -127,7 +127,10 @@ margin:0;
 display:flex;
 align-items:center;
 }
-.vtd-breadcrumbs-item a{color:inherit;}
+` +
+/* The crumb's anchor is the target, so it carries the 24px floor rather than the row around it */
+`
+.vtd-breadcrumbs-item a{color:inherit;display:inline-flex;align-items:center;min-height:24px;}
 .vtd-breadcrumbs-item[aria-current="page"]{font-weight:bold;}
 .vtd-breadcrumbs-separator{
 margin-inline:0.5em;

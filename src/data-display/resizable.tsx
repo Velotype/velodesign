@@ -36,10 +36,27 @@ export class Resizable extends Component<ResizableAttrsType> {
             areResizableStylesMounted = true
             mountStyles(`
 .vtd-resizable{position:relative;overflow:auto;}
-.vtd-resizable-handle{position:absolute;background-color:transparent;}
+.vtd-resizable-handle{position:absolute;background-color:transparent;` +
+/*
+ * touch-action:none, or a touch drag never reaches the handler at all - the browser claims the
+ * gesture for panning first and the pointermove events stop arriving. `Sidebar` and `DataTable`
+ * both set it on their own drag handles; this one was missed, which made the component
+ * touch-only-in-theory: every listener fired correctly and the page scrolled instead.
+ */
+`touch-action:none;}
 .vtd-resizable-handle:hover,.vtd-resizable-handle-active{background-color:var(--primary-6);}
-.vtd-resizable-handle-right{top:0;right:0;bottom:0;width:0.4em;cursor:ew-resize;}
-.vtd-resizable-handle-bottom{left:0;right:0;bottom:0;height:0.4em;cursor:ns-resize;}
+` +
+/*
+ * The visible line stays thin; the grab area does not. A 0.4em edge is about six pixels, which is
+ * a reasonable mouse target and not a finger one, so the handle is padded out to a real target and
+ * the drawn line is pulled back to its original width with a background-clip inset. See the touch
+ * target note in CLAUDE.md for why this is stated in px.
+ */
+`
+.vtd-resizable-handle-right{top:0;right:0;bottom:0;width:0.4em;min-width:24px;cursor:ew-resize;}
+.vtd-resizable-handle-bottom{left:0;right:0;bottom:0;height:0.4em;min-height:24px;cursor:ns-resize;}
+.vtd-resizable-handle-right:hover,.vtd-resizable-handle-right.vtd-resizable-handle-active{background:linear-gradient(to right,transparent calc(100% - 0.4em),var(--primary-6) calc(100% - 0.4em));}
+.vtd-resizable-handle-bottom:hover,.vtd-resizable-handle-bottom.vtd-resizable-handle-active{background:linear-gradient(to bottom,transparent calc(100% - 0.4em),var(--primary-6) calc(100% - 0.4em));}
 `, "vtd/Resizable")
         }
 
