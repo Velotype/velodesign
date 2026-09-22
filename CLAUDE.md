@@ -503,6 +503,17 @@ with `startTime == null` that never clears. A screenshot cannot see this, and ne
 assertion about rendered content. Read it directly rather than inferring from what the element
 looks like.
 
+⚠️ **A test that leaves a navigation in flight breaks whatever runs next.** The menu test clicks an
+entry whose `href` really navigates, and returned without waiting, so the next test's `page.goto`
+raced it - and a selector query landing on a document mid-swap fails with `Unable to get element
+from selector: body`, timing out after ten seconds. It failed about one run in eight.
+
+`networkidle2` used to hide this by idling for ~500ms after every navigation; moving to
+`waitUntil: "load"` for the speed removed that cushion and the pre-existing bug started showing. The
+fix is `preventDefault` on a capture listener before the click: the navigation never starts, while
+the component's own handler still runs so the assertion is unchanged. **Clicking a real link in a
+test needs one of those two - wait for it, or stop it.**
+
 ⚠️ **Neither transitions nor `IntersectionObserver` work inside this test suite.**
 `requestAnimationFrame` never ticks, computed values stay at their start, observer callbacks are
 never delivered, and any in-page promise running more than about a second trips Astral's own
@@ -1195,7 +1206,11 @@ above the label.
 fourth time**. It was invisible because the build output had been piped to `/dev/null` - `deno
 check` had not been re-run either. Don't discard build output.
 
-**It has now happened nine times.** The ninth was a prose comment written *into the showcase's
+**It has now happened ten times.** The tenth was a comment explaining a navigation race, written
+into the `page.evaluate()` literal it was explaining - `` `waitForSelector` `` closed the string.
+Caught by `deno check` one command later.
+
+**And nine times before that.** The ninth was a prose comment written *into the showcase's
 page-shell template literal* while adding the import map - three backticked specifiers inside
 `pageShell`, which ends the literal and turns the rest of `server.ts` into a syntax error. Caught
 immediately only because `deno check` was run on the file straight after writing it. The eighth was
