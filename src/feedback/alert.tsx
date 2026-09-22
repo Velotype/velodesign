@@ -66,6 +66,14 @@ font:inherit;
 line-height:1;
 padding:0.15em 0.4em;
 border-radius:0.25rem;
+` +
+/* A 24px floor on the control a reader taps to dismiss - see the touch target note in CLAUDE.md */
+`
+min-width:24px;
+min-height:24px;
+display:inline-flex;
+align-items:center;
+justify-content:center;
 }
 .vtd-alert-dismiss:hover{background-color:var(--background-3);}
 `, "vtd/Alert")

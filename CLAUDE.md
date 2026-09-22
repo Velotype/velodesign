@@ -250,6 +250,16 @@ beats a layered one whatever its specificity and whatever the source order. So:
 ⚠️ **A layer is not a substitute for scoping inside the package.** Two components in the same layer
 still tie on source order, so a rule about another component's class must still out-specify it -
 scope it under your own root (`.vtd-sidebar-profile .vtd-menu`, not `.vtd-sidebar-profile-menu`).
+
+**And the order is not a coin toss - the other component's sheet always wins.** A component that
+*constructs* another mounts its own sheet first, so the one it builds is always later and always
+beats it at equal specificity. `Carousel` styled its arrows with an unscoped `.vtd-carousel-nav`
+on a `Button`, lost `position:absolute` to `.vtd-button{position:relative}` every single time, and
+rendered both arrows stacked in the bottom-left corner in flow rather than over the slide - for as
+long as the component has existed. Every test passed throughout: the arrows are present, clickable
+and advance the slide wherever they sit, so only a computed-style assertion or a screenshot sees it.
+The sweep worth running when touching this: find every site where one component's class is applied
+to another component's element, and check each for a property both sides declare.
 The layer fixes library-versus-consumer; specificity still settles library-versus-library, and the
 `composite` layer is for the handful of cases where scoping alone cannot.
 
@@ -696,6 +706,41 @@ both moved a highlight without it, so arrowing past the visible options moved so
 see and the list looked like it had stopped responding. Both call
 `scrollIntoView({block: "nearest"})` now - `nearest`, so a highlight already on screen does not yank
 the list around under the reader.
+
+## A control has to be big enough to hit with a finger
+
+**24x24 CSS pixels, from WCAG 2.2 SC 2.5.8, and it is stated in `px` rather than `em`** - the one
+place in the package that is right to. Everything else here scales with the consumer's typography
+on purpose; a *minimum touch target* does not, because the thing it is sized against is a fingertip
+and that does not get smaller when someone picks a smaller body font. An `em` floor would silently
+drop under 24px for exactly the consumer whose reader needs it most.
+
+Measured at a 390px viewport before any of this, the package had seven controls under that floor,
+the worst being a **10x10** carousel dot. Two techniques, and which one to reach for depends on
+whether the control's own size is load-bearing:
+
+| Technique | When | Used by |
+|---|---|---|
+| Grow the control, draw the visual inside it with a pseudo-element | The visual is smaller than the target and nothing depends on the box | `Carousel`'s dots - a transparent 24px button with the 0.6em dot as `::before` |
+| Leave the control, extend the hit area past it with an absolutely-positioned `::after` | Making the control bigger would move the layout | `Tag`'s remove control - a 24px overlay centred on an 18px button, so the chip's height is unchanged |
+| A `min-width`/`min-height` floor | The control is already close and has room | `Button` (icon-only ones measured 23px across), `Alert`'s dismiss, `DataTable`'s sort button |
+
+`Slider` needed its own shape: a range input **is** its own hit area, and the track was the input's
+background, so the whole control was six pixels tall however big the thumb was drawn. The element is
+24px and transparent now, with the bar moved into `::-webkit-slider-runnable-track` /
+`::-moz-range-track` and the thumb centred by hand with a negative `margin-top`, which is what
+`-webkit-` requires once the track is shorter than the element.
+
+⚠️ **A pseudo-element hit area is invisible to `getBoundingClientRect`, so a box measurement cannot
+verify it** - `Tag`'s control still reports 18x18 and is correct. Hit-test with
+`document.elementFromPoint`, walking outwards from the centre until it stops returning the control.
+A sweep that reads boxes will report the fixed component as still broken, which is how this was
+nearly "fixed" twice.
+
+**Drag handles need `touch-action:none` or the gesture never arrives.** The browser claims a touch
+drag for panning before any `pointermove` fires, so the component looks correct, listens correctly,
+and does nothing while the page scrolls under the finger. `Sidebar` and `DataTable` set it;
+`Resizable` did not, which made it mouse-only in practice.
 
 ## Interactive means it looks interactive, everywhere
 
@@ -1514,7 +1559,9 @@ keeps looking correct even when the inherited palette is wrong.
 
 `tests/test_modules/explorer.tsx` (+ `explorer-schema.tsx`) is a separate, Storybook-style browsing UI served at `/` — a searchable/grouped sidebar, a live canvas, and a "Controls" panel that live-edits a story's props and re-renders the real component instantly. It's additive to the gallery-page fan-out above, not a replacement: every component still gets its own `/<name>` gallery page, and `basic_tests.test.ts` still drives those routes directly, unaffected by the Explorer. If you want a new component to also show up in the Explorer, add a `ComponentStory` entry for it in `explorer-schema.tsx` (`defaultProps`/`controls`/`render`) — only genuinely scalar props (a string enum → `select`, a `boolean`, a freeform string → `text`, a number → `number`) get a control; arrays/objects/callbacks stay baked into `render` as fixed sample data, same as the gallery pages already do. A story with a click-driven internal state (like `Pagination`'s current page) should route that through the `setProp` callback `render` receives as its second argument, so it stays in sync with the same update path a Controls edit uses - see `explorer.tsx`'s `Pagination`/`Menu` entries.
 
-Running the bundler: `deno run 'bundle*'` from `tests/` builds all 72 gallery modules, which is what `deno task test` and CI both rely on - verified by deleting `tests/build/` and counting what came back. An older note here said the glob silently ran only the first task; that was true of an earlier Deno and is not true of 2.9. If you are ever suspicious, delete `tests/build/` and count rather than trusting a "ran clean".
+Running the bundler: `tests/bundle.ts` builds the gallery modules, and `deno task test` runs it first. It skips whatever is already current, so a repeat run costs 0.3s rather than 24s, and takes module names to build a subset. Staleness is deliberately coarse - *any* change under `src/` rebuilds *every* module - because a gallery module's real dependency graph is the whole package, and a per-module graph that was wrong would hand back a green suite built from stale code.
+
+⚠️ **Bundling runs a small pool, not one per core.** Memory is the limit, not CPU: eight concurrent `deno bundle` processes took a four-core machine down with memory pressure. Half the cores, and `VTD_BUNDLE_JOBS` overrides it. Parallelism is not where the win is anyway - it was 26s at two jobs against 35s serially, while skipping what is current costs nothing at all.
 
 ## Changes reach `main` through a pull request, and CI is the reviewer
 
@@ -1532,10 +1579,10 @@ nothing merges that they do not pass.
 
 Three things worth knowing before you touch any of this:
 
-- **The suite's own summary line is useless and the exit code is not.** Something in the teardown
-  path calls `Deno.exit(0)`, so the tally always reads `0 passed | 0 failed`. A failing assertion
-  still exits 1 - verified by breaking one on purpose and watching the run go red - so
-  `deno task test` is a real gate. Count the `... ok (` lines when you want a number.
+- **The suite reports a real tally and a real exit code**, which needed veloserver 0.2.0. Before
+  that, `Server.serve()` called `Deno.exit(0)` from its shutdown handler and killed the runner
+  before it could print, so every run read `0 passed | 0 failed` whatever happened. `serve()` takes
+  `exitProcessOnClose` now and defaults to leaving the process alone.
 - **Auto-merge does not bypass anything.** It queues the merge and GitHub holds it until every
   required check passes; a red check leaves the PR open. It only arms for a non-draft PR from a
   branch in this repository opened by the repository owner, so a fork's PR still waits for a human.
@@ -1620,7 +1667,7 @@ while leaving every consumer to pay the bytes.
 
 1. `deno check src/index.ts` (and any test files you touched) — catches attrs-type/generic mistakes immediately.
 2. `cd tests && deno task bundle-<name>` (and `bundle-showcase` if you added a showcase section) — one task per invocation.
-3. `deno task test` (from repo root) — runs the full Astral suite; check for individual `ok`/`FAILED` lines per test, not just the final summary line (it can read `0 passed | 0 failed` even when every individual step passed — a pre-existing cosmetic quirk of how the test runner tallies when the suite calls `Deno.exit(0)`). If an assertion intermittently throws `Unable to get stable box model to click on` (or a destroyed-remote-object error from `getAttribute`) on an element that's clickable fine in an isolated throwaway script - this happened writing `Accordion`'s test, specifically only when running as a later test in the full suite - don't chase the exact cause. Stop holding an `ElementHandle` across the interaction entirely and drive the whole assertion through `page.evaluate()` instead (query + click + read state all as plain in-page JS, returning only plain data); that resolved it and is the more robust pattern regardless.
+3. `deno task test` (from repo root) — runs the full Astral suite, whose summary line is now trustworthy. `deno task test:only button tabs` and `deno task test:changed` narrow the bundling and the tests together for iteration; neither is a substitute for the full run. If an assertion intermittently throws `Unable to get stable box model to click on` (or a destroyed-remote-object error from `getAttribute`) on an element that's clickable fine in an isolated throwaway script - this happened writing `Accordion`'s test, specifically only when running as a later test in the full suite - don't chase the exact cause. Stop holding an `ElementHandle` across the interaction entirely and drive the whole assertion through `page.evaluate()` instead (query + click + read state all as plain in-page JS, returning only plain data); that resolved it and is the more robust pattern regardless.
 4. A broader headless-Chrome smoke pass hitting the new gallery page(s) directly and checking for zero `console`/`pageerror` events is worth doing for anything with real interaction, beyond just the handful of `basic_tests.test.ts` assertions — write a small throwaway script using `@astral/astral`'s `launch()` + `startAppServer` from `tests/base_server.ts` (see recent git history for the shape; nothing this specific is checked into the repo).
 5. **For anything with an interaction, count the DOM churn** (see "Interaction must only touch the DOM that actually changed"): a `MutationObserver` over the component root across ~40 repeats of the same interaction must report **zero** added/removed nodes, and a run that *does* change state must not create nodes where it could mutate text in place. Drain with `takeRecords()` - the observer's callback is an async microtask and will not have run inside a synchronous block. This is the only check that catches a handler which looks correct and rebuilds its subtree on every event; it is invisible to `deno check`, to assertions about rendered content, and to a screenshot.
 6. For anything with non-trivial CSS/layout (a new positioning trick, a windowed list, an open/closed state), take an actual screenshot (`page.screenshot()` → `Deno.writeFile(...)`) and look at it in both themes before calling it done. This is the only check that catches rendering-level mistakes `deno check`/automated assertions can't see by construction — e.g. `Breadcrumbs`'s stray literal `"false"` text (gotcha #1 above) was invisible to every other check and only showed up in a screenshot.

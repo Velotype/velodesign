@@ -79,6 +79,10 @@ export const Pagination: FunctionComponent<PaginationAttrsType> = function(attrs
 display:flex;
 align-items:center;
 gap:0.25em;
+` +
+/* Independent controls, so they wrap rather than scroll - a second row of page numbers reads fine */
+`
+flex-wrap:wrap;
 }
 .vtd-pagination-current{
 background-color:var(--primary-3);

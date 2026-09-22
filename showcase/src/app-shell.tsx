@@ -1,7 +1,8 @@
-import { Component, getComponent, RenderBasic, setStylesheet } from "@velotype/velotype"
+import { Component, getComponent, RenderBasic, RenderObject, setStylesheet } from "@velotype/velotype"
 import type { EmptyAttrs, RenderableElements } from "@velotype/velotype"
 
 import { Avatar, Button, ColorScheme, highlightMatch, I, Link, Navbar, searchHighlightCss, Sidebar, Text, TextBox } from "@velotype/velodesign"
+import type { SidebarNavState } from "@velotype/velodesign"
 import { categoryIconKey, searchIconKey } from "./data/category-icons.ts"
 import type { MenuItemType, SidebarItemType } from "@velotype/velodesign"
 import { docBySlug, groupByGroupSlug, groupedDocs } from "./data/docs.tsx"
@@ -282,10 +283,15 @@ ${searchHighlightCss}
 
         const content = getComponent<ContentArea>(<ContentArea/>)
 
+        // One object, handed to both: the Sidebar writes `overlay` from its own breakpoint and the
+        // Navbar reads it to know whether to draw the menu control, so the width lives in one place
+        const nav = new RenderObject<SidebarNavState>({open: false, overlay: false})
+
         this.#sidebar = getComponent<Sidebar>(<Sidebar
             spa
             collapsible
             resizable
+            nav={nav}
             class="vtd-showcase-sidebar"
             ariaLabel="Components by category"
             collapseLabel="Collapse or expand the sidebar"
@@ -341,6 +347,8 @@ ${searchHighlightCss}
                 children are pushed to the right automatically. */}
             <Navbar
                 class="vtd-showcase-header"
+                sidebar={nav}
+                menuLabel="Open the navigation"
                 brand={<Link spa to="/" class="vtd-showcase-brand">velodesign</Link>}
                 leading={<Text type="muted">Component showcase</Text>}>
                 <Link spa to="/theme" class="vtd-showcase-header-link">Theme builder</Link>
@@ -375,7 +383,34 @@ ${searchHighlightCss}
      */
     #headerObserver?: ResizeObserver
 
+    /**
+     * Closes the overlay nav when a click was a navigation, and leaves it open otherwise.
+     *
+     * ⚠️ The distinction is the whole point, and it is finer than "a click in the sidebar". A
+     * group's row *is* a `NavLink` to that category's own page, while the chevron beside it only
+     * expands the group - so closing on any click would shut the panel on someone who was opening a
+     * category to look inside it, which is the one thing they were most likely doing. Only a click
+     * that lands inside `.vtd-sidebar-link` is a destination.
+     *
+     * The panel stays open on the search box for the same reason: filtering is how a reader finds
+     * the link they want, not the act of following one.
+     */
+    #closeNavOnNavigation = (event: MouseEvent) => {
+        if (!this.#sidebar.isOpen()) {
+            return
+        }
+        const target = event.target instanceof Element ? event.target : null
+        if (target?.closest(".vtd-sidebar-link")) {
+            this.#sidebar.close()
+        }
+    }
+
     override mount() {
+        // Capture, so the panel closes even though `NavLink`'s own handler navigates on the same
+        // click - and on the sidebar's root rather than the document, so a click anywhere else on
+        // the page is not this component's business
+        this.#sidebar.render().addEventListener("click", this.#closeNavOnNavigation)
+
         const header = this.#root.querySelector(".vtd-showcase-header") as HTMLElement | null
         if (!header) {
             return
@@ -387,6 +422,7 @@ ${searchHighlightCss}
     }
 
     override unmount() {
+        this.#sidebar.render().removeEventListener("click", this.#closeNavOnNavigation)
         this.#headerObserver?.disconnect()
     }
 

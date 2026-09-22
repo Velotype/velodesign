@@ -57,7 +57,10 @@ export class DateTimeRangePicker extends Component<DateTimeRangePickerAttrsType>
         if (!areDateTimeRangePickerStylesMounted) {
             areDateTimeRangePickerStylesMounted = true
             mountStyles(`
-.vtd-date-time-range-picker{display:inline-flex;align-items:center;gap:0.5em;}
+` +
+/* Two fields and a separator: they wrap onto a second line rather than overflowing a narrow form */
+`
+.vtd-date-time-range-picker{display:inline-flex;align-items:center;gap:0.5em;flex-wrap:wrap;}
 .vtd-date-time-range-picker-input{
 padding:0.5ex 1ex;
 border-radius:0.25rem;

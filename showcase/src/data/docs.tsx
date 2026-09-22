@@ -621,7 +621,7 @@ const themeOptionDefinitions: Record<string, TypeDoc> = {
         name: "CommonThemeOptions",
         description: "The symbols more than one component means the same thing by. Every per-component field below that names one of these falls back to it live, so assigning here reaches each component that has not been given an override of its own.",
         fields: [
-            {name: "closeSymbol", type: "ThemeSymbol", defaultValue: "x", description: "Dismisses or removes the thing it sits on. Read by Alert, Toast, Tag, Modal and Drawer."},
+            {name: "closeSymbol", type: "ThemeSymbol", defaultValue: "✕", description: "Dismisses or removes the thing it sits on. Read by Alert, Toast, Tag, Modal and Drawer."},
             {name: "cancelSymbol", type: "ThemeSymbol", defaultValue: "a multiplication sign", description: "Rejects a pending action. Read by Modal's footer, Popconfirm, and an in-progress inline edit."},
             {name: "confirmSymbol", type: "ThemeSymbol", defaultValue: "a check mark", description: "Accepts a pending action, or marks one already done. Read by Popconfirm, an inline edit, and a completed Steps step."},
             {name: "emptySymbol", type: "ThemeSymbol", defaultValue: "the U+2205 glyph", description: "Stands in for content that isn't there. Read by Empty, both tables and every chart."},
@@ -655,7 +655,7 @@ const themeOptionDefinitions: Record<string, TypeDoc> = {
         name: "EmptyThemeOptions",
         description: "The illustration an Empty state shows.",
         fields: [
-            {name: "emptySymbol", type: "ThemeSymbol", defaultValue: "the shared empty symbol in a 2.5em span", description: "Shown above the title. This is the whole visual, sizing included, so a real illustration isn't stuck inside that span - to change only the glyph, and change it in both tables and every chart at the same time, set CommonThemeOptions.emptySymbol instead."},
+            {name: "emptySymbol", type: "ThemeSymbol", defaultValue: "the shared empty symbol in a 2.5em span", description: "Shown above the title. The whole visual, 2.5em sizing included, so a real illustration is not stuck inside that span. Set CommonThemeOptions.emptySymbol to change the glyph alone, here and in both tables and every chart."},
         ],
     },
     TagThemeOptions: {
@@ -724,7 +724,7 @@ const themeOptionDefinitions: Record<string, TypeDoc> = {
         description: "Shared by both tables, so a change reaches them together.",
         fields: [
             {name: "columnsSymbol", type: "ThemeSymbol", defaultValue: "the U+25A5 glyph", description: "Content of the column-visibility button. Only the tables draw this, so it stays local."},
-            {name: "emptySymbol", type: "ThemeSymbol", defaultValue: "the shared empty symbol in a 2em span", description: "Shown in place of the rows when the table has none. The whole visual, sizing included; set CommonThemeOptions.emptySymbol to change just the glyph."},
+            {name: "emptySymbol", type: "ThemeSymbol", defaultValue: "the shared empty symbol in a 2em span", description: "Shown in place of the rows when the table has none. The whole visual, 2em sizing included, so a real illustration is not stuck inside that span. Set CommonThemeOptions.emptySymbol to change the glyph alone, here and in Empty and every chart."},
         ],
     },
     ChartThemeOptions: {
@@ -732,7 +732,7 @@ const themeOptionDefinitions: Record<string, TypeDoc> = {
         description: "Shared by every chart, which is what keeps a dashboard's series colours consistent.",
         fields: [
             {name: "seriesColors", type: "string[]", defaultValue: "eight slots built from the theme's four hues at two lightness steps", description: "The palette each series is drawn from, in order. Never a hex literal in a chart itself - a literal looks right in one theme and wrong in the other."},
-            {name: "emptySymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.emptySymbol", description: "Shown when a chart has nothing to draw."},
+            {name: "emptySymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.emptySymbol", description: "Shown when a chart has nothing to draw. The glyph alone, with no sizing of its own - unlike Empty's and both tables', which wrap it in a sized span. It follows CommonThemeOptions.emptySymbol exactly, so setting that changes this too."},
         ],
     },
 }
@@ -1135,6 +1135,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "align", type: "AlignItems", description: "How cells line up within their row."},
     ],
     LineChart: [
+        {name: "title", type: "string", description: "A heading shown above the drawing. Also becomes the accessible name when ariaLabel is not set, so a visible title and a spoken one cannot disagree. Rendered as a div, not a heading element - the chart cannot know what level it sits at."},
         {name: "data", type: "ChartPointType[]", required: true, description: "One entry per category: {label, values: {seriesKey: number}}."},
         {name: "series", type: "ChartSeriesType[]", required: true, description: "The series to plot: {key, label?, color?}. Their order picks their palette slots."},
         {name: "area", type: "boolean", defaultValue: "false", description: "Fills under each line. AreaChart is this component with it set."},
@@ -1148,6 +1149,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "hideLegend", type: "boolean", defaultValue: "false", description: "Hides the legend even with more than one series. A single series never gets one."},
     ],
     AreaChart: [
+        {name: "title", type: "string", description: "A heading shown above the drawing. Also becomes the accessible name when ariaLabel is not set, so a visible title and a spoken one cannot disagree. Rendered as a div, not a heading element - the chart cannot know what level it sits at."},
         {name: "data", type: "ChartPointType[]", required: true, description: "One entry per category: {label, values: {seriesKey: number}}."},
         {name: "series", type: "ChartSeriesType[]", required: true, description: "The series to plot: {key, label?, color?}. Their order picks their palette slots."},
         {name: "stacked", type: "boolean", defaultValue: "false", description: "Stacks series on top of each other rather than overlaying them. This is the one to reach for: stacking is what makes an area chart say \"these parts add up to this total\" rather than \"these two filled shapes happen to overlap\"."},
@@ -1160,6 +1162,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "hideLegend", type: "boolean", defaultValue: "false", description: "Hides the legend even with more than one series. A single series never gets one."},
     ],
     BarChart: [
+        {name: "title", type: "string", description: "A heading shown above the drawing. Also becomes the accessible name when ariaLabel is not set, so a visible title and a spoken one cannot disagree. Rendered as a div, not a heading element - the chart cannot know what level it sits at."},
         {name: "data", type: "ChartPointType[]", required: true, description: "One entry per category."},
         {name: "series", type: "ChartSeriesType[]", required: true, description: "The series to plot."},
         {name: "horizontal", type: "boolean", defaultValue: "false", description: "Bars run left-to-right. Worth reaching for when category labels are words rather than dates - each label gets a full line instead of being rotated."},
@@ -1167,6 +1170,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "height", type: "number", defaultValue: "220", description: "Drawing height in px."},
     ],
     PieChart: [
+        {name: "title", type: "string", description: "A heading shown above the drawing. Also becomes the accessible name when ariaLabel is not set, so a visible title and a spoken one cannot disagree. Rendered as a div, not a heading element - the chart cannot know what level it sits at."},
         {name: "data", type: "PieSliceType[]", required: true, description: "The slices: {label, value, color?}, drawn from 12 o'clock in the order given."},
         {name: "donut", type: "number", defaultValue: "0", description: "Hole size as a fraction of the radius, 0-0.9. 0.6 is the usual donut."},
         {name: "centerLabel", type: "string", description: "Content for the middle of a donut."},
@@ -1174,6 +1178,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "showPercent", type: "boolean", defaultValue: "true", description: "Shows each slice's share in the tooltip."},
     ],
     Gauge: [
+        {name: "title", type: "string", description: "A heading shown above the drawing. Also becomes the accessible name when ariaLabel is not set, so a visible title and a spoken one cannot disagree. Rendered as a div, not a heading element - the chart cannot know what level it sits at."},
         {name: "value", type: "number", required: true, description: "The value to show."},
         {name: "min", type: "number", defaultValue: "0", description: "The low end of the range the value is read against."},
         {name: "max", type: "number", defaultValue: "100", description: "The high end of the range the value is read against."},
@@ -1327,6 +1332,18 @@ const monthlyRevenue = [
     {label: "May", values: {revenue: 22, costs: 13}},
 ]
 const revenueSeries = [{key: "revenue", label: "Revenue"}, {key: "costs", label: "Costs"}]
+// Four series, which is what shows the palette doing its job - and the point at which a legend
+// stops being decoration and starts being the only way to read the plot
+const quarterlyChannels = [
+    {label: "Q1", values: {direct: 31, partner: 18, organic: 24, paid: 12}},
+    {label: "Q2", values: {direct: 38, partner: 22, organic: 21, paid: 17}},
+    {label: "Q3", values: {direct: 34, partner: 29, organic: 27, paid: 14}},
+    {label: "Q4", values: {direct: 45, partner: 26, organic: 33, paid: 21}},
+]
+const channelSeries = [
+    {key: "direct", label: "Direct"}, {key: "partner", label: "Partner"},
+    {key: "organic", label: "Organic"}, {key: "paid", label: "Paid"},
+]
 const spendByTeam = [
     {label: "Platform", value: 24}, {label: "Growth", value: 18},
     {label: "Infra", value: 12}, {label: "Design", value: 7},
@@ -2232,6 +2249,24 @@ secondary. The last paragraph in a container drops its bottom margin.</Paragraph
     height={200}
     ariaLabel="Revenue and costs by month"
     formatValue={(n) => \`$\${n}k\`}/>`},
+        {label: "Titled, and four series", node: () => <LineChart title="Bookings by channel" data={quarterlyChannels} series={channelSeries} height={220} formatValue={(n: number) => `$${n}k`}/>, code: `// A title is also the accessible name when ariaLabel is not set, so the
+// visible heading and the one a screen reader announces cannot drift apart
+<LineChart
+    title="Bookings by channel"
+    data={quarterlyChannels}
+    series={channelSeries}
+    height={220}
+    formatValue={(n) => \`$\${n}k\`}/>`},
+        {label: "No dots, and no legend", node: () => <LineChart title="Revenue trend" data={monthlyRevenue} series={revenueSeries} showDots={false} hideLegend height={180} formatValue={(n: number) => `$${n}k`}/>, code: `// showDots off and the legend hidden: a single trend line reads as a shape
+// rather than as a series of readings
+<LineChart
+    title="Revenue trend"
+    data={monthlyRevenue}
+    series={revenueSeries}
+    showDots={false}
+    hideLegend
+    height={180}
+    formatValue={(n) => \`$\${n}k\`}/>`},
     ],
     AreaChart: [
         {label: "Stacked, so the parts add up", node: () => <AreaChart data={monthlyRevenue} series={revenueSeries} stacked height={200} ariaLabel="Revenue and costs by month, stacked" formatValue={(n: number) => `$${n}k`}/>, code: `// Stacking is what makes an area chart say "these parts add up to this total"
@@ -2242,6 +2277,13 @@ secondary. The last paragraph in a container drops its bottom margin.</Paragraph
     height={200}
     ariaLabel="Revenue and costs by month, stacked"
     formatValue={(n) => \`$\${n}k\`}/>`},
+        {label: "Four series stacked, with a title", node: () => <AreaChart title="Bookings by channel" data={quarterlyChannels} series={channelSeries} stacked height={220} formatValue={(n: number) => `$${n}k`}/>, code: `<AreaChart
+    title="Bookings by channel"
+    data={quarterlyChannels}
+    series={channelSeries}
+    stacked
+    height={220}
+    formatValue={(n) => \`$\${n}k\`}/>`},
     ],
     BarChart: [
         {label: "Grouped", node: () => <BarChart data={monthlyRevenue} series={revenueSeries} height={200} ariaLabel="Revenue and costs by month"/>, code: `<BarChart data={monthlyRevenue} series={revenueSeries} height={200}
@@ -2249,6 +2291,12 @@ secondary. The last paragraph in a container drops its bottom margin.</Paragraph
         {label: "Horizontal, for word labels", node: () => <BarChart data={monthlyRevenue} series={revenueSeries} horizontal height={200} ariaLabel="Revenue and costs by month, horizontal"/>, code: `// Each category label gets a full line instead of being rotated
 <BarChart data={monthlyRevenue} series={revenueSeries} horizontal height={200}
     ariaLabel="Revenue and costs by month, horizontal"/>`},
+        {label: "Grouped, four series, titled", node: () => <BarChart title="Bookings by channel" data={quarterlyChannels} series={channelSeries} height={220} formatValue={(n: number) => `$${n}k`}/>, code: `<BarChart
+    title="Bookings by channel"
+    data={quarterlyChannels}
+    series={channelSeries}
+    height={220}
+    formatValue={(n) => \`$\${n}k\`}/>`},
     ],
     PieChart: [
         {label: "Slices", node: () => <PieChart data={spendByTeam} height={200} ariaLabel="Spend by team"/>, code: `<PieChart data={spendByTeam} height={200} ariaLabel="Spend by team"/>`},

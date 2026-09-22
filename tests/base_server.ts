@@ -3,6 +3,14 @@
 import { Server, Router, Inspector, RequestInspectorResponse } from "@velotype/veloserver"
 import type { Context } from "@velotype/veloserver"
 
+/** Closes a test server. Use this rather than `server.close()` in test teardown. */
+export async function closeAppServer(server: Server<ServerContextMetadata>, reason: string): Promise<void> {
+    server.close(reason)
+    // The shutdown callbacks run from a `finished` handler, so let that settle before the caller
+    // carries on
+    await new Promise((resolve) => setTimeout(resolve, 0))
+}
+
 export type ServerContextMetadata = {
     /** Request start time (`performance.now()`), set by the timing inspector below */
     st?: number
