@@ -113,7 +113,22 @@ box-sizing:border-box;
 display:flex;
 gap:0.25em;
 border-block-end:1px solid var(--background-4);
+` +
+/*
+ * A tab strip scrolls rather than wrapping. Wrapping puts some tabs on a second line above the
+ * panel they label, which reads as two separate rows of controls; scrolling keeps one strip and is
+ * what every platform does with more tabs than fit. `flex-shrink:0` on the tab stops the browser
+ * squeezing them all to illegible slivers instead of overflowing, which is the default and is
+ * worse - it was 168px of sideways page scroll at phone width before this.
+ *
+ * `scrollbar-width:thin` rather than hidden: a strip that scrolls with no indication it scrolls is
+ * a row of tabs a reader does not know are there.
+ */
+`
+overflow-x:auto;
+scrollbar-width:thin;
 }
+.vtd-tabs-tab{flex-shrink:0;}
 .vtd-tabs-tab{
 position:relative;
 cursor:pointer;

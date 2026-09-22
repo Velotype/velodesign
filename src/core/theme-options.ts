@@ -119,7 +119,11 @@ export type CommonThemeOptionsType = {
  * exactly what the showcase's theme builder does.
  */
 export const CommonThemeOptions: CommonThemeOptionsType = themeOptions<CommonThemeOptionsType>({}, {
-    closeSymbol: function(){return "x"},
+    // Close and cancel share a glyph on purpose - they read the same in almost every interface, and
+    // they stay separate options so a consumer who wants to tell them apart can. This was the one
+    // symbol in the set that was not a glyph at all: a lowercase Latin "x", which seven components
+    // drew as their close control.
+    closeSymbol: function(){return "✕"},
     cancelSymbol: function(){return "✕"},
     confirmSymbol: function(){return "✓"},
     emptySymbol: function(){return "∅"},

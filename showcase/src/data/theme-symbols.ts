@@ -59,7 +59,7 @@ const owners: Record<string, Record<string, ThemeSymbol>> = {
  * actually wants - a per-component box below is for the exception.
  */
 export const commonSymbolOptions: SymbolOption[] = [
-    {owner: "CommonThemeOptions", field: "closeSymbol", fallback: "x"},
+    {owner: "CommonThemeOptions", field: "closeSymbol", fallback: "✕"},
     {owner: "CommonThemeOptions", field: "cancelSymbol", fallback: "✕"},
     {owner: "CommonThemeOptions", field: "confirmSymbol", fallback: "✓"},
     {owner: "CommonThemeOptions", field: "emptySymbol", fallback: "∅"},
@@ -78,16 +78,16 @@ export const commonSymbolOptions: SymbolOption[] = [
  */
 export const componentSymbolOptions: SymbolOption[] = [
     {owner: "ButtonThemeOptions", field: "loadingSymbol", fallback: "a Spinner component"},
-    {owner: "AlertThemeOptions", field: "closeSymbol", inherits: true, fallback: "x"},
-    {owner: "ToastThemeOptions", field: "closeSymbol", inherits: true, fallback: "x"},
+    {owner: "AlertThemeOptions", field: "closeSymbol", inherits: true, fallback: "✕"},
+    {owner: "ToastThemeOptions", field: "closeSymbol", inherits: true, fallback: "✕"},
     {owner: "EmptyThemeOptions", field: "emptySymbol", fallback: "the shared empty symbol, in a sized span"},
-    {owner: "TagThemeOptions", field: "closeSymbol", inherits: true, fallback: "x"},
+    {owner: "TagThemeOptions", field: "closeSymbol", inherits: true, fallback: "✕"},
     {owner: "BreadcrumbsThemeOptions", field: "collapseSymbol", inherits: true, fallback: "…"},
     {owner: "PaginationThemeOptions", field: "prevSymbol", inherits: true, fallback: "‹"},
     {owner: "PaginationThemeOptions", field: "nextSymbol", inherits: true, fallback: "›"},
-    {owner: "ModalThemeOptions", field: "closeSymbol", inherits: true, fallback: "x"},
+    {owner: "ModalThemeOptions", field: "closeSymbol", inherits: true, fallback: "✕"},
     {owner: "ModalThemeOptions", field: "cancelSymbol", inherits: true, fallback: "✕"},
-    {owner: "DrawerThemeOptions", field: "closeSymbol", inherits: true, fallback: "x"},
+    {owner: "DrawerThemeOptions", field: "closeSymbol", inherits: true, fallback: "✕"},
     {owner: "MenuThemeOptions", field: "confirmSymbol", inherits: true, fallback: "✓"},
     {owner: "PopconfirmThemeOptions", field: "confirmSymbol", inherits: true, fallback: "✓"},
     {owner: "PopconfirmThemeOptions", field: "cancelSymbol", inherits: true, fallback: "✕"},

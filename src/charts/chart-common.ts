@@ -91,6 +91,20 @@ export type ChartBaseAttrsType = {
     /** Drawing height in px, excluding the legend (default: `220`) */
     height?: number
     /**
+     * A heading shown above the drawing.
+     *
+     * **Also becomes the chart's accessible name when `ariaLabel` is not set**, which is the reason
+     * it is worth having here rather than left to the consumer to place above the component: a
+     * visible title and an accessible name are the same fact, and a chart that carries one without
+     * the other is either an unlabeled graphic to a screen reader or a labelled one nobody can see.
+     * Set `ariaLabel` as well only when the spoken name should differ from the written one.
+     *
+     * Rendered as a `div` rather than a heading element: the chart does not know what level it sits
+     * at, and a component that guesses produces the skipped-level outline `Heading` exists to stop.
+     * Pass a `Heading` of the right level yourself if this needs to be in the document outline.
+     */
+    title?: string
+    /**
      * Accessible name for the chart. No default - this package doesn't assume a language.
      *
      * A chart is `role="img"` to a screen reader: without this it is announced as an unlabeled
@@ -249,7 +263,20 @@ export function mountChartStyles(): void {
    and an absolute value neither matches the page's typography nor follows a consumer who scales
    it. 0.85em is the same secondary-text size Badge, Tag and the DataTable footer already use. */
 `
-.vtd-chart-tick{fill:var(--background-6);font-size:0.85em;font-family:inherit;}
+` +
+/*
+ * Axis text is a step darker and half a weight heavier than it was. `--background-6` at weight 400
+ * measured 5.74:1 light and 7.10:1 dark, so it passed WCAG AA and was still hard to read - the
+ * numbers are small, they sit beside saturated series colours that pull the eye off them, and grey
+ * at 400 loses that competition. This is a legibility change rather than a compliance one.
+ *
+ * Not `--text`: an axis label is a reference the reader consults, not content they read, and at
+ * full strength it competes with the data instead of supporting it. `--background-7` measures
+ * 7.9:1 light and 8.4:1 dark against the page, which is clearly above the body text's surroundings
+ * while staying visibly quieter than the plot.
+ */
+`
+.vtd-chart-tick{fill:var(--background-7);font-size:0.85em;font-weight:500;font-family:inherit;}
 .vtd-chart-tick-y{text-anchor:end;dominant-baseline:middle;}
 .vtd-chart-tick-x{text-anchor:middle;}
 ` +
@@ -274,6 +301,20 @@ line-height:1;
 ` +
 /* Legend */
 `
+` +
+/*
+ * The title sits above the drawing and inside the component, so `height` still means the drawing's
+ * height and a title does not silently shrink the plot.
+ */
+`
+.vtd-chart-title{
+font-weight:600;
+font-size:0.95em;
+line-height:1.3;
+margin-block-end:0.5em;
+color:var(--text);
+text-align:center;
+}
 .vtd-chart-legend{
 display:flex;
 flex-wrap:wrap;
@@ -283,7 +324,13 @@ gap:0.25em 1em;
 font-size:0.85em;
 color:var(--background-6);
 }
-.vtd-chart-legend-item{display:inline-flex;align-items:center;gap:0.4em;}
+` +
+/*
+ * A legend entry names a series, which is what makes the plot readable at all, so it carries more
+ * weight than a tick - it is closer to a label than to a reference value.
+ */
+`
+.vtd-chart-legend-item{display:inline-flex;align-items:center;gap:0.4em;color:var(--text);font-weight:500;}
 .vtd-chart-legend-swatch{width:0.75em;height:0.75em;border-radius:0.15em;flex-shrink:0;}
 ` +
 /* Tooltip - positioned by the chart, so it needs no layout of its own beyond staying on top */
