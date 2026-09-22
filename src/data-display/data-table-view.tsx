@@ -125,7 +125,9 @@ user-select:none;
 .vtd-data-table-sortable:hover{background-color:var(--background-1);}
 .vtd-data-table-sort-button{
 cursor:pointer;
-display:block;
+display:flex;
+align-items:center;
+min-height:24px;
 width:100%;
 text-align:inherit;
 background:transparent;

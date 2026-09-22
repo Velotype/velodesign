@@ -67,6 +67,7 @@ vertical-align:middle;
  */
 `
 .vtd-tag-remove{
+position:relative;
 cursor:pointer;
 display:inline-flex;
 align-items:center;
@@ -90,6 +91,26 @@ transition:opacity 0.12s ease-in-out, background-color 0.12s ease-in-out;
    neighbouring grey reads as muddy where the page's own background reads as a clear chip - and it
    flips with the theme, which a fixed rgba() would not */
 `
+` +
+/*
+ * The hit area is extended past the visual control rather than the control being made bigger. A Tag
+ * is small by design and a 24px button would set the height of the whole chip; an overlay centred
+ * on the 1.35em square reaches WCAG 2.2 SC 2.5.8's 24px without moving a pixel of the layout. It
+ * extends about three pixels either side, which is inside the Tag's own padding rather than over a
+ * neighbouring control.
+ */
+`
+.vtd-tag-remove::after{
+content:"";
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+min-width:24px;
+min-height:24px;
+width:100%;
+height:100%;
+}
 .vtd-tag-remove:hover{opacity:1;background-color:var(--background);}
 .vtd-tag-remove:focus-visible{opacity:1;}
 @media (prefers-reduced-motion: reduce){

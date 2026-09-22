@@ -27,6 +27,7 @@ export type {
     FunctionComponent,
     IdAttr,
     RenderBasic,
+    RenderObject,
     RenderableElements,
     StylePassthroughAttrs,
     TargetedEvent,

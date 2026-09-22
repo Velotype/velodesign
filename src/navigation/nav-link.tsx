@@ -44,6 +44,22 @@ export class NavLink extends Component<NavLinkAttrsType> {
 position:relative;
 color:inherit;
 text-decoration:none;
+` +
+/*
+ * A navigation link is a target a finger has to land on, not a phrase inside a sentence, so it
+ * takes the package's 24px floor - `Link` deliberately does not, because a link in prose is the
+ * case WCAG 2.2 SC 2.5.8 exempts and padding it would break the line it sits in.
+ *
+ * ⚠️ Padding and `inline-block`, never `inline-flex`. The `::after` below reserves the width of
+ * the bold state so activation cannot shift the layout, and it does that by being a *block* child
+ * that stacks under the text at zero height. As a flex item it would sit beside the text instead
+ * and double the link's width.
+ */
+`
+display:inline-block;
+box-sizing:border-box;
+min-height:24px;
+padding-block:0.15em;
 }
 ` +
 /*

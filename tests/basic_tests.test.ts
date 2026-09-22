@@ -7,7 +7,7 @@ import type {Server} from "@velotype/veloserver"
 
 import { launch } from "@astral/astral"
 import type { Browser, ElementHandle, Page } from "@astral/astral"
-import { startAppServer } from "./base_server.ts"
+import { closeAppServer, startAppServer } from "./base_server.ts"
 import type { ServerContextMetadata } from "./base_server.ts"
 
 const server_port = 3000
@@ -18,11 +18,37 @@ describe('basic component rendering', () => {
     let browser: Browser
     let page: Page
 
+    /**
+     * Closes the browser if the run is cut short, so an interrupted run does not orphan a headless
+     * Chrome to init.
+     *
+     * ⚠️ Not `Deno.addSignalListener`: a registered signal listener holds Deno's event loop open, so
+     * the process would finish its tests and then never exit. `unload` keeps nothing alive. It does
+     * not cover `kill -9`, which is the smaller problem.
+     */
+    globalThis.addEventListener("unload", () => {
+        try {
+            browser?.close()
+        } catch {
+            // Already gone, which is the outcome we wanted anyway
+        }
+    })
+
     beforeAll(async () => {
         server = await startAppServer(server_port)
         browser = await launch({
             headless: true,
-            args: ['--no-sandbox']
+            // --no-sandbox is needed in CI containers. The rest keep the browser's own footprint
+            // down: this suite drives one small page at a 400x200 viewport and needs none of the
+            // GPU, extension or background machinery a real browsing session does.
+            args: [
+                '--no-sandbox',
+                '--disable-gpu',
+                '--disable-extensions',
+                '--disable-background-networking',
+                '--disable-dev-shm-usage',
+                '--renderer-process-limit=1',
+            ]
         })
         page = await browser.newPage()
         await page.setViewportSize({ width: 400, height: 200 })
@@ -30,7 +56,7 @@ describe('basic component rendering', () => {
     afterAll(async () => {
         await page?.close()
         await browser?.close()
-        await server?.close('End basic tests')
+        if (server) { await closeAppServer(server, 'End basic tests') }
     })
 
     /**
@@ -51,11 +77,36 @@ describe('basic component rendering', () => {
         fail(`ERROR: timed out after ${timeoutMs}ms waiting for ${description}`)
     }
 
+    /**
+     * Which gallery modules to test, from `VTD_MODULES`. Unset means all of them.
+     *
+     * Set by `deno task test:only` and `deno task test:changed`, so that iterating on one component
+     * does not pay for the other seventy. Every test names the module it drives, which is what
+     * makes this possible without a second list to keep in step - a test cannot be filtered into
+     * the wrong bucket, because the bucket is the argument it already had.
+     */
+    const selectedModules = (() => {
+        const raw = Deno.env.get("VTD_MODULES")
+        if (!raw) {
+            return undefined
+        }
+        return new Set(raw.split(",").map(name => name.trim()).filter(name => name.length > 0))
+    })()
+
     const itWrap = (name: string, module: string, selector: string, testFn: (selection: ElementHandle) => void | Promise<void>) => {
         it({name,
+            // `ignore`, not "don't register": a skipped test is still reported, so a subset run says
+            // plainly what it did not cover rather than looking like a full green run
+            ignore: selectedModules !== undefined && !selectedModules.has(module),
             fn: async () => {
                 try {
-                    await page.goto(`${baseUrl}/${module}`, {waitUntil: 'networkidle2'})
+                    // `load`, not `networkidle2`. networkidle2 waits out a fixed idle window after
+                    // the last request - measured at ~550ms per navigation against load's ~60ms,
+                    // and every one of these tests navigates, so it was about 35s of the suite's
+                    // runtime spent waiting for a network that had already gone quiet. The
+                    // readiness that actually matters is the selector below, which is waited for
+                    // either way: `load` already means the module script has run.
+                    await page.goto(`${baseUrl}/${module}`, {waitUntil: 'load'})
                     const selection = await page.waitForSelector(selector)
                     if (selection) {
                         await testFn(selection)
@@ -305,7 +356,7 @@ describe('basic component rendering', () => {
 
         const toast = await page.waitForSelector(".vtd-toast")
         if (!toast) {fail("ERROR: toast did not appear after clicking trigger")}
-        assertEquals(await toast.innerText(), "Gone in a flash\nx")
+        assertEquals(await toast.innerText(), "Gone in a flash\n\u2715")
 
         await new Promise(resolve => setTimeout(resolve, 800))
         const stillThere = await page.$(".vtd-toast")
@@ -1304,7 +1355,7 @@ describe('basic component rendering', () => {
             }
         })()`
         const collapse = await page.evaluate(measure(".vtd-collapse")) as Record<string, string>
-        await page.goto(`${baseUrl}/accordion`, {waitUntil: "networkidle2"})
+        await page.goto(`${baseUrl}/accordion`, {waitUntil: "load"})
         await page.waitForSelector(".vtd-accordion-item")
         const accordion = await page.evaluate(measure(".vtd-accordion-item")) as Record<string, string>
 
@@ -1705,7 +1756,7 @@ describe('basic component rendering', () => {
         }) as Promise<Record<string, string>>
 
         const before = await read()
-        if (before.alertDismiss != "x" || before.tagRemove != "x") {
+        if (before.alertDismiss != "\u2715" || before.tagRemove != "\u2715") {
             fail(`ERROR: the close glyph did not start at the package default: ${JSON.stringify(before)}`)
         }
         if (before.pagerPrev != "\u2039" || before.stepsDone != "\u2713" || before.crumbsCollapse != "\u2026") {
@@ -2340,6 +2391,38 @@ describe('basic component rendering', () => {
         // Clearing has to look like typing to whoever is listening, or a filter never re-runs
         if (cleared.reported != "(empty)") {
             fail(`ERROR: clearing did not fire onInput, last saw ${JSON.stringify(cleared.reported)}`)
+        }
+    })
+
+
+    // A rule that lands on another component's element competes with that component's own rule at
+    // equal specificity in the same layer, where source order decides - and the other component's
+    // sheet mounts second whenever this one constructs it. Carousel's arrows lost that race to
+    // `.vtd-button{position:relative}` and rendered in flow below the slide, both stacked in the
+    // bottom-left corner. Asserted through computed position rather than by eye, because the
+    // arrows are present and clickable either way: every other test here passed while it was wrong.
+    itWrap("the carousel's arrows sit over the slide rather than under it", "carousel", "#default-carousel", async (_selection: ElementHandle) => {
+        const geometry = await page.evaluate(`(() => {
+            const carousel = document.querySelector("#default-carousel")
+            const prev = carousel.querySelector(".vtd-carousel-nav-prev")
+            const next = carousel.querySelector(".vtd-carousel-nav-next")
+            const slide = carousel.querySelector(".vtd-carousel-slide:not([hidden])")
+            const box = (el) => { const b = el.getBoundingClientRect(); return {left: b.left, right: b.right, top: b.top, bottom: b.bottom} }
+            return JSON.stringify({
+                position: getComputedStyle(prev).position,
+                prev: box(prev), next: box(next), slide: box(slide)
+            })
+        })()`)
+        const g = JSON.parse(geometry as string)
+        if (g.position != "absolute") {
+            fail(`ERROR: the carousel arrows compute to position:${g.position} - .vtd-button has won the cascade again`)
+        }
+        // Over the slide vertically, and at opposite ends of it horizontally
+        if (g.prev.top < g.slide.top || g.prev.bottom > g.slide.bottom) {
+            fail(`ERROR: the previous arrow is outside the slide vertically: ${JSON.stringify(g)}`)
+        }
+        if (!(g.next.left > g.prev.right)) {
+            fail(`ERROR: the arrows are not at opposite ends - prev right ${g.prev.right}, next left ${g.next.left}`)
         }
     })
 

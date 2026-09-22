@@ -18,7 +18,7 @@
         "lib": ["dom", "deno.ns", "esnext"]
     },
     "imports": {
-        "@velotype/veloserver": "jsr:@velotype/veloserver@^0.1.5",
+        "@velotype/veloserver": "jsr:@velotype/veloserver@^0.2.0",
         "@velotype/velodesign": "../src/index.ts",
         "@velotype/velodesign/jsx-runtime": "../src/core/jsx-runtime.ts",
         "@velotype/velotype/jsx-runtime": "jsr:@velotype/velotype@^0.0.27",
