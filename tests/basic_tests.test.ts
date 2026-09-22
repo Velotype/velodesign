@@ -1998,7 +1998,14 @@ describe('basic component rendering', () => {
                 moved: Math.round(keeper.getBoundingClientRect().top) - before,
                 counted: document.getElementById("showcase-theme-light").querySelector("#menu-click-count").innerText != countBefore,
             }
-            // ...and the entry beside it, with no keepOpen, still closes the whole thing
+            // ...and the entry beside it, with no keepOpen, still closes the whole thing.
+            //
+            // That entry is a link, so the click would navigate. preventDefault on a capture
+            // listener stops only the navigation - Menu's own close handler still runs, so the
+            // assertion is unchanged - and it stops the test leaving a navigation in flight for
+            // whatever runs next. A goto racing that navigation made the suite fail about one run
+            // in eight, as a selector query landing on a document mid-swap.
+            menu.addEventListener("click", (event) => { event.preventDefault() }, {capture: true, once: true})
             navigator.click()
             return {...kept, closedAfterPlainItem: !menu.open}
         })()`) as {open: boolean, submenuOpen: boolean, moved: number, counted: boolean, closedAfterPlainItem: boolean}
