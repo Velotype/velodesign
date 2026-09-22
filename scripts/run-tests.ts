@@ -49,7 +49,7 @@ function isCrossCutting(path: string): boolean {
  * cannot be placed - guessing narrowly here would hand back a green subset that never ran the test
  * for the thing that changed.
  */
-async function modulesForChange(path: string, known: Set<string>): Promise<string[] | undefined> {
+function modulesForChange(path: string, known: Set<string>): string[] | undefined {
     if (isCrossCutting(path)) {
         return undefined
     }
@@ -83,7 +83,7 @@ async function changedModules(known: Set<string>): Promise<string[] | undefined>
     }
     const selected = new Set<string>()
     for (const path of paths) {
-        const modules = await modulesForChange(path, known)
+        const modules = modulesForChange(path, known)
         if (modules === undefined) {
             console.log(`${path} reaches the whole package, so running everything`)
             return undefined
