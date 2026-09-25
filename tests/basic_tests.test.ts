@@ -13,6 +13,29 @@ import type { ServerContextMetadata } from "./base_server.ts"
 const server_port = 3000
 const baseUrl = `http://localhost:${server_port}`
 
+/** `#rrggbb` for an `[r, g, b]` triple of 0-255 channels, so a failure names a colour you can look up */
+function hexOf(rgb: number[]): string {
+    return "#" + rgb.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("")
+}
+
+/**
+ * WCAG 2.x contrast ratio between two opaque `[r, g, b]` triples, 1:1 to 21:1.
+ *
+ * Both arguments must already be sRGB channel values - see the note in the CodeBlock colour test
+ * about painting a colour rather than parsing what getComputedStyle returns.
+ */
+function contrastRatio(a: number[], b: number[]): number {
+    const luminance = (rgb: number[]) => {
+        const channel = (v: number) => {
+            const c = v / 255
+            return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * channel(rgb[0]) + 0.7152 * channel(rgb[1]) + 0.0722 * channel(rgb[2])
+    }
+    const [high, low] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+    return (high + 0.05) / (low + 0.05)
+}
+
 describe('basic component rendering', () => {
     let server: Server<ServerContextMetadata>
     let browser: Browser
@@ -1269,26 +1292,61 @@ describe('basic component rendering', () => {
         }
     })
 
-    itWrap("code block token colours stay distinct in both themes", "code-block", "#code-tsx", async (_selection: ElementHandle) => {
-        // Token colours come from the theme ramps, which invert between themes - a step that
-        // reads well on one background can collapse into it on the other.
+    itWrap("code block token colours stay distinct and meet AA in both themes", "code-block", "#code-tsx", async (_selection: ElementHandle) => {
+        // CodeBlock names its own colours, so nothing else in the package moves them back if a
+        // value is edited to something prettier and unreadable - which is exactly how this palette
+        // was chosen, by eye first and measured after. The light attr clears 4.5:1 by 0.01, so this
+        // is the guard that notices if it or the code background ever drifts.
+        //
+        // ⚠️ Colours are read by PAINTING them, not by parsing the computed string. getComputedStyle
+        // hands back whatever syntax the author wrote - `color(srgb 0.9 0.9 0.9)` for the
+        // color-mix background, and `oklch(...)` unconverted for a relative colour. Parsing those
+        // as rgb() gives numbers that look plausible and are nonsense.
         for (const theme of ["light", "dark"]) {
-            const colors = await page.evaluate(`(() => {
+            const measured = await page.evaluate(`(() => {
                 const scope = document.querySelector('#showcase-theme-${theme}')
+                const cv = document.createElement("canvas")
+                cv.width = cv.height = 1
+                const ctx = cv.getContext("2d", {willReadFrequently: true})
+                const paint = (css) => {
+                    ctx.clearRect(0, 0, 1, 1)
+                    ctx.fillStyle = "#000"
+                    ctx.fillStyle = css
+                    ctx.fillRect(0, 0, 1, 1)
+                    const d = ctx.getImageData(0, 0, 1, 1).data
+                    return [d[0], d[1], d[2]]
+                }
                 const out = {}
                 for (const kind of ["comment","string","keyword","tag","attr","number","punct"]) {
                     const el = scope.querySelector('.vtd-code-block-' + kind)
-                    out[kind] = el ? getComputedStyle(el).color : null
+                    out[kind] = el ? paint(getComputedStyle(el).color) : null
                 }
+                const block = scope.querySelector('.vtd-code-block')
+                out.background = paint(getComputedStyle(block).backgroundColor)
                 return out
-            })()`) as Record<string, string | null>
-            const missing = Object.entries(colors).filter(([, v]) => v == null).map(([k]) => k)
+            })()`) as Record<string, number[] | null>
+
+            const background = measured.background
+            const tokens = Object.entries(measured).filter(([k]) => k != "background")
+            const missing = tokens.filter(([, v]) => v == null).map(([k]) => k)
             if (missing.length > 0) {
                 fail(`ERROR: ${theme} is missing token kinds: ${missing.join(",")}`)
             }
-            const distinct = new Set(Object.values(colors)).size
+            if (background == null) {
+                fail(`ERROR: ${theme} could not measure the code block background`)
+                continue
+            }
+            const distinct = new Set(tokens.map(([, v]) => String(v))).size
             if (distinct < 5) {
-                fail(`ERROR: ${theme} renders only ${distinct} distinct token colours: ${JSON.stringify(colors)}`)
+                fail(`ERROR: ${theme} renders only ${distinct} distinct token colours: ${JSON.stringify(measured)}`)
+            }
+            for (const [kind, rgb] of tokens) {
+                if (rgb == null) { continue }
+                const ratio = contrastRatio(rgb, background)
+                if (ratio < 4.5) {
+                    fail(`ERROR: ${theme} ${kind} is ${ratio.toFixed(2)}:1 against the code background` +
+                        ` (${hexOf(rgb)} on ${hexOf(background)}), under WCAG AA's 4.5:1`)
+                }
             }
         }
     })
@@ -1430,6 +1488,11 @@ describe('basic component rendering', () => {
             const details = document.querySelector("#showcase-theme-light .vtd-collapse") as HTMLDetailsElement
             ;(details.querySelector(".vtd-disclosure-header") as HTMLElement).click()
         })
+        const settled = () => page.evaluate(() => {
+            const details = document.querySelector("#showcase-theme-light .vtd-collapse") as HTMLDetailsElement
+            const content = details.querySelector(".vtd-disclosure-content") as HTMLElement
+            return content.getAnimations().length == 0
+        })
 
         const before = await read()
         if (before.open) {fail("ERROR: expected the collapse to start closed")}
@@ -1437,6 +1500,14 @@ describe('basic component rendering', () => {
         for (let cycle = 1; cycle <= 3; cycle++) {
             await click()
             await waitUntil(async () => (await read()).open, `open ${cycle} to take effect`)
+            // ⚠️ Wait for the *transition*, not just the `open` flag, before closing. `open` flips
+            // on the click, so closing straight away interrupts an open that is still running - and
+            // the browser then retargets that transition rather than starting a fresh one, so it
+            // finishes proportionally sooner. Measured: closing 120ms into an open ran 153ms, at
+            // 50ms it ran 99ms, and only once the open had settled did a close take its full 200ms.
+            // That is correct behaviour and it made the timing check below fail about one run in
+            // six, which is what this wait removes.
+            await waitUntil(settled, `open ${cycle} transition to finish`)
 
             // Closing is intercepted: `open` is held set while the transition runs, which is the
             // whole fix - without it the subtree stops rendering and the transition never starts.
@@ -1458,7 +1529,8 @@ describe('basic component rendering', () => {
                 fail(`ERROR: close ${cycle} left ${closed.unstarted} transition(s) stuck with a null startTime`)
             }
             // The close must take the transition's own time rather than happening instantly.
-            // Throttling can only stretch this, never shorten it.
+            // Throttling can only stretch this; the one thing that shortens it is interrupting a
+            // running transition, which the wait above rules out.
             if (elapsed < 150) {
                 fail(`ERROR: close ${cycle} completed in ${elapsed}ms - it closed instantly instead of animating`)
             }
@@ -1826,6 +1898,57 @@ describe('basic component rendering', () => {
         const worded = await noMatchIn("worded-combobox")
         if (worded != "Rien ne correspond") {
             fail(`ERROR: noMatchMessage was ignored, got ${JSON.stringify(worded)}`)
+        }
+
+        // The empty row is a permanent child of the panel that is hidden rather than removed, so
+        // this has to check it actually goes away once something matches - a test that only ever
+        // asked for its text would pass with the row showing above a full list of suggestions.
+        const matching = await page.evaluate(`(() => {
+            const scope = document.getElementById("default-combobox")
+            const input = scope.querySelector("input.vtd-combobox")
+            input.value = "aus"
+            input.dispatchEvent(new Event("input", {bubbles: true}))
+            const empty = scope.querySelector(".vtd-combobox-empty")
+            return {
+                options: scope.querySelectorAll("li.vtd-combobox-option").length,
+                emptyHidden: empty ? empty.hidden : null,
+                emptyDisplay: empty ? getComputedStyle(empty).display : null
+            }
+        })()`) as {options: number, emptyHidden: boolean | null, emptyDisplay: string | null}
+
+        if (matching.options < 1) {
+            fail(`ERROR: "aus" matched ${matching.options} options, so there is nothing to check against`)
+        } else if (matching.emptyHidden !== true || matching.emptyDisplay != "none") {
+            fail(`ERROR: the no-match row is still shown beside ${matching.options} suggestions` +
+                ` (hidden ${matching.emptyHidden}, display ${matching.emptyDisplay})`)
+        }
+    })
+
+    /**
+     * The panel is a real box that opens and closes.
+     *
+     * velotype gives a RenderObjectArray's wrapper an inline `display:contents`, and the panel is
+     * that wrapper. Left in place it beats the stylesheet, so the suggestions drew inline beside
+     * the input with no dropdown around them and never went away - while every test that only
+     * counted option rows kept passing.
+     */
+    itWrap("the combobox panel is hidden when closed and a positioned box when open", "combobox", "#default-combobox", async (_selection: ElementHandle) => {
+        const panelState = (action: string) => page.evaluate(`(() => {
+            const scope = document.getElementById("default-combobox")
+            const input = scope.querySelector("input.vtd-combobox")
+            ${action}
+            const panel = scope.querySelector(".vtd-combobox-panel")
+            const style = getComputedStyle(panel)
+            return {display: style.display, position: style.position}
+        })()`) as Promise<{display: string, position: string}>
+
+        const opened = await panelState(`input.value = ""; input.dispatchEvent(new Event("input", {bubbles: true}))`)
+        if (opened.display != "block" || opened.position != "absolute") {
+            fail(`ERROR: an open panel should be an absolutely positioned block, got ${JSON.stringify(opened)}`)
+        }
+        const closed = await panelState(`input.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", bubbles: true}))`)
+        if (closed.display != "none") {
+            fail(`ERROR: a closed panel should not be drawn, got display ${closed.display}`)
         }
     })
 
@@ -2232,6 +2355,664 @@ describe('basic component rendering', () => {
      * With them off, `getBoundingClientRect` reports the state the rules actually declare. The
      * standalone check is what asserts that the motion between the two states happens at all.
      */
+    itWrap("a form field names its control, and points hint and error at it", "form", "#default-form", async (_selection: ElementHandle) => {
+        // The label used to be a bare sibling with no `for` and nothing wrapping it, so clicking it
+        // did nothing and a screen reader read the control unnamed - and hint and error were never
+        // announced, which is most of what they are for.
+        const state = await page.evaluate(`(() => {
+            const scope = document.getElementById("showcase-theme-light").querySelector("#default-form")
+            const fields = [...scope.querySelectorAll(".vtd-form-field")]
+            return fields.map((field) => {
+                const label = field.querySelector(".vtd-form-field-label")
+                const control = field.querySelector("input, select, textarea")
+                const error = field.querySelector(".vtd-form-field-error")
+                const describedBy = control ? (control.getAttribute("aria-describedby") || "") : ""
+                return {
+                    labelText: label ? label.textContent.trim() : null,
+                    labelFor: label ? label.getAttribute("for") : null,
+                    controlId: control ? control.id : null,
+                    hasError: !!error,
+                    errorId: error ? error.id : null,
+                    describedBy: describedBy,
+                    invalid: control ? control.getAttribute("aria-invalid") : null,
+                    required: control ? control.getAttribute("aria-required") : null,
+                }
+            })
+        })()`) as {labelText: string | null, labelFor: string | null, controlId: string | null,
+                   hasError: boolean, errorId: string | null, describedBy: string, invalid: string | null,
+                   required: string | null}[]
+
+        if (state.length < 2) {
+            fail(`ERROR: expected at least two form fields to check, found ${state.length}`)
+            return
+        }
+        for (const field of state) {
+            if (!field.controlId) {
+                fail(`ERROR: the field labelled "${field.labelText}" gave its control no id to be named by`)
+                continue
+            }
+            if (field.labelFor != field.controlId) {
+                fail(`ERROR: the label for "${field.labelText}" points at ${JSON.stringify(field.labelFor)}` +
+                    ` but its control is ${JSON.stringify(field.controlId)}`)
+            }
+            if (field.hasError) {
+                if (!field.describedBy.split(" ").includes(field.errorId ?? "")) {
+                    fail(`ERROR: "${field.labelText}" shows an error that its control does not reference` +
+                        ` (aria-describedby is ${JSON.stringify(field.describedBy)})`)
+                }
+                if (field.invalid != "true") {
+                    fail(`ERROR: "${field.labelText}" shows an error but its control is not aria-invalid`)
+                }
+            }
+        }
+        // The required field must say so to assistive tech, not only draw an asterisk
+        if (!state.some((field) => field.required == "true")) {
+            fail("ERROR: no control was marked aria-required, so the required marker is decoration only")
+        }
+    })
+
+    itWrap("bound controls write straight through to their field", "editable-field", "#bound-checkbox", async (_selection: ElementHandle) => {
+        // bindValue/bindChecked are the whole reason one layout works for every control, so this
+        // drives a value control, a checked control and a numeric one and reads the result back
+        // out of the control the binding re-rendered.
+        const state = await page.evaluate(`(() => {
+            const scope = document.getElementById("showcase-theme-light")
+            const box = scope.querySelector("#bound-checkbox input[type=checkbox]")
+            const select = scope.querySelector("#bound-select select")
+            const slider = scope.querySelector("#bound-slider input[type=range]")
+            const before = {checked: box.checked, plan: select.value, volume: slider.value}
+            box.checked = !box.checked
+            box.dispatchEvent(new Event("change", {bubbles: true}))
+            select.value = select.value === "pro" ? "free" : "pro"
+            select.dispatchEvent(new Event("change", {bubbles: true}))
+            slider.value = "77"
+            slider.dispatchEvent(new Event("input", {bubbles: true}))
+            return {before: before, after: {checked: box.checked, plan: select.value, volume: slider.value}}
+        })()`) as {before: {checked: boolean, plan: string, volume: string}, after: {checked: boolean, plan: string, volume: string}}
+
+        if (state.after.checked == state.before.checked) {
+            fail("ERROR: toggling the bound checkbox did not change it")
+        }
+        if (state.after.plan == state.before.plan) {
+            fail(`ERROR: the bound select did not change (still ${state.after.plan})`)
+        }
+        if (state.after.volume != "77") {
+            fail(`ERROR: the bound slider reads ${state.after.volume} after being set to 77`)
+        }
+    })
+
+    itWrap("an editable field edits, cancels and saves without a control of its own", "editable-field", "#plain-editable", async (_selection: ElementHandle) => {
+        // EditableField never names a control - the point of replacing TextEditableField - so this
+        // drives the text one and the Slider one through the same buttons.
+        const read = (id: string) => page.evaluate(`(() => {
+            const field = document.getElementById("showcase-theme-light").querySelector("#" + ${JSON.stringify("PLACEHOLDER")}.replace("PLACEHOLDER", ${JSON.stringify(id)}))
+            return JSON.stringify({
+                shown: field.querySelector(".vtd-editable-field-value").textContent.trim(),
+                editing: !!field.querySelector("input, select, textarea"),
+                error: (field.querySelector(".vtd-form-field-error") || {textContent: ""}).textContent.trim(),
+            })
+        })()`)
+        const click = (id: string, label: string) => page.evaluate(`(() => {
+            const field = document.getElementById("showcase-theme-light").querySelector("#" + ${JSON.stringify(id)})
+            const button = [...field.querySelectorAll("button")].find((b) => b.getAttribute("aria-label") === ${JSON.stringify(label)})
+            if (!button) { return "no button labelled " + ${JSON.stringify(label)} }
+            button.click()
+            return "ok"
+        })()`)
+        const type = (id: string, text: string) => page.evaluate(`(() => {
+            const input = document.getElementById("showcase-theme-light").querySelector("#" + ${JSON.stringify(id)} + " input")
+            input.value = ${JSON.stringify(text)}
+            input.dispatchEvent(new Event("input", {bubbles: true}))
+        })()`)
+
+        const start = JSON.parse(await read("plain-editable") as string)
+        if (start.editing) {
+            fail("ERROR: the field started in edit mode rather than showing its value")
+        }
+        if (start.shown != "Ada") {
+            fail(`ERROR: the field showed ${JSON.stringify(start.shown)} rather than its value`)
+        }
+
+        // Edit, change, cancel - the value must be exactly as it was
+        const opened = await click("plain-editable", "Edit")
+        if (opened != "ok") { fail(`ERROR: ${opened}`); return }
+        await type("plain-editable", "Grace")
+        await click("plain-editable", "Cancel")
+        const cancelled = JSON.parse(await read("plain-editable") as string)
+        if (cancelled.editing) {
+            fail("ERROR: cancelling left the field in edit mode")
+        }
+        if (cancelled.shown != "Ada") {
+            fail(`ERROR: cancelling kept the edit - the field now reads ${JSON.stringify(cancelled.shown)}`)
+        }
+
+        // Edit, change, save - now it must stick
+        await click("plain-editable", "Edit")
+        await type("plain-editable", "Grace")
+        await click("plain-editable", "Save")
+        const saved = JSON.parse(await read("plain-editable") as string)
+        if (saved.editing) {
+            fail("ERROR: saving left the field in edit mode")
+        }
+        if (saved.shown != "Grace") {
+            fail(`ERROR: saving did not take - the field reads ${JSON.stringify(saved.shown)}`)
+        }
+    })
+
+    itWrap("a rejected save keeps the reader's draft and says why", "editable-field", "#failing-editable", async (_selection: ElementHandle) => {
+        // Returning to the read view on failure would throw the edit away at the exact moment the
+        // reader is told it did not save. The old TextEditableField could not express this at all:
+        // it wrote straight to the field with nowhere to persist from and no way to fail.
+        await page.evaluate(`(() => {
+            const field = document.getElementById("showcase-theme-light").querySelector("#failing-editable")
+            const edit = [...field.querySelectorAll("button")].find((b) => b.getAttribute("aria-label") === "Edit")
+            edit.click()
+            const input = field.querySelector("input")
+            input.value = "my work"
+            input.dispatchEvent(new Event("input", {bubbles: true}))
+            const save = [...field.querySelectorAll("button")].find((b) => b.getAttribute("aria-label") === "Save")
+            save.click()
+        })()`)
+        // The save rejects on a microtask, so give the swap back to edit mode a turn to land
+        await new Promise((resolve) => setTimeout(resolve, 150))
+        const state = await page.evaluate(`(() => {
+            const field = document.getElementById("showcase-theme-light").querySelector("#failing-editable")
+            const input = field.querySelector("input")
+            const error = field.querySelector(".vtd-form-field-error")
+            return JSON.stringify({
+                stillEditing: !!input,
+                draft: input ? input.value : null,
+                error: error ? error.textContent.trim() : null,
+            })
+        })()`)
+        const result = JSON.parse(state as string) as {stillEditing: boolean, draft: string | null, error: string | null}
+        if (!result.stillEditing) {
+            fail("ERROR: a failed save dropped the reader back to the read view and lost the edit")
+            return
+        }
+        if (result.draft != "my work") {
+            fail(`ERROR: a failed save lost the draft - the control holds ${JSON.stringify(result.draft)}`)
+        }
+        if (result.error != "Server said no") {
+            fail(`ERROR: a failed save showed ${JSON.stringify(result.error)} rather than the reason`)
+        }
+    })
+
+    itWrap("a sidebar entry with no children is a plain link, and dividerBefore rules between runs", "sidebar", "#default-sidebar", async (_selection: ElementHandle) => {
+        // Two shapes the showcase's own generated categories never produce: an entry with no
+        // children at all, which must be a leaf link rather than a group with a chevron that opens
+        // nothing, and a rule separating one run of entries from the next.
+        const state = await page.evaluate(`(() => {
+            const bar = document.getElementById("showcase-theme-light").querySelector("#default-sidebar .vtd-sidebar")
+            const rows = [...bar.querySelectorAll(".vtd-sidebar-row")]
+            return rows.map((row) => {
+                const node = row.closest(".vtd-tree-node, .vtd-tree-leaf")
+                const style = getComputedStyle(row)
+                return {
+                    text: row.textContent.trim(),
+                    tag: row.tagName.toLowerCase(),
+                    divided: row.className.includes("vtd-sidebar-row-divided"),
+                    borderTop: style.borderTopStyle == "none" ? 0 : parseFloat(style.borderTopWidth),
+                    isLeaf: node ? node.className.includes("vtd-tree-leaf") : false,
+                    hasToggle: node ? !!node.querySelector(".vtd-tree-toggle") : false,
+                }
+            })
+        })()`) as {text: string, tag: string, divided: boolean, borderTop: number, isLeaf: boolean, hasToggle: boolean}[]
+
+        if (state.length != 3) {
+            fail(`ERROR: expected the three flat entries, found ${state.length}`)
+            return
+        }
+        for (const row of state) {
+            if (!row.isLeaf || row.hasToggle) {
+                fail(`ERROR: "${row.text}" has no children but rendered as a group with a toggle`)
+            }
+            if (row.tag != "a") {
+                fail(`ERROR: "${row.text}" has a destination but rendered as <${row.tag}> rather than a link`)
+            }
+        }
+        // A leading divider is ignored - a rule there would sit against the top of the list
+        if (state[0].divided || state[0].borderTop > 0) {
+            fail(`ERROR: the first entry drew a divider (${state[0].borderTop}px) despite being first`)
+        }
+        if (state[1].borderTop > 0) {
+            fail("ERROR: the middle entry drew a divider it never asked for")
+        }
+        if (!state[2].divided || !(state[2].borderTop > 0)) {
+            fail(`ERROR: the entry with dividerBefore drew no rule (border-top ${state[2].borderTop}px)`)
+        }
+
+        // ⚠️ The divider must survive the rail unchanged, rule *and* spacing. Suppressing it there
+        // took 16.2px of margin, padding and border out of the layout, so every icon below it
+        // jumped that far up as the panel collapsed - the one thing the collapse animation cannot
+        // tolerate. Geometry, not just the border, because hiding the line while keeping the gap
+        // would pass a border-only check and still lose the grouping.
+        const geometry = () => page.evaluate(`(() => {
+            const bar = document.getElementById("showcase-theme-light").querySelector("#default-sidebar .vtd-sidebar")
+            const row = [...bar.querySelectorAll(".vtd-sidebar-row")].find((r) => r.className.includes("vtd-sidebar-row-divided"))
+            const style = getComputedStyle(row)
+            const icon = row.querySelector(".vtd-sidebar-icon") || row
+            return JSON.stringify({
+                marginTop: style.marginTop,
+                paddingTop: style.paddingTop,
+                borderTop: style.borderTopStyle == "none" ? 0 : parseFloat(style.borderTopWidth),
+                iconTop: Math.round(icon.getBoundingClientRect().top - bar.getBoundingClientRect().top),
+            })
+        })()`)
+        const before = JSON.parse(await geometry() as string) as {marginTop: string, paddingTop: string, borderTop: number, iconTop: number}
+        await page.evaluate(`(() => {
+            const bar = document.getElementById("showcase-theme-light").querySelector("#default-sidebar .vtd-sidebar")
+            bar.querySelector(".vtd-sidebar-collapse").click()
+        })()`)
+        await waitUntil(async () => await page.evaluate(`(() => {
+            const bar = document.getElementById("showcase-theme-light").querySelector("#default-sidebar .vtd-sidebar")
+            return bar.classList.contains("vtd-sidebar-collapsed")
+        })()`) as boolean, "the flat sidebar to collapse to its rail")
+        const after = JSON.parse(await geometry() as string) as {marginTop: string, paddingTop: string, borderTop: number, iconTop: number}
+
+        if (!(after.borderTop > 0)) {
+            fail(`ERROR: the divider vanished on the rail (border-top ${after.borderTop}px)`)
+        }
+        if (after.marginTop != before.marginTop || after.paddingTop != before.paddingTop) {
+            fail(`ERROR: the divider's spacing changed on the rail - margin ${before.marginTop} to` +
+                ` ${after.marginTop}, padding ${before.paddingTop} to ${after.paddingTop}`)
+        }
+        if (after.iconTop != before.iconTop) {
+            fail(`ERROR: collapsing moved the divided row ${before.iconTop - after.iconTop}px, so every` +
+                ` icon below it shifts as the panel collapses`)
+        }
+    })
+
+    itWrap("a combobox option can be markup, match on its own text, and do something when picked", "combobox", "#rich-combobox", async (_selection: ElementHandle) => {
+        // Three things a string-only option cannot do, and the reason the showcase's own Navbar
+        // search is a Combobox at all: draw more than a name, be found by text that is not on
+        // screen, and be a way of *going somewhere* rather than of filling in the box.
+        const state = await page.evaluate(`(() => {
+            const scope = document.getElementById("showcase-theme-light").querySelector("#rich-combobox")
+            const input = scope.querySelector("input")
+            // "Buenos Aires" is not in the option's value - it reaches the filter through
+            // searchText, and the row shows it, so the match is both findable and visible
+            input.focus()
+            input.value = "buenos"
+            input.dispatchEvent(new Event("input", {bubbles: true}))
+            const options = [...scope.querySelectorAll(".vtd-combobox-option")]
+            const first = options[0]
+            const out = {
+                matched: options.length,
+                text: first ? first.textContent.trim().replace(/\\s+/g, " ") : null,
+                renderedMarkup: !!(first && first.querySelector(".vtd-test-rich-option")),
+                // What the reader is shown as the reason this row survived
+                marked: first ? [...first.querySelectorAll("mark, .vtd-search-highlight")].map((m) => m.textContent) : [],
+                pickedBefore: (globalThis.vtdPicked || []).length,
+            }
+            if (first) { first.click() }
+            out.pickedAfter = (globalThis.vtdPicked || []).slice()
+            out.valueAfter = input.value
+            // How many options the panel still holds. Not whether it is *open*: clearing by
+            // dispatching an input event leaves it shut either way, so an open/closed check cannot
+            // tell the two apart - but the dispatch re-runs the filter on an empty query and
+            // rebuilds the list to every option, which this sees.
+            const panel = scope.querySelector(".vtd-combobox-panel")
+            out.optionsAfter = panel ? panel.querySelectorAll(".vtd-combobox-option").length : -1
+            return out
+        })()`) as {matched: number, text: string | null, renderedMarkup: boolean, marked: string[], pickedBefore: number, pickedAfter: string[], valueAfter: string, optionsAfter: number}
+
+        if (state.matched != 1) {
+            fail(`ERROR: "buenos" matched ${state.matched} options - searchText is not what the filter reads`)
+            return
+        }
+        if (!state.renderedMarkup) {
+            fail(`ERROR: the option rendered as text (${JSON.stringify(state.text)}) rather than as the markup given`)
+        }
+        if (state.text == null) {
+            fail("ERROR: the matched option rendered nothing")
+        }
+        // ⚠️ The match has to be *visible*. A custom row is drawn by the caller, so it is the easy
+        // place to lose the one thing that tells a reader why a result is in front of them - and
+        // losing it leaves a list that looks arbitrary. Here the query is only in the trailing
+        // note, which is exactly the case a name-only highlight would miss.
+        if (state.marked.length == 0) {
+            fail("ERROR: nothing in the matched row was marked, so the row does not show why it matched")
+        } else if (!state.marked.some((text) => text.toLowerCase().includes("buenos"))) {
+            fail(`ERROR: the row marked ${JSON.stringify(state.marked)} rather than the text that matched`)
+        }
+        if (state.pickedBefore != 0 || state.pickedAfter.join(",") != "Argentina") {
+            fail(`ERROR: picking the option fired onSelect ${JSON.stringify(state.pickedAfter)}, want ["Argentina"]`)
+        }
+        // clearOnSelect: a box that finds something rather than fills in a field empties itself, so
+        // the next search starts clean and a pick that goes nowhere new still looks like it did
+        // something. It must not reopen the panel on the way - an empty query is the whole list.
+        if (state.valueAfter != "") {
+            fail(`ERROR: clearOnSelect left ${JSON.stringify(state.valueAfter)} in the input`)
+        }
+        if (state.optionsAfter != 1) {
+            fail(`ERROR: clearing the input re-ran the filter - the panel holds ${state.optionsAfter}` +
+                ` options rather than the 1 that matched`)
+        }
+
+        // And the other half of searchText: text that is in neither the value nor the row still
+        // finds it. There is nothing to highlight in that case, which is the point of showing the
+        // text you match on wherever you can.
+        const hidden = await page.evaluate(`(() => {
+            const scope = document.getElementById("showcase-theme-light").querySelector("#rich-combobox")
+            const input = scope.querySelector("input")
+            input.focus()
+            input.value = "oceania"
+            input.dispatchEvent(new Event("input", {bubbles: true}))
+            const options = [...scope.querySelectorAll(".vtd-combobox-option")]
+            return JSON.stringify({
+                matched: options.length,
+                text: options[0] ? options[0].textContent.trim().replace(/\\s+/g, " ") : null,
+            })
+        })()`)
+        const hiddenState = JSON.parse(hidden as string) as {matched: number, text: string | null}
+        if (hiddenState.matched != 1) {
+            fail(`ERROR: "oceania" matched ${hiddenState.matched} options - searchText does not reach text the row omits`)
+        } else if (hiddenState.text == null || !hiddenState.text.includes("Australia")) {
+            fail(`ERROR: "oceania" matched ${JSON.stringify(hiddenState.text)} rather than Australia`)
+        }
+    })
+
+    itWrap("a toast pushed into the container's list runs the lifecycle of what it holds", "toast", "#toast-probe-btn", async (_selection: ElementHandle) => {
+        /*
+         * `ToastContainer` holds its toasts in a `RenderObjectArray`, which is the one list in the
+         * package that genuinely mutates a point at a time. This checks that `push` and `delete`
+         * carry velotype's lifecycle with them, because a toast's `message` is consumer content and
+         * may be a component - the same property `setChildren` gives the lists that are rebuilt
+         * whole.
+         */
+        const state = await page.evaluate('(() => {' +
+            'const before = {m: globalThis.vtdLifecycle.mounts, u: globalThis.vtdLifecycle.unmounts};' +
+            'document.getElementById("toast-probe-btn").click();' +
+            'const shown = document.querySelectorAll(".vtd-toast .vtd-test-probe").length;' +
+            'const afterPush = {m: globalThis.vtdLifecycle.mounts, u: globalThis.vtdLifecycle.unmounts};' +
+            'document.querySelector(".vtd-toast .vtd-toast-dismiss").click();' +
+            'const gone = document.querySelectorAll(".vtd-toast .vtd-test-probe").length;' +
+            'const afterDismiss = {m: globalThis.vtdLifecycle.mounts, u: globalThis.vtdLifecycle.unmounts};' +
+            'return {before, shown, afterPush, gone, afterDismiss};' +
+        '})()') as {
+            before: {m: number, u: number}
+            shown: number
+            afterPush: {m: number, u: number}
+            gone: number
+            afterDismiss: {m: number, u: number}
+        }
+
+        if (state.shown != 1) {
+            fail(`ERROR: the toast drew ${state.shown} probes, so there is nothing to measure`)
+            return
+        }
+        if (state.afterPush.m - state.before.m != 1) {
+            fail(`ERROR: pushing the toast mounted ${state.afterPush.m - state.before.m} of its content,` +
+                ` want 1 - a component inside a toast never gets its mount lifecycle`)
+        }
+        if (state.gone != 0) {
+            fail("ERROR: dismissing left the toast on the page")
+        }
+        if (state.afterDismiss.u - state.afterPush.u != 1) {
+            fail(`ERROR: dismissing unmounted ${state.afterDismiss.u - state.afterPush.u} of the toast's` +
+                ` content, want 1 - its listeners and vtKey are leaked`)
+        }
+    })
+
+    itWrap("dismissing an Alert unmounts what the consumer put inside it", "alert", "#probed-alert", async (_selection: ElementHandle) => {
+        // The reason `Alert` is a class and not a `FunctionComponent`: it takes itself off the page
+        // on dismiss, and `children` is arbitrary consumer content that may need unmounting. A
+        // `FunctionComponent` has no instance for `removeElement` to do that through.
+        const state = await page.evaluate('(() => {' +
+            'const scope = document.getElementById("showcase-theme-light").querySelector("#probed-alert");' +
+            'const before = globalThis.vtdLifecycle.unmounts;' +
+            'const mounted = globalThis.vtdLifecycle.mounts;' +
+            'scope.querySelector(".vtd-alert-dismiss").click();' +
+            'return {before, mounted, after: globalThis.vtdLifecycle.unmounts, gone: !scope.querySelector(".vtd-alert")};' +
+        '})()') as {before: number, mounted: number, after: number, gone: boolean}
+
+        if (state.mounted < 1) {
+            fail("ERROR: the probe inside the alert never mounted, so there is nothing to unmount")
+            return
+        }
+        if (!state.gone) {
+            fail("ERROR: clicking dismiss left the alert on the page")
+        }
+        if (state.after - state.before != 1) {
+            fail(`ERROR: dismissing unmounted ${state.after - state.before} of the alert's children,` +
+                ` want 1 - its content is off the page with its listeners and vtKey still registered`)
+        }
+    })
+
+    itWrap("removing a Tag unmounts what the consumer put inside it", "tag", "#probed-tag", async (_selection: ElementHandle) => {
+        const state = await page.evaluate('(() => {' +
+            'const scope = document.getElementById("showcase-theme-light").querySelector("#probed-tag");' +
+            'const before = globalThis.vtdLifecycle.unmounts;' +
+            'const mounted = globalThis.vtdLifecycle.mounts;' +
+            'scope.querySelector(".vtd-tag-remove").click();' +
+            'return {before, mounted, after: globalThis.vtdLifecycle.unmounts, gone: !scope.querySelector(".vtd-tag")};' +
+        '})()') as {before: number, mounted: number, after: number, gone: boolean}
+
+        if (state.mounted < 1) {
+            fail("ERROR: the probe inside the tag never mounted, so there is nothing to unmount")
+            return
+        }
+        if (!state.gone) {
+            fail("ERROR: clicking remove left the tag on the page")
+        }
+        if (state.after - state.before != 1) {
+            fail(`ERROR: removing unmounted ${state.after - state.before} of the tag's children, want 1`)
+        }
+    })
+
+    itWrap("swapping a subtree in place runs velotype's mount and unmount lifecycle", "combobox", "#lifecycle-combobox", async (_selection: ElementHandle) => {
+        /*
+         * ⚠️ **The guard for the whole class of bug, not for the Combobox.**
+         *
+         * velotype calls a Component's `mount()` from a walk of the subtree it has just attached,
+         * and that walk is reached only from `replaceElementWithRoot`, from `refresh()`, and from
+         * the Component methods `appendToChild` / `prependToChild` / `replaceChild` /
+         * `replaceChildrenOfChild` / `removeChild`. A bare `element.replaceChildren(...)` is not
+         * one of them, so everything it puts on the page renders perfectly and never mounts.
+         *
+         * Nothing in the DOM says so. The markup is identical either way; what is missing is the
+         * component's subscriptions to things *outside* itself - a `popstate` listener, a
+         * `mountStyles` call, a document-level click-away - and its `unmount()`, which is what
+         * takes those listeners back out and releases the vtKey. So the only way to see it is to
+         * count the calls, which is all `MountProbe` in the test module does.
+         *
+         * This was found the hard way: every row of the Sidebar is a NavLink, the tree was
+         * attached with a bare `body.replaceChildren(...)`, and the sidebar went on pointing at
+         * whichever page the reader first loaded however far they browsed from it.
+         */
+        const state = await page.evaluate('(() => {' +
+            'const scope = document.getElementById("lifecycle-combobox");' +
+            'const input = scope.querySelector("input");' +
+            'const tally = () => ({mounts: globalThis.vtdLifecycle.mounts, unmounts: globalThis.vtdLifecycle.unmounts});' +
+            'const start = tally();' +
+            // An input event, not `.focus()`. Focus opens the panel too, but only when the page
+            // itself has focus - which it does in a single-module run and does not reliably by the
+            // time the whole suite has been navigating for half a minute. That cost one full-suite
+            // failure that a module-only run could not reproduce.
+            'const type = (text) => { input.value = text; input.dispatchEvent(new Event("input", {bubbles: true})); };' +
+            // "a" is in most of the country list, so this draws a large set of MountProbes
+            'type("a");' +
+            'const opened = tally();' +
+            'const openCount = scope.querySelectorAll(".vtd-test-probe").length;' +
+            // Narrowing the query throws that whole set away and builds a smaller one, so this
+            // half covers unmount as well as mount
+            'type("austr");' +
+            'const filtered = tally();' +
+            'const filterCount = scope.querySelectorAll(".vtd-test-probe").length;' +
+            'return {start, opened, openCount, filtered, filterCount};' +
+        '})()') as {
+            start: {mounts: number, unmounts: number}
+            opened: {mounts: number, unmounts: number}
+            openCount: number
+            filtered: {mounts: number, unmounts: number}
+            filterCount: number
+        }
+
+        if (state.openCount < 2) {
+            fail(`ERROR: the query drew ${state.openCount} options, so there is nothing to measure`)
+            return
+        }
+        if (state.filterCount < 1 || state.filterCount >= state.openCount) {
+            fail(`ERROR: the query narrowed ${state.openCount} options to ${state.filterCount}, so the` +
+                ` rebuild did not replace the set`)
+            return
+        }
+        const mountedOnOpen = state.opened.mounts - state.start.mounts
+        if (mountedOnOpen != state.openCount) {
+            fail(`ERROR: the panel drew ${state.openCount} options but mounted ${mountedOnOpen} of them` +
+                ` - a component put on the page imperatively never gets its mount lifecycle`)
+        }
+        const unmountedOnFilter = state.filtered.unmounts - state.opened.unmounts
+        if (unmountedOnFilter != state.openCount) {
+            fail(`ERROR: rebuilding the list discarded ${state.openCount} options but unmounted` +
+                ` ${unmountedOnFilter} of them - their listeners and vtKeys are leaked`)
+        }
+        const mountedOnFilter = state.filtered.mounts - state.opened.mounts
+        if (mountedOnFilter != state.filterCount) {
+            fail(`ERROR: the rebuilt list holds ${state.filterCount} options but mounted` +
+                ` ${mountedOnFilter} of them`)
+        }
+    })
+
+    itWrap("the sidebar follows a client-side navigation to the current page", "sidebar", "#default-sidebar", async (_selection: ElementHandle) => {
+        // ⚠️ The rows are NavLinks, and a NavLink keeps itself current by listening for
+        // popstate/locationchange in its `mount` - but these never mount. The tree goes into the
+        // DOM through `replaceChildren`, and a component attached imperatively does not get
+        // velotype's mount lifecycle, so every row kept whatever it decided when it was *built*:
+        // the sidebar went on pointing at the page the reader first loaded, however far they
+        // browsed. It looked right on any fresh load, which is why it survived this long.
+        const read = () => page.evaluate(`(() => {
+            const bar = document.getElementById("showcase-theme-light").querySelector("#default-sidebar .vtd-sidebar")
+            const links = [...bar.querySelectorAll("a.vtd-sidebar-link")]
+            return JSON.stringify({
+                path: location.pathname,
+                active: links.filter((a) => a.classList.contains("vtd-nav-link-active")).map((a) => a.getAttribute("href")),
+                current: links.filter((a) => a.getAttribute("aria-current") == "page").map((a) => a.getAttribute("href")),
+            })
+        })()`)
+        const go = (href: string) => page.evaluate(`(() => {
+            const bar = document.getElementById("showcase-theme-light").querySelector("#default-sidebar .vtd-sidebar")
+            const link = [...bar.querySelectorAll("a")].find((a) => a.getAttribute("href") === ${JSON.stringify("HREF")}.replace("HREF", ${JSON.stringify(href)}))
+            if (!link) { return "missing" }
+            link.click()
+            return "ok"
+        })()`)
+
+        // Rebuild the tree first. A sidebar rendered once and left alone keeps NavLinks that did
+        // mount and do track navigation; it is `setItems` - how every consumer filters one - that
+        // swaps them for rows attached imperatively, and those are the ones that went stale. Test
+        // the state a real sidebar spends its life in, not the one it is born in.
+        await page.evaluate(`document.getElementById("showcase-theme-light").querySelector(".reset-sidebar-items").click()`)
+        await new Promise((resolve) => setTimeout(resolve, 50))
+
+        const start = JSON.parse(await read() as string) as {path: string, active: string[], current: string[]}
+        if (start.active.join(",") != "/sidebar") {
+            fail(`ERROR: on ${start.path} the sidebar marked ${JSON.stringify(start.active)}, want ["/sidebar"]`)
+        }
+
+        const moved = await go("/sidebar/settings")
+        if (moved != "ok") { fail("ERROR: the gallery has no /sidebar/settings row to navigate to"); return }
+        await waitUntil(async () => {
+            const state = JSON.parse(await read() as string) as {path: string}
+            return state.path == "/sidebar/settings"
+        }, "the client-side navigation to land")
+
+        const after = JSON.parse(await read() as string) as {path: string, active: string[], current: string[]}
+        if (after.active.join(",") != "/sidebar/settings") {
+            fail(`ERROR: after navigating to ${after.path} the sidebar still marks ${JSON.stringify(after.active)}`)
+        }
+        // The half a screen reader hears has to move with the half that is visible
+        if (after.current.join(",") != "/sidebar/settings") {
+            fail(`ERROR: aria-current stayed on ${JSON.stringify(after.current)} after navigating to ${after.path}`)
+        }
+    })
+
+    itWrap("every focusable thing in the sidebar has room to draw its whole focus ring", "sidebar", "#full-sidebar", async (_selection: ElementHandle) => {
+        // The ring is drawn OUTSIDE the control - outline-width plus outline-offset - and the
+        // sidebar is full of containers that clip, because clipping is what lets the groups, the
+        // header and the footer animate open and shut. So every focusable needs that much room on
+        // all four sides or its ring is silently cut off.
+        //
+        // This has now been wrong three times - the sub-category rows on their inline edges, the
+        // same rows on their block edges, and the header's search box on its trailing edge once a
+        // rule tucked it against the close control. Each fix was to one spot, so this sweeps every
+        // focusable instead of naming the three that were reported.
+        //
+        // ⚠️ A real key first, through CDP. The ring is `:focus-visible`, which Chrome grants to a
+        // programmatic focus only while the last input was a keyboard - so an earlier version
+        // passed alone and failed in the full suite, where a previous test had clicked and left the
+        // modality on pointer. A `KeyboardEvent` dispatched from page script is untrusted and does
+        // not move it.
+        // One gallery sidebar is left on the default breakpoint, so at this viewport it is an
+        // overlay - and an overlay panel that is shut has nothing measurable in it. Opening it is
+        // what puts the header's search box, in the flex row beside the close control, in reach.
+        await page.evaluate(`document.getElementById("open-search-sidebar").click()`)
+        await new Promise((resolve) => setTimeout(resolve, 350))
+        await page.keyboard.press("Tab")
+        const state = await page.evaluate(`(() => {
+            const scope = document.getElementById("showcase-theme-light")
+            const bars = [...scope.querySelectorAll(".vtd-sidebar")]
+            const out = []
+            for (const bar of bars) {
+                const focusables = [...bar.querySelectorAll("a, button, input, select, textarea, [tabindex]")]
+                    .filter((el) => {
+                        const r = el.getBoundingClientRect()
+                        return r.width > 0 && r.height > 0 && !el.hasAttribute("disabled")
+                    })
+                for (const el of focusables) {
+                    el.focus()
+                    if (document.activeElement !== el) { continue }
+                    const cs = getComputedStyle(el)
+                    const reach = parseFloat(cs.outlineWidth || "0") + parseFloat(cs.outlineOffset || "0")
+                    const r = el.getBoundingClientRect()
+                    let tightest = null
+                    let a = el.parentElement
+                    while (a && a !== document.documentElement) {
+                        const as = getComputedStyle(a)
+                        if (as.overflowX !== "visible" || as.overflowY !== "visible") {
+                            const ar = a.getBoundingClientRect()
+                            const edges = [["top", r.top - ar.top], ["bottom", ar.bottom - r.bottom],
+                                           ["left", r.left - ar.left], ["right", ar.right - r.right]]
+                            for (const pair of edges) {
+                                if (tightest == null || pair[1] < tightest.room) {
+                                    tightest = {edge: pair[0], room: pair[1], by: a.className || a.tagName}
+                                }
+                            }
+                        }
+                        a = a.parentElement
+                    }
+                    out.push({
+                        what: el.tagName.toLowerCase() + "." + String(el.className).split(" ").filter(Boolean)[0],
+                        text: (el.textContent || el.getAttribute("placeholder") || "").trim().slice(0, 24),
+                        reach: reach, tightest: tightest,
+                    })
+                }
+            }
+            return out
+        })()`) as {what: string, text: string, reach: number, tightest: {edge: string, room: number, by: string} | null}[]
+
+        // Guard the guard: no focusables, or none that draw a ring, and every check below passes
+        // for the wrong reason.
+        if (state.length < 3) {
+            fail(`ERROR: found only ${state.length} focusable sidebar controls to check`)
+            return
+        }
+        const ringed = state.filter((row) => row.reach > 0)
+        if (ringed.length == 0) {
+            fail("ERROR: no sidebar control drew an outline when focused, so this test proves nothing")
+            return
+        }
+        for (const row of ringed) {
+            if (row.tightest == null) { continue }
+            if (row.tightest.room < row.reach) {
+                fail(`ERROR: the focus ring on ${row.what} "${row.text}" reaches ${row.reach}px but its` +
+                    ` ${row.tightest.edge} edge has only ${Math.round(row.tightest.room)}px inside` +
+                    ` "${row.tightest.by}", so it is clipped`)
+            }
+        }
+    })
+
     itWrap("a collapsed sidebar is an even rail of icons, and still marks the active group", "sidebar", "#full-sidebar", async (_selection: ElementHandle) => {
         await page.evaluate(`(() => {
             const style = document.createElement("style")

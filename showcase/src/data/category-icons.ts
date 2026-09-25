@@ -34,6 +34,18 @@ const categoryIcons: Record<string, string> = {
     "Data Entry": "M3.5 20.5l1.2-4.4L15.9 4.9l3.2 3.2L7.9 19.3z",
     // Not a category: the magnifier that stands in for the search box on the collapsed rail
     "Search": "M10.5 2a8.5 8.5 0 105.2 15.2l4.6 4.6 2.1-2.1-4.6-4.6A8.5 8.5 0 0010.5 2zm0 3a5.5 5.5 0 110 11 5.5 5.5 0 010-11z",
+    /*
+     * Not a category either: a paint droplet, for the theme builder's own row.
+     *
+     * A paint roller was tried first and is the more specific metaphor, but not at this size: a
+     * roller is a head, an arm and a grip, and as a flat silhouette in 24px those separate into
+     * three unrelated blocks with nothing joining them. The droplet is one closed shape, so it
+     * survives being small - and it does not collide with Typography's three lines the way a
+     * stack of colour swatches would.
+     */
+    "Theme": "M12 2C8 8 6 11 6 14a6 6 0 0 0 12 0c0-3-2-6-6-12z",
+    // Nor this: a house, for the home page as a search result
+    "Home": "M12 2.5L1.5 11h3V21h5v-6h5v6h5V11h3z",
 }
 
 let areCategoryIconsRegistered = false
@@ -56,8 +68,14 @@ export function registerCategoryIcons(): void {
 
 /** Every category an icon was drawn for, so a test can check none has been left behind */
 export function iconedCategories(): string[] {
-    return Object.keys(categoryIcons).filter(key => key != "Search")
+    return Object.keys(categoryIcons).filter(key => !["Search", "Theme", "Home"].includes(key))
 }
+
+/** The paint roller shown beside the sidebar's Theme builder row */
+export const themeIconKey: string = categoryIconKey("Theme")
+
+/** The house shown beside the Home result in the Navbar search */
+export const homeIconKey: string = categoryIconKey("Home")
 
 /** The magnifier shown in place of the search box once the sidebar is a rail */
 export const searchIconKey: string = categoryIconKey("Search")

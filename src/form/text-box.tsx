@@ -43,14 +43,8 @@ export type TextBoxAttrsType = {
 } & IdAttr & StylePassthroughAttrs
 
 let areTextBoxStylesMounted = false
-/**
- * An input box accepting text input from the user
- */
-export const TextBox: FunctionComponent<TextBoxAttrsType> = function(attrs: TextBoxAttrsType, _children: RenderableElements[]): HTMLElement {
-    if (!areTextBoxStylesMounted) {
-        areTextBoxStylesMounted = true
-        mountStyles(
-`
+/** Stylesheet for `<TextBox/>`, mounted once on first construction */
+const textBoxCss: string = `
 .vtd-text-box{
 padding:0.5ex 1ex;
 margin-inline-start:1ex;
@@ -82,7 +76,15 @@ line-height:1;
 `
 .vtd-text-box-wrapper .vtd-text-box:not(:placeholder-shown) ~ .vtd-text-box-clear{display:inline-flex;}
 .vtd-text-box-clear:hover{background-color:var(--background-2);color:var(--text);}
-`, "vtd/TextBox")
+`
+
+/**
+ * An input box accepting text input from the user
+ */
+export const TextBox: FunctionComponent<TextBoxAttrsType> = function(attrs: TextBoxAttrsType, _children: RenderableElements[]): HTMLElement {
+    if (!areTextBoxStylesMounted) {
+        areTextBoxStylesMounted = true
+        mountStyles(textBoxCss, "vtd/TextBox")
     }
 
     let autocomplete = "off"

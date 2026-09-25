@@ -66,19 +66,8 @@ export const DataTableThemeOptions: {
 
 let areDataTableStylesMounted = false
 
-/**
- * Mounts the stylesheet both tables share, once.
- *
- * One `setStylesheet` key for both components, not one each: two stylesheets would be two places
- * for a padding value to diverge, and the visual consistency between the two tables is the point.
- */
-export function mountDataTableStyles(): void {
-    if (areDataTableStylesMounted) {
-        return
-    }
-    areDataTableStylesMounted = true
-    mountStyles(
-`
+/** Stylesheet for `<DataTable/>`, mounted once on first construction */
+const dataTableCss: string = `
 .vtd-data-table-wrapper{width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:0.75em;}
 ` +
 /*
@@ -192,7 +181,20 @@ touch-action:none;
 .vtd-data-table-body-reloading{transition:none;}
 }
 ${searchHighlightCss}
-`, "vtd/DataTable", "composite")
+`
+
+/**
+ * Mounts the stylesheet both tables share, once.
+ *
+ * One `setStylesheet` key for both components, not one each: two stylesheets would be two places
+ * for a padding value to diverge, and the visual consistency between the two tables is the point.
+ */
+export function mountDataTableStyles(): void {
+    if (areDataTableStylesMounted) {
+        return
+    }
+    areDataTableStylesMounted = true
+    mountStyles(dataTableCss, "vtd/DataTable", "composite")
 }
 
 /** Builds the `<colgroup>` contents, returning each column's `<col>` so a resize can size it */

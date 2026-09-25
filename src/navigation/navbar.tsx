@@ -105,11 +105,8 @@ export class Navbar extends Component<NavbarAttrsType> {
     }
 }
 
-function mountNavbarStyles(): void {
-    if (!areNavbarStylesMounted) {
-        areNavbarStylesMounted = true
-        mountStyles(
-`
+/** Stylesheet for `<Navbar/>`, mounted once on first construction */
+const navbarCss: string = `
 .vtd-navbar{
 width:100%;
 box-sizing:border-box;
@@ -225,6 +222,11 @@ background-color:currentcolor;
 }
 .vtd-navbar-menu-icon::before{top:-0.35em;}
 .vtd-navbar-menu-icon::after{top:0.35em;}
-`, "vtd/Navbar")
+`
+
+function mountNavbarStyles(): void {
+    if (!areNavbarStylesMounted) {
+        areNavbarStylesMounted = true
+        mountStyles(navbarCss, "vtd/Navbar")
     }
 }

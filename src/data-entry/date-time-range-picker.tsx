@@ -32,6 +32,25 @@ export type DateTimeRangePickerAttrsType = {
 
 let areDateTimeRangePickerStylesMounted = false
 
+/** Stylesheet for `<DateTimeRangePicker/>`, mounted once on first construction */
+const dateTimeRangePickerCss: string = `
+` +
+/* Two fields and a separator: they wrap onto a second line rather than overflowing a narrow form */
+`
+.vtd-date-time-range-picker{display:inline-flex;align-items:center;gap:0.5em;flex-wrap:wrap;}
+.vtd-date-time-range-picker-input{
+padding:0.5ex 1ex;
+border-radius:0.25rem;
+border:1px solid var(--background-5);
+background-color:var(--background-1);
+color:var(--text);
+font:inherit;
+color-scheme:inherit;
+}
+.vtd-date-time-range-picker-input:disabled{cursor:not-allowed;opacity:0.6;}
+.vtd-date-time-range-picker-separator{opacity:0.6;}
+`
+
 /**
  * A pair of linked `<input type="datetime-local"/>` fields for picking a *span* of date-times -
  * same native-input-first approach as `DatePicker`/`DateTimePicker` (full keyboard/locale
@@ -56,23 +75,7 @@ export class DateTimeRangePicker extends Component<DateTimeRangePickerAttrsType>
         this.#attrs = attrs
         if (!areDateTimeRangePickerStylesMounted) {
             areDateTimeRangePickerStylesMounted = true
-            mountStyles(`
-` +
-/* Two fields and a separator: they wrap onto a second line rather than overflowing a narrow form */
-`
-.vtd-date-time-range-picker{display:inline-flex;align-items:center;gap:0.5em;flex-wrap:wrap;}
-.vtd-date-time-range-picker-input{
-padding:0.5ex 1ex;
-border-radius:0.25rem;
-border:1px solid var(--background-5);
-background-color:var(--background-1);
-color:var(--text);
-font:inherit;
-color-scheme:inherit;
-}
-.vtd-date-time-range-picker-input:disabled{cursor:not-allowed;opacity:0.6;}
-.vtd-date-time-range-picker-separator{opacity:0.6;}
-`, "vtd/DateTimeRangePicker")
+            mountStyles(dateTimeRangePickerCss, "vtd/DateTimeRangePicker")
         }
 
         this.#startEl = <input

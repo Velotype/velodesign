@@ -17,6 +17,8 @@ import { TextBox } from "./form/text-box.tsx"
 import type { TextBoxAttrsType, TextBoxType } from "./form/text-box.tsx"
 import { ButtonModal, type ButtonModalAttrsType, Modal, type ModalAttrsType, ModalThemeOptions } from "./overlays/modal.tsx"
 import { TextFormFieldThemeOptions, type TextNonEditableFieldAttrsType, TextNonEditableField, type TextFormFieldAttrsType, TextFormField, type TextEditableFieldAttrsType, TextEditableField } from "./form/text-form-field.tsx"
+import { EditableFieldThemeOptions, type EditableFieldAttrsType, EditableField } from "./form/editable-field.tsx"
+import { bindValue, bindChecked, bindFiles, type ValueBinding, type CheckedBinding, type FilesBinding, type BindWhen } from "./form/binding.ts"
 import { RadioButton, type RadioButtonAttrsType } from "./form/radio-button.tsx"
 import { TimeAgo, type TimeAgoAttrsType } from "./data-display/time-ago.ts"
 import { LocalizedString, S, T, type TAttrsType } from "./core/strings.ts"
@@ -37,7 +39,7 @@ import { NavLink, type NavLinkAttrsType } from "./navigation/nav-link.tsx"
 import { Breadcrumbs, BreadcrumbsThemeOptions, type BreadcrumbItemType, type BreadcrumbsAttrsType } from "./navigation/breadcrumbs.tsx"
 import { Pagination, PaginationThemeOptions, type PaginationAttrsType } from "./navigation/pagination.tsx"
 import { Navbar, type NavbarAttrsType } from "./navigation/navbar.tsx"
-import { Sidebar, type SidebarAttrsType, type SidebarNavState, type SidebarItemType, type SidebarProfileType } from "./navigation/sidebar.tsx"
+import { Sidebar, SidebarThemeOptions, type SidebarAttrsType, type SidebarNavState, type SidebarItemType, type SidebarProfileType } from "./navigation/sidebar.tsx"
 import { TableOfContents, type TableOfContentsAttrsType, type TableOfContentsItemType } from "./navigation/table-of-contents.tsx"
 import { Menu, MenuThemeOptions, type MenuAttrsType, type MenuItemType } from "./navigation/menu.tsx"
 import { showToast, ToastThemeOptions, type ToastOptions, type ToastType } from "./feedback/toast.tsx"
@@ -169,6 +171,16 @@ export {
     TextFormField,
     type TextEditableFieldAttrsType,
     TextEditableField,
+    EditableFieldThemeOptions,
+    type EditableFieldAttrsType,
+    EditableField,
+    bindValue,
+    bindChecked,
+    bindFiles,
+    type ValueBinding,
+    type CheckedBinding,
+    type FilesBinding,
+    type BindWhen,
 
     Badge,
     type BadgeAttrsType,
@@ -221,6 +233,7 @@ export {
     type TableOfContentsAttrsType,
     type TableOfContentsItemType,
     type SidebarAttrsType,
+    SidebarThemeOptions,
     type SidebarNavState,
     type SidebarItemType,
     type SidebarProfileType,

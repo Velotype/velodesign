@@ -53,23 +53,8 @@ function cssLength(width: number | string | undefined): string | undefined {
 
 let areTableStylesMounted = false
 
-/**
- * A themed data table, wrapping a native `<table/>`.
- *
- * Generic over the row type (`Table<RowType>`), so it can't be typed as the usual
- * `FunctionComponent<XAttrsType>` alias (that alias isn't generic) - otherwise it follows
- * the same shape as every other `FunctionComponent` in this package.
- *
- * Sorting/pagination/filtering are the caller's responsibility (pass already-sorted `rows`,
- * pair with `Pagination` for paging) - this Component only renders what it's given. For sort/
- * page/search/column-visibility/resize to just work without wiring that state up yourself,
- * use `DataTable` instead.
- */
-export function Table<RowType>(attrs: TableAttrsType<RowType>, _children: RenderableElements[]): HTMLTableElement {
-    if (!areTableStylesMounted) {
-        areTableStylesMounted = true
-        mountStyles(
-`
+/** Stylesheet for `<Table/>`, mounted once on first construction */
+const tableCss: string = `
 .vtd-table{width:100%;border-collapse:collapse;}
 .vtd-table th,.vtd-table td{padding:0.6em 0.9em;text-align:start;border-block-end:1px solid var(--background-4);}
 .vtd-table th{font-weight:bold;color:var(--text);white-space:nowrap;}
@@ -89,7 +74,24 @@ export function Table<RowType>(attrs: TableAttrsType<RowType>, _children: Render
 .vtd-table-fixed{table-layout:fixed;}
 .vtd-table-fixed th{white-space:normal;}
 .vtd-table-fixed td{overflow-wrap:break-word;}
-`, "vtd/Table")
+`
+
+/**
+ * A themed data table, wrapping a native `<table/>`.
+ *
+ * Generic over the row type (`Table<RowType>`), so it can't be typed as the usual
+ * `FunctionComponent<XAttrsType>` alias (that alias isn't generic) - otherwise it follows
+ * the same shape as every other `FunctionComponent` in this package.
+ *
+ * Sorting/pagination/filtering are the caller's responsibility (pass already-sorted `rows`,
+ * pair with `Pagination` for paging) - this Component only renders what it's given. For sort/
+ * page/search/column-visibility/resize to just work without wiring that state up yourself,
+ * use `DataTable` instead.
+ */
+export function Table<RowType>(attrs: TableAttrsType<RowType>, _children: RenderableElements[]): HTMLTableElement {
+    if (!areTableStylesMounted) {
+        areTableStylesMounted = true
+        mountStyles(tableCss, "vtd/Table")
     }
 
     // A declared width only binds under fixed layout - see `TableColumnType.width`

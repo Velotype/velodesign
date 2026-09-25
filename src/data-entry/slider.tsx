@@ -25,13 +25,8 @@ export type SliderAttrsType = {
 
 let areSliderStylesMounted = false
 
-/**
- * A themed range input, wrapping a native `<input type="range"/>`
- */
-export const Slider: FunctionComponent<SliderAttrsType> = function(attrs: SliderAttrsType, _children: RenderableElements[]): HTMLInputElement {
-    if (!areSliderStylesMounted) {
-        areSliderStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<Slider/>`, mounted once on first construction */
+const sliderCss: string = `
 ` +
 /*
  * The element is 24px tall and transparent; the 0.35em bar a reader sees is drawn by the track
@@ -83,7 +78,15 @@ height:0.35em;
 border-radius:999px;
 background-color:var(--background-3);
 }
-`, "vtd/Slider")
+`
+
+/**
+ * A themed range input, wrapping a native `<input type="range"/>`
+ */
+export const Slider: FunctionComponent<SliderAttrsType> = function(attrs: SliderAttrsType, _children: RenderableElements[]): HTMLInputElement {
+    if (!areSliderStylesMounted) {
+        areSliderStylesMounted = true
+        mountStyles(sliderCss, "vtd/Slider")
     }
 
     return passthroughAttrsToElement<HTMLInputElement>(<input

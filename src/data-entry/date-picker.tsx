@@ -25,14 +25,8 @@ export type DatePickerAttrsType = {
 
 let areDatePickerStylesMounted = false
 
-/**
- * A themed date input, wrapping a native `<input type="date"/>` - the browser supplies the
- * calendar picker UI and all keyboard/locale handling for free
- */
-export const DatePicker: FunctionComponent<DatePickerAttrsType> = function(attrs: DatePickerAttrsType, _children: RenderableElements[]): HTMLInputElement {
-    if (!areDatePickerStylesMounted) {
-        areDatePickerStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<DatePicker/>`, mounted once on first construction */
+const datePickerCss: string = `
 .vtd-date-picker{
 padding:0.5ex 1ex;
 margin-inline-start:1ex;
@@ -44,7 +38,16 @@ font:inherit;
 color-scheme:inherit;
 }
 .vtd-date-picker:disabled{cursor:not-allowed;opacity:0.6;}
-`, "vtd/DatePicker")
+`
+
+/**
+ * A themed date input, wrapping a native `<input type="date"/>` - the browser supplies the
+ * calendar picker UI and all keyboard/locale handling for free
+ */
+export const DatePicker: FunctionComponent<DatePickerAttrsType> = function(attrs: DatePickerAttrsType, _children: RenderableElements[]): HTMLInputElement {
+    if (!areDatePickerStylesMounted) {
+        areDatePickerStylesMounted = true
+        mountStyles(datePickerCss, "vtd/DatePicker")
     }
 
     return passthroughAttrsToElement<HTMLInputElement>(<input

@@ -62,6 +62,9 @@ export const I: FunctionComponent<IAttrsType> = function(attrs: IAttrsType): SVG
 }
 
 let iconStylesheetSet: boolean = false
+/** Stylesheet for `<I/>`, mounted once when the first icon is registered */
+const iconCss: string = '.vtd-icon{height:1em;vertical-align:middle;}'
+
 /**
  * Register an icon
  * 
@@ -69,7 +72,7 @@ let iconStylesheetSet: boolean = false
  */
 export function registerIcon(key: string, icon: Icon) {
     if (!iconStylesheetSet) {
-        mountStyles('.vtd-icon{height:1em;vertical-align:middle;}','Velodesign Icon')
+        mountStyles(iconCss, 'Velodesign Icon')
         iconStylesheetSet = true
     }
     icons.set(key, icon)

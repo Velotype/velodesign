@@ -23,13 +23,8 @@ export type ProgressAttrsType = {
 
 let areProgressStylesMounted = false
 
-/**
- * A determinate progress bar, wrapping a native `<progress/>`
- */
-export const Progress: FunctionComponent<ProgressAttrsType> = function(attrs: ProgressAttrsType, _children: RenderableElements[]): HTMLElement {
-    if (!areProgressStylesMounted) {
-        areProgressStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<Progress/>`, mounted once on first construction */
+const progressCss: string = `
 .vtd-progress-wrapper{width:100%;box-sizing:border-box;display:flex;align-items:center;gap:0.75em;}
 .vtd-progress{
 appearance:none;
@@ -52,7 +47,15 @@ overflow:hidden;
 .vtd-progress-danger::-moz-progress-bar{background-color:var(--accent);}
 .vtd-progress-danger::-webkit-progress-value{background-color:var(--accent);}
 .vtd-progress-label{font-size:0.85em;white-space:nowrap;}
-`, "vtd/Progress")
+`
+
+/**
+ * A determinate progress bar, wrapping a native `<progress/>`
+ */
+export const Progress: FunctionComponent<ProgressAttrsType> = function(attrs: ProgressAttrsType, _children: RenderableElements[]): HTMLElement {
+    if (!areProgressStylesMounted) {
+        areProgressStylesMounted = true
+        mountStyles(progressCss, "vtd/Progress")
     }
 
     const max = attrs.max || 100

@@ -68,13 +68,8 @@ function buildPageWindow(page: number, totalPages: number, siblingCount: number)
     return result
 }
 
-/**
- * A control for navigating between pages of results
- */
-export const Pagination: FunctionComponent<PaginationAttrsType> = function(attrs: PaginationAttrsType, _children: RenderableElements[]): HTMLElement {
-    if (!arePaginationStylesMounted) {
-        arePaginationStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<Pagination/>`, mounted once on first construction */
+const paginationCss: string = `
 .vtd-pagination{
 display:flex;
 align-items:center;
@@ -91,7 +86,15 @@ font-weight:bold;
 .vtd-pagination-ellipsis{
 padding:0.25rem 0.5rem;
 }
-`, "vtd/Pagination")
+`
+
+/**
+ * A control for navigating between pages of results
+ */
+export const Pagination: FunctionComponent<PaginationAttrsType> = function(attrs: PaginationAttrsType, _children: RenderableElements[]): HTMLElement {
+    if (!arePaginationStylesMounted) {
+        arePaginationStylesMounted = true
+        mountStyles(paginationCss, "vtd/Pagination")
     }
 
     const totalPages = Math.max(1, attrs.totalPages)

@@ -1,8 +1,10 @@
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
+import { setChildren } from "../core/dom-lifecycle.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { RenderableElements, IdAttr, StylePassthroughAttrs } from "../core/velotype.ts"
 import { highlightMatch, searchHighlightCss } from "../core/search-highlight.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
+import { setTimeoutHelper } from "../core/utilities.ts"
 
 /**
  * A single entry in a `<Command/>` palette
@@ -37,6 +39,27 @@ export type CommandAttrsType = {
 
 let areCommandStylesMounted = false
 
+/** Stylesheet for `<Command/>`, mounted once on first construction */
+const commandCss: string = `
+.vtd-command{margin:10vh auto auto auto;padding:0;border:none;width:min(32em,90vw);border-radius:0.5rem;overflow:hidden;}
+.vtd-command::backdrop{background:rgba(75,75,75,0.6);backdrop-filter:blur(2px);}
+.vtd-command-input{
+width:100%;
+padding:0.9em 1em;
+border:none;
+border-block-end:1px solid var(--background-4);
+background-color:var(--background-1);
+color:var(--text);
+font:inherit;
+}
+.vtd-command-input:focus-visible{outline:none;}
+.vtd-command-list{list-style:none;margin:0;padding:0.4em;max-height:16em;overflow:auto;}
+.vtd-command-item{padding:0.6em 0.75em;border-radius:0.25rem;cursor:pointer;}
+.vtd-command-item-highlighted{background-color:var(--primary-3);}
+.vtd-command-empty{padding:1.5em;text-align:center;opacity:0.6;}
+${searchHighlightCss}
+`
+
 /**
  * A searchable command palette overlay: a text input filters a list of items, with
  * Up/Down/Enter keyboard navigation. Built on a native `<dialog/>` (like `Modal`), so
@@ -66,7 +89,7 @@ export class Command extends Component<CommandAttrsType> {
         this.#input.value = ""
         this.#dialog.showModal()
         this.#renderList()
-        globalThis.setTimeout(() => this.#input.focus(), 0)
+        setTimeoutHelper(() => this.#input.focus(), 0)
     }
 
     /** Items matching the current search query (all items if the query is empty) */
@@ -95,11 +118,13 @@ export class Command extends Component<CommandAttrsType> {
             this.#highlightedIndex = Math.max(0, items.length - 1)
         }
         if (items.length == 0) {
-            this.#list.replaceChildren(<li class="vtd-command-empty">{this.#attrs.noMatchMessage ?? <CommonThemeOptions.emptySymbol/>}</li>)
+            // `setChildren`, never `#list.replaceChildren` - see core/dom-lifecycle.ts.
+            // `noMatchMessage` is consumer content, so this list can hold anything.
+            setChildren(this, this.#list, [<li class="vtd-command-empty">{this.#attrs.noMatchMessage ?? <CommonThemeOptions.emptySymbol/>}</li>])
             return
         }
         const query = this.#query.trim()
-        this.#list.replaceChildren(...items.map((item, index) => <li
+        setChildren(this, this.#list, items.map((item, index) => <li
             class={`vtd-command-item${index == this.#highlightedIndex ? " vtd-command-item-highlighted" : ""}`}
             role="option"
             aria-selected={index == this.#highlightedIndex}
@@ -119,25 +144,7 @@ export class Command extends Component<CommandAttrsType> {
         this.#attrs = attrs
         if (!areCommandStylesMounted) {
             areCommandStylesMounted = true
-            mountStyles(`
-.vtd-command{margin:10vh auto auto auto;padding:0;border:none;width:min(32em,90vw);border-radius:0.5rem;overflow:hidden;}
-.vtd-command::backdrop{background:rgba(75,75,75,0.6);backdrop-filter:blur(2px);}
-.vtd-command-input{
-width:100%;
-padding:0.9em 1em;
-border:none;
-border-block-end:1px solid var(--background-4);
-background-color:var(--background-1);
-color:var(--text);
-font:inherit;
-}
-.vtd-command-input:focus-visible{outline:none;}
-.vtd-command-list{list-style:none;margin:0;padding:0.4em;max-height:16em;overflow:auto;}
-.vtd-command-item{padding:0.6em 0.75em;border-radius:0.25rem;cursor:pointer;}
-.vtd-command-item-highlighted{background-color:var(--primary-3);}
-.vtd-command-empty{padding:1.5em;text-align:center;opacity:0.6;}
-${searchHighlightCss}
-`, "vtd/Command")
+            mountStyles(commandCss, "vtd/Command")
         }
 
         this.#input = <input

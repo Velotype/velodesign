@@ -19,15 +19,8 @@ export type UploadAttrsType = {
 
 let areUploadStylesMounted = false
 
-/**
- * A themed drop-zone wrapping a visually-hidden native `<input type="file"/>` - clicking
- * or dragging a file onto it opens/fills the browser's native file picker, same trade-off
- * as `Checkbox`/`Toggle` wrapping a hidden native input for their visual box
- */
-export const Upload: FunctionComponent<UploadAttrsType> = function(attrs: UploadAttrsType, children: RenderableElements[]): HTMLLabelElement {
-    if (!areUploadStylesMounted) {
-        areUploadStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<Upload/>`, mounted once on first construction */
+const uploadCss: string = `
 .vtd-upload{
 width:100%;
 box-sizing:border-box;
@@ -48,7 +41,17 @@ transition:background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
 .vtd-upload-disabled{cursor:not-allowed;opacity:0.6;}
 .vtd-upload-disabled:hover{background-color:transparent;border-color:var(--background-5);}
 .vtd-upload:has(.vtd-upload-input:focus-visible){outline:2px solid var(--primary-7);outline-offset:2px;}
-`, "vtd/Upload")
+`
+
+/**
+ * A themed drop-zone wrapping a visually-hidden native `<input type="file"/>` - clicking
+ * or dragging a file onto it opens/fills the browser's native file picker, same trade-off
+ * as `Checkbox`/`Toggle` wrapping a hidden native input for their visual box
+ */
+export const Upload: FunctionComponent<UploadAttrsType> = function(attrs: UploadAttrsType, children: RenderableElements[]): HTMLLabelElement {
+    if (!areUploadStylesMounted) {
+        areUploadStylesMounted = true
+        mountStyles(uploadCss, "vtd/Upload")
     }
 
     return passthroughAttrsToElement<HTMLLabelElement>(<label class={`vtd-upload${attrs.disabled?" vtd-upload-disabled":""}`}>

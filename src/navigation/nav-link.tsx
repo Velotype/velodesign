@@ -2,6 +2,7 @@ import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { History } from "../core/history.ts"
+import { addGlobalListener, getPathname, removeGlobalListener } from "../core/utilities.ts"
 
 /**
  * Attrs type for `<NavLink/>` Component
@@ -23,23 +24,8 @@ export type NavLinkAttrsType = {
 
 let areNavLinkStylesMounted = false
 
-/**
- * A `<Link/>` that also knows whether it matches the current location, for highlighting
- * the active item in navigational UI (`Navbar`, `Sidebar`, etc).
- *
- * Defaults to plain navigation (see `spa` attr) - a real page load, same as a hand-written
- * anchor tag. The `popstate`/`locationchange` listeners below are still always registered
- * regardless of `spa`: they're what an SPA (`spa={true}`) needs to keep the active-highlight in
- * sync as the route changes, and harmless (just never-firing, since a real navigation destroys
- * this instance - and its listeners - before one could fire) overhead otherwise.
- */
-export class NavLink extends Component<NavLinkAttrsType> {
-    /** Mount this Component */
-    override mount() {
-        if (!areNavLinkStylesMounted) {
-            areNavLinkStylesMounted = true
-            mountStyles(
-`
+/** Stylesheet for `<NavLink/>`, mounted once on first construction */
+const navLinkCss: string = `
 .vtd-nav-link{
 position:relative;
 color:inherit;
@@ -81,22 +67,39 @@ font-weight:bold;
 color:var(--primary);
 font-weight:bold;
 }
-`, "vtd/NavLink")
+`
+
+/**
+ * A `<Link/>` that also knows whether it matches the current location, for highlighting
+ * the active item in navigational UI (`Navbar`, `Sidebar`, etc).
+ *
+ * Defaults to plain navigation (see `spa` attr) - a real page load, same as a hand-written
+ * anchor tag. The `popstate`/`locationchange` listeners below are still always registered
+ * regardless of `spa`: they're what an SPA (`spa={true}`) needs to keep the active-highlight in
+ * sync as the route changes, and harmless (just never-firing, since a real navigation destroys
+ * this instance - and its listeners - before one could fire) overhead otherwise.
+ */
+export class NavLink extends Component<NavLinkAttrsType> {
+    /** Mount this Component */
+    override mount() {
+        if (!areNavLinkStylesMounted) {
+            areNavLinkStylesMounted = true
+            mountStyles(navLinkCss, "vtd/NavLink")
         }
-        globalThis.addEventListener('popstate', this.refresh)
-        globalThis.addEventListener('locationchange', this.refresh)
+        addGlobalListener('popstate', this.refresh)
+        addGlobalListener('locationchange', this.refresh)
     }
 
     /** Unmount this Component */
     override unmount() {
-        globalThis.removeEventListener('popstate', this.refresh)
-        globalThis.removeEventListener('locationchange', this.refresh)
+        removeGlobalListener('popstate', this.refresh)
+        removeGlobalListener('locationchange', this.refresh)
     }
 
     /** Render this Component */
     override render(attrs: NavLinkAttrsType, children: RenderableElements[]): HTMLAnchorElement {
         const exact = attrs.exact === undefined ? true : attrs.exact
-        const isActive = exact ? globalThis.location.pathname == attrs.to : globalThis.location.pathname.startsWith(attrs.to)
+        const isActive = exact ? getPathname() == attrs.to : getPathname().startsWith(attrs.to)
         const activeClass = attrs.activeClass || "vtd-nav-link-active"
         const spa = attrs.spa ?? false
         const soleChild = children.length == 1 ? children[0] : undefined

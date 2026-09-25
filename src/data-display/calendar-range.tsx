@@ -1,4 +1,5 @@
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
+import { setChildren } from "../core/dom-lifecycle.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { Button } from "../form/button.tsx"
@@ -36,6 +37,49 @@ function isSameDay(a: Date, b: Date): boolean {
 function atMidnight(date: Date): Date {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate())
 }
+
+/** Stylesheet for `<CalendarRange/>`, mounted once on first construction */
+const calendarRangeCss: string = `
+.vtd-calendar{width:20em;max-width:100%;}
+.vtd-calendar-header{display:flex;align-items:center;justify-content:space-between;margin-block-end:0.5em;}
+.vtd-calendar-title{font-weight:bold;}
+.vtd-calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0.15em;text-align:center;}
+.vtd-calendar-weekdays{display:contents;}
+.vtd-calendar-weekday{font-size:0.8em;opacity:0.6;padding-block:0.3em;}
+.vtd-calendar-week{display:contents;}
+.vtd-calendar-day{
+padding:0.4em 0;
+border-radius:0.25rem;
+border:none;
+background:transparent;
+color:inherit;
+font:inherit;
+cursor:pointer;
+}
+.vtd-calendar-day:hover{background-color:var(--background-1);}
+.vtd-calendar-day-outside{opacity:0.35;}
+` +
+/* See Calendar's identical comment for the full rationale - a subtle background tint instead of
+ * a box-shadow ring, so "today" never reads as a leftover selection/range outline. */
+`
+.vtd-calendar-day-today{font-weight:bold;background-color:var(--primary-1);}
+.vtd-calendar-day-in-range{background-color:var(--primary-3);border-radius:0;}
+.vtd-calendar-day-range-start,.vtd-calendar-day-range-end{background-color:var(--primary);color:var(--text-alt);}
+.vtd-calendar-day-range-start{border-start-end-radius:0;border-end-end-radius:0;}
+.vtd-calendar-day-range-end{border-start-start-radius:0;border-end-start-radius:0;}
+` +
+/*
+ * All need to win over the plain :hover rule above by specificity (not source order, which
+ * would be one stray reorder away from silently regressing) - otherwise hovering any of them
+ * drops it back to the same neutral background :hover gives an ordinary day, making it
+ * indistinguishable from an unselected day for as long as the pointer sits on it - see
+ * Calendar's identical -selected:hover fix.
+ */
+`
+.vtd-calendar-day.vtd-calendar-day-today:hover{background-color:var(--primary-2);}
+.vtd-calendar-day.vtd-calendar-day-in-range:hover{background-color:var(--primary-4);}
+.vtd-calendar-day.vtd-calendar-day-range-start:hover,.vtd-calendar-day.vtd-calendar-day-range-end:hover{background-color:var(--primary-6);}
+`
 
 /**
  * A month-grid date-range picker: the same prev/next-month grid as `Calendar`, but clicking
@@ -86,48 +130,7 @@ export class CalendarRange extends Component<CalendarRangeAttrsType> {
         this.#focusedDate = anchor
         if (!areCalendarRangeStylesMounted) {
             areCalendarRangeStylesMounted = true
-            mountStyles(
-`
-.vtd-calendar{width:20em;max-width:100%;}
-.vtd-calendar-header{display:flex;align-items:center;justify-content:space-between;margin-block-end:0.5em;}
-.vtd-calendar-title{font-weight:bold;}
-.vtd-calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0.15em;text-align:center;}
-.vtd-calendar-weekdays{display:contents;}
-.vtd-calendar-weekday{font-size:0.8em;opacity:0.6;padding-block:0.3em;}
-.vtd-calendar-week{display:contents;}
-.vtd-calendar-day{
-padding:0.4em 0;
-border-radius:0.25rem;
-border:none;
-background:transparent;
-color:inherit;
-font:inherit;
-cursor:pointer;
-}
-.vtd-calendar-day:hover{background-color:var(--background-1);}
-.vtd-calendar-day-outside{opacity:0.35;}
-` +
-/* See Calendar's identical comment for the full rationale - a subtle background tint instead of
- * a box-shadow ring, so "today" never reads as a leftover selection/range outline. */
-`
-.vtd-calendar-day-today{font-weight:bold;background-color:var(--primary-1);}
-.vtd-calendar-day-in-range{background-color:var(--primary-3);border-radius:0;}
-.vtd-calendar-day-range-start,.vtd-calendar-day-range-end{background-color:var(--primary);color:var(--text-alt);}
-.vtd-calendar-day-range-start{border-start-end-radius:0;border-end-end-radius:0;}
-.vtd-calendar-day-range-end{border-start-start-radius:0;border-end-start-radius:0;}
-` +
-/*
- * All need to win over the plain :hover rule above by specificity (not source order, which
- * would be one stray reorder away from silently regressing) - otherwise hovering any of them
- * drops it back to the same neutral background :hover gives an ordinary day, making it
- * indistinguishable from an unselected day for as long as the pointer sits on it - see
- * Calendar's identical -selected:hover fix.
- */
-`
-.vtd-calendar-day.vtd-calendar-day-today:hover{background-color:var(--primary-2);}
-.vtd-calendar-day.vtd-calendar-day-in-range:hover{background-color:var(--primary-4);}
-.vtd-calendar-day.vtd-calendar-day-range-start:hover,.vtd-calendar-day.vtd-calendar-day-range-end:hover{background-color:var(--primary-6);}
-`, "vtd/CalendarRange", "composite")
+            mountStyles(calendarRangeCss, "vtd/CalendarRange", "composite")
         }
 
         this.#gridEl.addEventListener("keydown", this.#handleGridKeyDown)
@@ -227,7 +230,7 @@ cursor:pointer;
         const days = Array.from({length: 42}, (_, i) => new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i))
         const weeks = Array.from({length: 6}, (_, i) => days.slice(i * 7, i * 7 + 7))
 
-        this.#gridEl.replaceChildren(
+        setChildren(this, this.#gridEl, [
             <div class="vtd-calendar-weekdays" role="row">
                 {weekdayLabels.map(label => <span class="vtd-calendar-weekday" role="columnheader">{label}</span>)}
             </div>,
@@ -256,7 +259,7 @@ cursor:pointer;
                         onClick={() => this.#pickDay(day)}>{day.getDate()}</button>
                 })}
             </div>),
-        )
+        ])
     }
 
     /** Render this Component */

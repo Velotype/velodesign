@@ -34,16 +34,6 @@ export class CategoryPage extends Component<CategoryPageAttrsType> {
 .vtd-showcase-category-entry-link{color:inherit;text-decoration:none;font-size:0.9em;}
 .vtd-showcase-category-entry-link:hover{color:var(--primary-8);}
 .vtd-showcase-category-entry-description{font-size:0.9em;margin-block-end:0.6em;}
-.vtd-showcase-example-preview{
-border:1px solid var(--background-4);
-border-radius:0.5rem;
-padding:2em;
-display:flex;
-align-items:center;
-min-height:3em;
-background-image:radial-gradient(color-mix(in srgb, var(--background-4) 35%, transparent) 1px, transparent 1px);
-background-size:16px 16px;
-}
 `, "velodesign-showcase/CategoryPage")
         }
     }

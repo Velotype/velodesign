@@ -1,4 +1,4 @@
-import { consoleError } from "./utilities.ts"
+import { consoleError, dispatchGlobalEvent, pushHistoryState, setHref } from "./utilities.ts"
 
 /**
  * A collection of useful functions to manage browser History
@@ -14,8 +14,8 @@ export const History = {
         // https://github.com/remix-run/history/issues/291
         // https://jdurand.com/blog/2016/05/03/ember-history-pushstate-dom-exception-18/
         try {
-            globalThis.history.pushState(null,"",newLocation)
-            globalThis.dispatchEvent(new Event('locationchange'))
+            pushHistoryState(newLocation)
+            dispatchGlobalEvent(new Event('locationchange'))
         } catch (error) {
             consoleError(error)
             History.loadNewPageLocation(newLocation)
@@ -25,6 +25,6 @@ export const History = {
      * Change the current URL to the `newLocation` by reloading the page
      */
     loadNewPageLocation: function(newLocation: string): void {
-        globalThis.location.href = newLocation
+        setHref(newLocation)
     }
 }

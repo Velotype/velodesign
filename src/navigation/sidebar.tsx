@@ -1,12 +1,54 @@
 import {Component, getComponent, passthroughAttrsToElement} from "../core/velotype.ts"
+import { setChildren } from "../core/dom-lifecycle.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, RenderObject, StylePassthroughAttrs } from "../core/velotype.ts"
 import { NavLink } from "./nav-link.tsx"
 import { Menu } from "./menu.tsx"
-import { CommonThemeOptions } from "../core/theme-options.ts"
+import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
+
+/**
+ * Options to customize `<Sidebar/>` Component Theme
+ */
+export const SidebarThemeOptions: {
+    /**
+     * Dismisses the overlay panel.
+     *
+     * **Its own glyph rather than `CommonThemeOptions.closeSymbol`.** In overlay mode the panel's
+     * header can hold a search box, and that box has a cross of its own for emptying it - two
+     * crosses a few pixels apart, one clearing a field and one shutting the whole panel, with
+     * nothing but position to tell them apart. A cross is the right mark for *clearing*, so the
+     * panel takes a different one: an arrow curving back, which says where it goes rather than
+     * what it removes.
+     *
+     * The `\uFE0E` is a variation selector forcing text presentation - without it the arrow is an
+     * emoji on platforms that have one, and arrives full-colour at a size of its own choosing.
+     *
+     * The glyph is flipped in CSS rather than swapped for another codepoint: what is wanted is an
+     * arrow whose tail curves up and whose head points back, and no arrow in Unicode draws that
+     * while staying as legible as this one does upside down. The wrapper also lets the flip carry
+     * an optical correction: this glyph is drawn entirely *above* the baseline, so its ink already
+     * sits high in its line box, and mirroring throws it exactly as far low - measured at 2.47px
+     * of a 20px box. The box is centred by the button either way; `translateY` centres what is
+     * actually drawn in it.
+     */
+    closeSymbol: ThemeSymbol
+} = themeOptions({}, {
+    closeSymbol: function(){return <span class="vtd-sidebar-close-glyph">{closeGlyph}</span>}
+})
+
+/**
+ * U+21A9 leftwards arrow with hook, followed by U+FE0E.
+ *
+ * A named constant rather than the characters inline, for both halves: escapes written straight
+ * into JSX are text, so `<span>\u21A9</span>` renders those six characters; and U+FE0E is
+ * invisible in source, so pasting the pair leaves a file with a character in it that nothing on
+ * screen accounts for.
+ */
+const closeGlyph = "\u21A9\uFE0E"
 import type { MenuItemType } from "./menu.tsx"
 import { Tree } from "../data-display/tree.tsx"
 import type { TreeNodeType } from "../data-display/tree.tsx"
+import { addGlobalListener, clearTimeoutHelper, getPathname, matchMediaHelper, removeGlobalListener, requestFrame, setTimeoutHelper } from "../core/utilities.ts"
 
 /**
  * A single entry in a `<Sidebar/>`
@@ -32,6 +74,14 @@ export type SidebarItemType = {
     children?: SidebarItemType[]
     /** Should this group start expanded? (default: `false`) */
     defaultOpen?: boolean
+    /**
+     * Draws a rule above this entry, for separating one run of entries from the next.
+     *
+     * Ignored on the first entry, where it would be a rule against the top of the list - so a
+     * consumer can mark a group's first item without checking whether it happens to be first
+     * overall. Same name and same behaviour as `Menu`'s.
+     */
+    dividerBefore?: boolean
 }
 
 /**
@@ -192,492 +242,6 @@ const rail = `.vtd-sidebar-collapsed:not(${floatTriggers})`
 /** Collapsed, but floated back out over the page */
 const floated = `.vtd-sidebar-collapsed:is(${floatTriggers})`
 
-/**
- * A themed vertical navigation panel, with the current page highlighted automatically.
- *
- * Entries may nest: an item with `children` renders as a collapsible group, built on `Tree` so the
- * open/close animation, the keyboard handling and the open-state API all come from one place
- * rather than a second copy of them here.
- *
- * Three things it does that a plain list cannot, each optional:
- *
- * - **`collapsible`** shrinks it to a rail of icons that floats back out over the page on hover,
- *   on keyboard focus, while its trailing edge is being dragged, and while its account menu is
- *   open. The rail shows each group's `icon` and nothing else, including for a group the reader
- *   left expanded - see `floatTriggers` and the collapsed rules in the stylesheet.
- * - **`resizable`** lets the trailing edge be dragged.
- * - **`profile`** pins an account row to the foot that opens a `Menu`.
- *
- * **Never call `refresh()` here.** Every `label`, `icon` and `trailing` is `RenderableElements`, so
- * it can hold a consumer's own components; each method below does a targeted DOM update instead.
- */
-export class Sidebar extends Component<SidebarAttrsType> {
-    #root: HTMLElement
-    #panel: HTMLDivElement
-    #tree: Tree
-    #attrs: SidebarAttrsType
-    #collapsed: boolean
-    #width: number
-    /** Every group's `<details>`, captured once, so marking the active one re-queries nothing */
-    #groups: HTMLElement[] = []
-    /** Watches `overlayBelow`. Undefined when the behaviour is switched off */
-    #media: MediaQueryList | undefined
-
-    /**
-     * Marks the group holding the current page.
-     *
-     * On the rail there is no label and no open group to show where the reader is, so without this
-     * the sidebar can say which *page* is current while giving no clue which section it belongs
-     * to. `NavLink` already decides what is active; this only asks which group contains it, so the
-     * two can never disagree about the answer.
-     */
-    /** What `Tree` calls on a toggle: keep the active marker right, then tell the consumer */
-    #handleToggle = (node: TreeNodeType, open: boolean) => {
-        this.#syncActiveGroup()
-        this.#attrs.onToggle?.(node.key, open)
-    }
-
-    #syncActiveGroup = () => {
-        for (const group of this.#groups) {
-            group.classList.toggle("vtd-sidebar-group-active", !!group.querySelector(".vtd-nav-link-active"))
-        }
-    }
-
-    /**
-     * Applies the collapsed state to the DOM.
-     *
-     * Two lines, and that is the whole of it: a class and a custom property. Everything the rail
-     * looks like is a CSS rule reading one or the other, which is what lets the change *animate* -
-     * a JS-driven rail would have to decide each piece's end state itself and would land all of
-     * them in the frame of the click.
-     */
-    #syncCollapsed() {
-        // ⚠️ The rail is a *column* behaviour, and in overlay mode the class is not applied at all -
-        // `#collapsed` is still remembered, so it comes back when the sidebar is a column again.
-        //
-        // Not a specificity fix, deliberately. Overriding the rail's rules from an overlay rule
-        // loses: `${rail}` is `.vtd-sidebar-collapsed:not(<four triggers>)`, and `:not()` carries
-        // the specificity of its most specific argument - `:has(.vtd-menu[open])` - so the rail's
-        // label rule is (0,4,0) against an overlay rule's (0,3,0). The visible symptom was precise:
-        // an open overlay panel collapsed to icons the moment the pointer left the window, because
-        // `:not(:hover)` started matching again and the rail rule took back over.
-        const overlay = this.#navState().overlay
-        this.#root.classList.toggle("vtd-sidebar-collapsed", this.#collapsed && !overlay)
-        // The dragged width goes out as a custom property and every actual width is a CSS rule
-        // reading it. Setting width inline instead pinned the panel open: an inline style beats a
-        // class, so the collapsed rule could never narrow it and hovering could never widen it -
-        // collapsing shrank the gutter and left a full-width panel sitting over the page.
-        this.#root.style.setProperty("--vtd-sidebar-width", `${this.#width}px`)
-        const toggle = this.#root.querySelector(".vtd-sidebar-collapse")
-        toggle?.setAttribute("aria-expanded", this.#collapsed ? "false" : "true")
-    }
-
-    /**
-     * Applies overlay mode and the open state to the DOM.
-     *
-     * Same shape as `#syncCollapsed`: classes only, so every visual is a CSS rule and the panel can
-     * animate rather than being positioned frame by frame from here.
-     */
-    /** The open state as the DOM was last left, so a change can be told from a re-sync */
-    #wasOpen = false
-
-    #syncOverlay = () => {
-        const state = this.#navState()
-        this.#root.classList.toggle("vtd-sidebar-overlay", state.overlay)
-        // Whether the rail applies depends on the mode, so it is re-decided here too
-        this.#root.classList.toggle("vtd-sidebar-collapsed", this.#collapsed && !state.overlay)
-        this.#root.classList.toggle("vtd-sidebar-overlay-open", state.overlay && state.open)
-        // A panel that is off-screen must not be a tab stop, or Tab walks into a nav nobody can see
-        this.#panel.toggleAttribute("inert", state.overlay && !state.open)
-
-        // ⚠️ Focus is handled here rather than in `open()`/`close()`, because those are not the only
-        // way the panel opens - `Navbar`'s control writes straight to the shared state, so a method
-        // that moves focus would simply never run for the one caller that matters. Everything that
-        // changes the state comes through here.
-        const isOpen = state.overlay && state.open
-        if (isOpen != this.#wasOpen) {
-            this.#wasOpen = isOpen
-            if (isOpen) {
-                const active = document.activeElement
-                this.#returnFocusTo = active instanceof HTMLElement ? active : undefined
-                // The panel itself, not the first control in it: the first control is the search
-                // box, and focusing an input on a touch device throws the keyboard up over the nav
-                // the reader has just asked to see. `inert` came off a line ago, so it can hold it.
-                this.#panel.focus()
-            } else if (this.#returnFocusTo?.isConnected) {
-                // Back where it came from, or the reader's next Tab starts from the top of the page
-                this.#returnFocusTo.focus()
-                this.#returnFocusTo = undefined
-            }
-        }
-    }
-
-    #navState(): SidebarNavState {
-        return this.#attrs.nav?.get() ?? {open: false, overlay: false}
-    }
-
-    #setNavState(next: Partial<SidebarNavState>): void {
-        const nav = this.#attrs.nav
-        if (!nav) {
-            return
-        }
-        const current = nav.get()
-        const merged = {...current, ...next}
-        if (merged.open == current.open && merged.overlay == current.overlay) {
-            return
-        }
-        // `set` replaces the whole value, which is what notifies every listener - Navbar included
-        nav.set(merged)
-    }
-
-    /**
-     * Crossing the breakpoint animates, and the reason it *can* is that nothing discontinuous
-     * happens any more.
-     *
-     * This used to suppress transitions for a frame, because the switch changed `position` as well
-     * as width and the panel jumped from below the header to the top of the viewport before sliding.
-     * With the panel staying absolutely positioned there is nothing left that cannot be
-     * interpolated, so the switch is left to animate like any other change.
-     */
-
-    #switchTimer: number | undefined
-
-    /**
-     * Holds the *panel* still while the mode changes, and nothing else.
-     *
-     * The panel is invisible at both ends of a mode switch - a closed overlay surface on one side,
-     * a column panel on the other - but the CSS that makes it invisible is transitioned, so on the
-     * way into overlay mode it fades out over 180ms. `position` flips to `fixed` in the first frame
-     * of that fade, at full opacity, and the panel is seen jumping from under the header to the top
-     * of the viewport before it disappears. Measured: `top:55 w:250` to `top:0 w:390` at opacity
-     * 1.00, which is exactly the jump this component has now produced twice.
-     *
-     * ⚠️ Scoped to the panel and the scrim, deliberately. An earlier version killed every
-     * transition under the root, which took the column's own width animation and the rows with it -
-     * that is what made the whole thing pop rather than close. The root's width is left alone, so
-     * the column still slides shut while the panel simply stops being drawn.
-     */
-    #switchModeWithoutAnimatingPanel(apply: () => void): void {
-        this.#root.classList.add("vtd-sidebar-switching")
-        apply()
-        // Force the style recalculation now, so the new values are what any later transition
-        // starts from rather than being picked up at the next paint
-        void this.#root.offsetWidth
-        globalThis.clearTimeout(this.#switchTimer)
-        const release = () => { this.#root.classList.remove("vtd-sidebar-switching") }
-        globalThis.requestAnimationFrame(() => { globalThis.requestAnimationFrame(release) })
-        // rAF does not tick in a background tab, and the class would stay on forever
-        this.#switchTimer = globalThis.setTimeout(release, 100)
-    }
-
-    /** Re-reads the breakpoint and writes the answer into the shared state */
-    #handleMediaChange = () => {
-        const overlay = this.#media?.matches ?? false
-        if (overlay == this.#navState().overlay && this.#root.classList.contains("vtd-sidebar-overlay") == overlay) {
-            return
-        }
-        this.#switchModeWithoutAnimatingPanel(() => {
-            // `open` is carried across the switch rather than cleared. It means nothing while the
-            // sidebar is a column - every rule that reads it also requires `.vtd-sidebar-overlay`,
-            // and `isOpen()` answers false - so keeping it costs nothing and is what a reader
-            // expects: widening and narrowing the window again is not an interaction with the
-            // panel, so it should not close what they opened.
-            this.#setNavState({overlay})
-            this.#syncOverlay()
-        })
-    }
-
-    /** Escape closes the panel, which is what every other dismissible surface here does */
-    #handleKeydown = (event: KeyboardEvent) => {
-        const state = this.#navState()
-        if (event.key == "Escape" && state.overlay && state.open) {
-            event.preventDefault()
-            this.close()
-        }
-    }
-
-    /**
-     * Whatever had focus when the panel opened, so closing can give it back.
-     *
-     * Recorded rather than assumed to be `Navbar`'s control: this component does not know what
-     * opened it, and a consumer's own button is just as likely. Reading `activeElement` answers
-     * the question without either side having to know about the other.
-     */
-    #returnFocusTo: HTMLElement | undefined
-
-    /** Every focusable thing inside the panel, in tab order */
-    #focusablesInPanel(): HTMLElement[] {
-        const selector = "a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),summary,[tabindex]:not([tabindex='-1'])"
-        return [...this.#panel.querySelectorAll(selector)]
-            .filter(el => (el as HTMLElement).checkVisibility({checkVisibilityCSS: true})) as HTMLElement[]
-    }
-
-    /**
-     * Tab stays inside an open overlay panel.
-     *
-     * The page behind is covered by the scrim and cannot be reached with a pointer, so letting Tab
-     * walk into it would put the reader somewhere they can see but cannot click. This is the one
-     * thing a `<dialog>` would have given for free, and the only one - `Escape`, the scrim and
-     * `inert` on the closed panel are all already here.
-     */
-    #handleFocusTrap = (event: KeyboardEvent) => {
-        if (event.key != "Tab" || !this.isOpen()) {
-            return
-        }
-        const focusables = this.#focusablesInPanel()
-        if (focusables.length == 0) {
-            return
-        }
-        const first = focusables[0]
-        const last = focusables[focusables.length - 1]
-        const active = document.activeElement
-        if (!this.#panel.contains(active)) {
-            event.preventDefault()
-            ;(event.shiftKey ? last : first).focus()
-        } else if (event.shiftKey && active == first) {
-            event.preventDefault()
-            last.focus()
-        } else if (!event.shiftKey && active == last) {
-            event.preventDefault()
-            first.focus()
-        }
-    }
-
-    /** Opens the overlay panel. Does nothing while the sidebar is a column */
-    open(): void {
-        if (!this.#navState().overlay) {
-            return
-        }
-        this.#setNavState({open: true})
-        this.#syncOverlay()
-    }
-
-    /** Closes the overlay panel */
-    close(): void {
-        this.#setNavState({open: false})
-        this.#syncOverlay()
-    }
-
-    /** Opens the overlay panel if it is closed, closes it if it is open */
-    toggle(): void {
-        if (this.#navState().open) { this.close() } else { this.open() }
-    }
-
-    /** Is the overlay panel showing? Always false while the sidebar is a column */
-    isOpen(): boolean {
-        const state = this.#navState()
-        return state.overlay && state.open
-    }
-
-    /** Is the sidebar currently an overlay rather than a column? */
-    isOverlay(): boolean {
-        return this.#navState().overlay
-    }
-
-    /** Collapses or expands the sidebar */
-    setCollapsed(collapsed: boolean): void {
-        if (this.#collapsed == collapsed) {
-            return
-        }
-        this.#collapsed = collapsed
-        this.#syncCollapsed()
-        this.#attrs.onCollapsedChange?.(collapsed)
-    }
-
-    /** Is the sidebar collapsed to its rail? */
-    isCollapsed(): boolean {
-        return this.#collapsed
-    }
-
-    /** The sidebar's expanded width in px - what a drag changes, unaffected by collapsing */
-    getWidth(): number {
-        return this.#width
-    }
-
-    /** Sets the expanded width in px, clamped to `minWidth`/`maxWidth` */
-    setWidth(width: number): void {
-        const min = this.#attrs.minWidth ?? 180
-        const max = this.#attrs.maxWidth ?? 480
-        this.#width = Math.round(Math.min(max, Math.max(min, width)))
-        this.#syncCollapsed()
-    }
-
-    /** The `Tree` behind the groups, for reading or driving which are open */
-    getTree(): Tree {
-        return this.#tree
-    }
-
-    /**
-     * Replaces the entries, rebuilding only the list.
-     *
-     * This exists so a filterable sidebar is possible at all. The obvious way to re-filter is to
-     * re-render the whole component, and that destroys the `header` along with everything else -
-     * which is where the search box lives, so the reader loses focus after the first character.
-     * Only the body is rebuilt here; the header, the profile row, the collapsed state and the
-     * dragged width all survive.
-     *
-     * The open/closed state does *not* survive, because the entries themselves are new. Read it
-     * off `getTree()` before calling this and put it back through `defaultOpen` - which is what a
-     * filter wants anyway, since it needs to force open whichever groups still hold a match.
-     */
-    setItems(items: SidebarItemType[]): void {
-        this.#attrs = {...this.#attrs, items}
-        const body = this.#panel.querySelector(".vtd-sidebar-body") as HTMLElement
-        this.#tree = getComponent<Tree>(<Tree
-            class="vtd-sidebar-tree"
-            ariaLabel={this.#attrs.ariaLabel}
-            nodes={this.#toNodes(items)}
-            onToggle={this.#handleToggle}/>)
-        body.replaceChildren(this.#tree.render())
-        this.#groups = [...this.#root.querySelectorAll(".vtd-tree-node")] as HTMLElement[]
-        this.#syncActiveGroup()
-    }
-
-    override mount() {
-        globalThis.addEventListener("popstate", this.#syncActiveGroup)
-        globalThis.addEventListener("locationchange", this.#syncActiveGroup)
-        this.#syncActiveGroup()
-
-        const breakpoint = this.#attrs.overlayBelow ?? "48em"
-        if (breakpoint) {
-            this.#media = globalThis.matchMedia(`(max-width: ${breakpoint})`)
-            this.#media.addEventListener("change", this.#handleMediaChange)
-            this.#handleMediaChange()
-        }
-        // Escape is listened for on the document rather than the panel: the reader may well have
-        // focus back on the menu control that opened it, which is outside this component entirely
-        document.addEventListener("keydown", this.#handleKeydown)
-        document.addEventListener("keydown", this.#handleFocusTrap)
-        // A second control for the same state - Navbar's menu button - writes straight to the
-        // shared object, so the panel has to follow the object rather than only its own methods
-        this.#attrs.nav?.registerOnChangeListener(this.#syncOverlay, {hasVtKey: this})
-    }
-
-    override unmount() {
-        globalThis.removeEventListener("popstate", this.#syncActiveGroup)
-        globalThis.removeEventListener("locationchange", this.#syncActiveGroup)
-        this.#media?.removeEventListener("change", this.#handleMediaChange)
-        globalThis.clearTimeout(this.#switchTimer)
-        document.removeEventListener("keydown", this.#handleKeydown)
-        document.removeEventListener("keydown", this.#handleFocusTrap)
-    }
-
-    /**
-     * Builds one entry's row - the icon, the label and the trailing slot, as a single element.
-     *
-     * **The whole row is one element, and it is the link when the entry has a `to`.** `Tree`'s
-     * `leading`/`trailing` slots are deliberately not used for this: they are siblings of the
-     * label, so a link in the label covers only the text between them and the icon and the count
-     * on either side belong to the row instead. On a *group* that is the difference between two
-     * competing actions and two separate ones - the chevron toggles, and everything else is a
-     * destination you can click anywhere in, middle-click, or copy the address of. It also settles
-     * what a click on the collapsed rail means, where the icon is the only thing there: it goes to
-     * the group's own page, which is the only answer that does anything a reader can see.
-     *
-     * Reading order is still icon, label, count, so a screen reader announces "Typography 3" and
-     * not "3 Typography" - that ordering is the reason `trailing` exists on `Tree` at all, and it
-     * is kept here by markup order rather than by CSS.
-     */
-    #buildRow(item: SidebarItemType): RenderableElements {
-        const content: RenderableElements[] = [
-            item.icon ? <span class="vtd-sidebar-icon">{item.icon}</span> : null,
-            <span class="vtd-sidebar-label">{item.label}</span>,
-            item.trailing ? <span class="vtd-sidebar-trailing">{item.trailing}</span> : null,
-        ]
-        if (!item.to) {
-            return <span class="vtd-sidebar-row">{content}</span>
-        }
-        return <NavLink
-            to={item.to}
-            spa={this.#attrs.spa}
-            exact={this.#attrs.exact}
-            class="vtd-sidebar-row vtd-sidebar-link">{content}</NavLink>
-    }
-
-    /** Maps this component's items onto the nodes `Tree` renders */
-    #toNodes(items: SidebarItemType[]): TreeNodeType[] {
-        return items.map(item => ({
-            key: item.key ?? item.to ?? String(item.label),
-            label: this.#buildRow(item),
-            defaultOpen: item.defaultOpen,
-            children: item.children && item.children.length > 0 ? this.#toNodes(item.children) : undefined,
-        }))
-    }
-
-    /** The collapse control: a chevron drawn in CSS, which flips to point the other way */
-    #buildCollapseControl(): RenderableElements {
-        const button: HTMLButtonElement = <button
-            type="button"
-            class="vtd-sidebar-collapse"
-            aria-label={this.#attrs.collapseLabel}
-            aria-expanded={this.#collapsed ? "false" : "true"}
-            onClick={() => { this.setCollapsed(!this.#collapsed) }}>
-            <span class="vtd-sidebar-collapse-icon" aria-hidden="true"/>
-        </button>
-        return <div class="vtd-sidebar-collapse-row">{button}</div>
-    }
-
-    /** The account row, which is a `Menu` whose trigger is the row itself */
-    #buildProfile(profile: SidebarProfileType): RenderableElements {
-        const trigger = <span class="vtd-sidebar-profile-trigger">
-            <span class="vtd-sidebar-profile-avatar">{profile.avatar}</span>
-            <span class="vtd-sidebar-profile-text">
-                <span class="vtd-sidebar-profile-name">{profile.name}</span>
-                {profile.detail ? <span class="vtd-sidebar-profile-detail">{profile.detail}</span> : null}
-            </span>
-        </span>
-        return <div class="vtd-sidebar-profile">
-            <Menu
-                class="vtd-sidebar-profile-menu"
-                ariaLabel={profile.menuAriaLabel}
-                trigger={trigger}
-                items={profile.menuItems}/>
-        </div>
-    }
-
-    /**
-     * The drag handle on the trailing edge.
-     *
-     * `Resizable` is deliberately not reused here even though it does this job: it owns the width
-     * of what it wraps, and this component has to reconcile a dragged width with a collapsed one -
-     * two owners of the same property fighting over it. The drag listeners still follow its
-     * pattern, living on `document` only for the duration of a drag rather than for the whole
-     * component lifecycle.
-     */
-    #buildResizeHandle(): RenderableElements {
-        const handle: HTMLElement = <div class="vtd-sidebar-resize" role="separator" aria-orientation="vertical"/>
-        handle.addEventListener("pointerdown", (event: PointerEvent) => {
-            event.preventDefault()
-            // No setPointerCapture here, deliberately: the move and up listeners go on `document`,
-            // which already sees the drag wherever the pointer goes, and capture throws outright on
-            // a pointerId that is not currently active - so it turns a synthetic pointerdown, which
-            // is how a test drives this, into a resize handle that does nothing at all. The
-            // `.vtd-sidebar-resizing` class added below is what keeps the panel from collapsing out
-            // from under a pointer that has left it, which is the thing that actually needed fixing.
-            const startX = event.clientX
-            const startWidth = this.#width
-            const onMove = (move: PointerEvent) => { this.setWidth(startWidth + (move.clientX - startX)) }
-            const onUp = () => {
-                document.removeEventListener("pointermove", onMove)
-                document.removeEventListener("pointerup", onUp)
-                this.#root.classList.remove("vtd-sidebar-resizing")
-                this.#attrs.onWidthChange?.(this.#width)
-            }
-            this.#root.classList.add("vtd-sidebar-resizing")
-            document.addEventListener("pointermove", onMove)
-            document.addEventListener("pointerup", onUp)
-        })
-        return handle
-    }
-
-    constructor(attrs: SidebarAttrsType, children: RenderableElements[]) {
-        super(attrs, children)
-        this.#attrs = attrs
-        this.#collapsed = attrs.collapsible === true && attrs.defaultCollapsed === true
-        this.#width = attrs.defaultWidth ?? defaultWidthPx
-        if (!areSidebarStylesMounted) {
-            areSidebarStylesMounted = true
-            mountStyles(
 /*
  * The root sets no position, deliberately.
  *
@@ -693,7 +257,8 @@ export class Sidebar extends Component<SidebarAttrsType> {
  * The containing block those two children actually need is .vtd-sidebar-rail, an element this
  * component owns outright. Nothing has to be overridden, so nothing has to out-specify anything.
  */
-`
+/** Stylesheet for `<Sidebar/>`, mounted once on first construction */
+const sidebarCss: string = `
 .vtd-sidebar{
 box-sizing:border-box;
 flex-shrink:0;
@@ -743,6 +308,33 @@ max-height:14em;
 transition:max-height 0.18s ease-in-out, padding 0.18s ease-in-out;
 }
 .vtd-sidebar-body{overflow-y:auto;overflow-x:hidden;flex-grow:1;padding:0.4em 0.35em;}
+` +
+/*
+ * Room for the focus ring inside the clipping containers.
+ *
+ * A group's children live in `disclosure-view`'s content box, which clips its overflow so the rows
+ * are hidden while the grid track collapses - that is what makes opening and closing animate. The
+ * ring is an outline 2px wide at a 2px offset, so it reaches 4px past the row, and a row that fills
+ * its container exactly had 0px to put it in: tabbing to a sub-category drew a ring nobody could
+ * see. Padding the clip box out and pulling it back with an equal negative margin moves the clip
+ * edge without moving anything on screen.
+ *
+ * Scoped to the sidebar rather than fixed in `disclosure-view`: `Collapse` and `Accordion` pad their
+ * content generously already, so they have the room, and widening the clip box for every disclosure
+ * in the package to solve one component's problem is the wrong trade.
+ *
+ * The block axis cannot use the same trick, because `overflow` clips at the *padding* box: vertical
+ * padding here would leave a 4px sliver of the sub-links showing while the category is collapsed.
+ * The first and last rows take a margin instead, which is real room *inside* the clip box and
+ * collapses away with everything else when the grid track shrinks to `0fr`. Margins are safe to use
+ * here specifically because the inner is a grid item, and a grid item establishes an independent
+ * formatting context - so a child's block margin cannot collapse through it and escape the very
+ * container the room was being made in.
+ */
+`
+.vtd-sidebar .vtd-disclosure-content-inner{padding-inline:4px;margin-inline:-4px;}
+.vtd-sidebar .vtd-disclosure-content-inner>:first-child{margin-block-start:4px;}
+.vtd-sidebar .vtd-disclosure-content-inner>:last-child{margin-block-end:4px;}
 .vtd-sidebar-footer{
 flex-shrink:0;
 overflow:hidden;
@@ -780,6 +372,29 @@ transition:gap 0.18s ease-in-out;
 .vtd-sidebar-link{color:inherit;text-decoration:none;}
 ` +
 /*
+ * A `dividerBefore` rule, drawn the way Menu draws its own so the two read as one idea.
+ *
+ * Margin above the rule and padding below it, rather than padding on both sides: the row's own
+ * background - the hover and the active fill - paints to the padding edge, so a symmetric padding
+ * would pull the fill up to touch the line above it.
+ *
+ * ⚠️ **It stays on the rail, rule and spacing both.** Suppressing it there was tried and is wrong
+ * twice over: the grouping is *more* useful on the rail, not less - the labels that carried it are
+ * gone, so the rule is all that is left saying these rows are a separate run - and removing the
+ * margin, padding and border takes 16.2px out of the layout, so every icon below it jumped that
+ * far up as the panel collapsed. Nothing on the rail may leave layout; that is the rule the whole
+ * collapse animation is built on, and this broke it.
+ */
+`
+.vtd-sidebar-row-divided{
+margin-block-start:0.45em;
+padding-block-start:0.5em;
+border-block-start:1px solid var(--background-4);
+border-start-start-radius:0;
+border-start-end-radius:0;
+}
+` +
+/*
  * The hover belongs to the two things that do something, not to the container holding them.
  *
  * Tree gives every row a hover of its own, which is right for a tree and wrong here: a group's
@@ -790,7 +405,7 @@ transition:gap 0.18s ease-in-out;
 `
 .vtd-sidebar .vtd-tree-label:hover,.vtd-sidebar .vtd-tree-leaf:hover{background-color:transparent;}
 .vtd-sidebar-link:hover{background-color:var(--background-2);}
-.vtd-sidebar-link.vtd-nav-link-active{background-color:var(--primary-2);font-weight:bold;}
+.vtd-sidebar-link.vtd-nav-link-active{background-color:var(--primary-4);font-weight:bold;}
 ` +
 /*
  * The chevron is as tall as the row it splits, not as tall as the glyph inside it.
@@ -805,18 +420,28 @@ transition:gap 0.18s ease-in-out;
 .vtd-sidebar .vtd-tree-chevron{
 align-self:stretch;
 height:auto;
+order:1;
 margin-inline-start:0.2em;
+margin-inline-end:0;
 transition:width 0.18s ease-in-out, margin 0.18s ease-in-out, opacity 0.18s ease-in-out;
 }
 .vtd-sidebar .vtd-tree-children{padding-inline-start:0.9em;}
 ` +
-/* A top-level leaf has no chevron, so it needs the room one would have taken or its icon sits a
-   chevron's width to the left of every group's. It collapses with the chevron on the rail. */
+/*
+ * The chevron sits at the *trailing* edge of a group's row, which is why nothing here indents a
+ * leaf to make room for one.
+ *
+ * Leading was the obvious place and was wrong twice over. Every row then began a chevron's width
+ * in, so a leaf - an entry with no children - had to be padded by hand to put its icon under the
+ * groups' icons, and that padding is dead space the row's own link never covers: the reader aims
+ * at the left of the row and hits nothing. Moving the chevron to the end lines every icon up at
+ * one left edge without a correction, and hands the whole leading run of the row back to the link.
+ *
+ * A group's row still stops short of its chevron, and that is the point - the chevron is a
+ * separate control with a target of its own, so the row and the toggle stay distinguishable.
+ */
 `
-.vtd-sidebar .vtd-tree > li > .vtd-tree-leaf{
-padding-inline-start:1.7em;
-transition:padding-inline-start 0.18s ease-in-out;
-}
+.vtd-sidebar .vtd-tree > li > .vtd-tree-leaf{padding-inline-start:0;}
 ` +
 /*
  * Every top-level row is one height, in *both* states - not just on the rail.
@@ -918,6 +543,27 @@ border-radius:0.1em;
 background-color:var(--primary-7);
 }
 .vtd-sidebar-group-active > .vtd-tree-label .vtd-sidebar-icon{color:var(--primary-8);}
+` +
+/*
+ * A top-level entry with no children gets the same marker its groups get.
+ *
+ * Only groups had one, so the current page was findable at a glance inside a category and invisible
+ * when it *was* a top-level entry - the fill alone measured 1.34:1 against the panel in light and
+ * 1.09:1 in dark, which is not a cue anyone can see. A leaf has no group to carry the bar for it,
+ * so it carries its own, and the two kinds of destination now mark themselves the same way.
+ */
+`
+.vtd-sidebar .vtd-tree > li > .vtd-tree-leaf > .vtd-nav-link-active{position:relative;}
+.vtd-sidebar .vtd-tree > li > .vtd-tree-leaf > .vtd-nav-link-active::after{
+content:"";
+position:absolute;
+inset-block:0.2em;
+inset-inline-start:-0.35em;
+width:0.2em;
+border-radius:0.1em;
+background-color:var(--primary-7);
+}
+.vtd-sidebar .vtd-tree > li > .vtd-tree-leaf > .vtd-nav-link-active .vtd-sidebar-icon{color:var(--primary-8);}
 .vtd-sidebar-resize{
 position:absolute;
 inset-block:0;
@@ -1064,7 +710,6 @@ transition:opacity 0.18s ease-in-out, max-width 0s linear 0.18s;
 ${rail} .vtd-sidebar-row{gap:0;}
 ${rail} .vtd-sidebar-profile-trigger{gap:0;}
 ${rail} .vtd-tree-chevron{width:0;margin:0;opacity:0;}
-${rail} .vtd-tree > li > .vtd-tree-leaf{padding-inline-start:0;}
 ` +
 /* With nothing to show at 56px the header folds away over the same 180ms the width takes, so the
    icons below it move with the panel instead of snapping up the moment it is clicked */
@@ -1245,26 +890,65 @@ box-shadow:0 0 2em rgba(0,0,0,0.35);
 .vtd-sidebar-overlay .vtd-sidebar-top{
 display:flex;
 align-items:center;
-gap:0.5em;
+gap:0.9em;
 padding-inline-end:0.5em;
+border-block-end:1px solid var(--background-4);
 }
-.vtd-sidebar-overlay .vtd-sidebar-top .vtd-sidebar-header{flex:1;min-width:0;padding-inline-end:0;}
+` +
+/*
+ * The header keeps its `overflow:hidden` here (it is what lets the header collapse on the rail), so
+ * zeroing its trailing padding to sit the search box against the close control left the search
+ * box's focus ring with 0px to draw into and cut it off. 4px of padding is the ring's exact reach,
+ * and the equal negative margin hands it straight back to the flex row, so the clip edge moves and
+ * nothing on screen does - the ring simply draws over 4px of the row's 0.5em gap.
+ */
+`
+.vtd-sidebar-overlay .vtd-sidebar-top .vtd-sidebar-header{
+flex:1;
+min-width:0;
+padding-inline-end:4px;
+margin-inline-end:-4px;
+border-block-end:none;
+}
+` +
+/*
+ * The rule under the header belongs to the *row*, not the header, once there is a close control
+ * beside it. The header is a flex item that stops where that control begins, so its own
+ * border-block-end drew a line across part of the panel and then stopped - 344px of a 390px panel
+ * on a phone, which reads as an unfinished divider rather than as the edge of a section.
+ *
+ * The close control carries a surface of its own, which a borderless glyph did not.
+ *
+ * In overlay mode it sits beside the panel's header content, and a header holding a search box puts
+ * two small marks a few pixels apart: the field's own clear control and this. Both were a bare
+ * cross at roughly one size and one colour, 14px apart, and nothing said which emptied the box and
+ * which shut the panel. The field's control belongs *to the field* - it is inside the input's
+ * border, unboxed and muted - so this one is drawn as what it is instead: a control of the panel's
+ * chrome, with a fill, a border and more room between them.
+ */
+`
 .vtd-sidebar-overlay .vtd-sidebar-close{
 display:inline-flex;
 align-items:center;
 justify-content:center;
 flex-shrink:0;
 margin-inline-start:auto;
-min-width:24px;
-min-height:24px;
+min-width:28px;
+min-height:28px;
 padding:0.25em;
-font-size:1.1em;
+font-size:1em;
 line-height:1;
-background:transparent;
-border:1px solid transparent;
+background-color:var(--background-2);
+border:1px solid var(--background-4);
 border-radius:0.25rem;
-color:inherit;
+color:var(--text);
 cursor:pointer;
+}
+.vtd-sidebar-overlay .vtd-sidebar-close:hover{background-color:var(--background-3);}
+.vtd-sidebar-close-glyph{
+display:block;
+line-height:1;
+transform:translateY(-0.15em) scaleY(-1);
 }
 .vtd-sidebar-overlay .vtd-sidebar-close:hover{background-color:var(--background-2);}
 
@@ -1304,7 +988,549 @@ transition:none !important;
 @media (prefers-reduced-motion: reduce){
 .vtd-sidebar-scrim,.vtd-sidebar-overlay .vtd-sidebar-panel,.vtd-sidebar-overlay{transition:none;}
 }
-`, "vtd/Sidebar", "composite")
+`
+
+/**
+ * A themed vertical navigation panel, with the current page highlighted automatically.
+ *
+ * Entries may nest: an item with `children` renders as a collapsible group, built on `Tree` so the
+ * open/close animation, the keyboard handling and the open-state API all come from one place
+ * rather than a second copy of them here.
+ *
+ * Three things it does that a plain list cannot, each optional:
+ *
+ * - **`collapsible`** shrinks it to a rail of icons that floats back out over the page on hover,
+ *   on keyboard focus, while its trailing edge is being dragged, and while its account menu is
+ *   open. The rail shows each group's `icon` and nothing else, including for a group the reader
+ *   left expanded - see `floatTriggers` and the collapsed rules in the stylesheet.
+ * - **`resizable`** lets the trailing edge be dragged.
+ * - **`profile`** pins an account row to the foot that opens a `Menu`.
+ *
+ * **Never call `refresh()` here.** Every `label`, `icon` and `trailing` is `RenderableElements`, so
+ * it can hold a consumer's own components; each method below does a targeted DOM update instead.
+ */
+export class Sidebar extends Component<SidebarAttrsType> {
+    #root: HTMLElement
+    #panel: HTMLDivElement
+    #tree: Tree
+    #attrs: SidebarAttrsType
+    #collapsed: boolean
+    #width: number
+    /** Every group's `<details>`, captured once, so marking the active one re-queries nothing */
+    #groups: HTMLElement[] = []
+    /** Watches `overlayBelow`. Undefined when the behaviour is switched off */
+    #media: MediaQueryList | undefined
+
+    /**
+     * Marks the group holding the current page.
+     *
+     * On the rail there is no label and no open group to show where the reader is, so without this
+     * the sidebar can say which *page* is current while giving no clue which section it belongs
+     * to. `NavLink` already decides what is active; this only asks which group contains it, so the
+     * two can never disagree about the answer.
+     */
+    /** What `Tree` calls on a toggle: keep the active marker right, then tell the consumer */
+    #handleToggle = (node: TreeNodeType, open: boolean) => {
+        this.#syncActiveGroup()
+        this.#attrs.onToggle?.(node.key, open)
+    }
+
+    /**
+     * Marks the row for the current page, and then the group holding it.
+     *
+     * The rows are `NavLink`s and now keep themselves current as well, since `setItems` attaches
+     * the tree through `replaceChildrenOfChild` and their `mount` therefore runs. This stays
+     * because **the two cannot be relied on to run in that order.** A `NavLink` built by
+     * `setItems` registers its `popstate` listener *after* this component registered its own, so
+     * on the next navigation `#syncActiveGroup` would read row markers the rows had not updated
+     * yet, and the group marker would lag a page behind. Deciding the row state here first makes
+     * the group marker a function of it rather than a race against it.
+     *
+     * The rule matches `NavLink`'s exactly - `exact` compares the whole pathname, otherwise
+     * `startsWith` - so the two never disagree about an answer, only about who wrote it.
+     */
+    #syncActiveLinks = () => {
+        const exact = this.#attrs.exact ?? true
+        const path = getPathname()
+        for (const link of this.#root.querySelectorAll("a.vtd-sidebar-link")) {
+            const href = link.getAttribute("href")
+            const active = href != null && (exact ? path == href : path.startsWith(href))
+            link.classList.toggle("vtd-nav-link-active", active)
+            // `aria-current` is the half a screen reader hears, and dropping it would leave the
+            // sidebar looking right and announcing nothing
+            if (active) {
+                link.setAttribute("aria-current", "page")
+            } else {
+                link.removeAttribute("aria-current")
+            }
+        }
+    }
+
+    #syncActiveGroup = () => {
+        this.#syncActiveLinks()
+        for (const group of this.#groups) {
+            group.classList.toggle("vtd-sidebar-group-active", !!group.querySelector(".vtd-nav-link-active"))
+        }
+    }
+
+    /**
+     * Applies the collapsed state to the DOM.
+     *
+     * Two lines, and that is the whole of it: a class and a custom property. Everything the rail
+     * looks like is a CSS rule reading one or the other, which is what lets the change *animate* -
+     * a JS-driven rail would have to decide each piece's end state itself and would land all of
+     * them in the frame of the click.
+     */
+    #syncCollapsed() {
+        // ⚠️ The rail is a *column* behaviour, and in overlay mode the class is not applied at all -
+        // `#collapsed` is still remembered, so it comes back when the sidebar is a column again.
+        //
+        // Not a specificity fix, deliberately. Overriding the rail's rules from an overlay rule
+        // loses: `${rail}` is `.vtd-sidebar-collapsed:not(<four triggers>)`, and `:not()` carries
+        // the specificity of its most specific argument - `:has(.vtd-menu[open])` - so the rail's
+        // label rule is (0,4,0) against an overlay rule's (0,3,0). The visible symptom was precise:
+        // an open overlay panel collapsed to icons the moment the pointer left the window, because
+        // `:not(:hover)` started matching again and the rail rule took back over.
+        const overlay = this.#navState().overlay
+        this.#root.classList.toggle("vtd-sidebar-collapsed", this.#collapsed && !overlay)
+        // The dragged width goes out as a custom property and every actual width is a CSS rule
+        // reading it. Setting width inline instead pinned the panel open: an inline style beats a
+        // class, so the collapsed rule could never narrow it and hovering could never widen it -
+        // collapsing shrank the gutter and left a full-width panel sitting over the page.
+        this.#root.style.setProperty("--vtd-sidebar-width", `${this.#width}px`)
+        const toggle = this.#root.querySelector(".vtd-sidebar-collapse")
+        toggle?.setAttribute("aria-expanded", this.#collapsed ? "false" : "true")
+    }
+
+    /**
+     * Applies overlay mode and the open state to the DOM.
+     *
+     * Same shape as `#syncCollapsed`: classes only, so every visual is a CSS rule and the panel can
+     * animate rather than being positioned frame by frame from here.
+     */
+    /** The open state as the DOM was last left, so a change can be told from a re-sync */
+    #wasOpen = false
+
+    #syncOverlay = () => {
+        const state = this.#navState()
+        this.#root.classList.toggle("vtd-sidebar-overlay", state.overlay)
+        // Whether the rail applies depends on the mode, so it is re-decided here too
+        this.#root.classList.toggle("vtd-sidebar-collapsed", this.#collapsed && !state.overlay)
+        this.#root.classList.toggle("vtd-sidebar-overlay-open", state.overlay && state.open)
+        // A panel that is off-screen must not be a tab stop, or Tab walks into a nav nobody can see
+        this.#panel.toggleAttribute("inert", state.overlay && !state.open)
+
+        // ⚠️ Focus is handled here rather than in `open()`/`close()`, because those are not the only
+        // way the panel opens - `Navbar`'s control writes straight to the shared state, so a method
+        // that moves focus would simply never run for the one caller that matters. Everything that
+        // changes the state comes through here.
+        const isOpen = state.overlay && state.open
+        if (isOpen != this.#wasOpen) {
+            this.#wasOpen = isOpen
+            if (isOpen) {
+                const active = document.activeElement
+                this.#returnFocusTo = active instanceof HTMLElement ? active : undefined
+                // The panel itself, not the first control in it: the first control is the search
+                // box, and focusing an input on a touch device throws the keyboard up over the nav
+                // the reader has just asked to see. `inert` came off a line ago, so it can hold it.
+                this.#panel.focus()
+            } else if (this.#returnFocusTo?.isConnected) {
+                // Back where it came from, or the reader's next Tab starts from the top of the page
+                this.#returnFocusTo.focus()
+                this.#returnFocusTo = undefined
+            }
+        }
+    }
+
+    /**
+     * Open/overlay state for a sidebar given no `nav` object of its own.
+     *
+     * ⚠️ Not a constant. Reading `{open: false, overlay: false}` and writing nowhere is what this
+     * used to do, and it left overlay mode switched off for every sidebar that was not wired to a
+     * `Navbar`: the media query fired, `#setNavState` dropped the result, and `#syncOverlay` then
+     * read the frozen `false` back and took the class off again. `open()` and `close()` were
+     * no-ops for the same reason. `nav` is for *sharing* the state with another control, so a
+     * sidebar without one still needs somewhere to keep it.
+     */
+    #localNav: SidebarNavState = {open: false, overlay: false}
+
+    #navState(): SidebarNavState {
+        return this.#attrs.nav?.get() ?? this.#localNav
+    }
+
+    #setNavState(next: Partial<SidebarNavState>): void {
+        const nav = this.#attrs.nav
+        if (!nav) {
+            // Every caller follows this with `#syncOverlay`, so storing it is the whole job here -
+            // there are no listeners to notify without a shared object
+            this.#localNav = {...this.#localNav, ...next}
+            return
+        }
+        const current = nav.get()
+        const merged = {...current, ...next}
+        if (merged.open == current.open && merged.overlay == current.overlay) {
+            return
+        }
+        // `set` replaces the whole value, which is what notifies every listener - Navbar included
+        nav.set(merged)
+    }
+
+    /**
+     * Crossing the breakpoint animates, and the reason it *can* is that nothing discontinuous
+     * happens any more.
+     *
+     * This used to suppress transitions for a frame, because the switch changed `position` as well
+     * as width and the panel jumped from below the header to the top of the viewport before sliding.
+     * With the panel staying absolutely positioned there is nothing left that cannot be
+     * interpolated, so the switch is left to animate like any other change.
+     */
+
+    #switchTimer: number | undefined
+
+    /**
+     * Holds the *panel* still while the mode changes, and nothing else.
+     *
+     * The panel is invisible at both ends of a mode switch - a closed overlay surface on one side,
+     * a column panel on the other - but the CSS that makes it invisible is transitioned, so on the
+     * way into overlay mode it fades out over 180ms. `position` flips to `fixed` in the first frame
+     * of that fade, at full opacity, and the panel is seen jumping from under the header to the top
+     * of the viewport before it disappears. Measured: `top:55 w:250` to `top:0 w:390` at opacity
+     * 1.00, which is exactly the jump this component has now produced twice.
+     *
+     * ⚠️ Scoped to the panel and the scrim, deliberately. An earlier version killed every
+     * transition under the root, which took the column's own width animation and the rows with it -
+     * that is what made the whole thing pop rather than close. The root's width is left alone, so
+     * the column still slides shut while the panel simply stops being drawn.
+     */
+    #switchModeWithoutAnimatingPanel(apply: () => void): void {
+        this.#root.classList.add("vtd-sidebar-switching")
+        apply()
+        // Force the style recalculation now, so the new values are what any later transition
+        // starts from rather than being picked up at the next paint
+        void this.#root.offsetWidth
+        clearTimeoutHelper(this.#switchTimer)
+        const release = () => { this.#root.classList.remove("vtd-sidebar-switching") }
+        requestFrame(() => { requestFrame(release) })
+        // rAF does not tick in a background tab, and the class would stay on forever
+        this.#switchTimer = setTimeoutHelper(release, 100)
+    }
+
+    /** Re-reads the breakpoint and writes the answer into the shared state */
+    #handleMediaChange = () => {
+        const overlay = this.#media?.matches ?? false
+        if (overlay == this.#navState().overlay && this.#root.classList.contains("vtd-sidebar-overlay") == overlay) {
+            return
+        }
+        this.#switchModeWithoutAnimatingPanel(() => {
+            // `open` is carried across the switch rather than cleared. It means nothing while the
+            // sidebar is a column - every rule that reads it also requires `.vtd-sidebar-overlay`,
+            // and `isOpen()` answers false - so keeping it costs nothing and is what a reader
+            // expects: widening and narrowing the window again is not an interaction with the
+            // panel, so it should not close what they opened.
+            this.#setNavState({overlay})
+            this.#syncOverlay()
+        })
+    }
+
+    /** Escape closes the panel, which is what every other dismissible surface here does */
+    #handleKeydown = (event: KeyboardEvent) => {
+        const state = this.#navState()
+        if (event.key == "Escape" && state.overlay && state.open) {
+            event.preventDefault()
+            this.close()
+        }
+    }
+
+    /**
+     * Whatever had focus when the panel opened, so closing can give it back.
+     *
+     * Recorded rather than assumed to be `Navbar`'s control: this component does not know what
+     * opened it, and a consumer's own button is just as likely. Reading `activeElement` answers
+     * the question without either side having to know about the other.
+     */
+    #returnFocusTo: HTMLElement | undefined
+
+    /** Every focusable thing inside the panel, in tab order */
+    #focusablesInPanel(): HTMLElement[] {
+        const selector = "a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),summary,[tabindex]:not([tabindex='-1'])"
+        return [...this.#panel.querySelectorAll(selector)]
+            .filter(el => (el as HTMLElement).checkVisibility({checkVisibilityCSS: true})) as HTMLElement[]
+    }
+
+    /**
+     * Tab stays inside an open overlay panel.
+     *
+     * The page behind is covered by the scrim and cannot be reached with a pointer, so letting Tab
+     * walk into it would put the reader somewhere they can see but cannot click. This is the one
+     * thing a `<dialog>` would have given for free, and the only one - `Escape`, the scrim and
+     * `inert` on the closed panel are all already here.
+     */
+    #handleFocusTrap = (event: KeyboardEvent) => {
+        if (event.key != "Tab" || !this.isOpen()) {
+            return
+        }
+        const focusables = this.#focusablesInPanel()
+        if (focusables.length == 0) {
+            return
+        }
+        const first = focusables[0]
+        const last = focusables[focusables.length - 1]
+        const active = document.activeElement
+        if (!this.#panel.contains(active)) {
+            event.preventDefault()
+            ;(event.shiftKey ? last : first).focus()
+        } else if (event.shiftKey && active == first) {
+            event.preventDefault()
+            last.focus()
+        } else if (!event.shiftKey && active == last) {
+            event.preventDefault()
+            first.focus()
+        }
+    }
+
+    /** Opens the overlay panel. Does nothing while the sidebar is a column */
+    open(): void {
+        if (!this.#navState().overlay) {
+            return
+        }
+        this.#setNavState({open: true})
+        this.#syncOverlay()
+    }
+
+    /** Closes the overlay panel */
+    close(): void {
+        this.#setNavState({open: false})
+        this.#syncOverlay()
+    }
+
+    /** Opens the overlay panel if it is closed, closes it if it is open */
+    toggle(): void {
+        if (this.#navState().open) { this.close() } else { this.open() }
+    }
+
+    /** Is the overlay panel showing? Always false while the sidebar is a column */
+    isOpen(): boolean {
+        const state = this.#navState()
+        return state.overlay && state.open
+    }
+
+    /** Is the sidebar currently an overlay rather than a column? */
+    isOverlay(): boolean {
+        return this.#navState().overlay
+    }
+
+    /** Collapses or expands the sidebar */
+    setCollapsed(collapsed: boolean): void {
+        if (this.#collapsed == collapsed) {
+            return
+        }
+        this.#collapsed = collapsed
+        this.#syncCollapsed()
+        this.#attrs.onCollapsedChange?.(collapsed)
+    }
+
+    /** Is the sidebar collapsed to its rail? */
+    isCollapsed(): boolean {
+        return this.#collapsed
+    }
+
+    /** The sidebar's expanded width in px - what a drag changes, unaffected by collapsing */
+    getWidth(): number {
+        return this.#width
+    }
+
+    /** Sets the expanded width in px, clamped to `minWidth`/`maxWidth` */
+    setWidth(width: number): void {
+        const min = this.#attrs.minWidth ?? 180
+        const max = this.#attrs.maxWidth ?? 480
+        this.#width = Math.round(Math.min(max, Math.max(min, width)))
+        this.#syncCollapsed()
+    }
+
+    /** The `Tree` behind the groups, for reading or driving which are open */
+    getTree(): Tree {
+        return this.#tree
+    }
+
+    /**
+     * Replaces the entries, rebuilding only the list.
+     *
+     * This exists so a filterable sidebar is possible at all. The obvious way to re-filter is to
+     * re-render the whole component, and that destroys the `header` along with everything else -
+     * which is where the search box lives, so the reader loses focus after the first character.
+     * Only the body is rebuilt here; the header, the profile row, the collapsed state and the
+     * dragged width all survive.
+     *
+     * The open/closed state does *not* survive, because the entries themselves are new. Read it
+     * off `getTree()` before calling this and put it back through `defaultOpen` - which is what a
+     * filter wants anyway, since it needs to force open whichever groups still hold a match.
+     */
+    setItems(items: SidebarItemType[]): void {
+        this.#attrs = {...this.#attrs, items}
+        const body = this.#panel.querySelector(".vtd-sidebar-body") as HTMLElement
+        const treeEl: HTMLElement = <Tree
+            class="vtd-sidebar-tree"
+            ariaLabel={this.#attrs.ariaLabel}
+            nodes={this.#toNodes(items)}
+            onToggle={this.#handleToggle}/>
+        this.#tree = getComponent<Tree>(treeEl)
+        // `setChildren`, never `body.replaceChildren(...)` - see core/dom-lifecycle.ts. Every row
+        // in here is a `NavLink`, which does all of its work in `mount()`: this is the call site
+        // that bug was found on.
+        setChildren(this, body, [treeEl])
+        this.#groups = [...this.#root.querySelectorAll(".vtd-tree-node")] as HTMLElement[]
+        this.#syncActiveGroup()
+    }
+
+    override mount() {
+        addGlobalListener("popstate", this.#syncActiveGroup)
+        addGlobalListener("locationchange", this.#syncActiveGroup)
+        this.#syncActiveGroup()
+
+        const breakpoint = this.#attrs.overlayBelow ?? "48em"
+        if (breakpoint) {
+            this.#media = matchMediaHelper(`(max-width: ${breakpoint})`)
+            this.#media?.addEventListener("change", this.#handleMediaChange)
+            this.#handleMediaChange()
+        }
+        // Escape is listened for on the document rather than the panel: the reader may well have
+        // focus back on the menu control that opened it, which is outside this component entirely
+        document.addEventListener("keydown", this.#handleKeydown)
+        document.addEventListener("keydown", this.#handleFocusTrap)
+        // A second control for the same state - Navbar's menu button - writes straight to the
+        // shared object, so the panel has to follow the object rather than only its own methods
+        this.#attrs.nav?.registerOnChangeListener(this.#syncOverlay, {hasVtKey: this})
+    }
+
+    override unmount() {
+        removeGlobalListener("popstate", this.#syncActiveGroup)
+        removeGlobalListener("locationchange", this.#syncActiveGroup)
+        this.#media?.removeEventListener("change", this.#handleMediaChange)
+        clearTimeoutHelper(this.#switchTimer)
+        document.removeEventListener("keydown", this.#handleKeydown)
+        document.removeEventListener("keydown", this.#handleFocusTrap)
+    }
+
+    /**
+     * Builds one entry's row - the icon, the label and the trailing slot, as a single element.
+     *
+     * **The whole row is one element, and it is the link when the entry has a `to`.** `Tree`'s
+     * `leading`/`trailing` slots are deliberately not used for this: they are siblings of the
+     * label, so a link in the label covers only the text between them and the icon and the count
+     * on either side belong to the row instead. On a *group* that is the difference between two
+     * competing actions and two separate ones - the chevron toggles, and everything else is a
+     * destination you can click anywhere in, middle-click, or copy the address of. It also settles
+     * what a click on the collapsed rail means, where the icon is the only thing there: it goes to
+     * the group's own page, which is the only answer that does anything a reader can see.
+     *
+     * Reading order is still icon, label, count, so a screen reader announces "Typography 3" and
+     * not "3 Typography" - that ordering is the reason `trailing` exists on `Tree` at all, and it
+     * is kept here by markup order rather than by CSS.
+     */
+    #buildRow(item: SidebarItemType, divided: boolean): RenderableElements {
+        const content: RenderableElements[] = [
+            item.icon ? <span class="vtd-sidebar-icon">{item.icon}</span> : null,
+            <span class="vtd-sidebar-label">{item.label}</span>,
+            item.trailing ? <span class="vtd-sidebar-trailing">{item.trailing}</span> : null,
+        ]
+        // The rule goes on the row rather than on the node wrapping it, so it spans the row the
+        // reader sees; the wrapper also holds the group's children, which would put the line above
+        // an open group's contents instead of above the group
+        const divider = divided ? " vtd-sidebar-row-divided" : ""
+        if (!item.to) {
+            return <span class={`vtd-sidebar-row${divider}`}>{content}</span>
+        }
+        return <NavLink
+            to={item.to}
+            spa={this.#attrs.spa}
+            exact={this.#attrs.exact}
+            class={`vtd-sidebar-row vtd-sidebar-link${divider}`}>{content}</NavLink>
+    }
+
+    /** Maps this component's items onto the nodes `Tree` renders */
+    #toNodes(items: SidebarItemType[]): TreeNodeType[] {
+        return items.map((item, index) => ({
+            key: item.key ?? item.to ?? String(item.label),
+            label: this.#buildRow(item, item.dividerBefore === true && index > 0),
+            defaultOpen: item.defaultOpen,
+            children: item.children && item.children.length > 0 ? this.#toNodes(item.children) : undefined,
+        }))
+    }
+
+    /** The collapse control: a chevron drawn in CSS, which flips to point the other way */
+    #buildCollapseControl(): RenderableElements {
+        const button: HTMLButtonElement = <button
+            type="button"
+            class="vtd-sidebar-collapse"
+            aria-label={this.#attrs.collapseLabel}
+            aria-expanded={this.#collapsed ? "false" : "true"}
+            onClick={() => { this.setCollapsed(!this.#collapsed) }}>
+            <span class="vtd-sidebar-collapse-icon" aria-hidden="true"/>
+        </button>
+        return <div class="vtd-sidebar-collapse-row">{button}</div>
+    }
+
+    /** The account row, which is a `Menu` whose trigger is the row itself */
+    #buildProfile(profile: SidebarProfileType): RenderableElements {
+        const trigger = <span class="vtd-sidebar-profile-trigger">
+            <span class="vtd-sidebar-profile-avatar">{profile.avatar}</span>
+            <span class="vtd-sidebar-profile-text">
+                <span class="vtd-sidebar-profile-name">{profile.name}</span>
+                {profile.detail ? <span class="vtd-sidebar-profile-detail">{profile.detail}</span> : null}
+            </span>
+        </span>
+        return <div class="vtd-sidebar-profile">
+            <Menu
+                class="vtd-sidebar-profile-menu"
+                ariaLabel={profile.menuAriaLabel}
+                trigger={trigger}
+                items={profile.menuItems}/>
+        </div>
+    }
+
+    /**
+     * The drag handle on the trailing edge.
+     *
+     * `Resizable` is deliberately not reused here even though it does this job: it owns the width
+     * of what it wraps, and this component has to reconcile a dragged width with a collapsed one -
+     * two owners of the same property fighting over it. The drag listeners still follow its
+     * pattern, living on `document` only for the duration of a drag rather than for the whole
+     * component lifecycle.
+     */
+    #buildResizeHandle(): RenderableElements {
+        const handle: HTMLElement = <div class="vtd-sidebar-resize" role="separator" aria-orientation="vertical"/>
+        handle.addEventListener("pointerdown", (event: PointerEvent) => {
+            event.preventDefault()
+            // No setPointerCapture here, deliberately: the move and up listeners go on `document`,
+            // which already sees the drag wherever the pointer goes, and capture throws outright on
+            // a pointerId that is not currently active - so it turns a synthetic pointerdown, which
+            // is how a test drives this, into a resize handle that does nothing at all. The
+            // `.vtd-sidebar-resizing` class added below is what keeps the panel from collapsing out
+            // from under a pointer that has left it, which is the thing that actually needed fixing.
+            const startX = event.clientX
+            const startWidth = this.#width
+            const onMove = (move: PointerEvent) => { this.setWidth(startWidth + (move.clientX - startX)) }
+            const onUp = () => {
+                document.removeEventListener("pointermove", onMove)
+                document.removeEventListener("pointerup", onUp)
+                this.#root.classList.remove("vtd-sidebar-resizing")
+                this.#attrs.onWidthChange?.(this.#width)
+            }
+            this.#root.classList.add("vtd-sidebar-resizing")
+            document.addEventListener("pointermove", onMove)
+            document.addEventListener("pointerup", onUp)
+        })
+        return handle
+    }
+
+    constructor(attrs: SidebarAttrsType, children: RenderableElements[]) {
+        super(attrs, children)
+        this.#attrs = attrs
+        this.#collapsed = attrs.collapsible === true && attrs.defaultCollapsed === true
+        this.#width = attrs.defaultWidth ?? defaultWidthPx
+        if (!areSidebarStylesMounted) {
+            areSidebarStylesMounted = true
+            mountStyles(sidebarCss, "vtd/Sidebar", "composite")
         }
 
         this.#tree = getComponent<Tree>(<Tree
@@ -1323,7 +1549,7 @@ transition:none !important;
             type="button"
             class="vtd-sidebar-close"
             aria-label={attrs.closeLabel}
-            onClick={() => { this.close() }}><CommonThemeOptions.closeSymbol/></button>
+            onClick={() => { this.close() }}><SidebarThemeOptions.closeSymbol/></button>
 
         this.#panel = <div class="vtd-sidebar-panel" tabindex={-1}>
             {/*
@@ -1343,14 +1569,14 @@ transition:none !important;
             {attrs.footer ? <div class="vtd-sidebar-footer">{attrs.footer}</div> : null}
             {attrs.profile ? this.#buildProfile(attrs.profile) : null}
             {attrs.collapsible ? this.#buildCollapseControl() : null}
+            {/*
+              * Inside the panel, not beside it. Against the rail the handle tracked the *gutter*,
+              * so once collapsed it sat at 56px - and stayed there while hovering floated the panel
+              * out to its full width, leaving the drag target stranded 200px from the edge it
+              * resizes. Last, so it draws over its siblings without needing a z-index.
+              */}
+            {attrs.resizable ? this.#buildResizeHandle() : null}
         </div>
-
-        if (attrs.resizable) {
-            // Inside the panel, not beside it. Against the rail the handle tracked the *gutter*, so
-            // once collapsed it sat at 56px - and stayed there while hovering floated the panel out
-            // to its full width, leaving the drag target stranded 200px from the edge it resizes.
-            this.#panel.appendChild(this.#buildResizeHandle() as HTMLElement)
-        }
         // The scrim is always in the tree and only ever changes opacity, because an element that
         // stops rendering leaves its transition pending forever - see the Animation section of
         // CLAUDE.md. It is aria-hidden and not focusable: closing by tapping it is a pointer

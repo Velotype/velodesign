@@ -1,4 +1,4 @@
-import { getComponent, RenderBasic } from "@velotype/velotype"
+import { getComponent, RenderBasic, RenderObject } from "@velotype/velotype"
 import type { RenderableElements } from "@velotype/velotype"
 
 import {
@@ -73,6 +73,8 @@ import {
     Tag, type TagType,
     TextBox, type TextBoxType,
     Textarea,
+    bindValue,
+    EditableField,
     TextEditableField,
     TextFormField,
     TextNonEditableField,
@@ -117,6 +119,7 @@ registerIcon("gear", new Icon(512, 512, "M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-
 
 const textFormFieldValue = new RenderBasic<string>("editable value")
 const textEditableFieldValue = new RenderBasic<string>("click edit to change me")
+const editableFieldValue = new RenderObject<string>("click edit to change me")
 
 const comboboxCountryOptions = [
     "Argentina", "Australia", "Austria", "Belgium", "Brazil", "Canada", "Chile", "China", "Colombia",
@@ -275,6 +278,26 @@ export const stories: ComponentStory[] = [
             children: {kind: "text", label: "children"},
         },
         render: (attrs) => <TextFormField type={attrs.type as TextBoxType} required={attrs.required as boolean} field={textFormFieldValue}>{attrs.children as string}</TextFormField>,
+    },
+    {
+        name: "EditableField", group: "Form",
+        defaultAttrs: {label: "Display name", required: false, hint: "", failSave: false},
+        controls: {
+            label: {kind: "text", label: "label"},
+            hint: {kind: "text", label: "hint"},
+            required: {kind: "boolean", label: "required"},
+            failSave: {kind: "boolean", label: "make the save fail"},
+        },
+        render: (attrs) => <EditableField<string>
+            label={attrs.label as string}
+            hint={(attrs.hint as string) || undefined}
+            required={attrs.required as boolean}
+            value={editableFieldValue}
+            display={(value) => value || "Not set"}
+            edit={(draft) => <TextBox type="text" {...bindValue(draft)}/>}
+            onSave={attrs.failSave
+                ? () => Promise.reject(new Error("Could not save - try again"))
+                : undefined}/>,
     },
     {
         name: "TextEditableField", group: "Form",

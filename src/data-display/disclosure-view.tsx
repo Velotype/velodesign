@@ -1,6 +1,7 @@
 import {} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { RenderableElements } from "../core/velotype.ts"
+import { matchMediaHelper } from "../core/utilities.ts"
 
 /**
  * Shared internals for `Collapse` and `Accordion`.
@@ -32,37 +33,8 @@ const TRANSITION_MS = 200
 
 let areDisclosureStylesMounted = false
 
-/**
- * Mounts the stylesheet both components share, once.
- *
- * The open/close transition is CSS (the close is sequenced by `animateClosed` - see there for why
- * it cannot be CSS alone). Three non-obvious pieces make it work:
- * - `.vtd-disclosure-content` overrides the browser's default `display:none` on a closed
- *   `<details>`'s body (author styles win over that UA default), replacing it with
- *   `display:grid; grid-template-rows:minmax(0,0fr)` / `minmax(0,1fr)` when open - the
- *   "animate to auto height" trick, since `grid-template-rows` accepts fraction units as an
- *   actually-transitionable value. (A `height:0`/`auto` transition looks simpler but silently
- *   doesn't animate at all without `interpolate-size:allow-keywords`, which - checked directly -
- *   isn't supported by Safari or Firefox and only shipped in Chrome 129+, too narrow a base to
- *   build this on.)
- * - The `minmax(0, ...)` matters, not just `0fr`/`1fr` alone: a lone `fr` track still has an
- *   implicit automatic minimum driven by its content's min-content size, so without wrapping it
- *   the "closed" track measured ~14px (one line of text) instead of 0 in testing, even with
- *   `min-height:0` set on the content wrapper. `.vtd-disclosure-content-inner` still needs
- *   `overflow:hidden` (to clip content while the row is shrunk) and `min-height:0` (grid items
- *   default to `min-height:auto`, which would otherwise also push the row back open regardless of
- *   the track's own sizing).
- * - `visibility` flips at the *end* of the closing transition (via a transition-delay) so closed
- *   content still leaves the tab order immediately, same as it did under the browser's native
- *   `display:none`.
- */
-export function mountDisclosureStyles(): void {
-    if (areDisclosureStylesMounted) {
-        return
-    }
-    areDisclosureStylesMounted = true
-    mountStyles(
-`
+/** Stylesheet for `<Disclosure/>`, mounted once on first construction */
+const disclosureCss: string = `
 .vtd-disclosure{
 width:100%;
 box-sizing:border-box;
@@ -145,7 +117,38 @@ transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0s;
 @media (prefers-reduced-motion: reduce){
 .vtd-disclosure-content,.vtd-disclosure-chevron,.vtd-disclosure-header{transition:none;}
 }
-`, "vtd/Disclosure", "base")
+`
+
+/**
+ * Mounts the stylesheet both components share, once.
+ *
+ * The open/close transition is CSS (the close is sequenced by `animateClosed` - see there for why
+ * it cannot be CSS alone). Three non-obvious pieces make it work:
+ * - `.vtd-disclosure-content` overrides the browser's default `display:none` on a closed
+ *   `<details>`'s body (author styles win over that UA default), replacing it with
+ *   `display:grid; grid-template-rows:minmax(0,0fr)` / `minmax(0,1fr)` when open - the
+ *   "animate to auto height" trick, since `grid-template-rows` accepts fraction units as an
+ *   actually-transitionable value. (A `height:0`/`auto` transition looks simpler but silently
+ *   doesn't animate at all without `interpolate-size:allow-keywords`, which - checked directly -
+ *   isn't supported by Safari or Firefox and only shipped in Chrome 129+, too narrow a base to
+ *   build this on.)
+ * - The `minmax(0, ...)` matters, not just `0fr`/`1fr` alone: a lone `fr` track still has an
+ *   implicit automatic minimum driven by its content's min-content size, so without wrapping it
+ *   the "closed" track measured ~14px (one line of text) instead of 0 in testing, even with
+ *   `min-height:0` set on the content wrapper. `.vtd-disclosure-content-inner` still needs
+ *   `overflow:hidden` (to clip content while the row is shrunk) and `min-height:0` (grid items
+ *   default to `min-height:auto`, which would otherwise also push the row back open regardless of
+ *   the track's own sizing).
+ * - `visibility` flips at the *end* of the closing transition (via a transition-delay) so closed
+ *   content still leaves the tab order immediately, same as it did under the browser's native
+ *   `display:none`.
+ */
+export function mountDisclosureStyles(): void {
+    if (areDisclosureStylesMounted) {
+        return
+    }
+    areDisclosureStylesMounted = true
+    mountStyles(disclosureCss, "vtd/Disclosure", "base")
 }
 
 /**
@@ -248,7 +251,7 @@ export function animateClosed(section: DisclosureSection): void {
     // With motion reduced there is no transition to wait for, and the stylesheet has already
     // zeroed it - close immediately rather than sitting in the closing state until the fallback
     // timer fires, which would read as an unexplained delay
-    if (globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+    if (matchMediaHelper("(prefers-reduced-motion: reduce)")?.matches) {
         details.open = false
         return
     }

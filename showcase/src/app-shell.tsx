@@ -1,11 +1,11 @@
-import { Component, getComponent, RenderBasic, RenderObject, setStylesheet } from "@velotype/velotype"
+import { Component, getComponent, RenderObject, setStylesheet } from "@velotype/velotype"
 import type { EmptyAttrs, RenderableElements } from "@velotype/velotype"
 
-import { Avatar, Button, ColorScheme, highlightMatch, I, Link, Navbar, searchHighlightCss, Sidebar, Text, TextBox } from "@velotype/velodesign"
+import { Avatar, ColorScheme, Combobox, highlightMatch, History, I, Link, Navbar, searchHighlightCss, Sidebar, Text, TextBox } from "@velotype/velodesign"
 import type { SidebarNavState } from "@velotype/velodesign"
-import { categoryIconKey, searchIconKey } from "./data/category-icons.ts"
+import { categoryIconKey, homeIconKey, searchIconKey, themeIconKey } from "./data/category-icons.ts"
 import type { MenuItemType, SidebarItemType } from "@velotype/velodesign"
-import { docBySlug, groupByGroupSlug, groupedDocs } from "./data/docs.tsx"
+import { componentDocs, docBySlug, groupByGroupSlug, groupedDocs } from "./data/docs.tsx"
 import { HomePage } from "./pages/home.tsx"
 import { ComponentPage } from "./pages/component-page.tsx"
 import { CategoryPage, categoryPageUrl } from "./pages/category-page.tsx"
@@ -41,7 +41,7 @@ function buildSidebarItems(filterText: string, openCategories: Set<string>): Sid
                 : bucket.docs.filter(doc => doc.name.toLowerCase().includes(filterLower)),
         }))
         .filter(bucket => bucket.docs.length > 0)
-        .map(bucket => ({
+        .map<SidebarItemType>(bucket => ({
             key: bucket.group,
             // `to` rather than a Link inside the label, which is what this used to be. Sidebar
             // turns an entry with a destination into one link covering the icon, the name and the
@@ -66,6 +66,99 @@ function buildSidebarItems(filterText: string, openCategories: Set<string>): Sid
                 label: highlightMatch(doc.name, filterLower),
             })),
         }))
+        .concat(themeBuilderItem(filterLower, filtering))
+}
+
+/**
+ * The Theme builder's own row, under a rule at the foot of the list.
+ *
+ * It is a page of the showcase rather than a component category, and it used to be a link in the
+ * Navbar - which put the two kinds of destination in two different places, and left the sidebar
+ * holding only the thing it was already showing. Down here the navigation is in one list.
+ *
+ * It is also the two shapes the categories above never exercise: an entry with **no children**,
+ * which is a plain link rather than a group with a chevron, and a category the docs did not
+ * generate. Both are supported and neither was used anywhere, so neither was ever seen.
+ *
+ * It answers the filter like any other entry, since a reader typing "theme" is looking for
+ * something and an empty list is the wrong answer.
+ */
+function themeBuilderItem(filterLower: string, filtering: boolean): SidebarItemType[] {
+    if (filtering && !"theme builder".includes(filterLower)) {
+        return []
+    }
+    return [{
+        key: "theme-builder",
+        to: "/theme",
+        label: highlightMatch("Theme builder", filterLower),
+        icon: <I i={themeIconKey}/>,
+        dividerBefore: true,
+    }]
+}
+
+/**
+ * Everything the Navbar search can take you to: every category, then every component.
+ *
+ * Categories are in the list because they are real destinations with pages of their own, and
+ * leaving them out meant typing "Data Entry" offered the ten components inside it and no way to
+ * reach the category itself - the one result a reader typing a category name most likely wants.
+ * They come first for the same reason: the broad destination above the narrow ones it contains.
+ *
+ * Built once, lazily, rather than at module scope - `groupedDocs()` reads `componentDocs`, which is
+ * declared further down its own module.
+ */
+type SearchEntry = {
+    value: string
+    kind: "category" | "component" | "page"
+    /** Which category's glyph the row draws - its own, for a category */
+    group: string
+    /** The trailing note: a component's category, how many a category holds, or what a page is */
+    detail: string
+    url: string
+    /** Overrides the glyph, for a destination that is not a category and holds no components */
+    icon?: string
+}
+
+/** Destinations that are neither a category nor a component - kept beside the sidebar's own tail */
+const standalonePages: SearchEntry[] = [
+    {value: "Theme builder", kind: "page", group: "", detail: "Page", url: "/theme", icon: themeIconKey},
+    {value: "Home", kind: "page", group: "", detail: "Page", url: "/", icon: homeIconKey},
+]
+
+let cachedSearchEntries: SearchEntry[] | undefined
+function searchEntries(): SearchEntry[] {
+    if (!cachedSearchEntries) {
+        cachedSearchEntries = [
+            ...groupedDocs().map((bucket): SearchEntry => ({
+                value: bucket.group,
+                kind: "category",
+                group: bucket.group,
+                detail: `${bucket.docs.length} components`,
+                url: categoryPageUrl(bucket.group),
+            })),
+            ...componentDocs.map((doc): SearchEntry => ({
+                value: doc.name,
+                kind: "component",
+                group: doc.group,
+                detail: doc.group,
+                url: `/components/${doc.slug}`,
+            })),
+            // The pages that are destinations without being a category or a component. Easy to
+            // forget precisely because they are not generated from the docs: the Theme builder is
+            // in the sidebar and was in the Navbar before that, and was still unreachable by
+            // searching for it. Anything added to the sidebar's own tail belongs here too.
+            ...standalonePages,
+        ]
+    }
+    return cachedSearchEntries
+}
+
+let cachedSearchEntryByValue: Map<string, SearchEntry> | undefined
+function searchEntryByValue(): Map<string, SearchEntry> {
+    if (!cachedSearchEntryByValue) {
+        cachedSearchEntryByValue = new Map(searchEntries().map(entry => [entry.value, entry]))
+    }
+    return cachedSearchEntryByValue
 }
 
 /** Swaps between Home / a component's detail page / Not Found based on `location.pathname` */
@@ -173,23 +266,26 @@ let areShellStylesMounted = false
  */
 export class AppShell extends Component<EmptyAttrs> {
     #root: HTMLDivElement
+    #searchInput!: HTMLElement
+    #navbarSearchSlot!: HTMLElement
+    #sidebarSearchSlot!: HTMLElement
+    #searchInOverlay: boolean | undefined
+    #nav!: RenderObject<SidebarNavState>
     #sidebar: Sidebar
     /** What the reader has expanded, kept across the item rebuilds a search edit causes */
     #openCategories = new Set<string>()
     #filterText = ""
-    #darkModeLabel = new RenderBasic<string>(ColorScheme.getColorScheme() == "light" ? "off" : "on")
 
     /**
      * The one path every theme change here goes through.
      *
-     * Two controls now set the same thing - the header's toggle and the account menu's Theme group -
-     * and each has a piece of state to keep right: the header shows on/off, the menu shows a tick.
-     * Routing both through here is what keeps them agreeing. The menu needs nothing pushed to it
-     * because its `selected` entries are functions, but the header's label is a value and does.
+     * One control sets it now - the account menu's Theme group - where it sits beside the account's
+     * other settings and offers System as well as the two it used to toggle between. It needs
+     * nothing pushed to it, because its `selected` entries are functions and are re-read each time
+     * the menu opens; the Navbar's own on/off button did need pushing, and is gone with it.
      */
     #applyColorScheme(scheme: "light" | "dark" | "default") {
         ColorScheme.setColorScheme(scheme)
-        this.#darkModeLabel.value = ColorScheme.getColorScheme() == "light" ? "off" : "on"
     }
 
     constructor(attrs: EmptyAttrs, children: RenderableElements[]) {
@@ -254,6 +350,27 @@ color:var(--background-9);
 .vtd-showcase-sidebar .vtd-tree-label .vtd-sidebar-link:hover .vtd-sidebar-label{color:var(--primary-8);}
 .vtd-showcase-sidebar .vtd-tree-label .vtd-nav-link-active .vtd-sidebar-label{color:var(--primary-8);}
 .vtd-showcase-sidebar-count{font-size:0.75em;}
+/*
+ * The search box's two homes.
+ *
+ * In the Navbar it is given a width rather than left to the input's default size, which is about
+ * 20 characters and reads as an afterthought beside the brand. It shrinks before it wraps, so a
+ * mid-width window narrows the box instead of pushing the theme control onto a second line.
+ */
+.vtd-showcase-search-slot{display:flex;align-items:center;min-width:0;}
+.vtd-showcase-search-slot .vtd-showcase-search{width:min(22em,40vw);}
+/* The Navbar's box is only in use at the width where the sidebar is a column of its own */
+.vtd-showcase-search-in-navbar .vtd-showcase-search-slot{display:flex;}
+.vtd-showcase-search-slot{display:none;}
+/* A result is an icon, the component, then its category pushed to the trailing edge - so a row of
+   three Buttons is told apart by the one part of it that differs */
+.vtd-showcase-result{display:flex;align-items:center;gap:0.5em;width:100%;min-width:0;}
+.vtd-showcase-result-icon{color:var(--primary-7);flex-shrink:0;}
+.vtd-showcase-result-name{flex-grow:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.vtd-showcase-result-group{font-size:0.8em;flex-shrink:0;}
+/* While the box is in the Navbar the sidebar's header is an empty strip, so it is not drawn at all
+   - including on the rail, where the magnifier that stood in for the box has nothing to stand for */
+.vtd-showcase-search-in-navbar .vtd-showcase-sidebar .vtd-sidebar-header{display:none;}
 .vtd-showcase-main{flex-grow:1;min-width:0;isolation:isolate;}
 /*
  * The frame every routed page draws itself in. It belongs to the shell rather than to any one
@@ -263,6 +380,20 @@ color:var(--background-9);
  * A page's own layout stays in that page's stylesheet; this is only the frame.
  */
 .vtd-showcase-doc{padding:2em;max-width:62em;min-width:0;flex-grow:1;}
+/*
+ * The dotted frame an example is drawn in. Shared by the component and category pages, so it lives
+ * here: defined in both page sheets, whichever page was visited last decided its corners.
+ */
+.vtd-showcase-example-preview{
+border:1px solid var(--background-4);
+border-radius:0.5rem;
+padding:2em;
+display:flex;
+align-items:center;
+min-height:3em;
+background-image:radial-gradient(color-mix(in srgb, var(--background-4) 35%, transparent) 1px, transparent 1px);
+background-size:16px 16px;
+}
 /* Paragraph supplies the colour; this only sizes and spaces a page's lede */
 .vtd-showcase-doc-description{font-size:1.05em;margin-block-end:1.5em;max-width:44em;}
 ${searchHighlightCss}
@@ -281,11 +412,56 @@ ${searchHighlightCss}
                 if (event.target instanceof HTMLInputElement) { this.#setFilter(event.target.value) }
             }}/>
 
+        /*
+         * Two searches, because at the two widths they are different jobs.
+         *
+         * Wide, the box is in the Navbar and the sidebar is across the page from it: filtering the
+         * sidebar from there meant typing in one corner and watching a list rearrange itself in
+         * another, with nothing connecting the two. So the Navbar box is a Combobox - the matches
+         * drop out of the box the reader is typing into, and picking one goes there. The sidebar
+         * is left alone, a stable list of every category.
+         *
+         * Narrow, the sidebar *is* the surface and the box sits at the top of it, directly above
+         * the entries. Filtering in place is the connected thing to do there, so that stays a
+         * plain TextBox over the list.
+         */
+        this.#navbarSearchSlot = <div class="vtd-showcase-search-slot">{<Combobox
+            class="vtd-showcase-search"
+            placeholder="Search components..."
+            noMatchMessage={<Text type="muted">No component matches</Text>}
+            clearOnSelect
+            options={searchEntries().map(entry => ({
+                value: entry.value,
+                // A component carries its category in the matched text, so typing a category finds
+                // everything in it - the same rule the sidebar's own filter follows - while the row
+                // still reads as the component's name. A category matches on its own name alone.
+                searchText: entry.kind == "component" ? `${entry.value} ${entry.group}` : entry.value,
+                onSelect: () => History.changeLocation(entry.url),
+            }))}
+            // `query` is threaded through to highlightMatch so a row still shows *why* it matched,
+            // which drawing markup by hand is otherwise the easy way to lose - and the trailing
+            // slot says which kind of destination the row is, since a category and a component look
+            // otherwise identical.
+            renderOption={(option, query) => {
+                const entry = searchEntryByValue().get(option.value)
+                return <span class="vtd-showcase-result">
+                    <I i={entry?.icon ?? categoryIconKey(entry?.group ?? "")} class="vtd-showcase-result-icon"/>
+                    <span class="vtd-showcase-result-name">{highlightMatch(option.value, query)}</span>
+                    {/* The trailing note is highlighted too: searching a category matches these
+                        rows on text that is not in their name, so marking only the name would show
+                        a list of results with nothing in them explaining why they are there */}
+                    <Text type="muted" class="vtd-showcase-result-group">{highlightMatch(entry?.detail ?? "", query)}</Text>
+                </span>
+            }}/>}</div>
+        this.#sidebarSearchSlot = <div class="vtd-showcase-sidebar-search">{searchInput}</div>
+        this.#searchInput = searchInput
+
         const content = getComponent<ContentArea>(<ContentArea/>)
 
         // One object, handed to both: the Sidebar writes `overlay` from its own breakpoint and the
         // Navbar reads it to know whether to draw the menu control, so the width lives in one place
         const nav = new RenderObject<SidebarNavState>({open: false, overlay: false})
+        this.#nav = nav
 
         this.#sidebar = getComponent<Sidebar>(<Sidebar
             spa
@@ -295,7 +471,8 @@ ${searchHighlightCss}
             class="vtd-showcase-sidebar"
             ariaLabel="Components by category"
             collapseLabel="Collapse or expand the sidebar"
-            header={<div class="vtd-showcase-sidebar-search">{searchInput}</div>}
+            closeLabel="Close the navigation"
+            header={this.#sidebarSearchSlot}
             // Keeps the header's height on the rail, so collapsing slides the icons sideways
             // rather than up. Clicking it expands the sidebar and puts the cursor in the box.
             collapsedHeader={<button
@@ -324,7 +501,10 @@ ${searchHighlightCss}
                 detail: "design@velotype.dev",
                 menuAriaLabel: "Account",
                 menuItems: [
-                    {label: "Theme builder", href: "/theme", spa: true},
+                    // No "Theme builder" here: it is a row of the sidebar itself now, and a second
+                    // way in tucked inside the account menu is a place for the two to disagree
+                    // about where that page lives.
+                    //
                     // keepOpen + selected: the three are a radio group, so Menu moves the tick
                     // itself on a click and the menu stays put - switching theme is something a
                     // reader may well want to do twice, and closing on the click takes the choices
@@ -337,10 +517,6 @@ ${searchHighlightCss}
                 ],
             }}/>)
 
-        const themeToggle = <Button type="secondary" onClick={() => {
-            this.#applyColorScheme(ColorScheme.getColorScheme() == "light" ? "dark" : "light")
-        }}>Dark mode: {this.#darkModeLabel}</Button>
-
         this.#root = <div class="vtd-showcase-shell">
             {/* Navbar's own `brand` / `leading` / children slots, rather than a hand-built
                 <header>: the brand sits far left, the tagline beside it via `leading`, and
@@ -351,8 +527,7 @@ ${searchHighlightCss}
                 menuLabel="Open the navigation"
                 brand={<Link spa to="/" class="vtd-showcase-brand">velodesign</Link>}
                 leading={<Text type="muted">Component showcase</Text>}>
-                <Link spa to="/theme" class="vtd-showcase-header-link">Theme builder</Link>
-                {themeToggle}
+                {this.#navbarSearchSlot}
             </Navbar>
             <div class="vtd-showcase-body">
                 {this.#sidebar}
@@ -405,11 +580,39 @@ ${searchHighlightCss}
         }
     }
 
+    /**
+     * Puts the search box in whichever slot the current width calls for.
+     *
+     * Guarded on the last placement: the nav object reports every change to open/closed as well,
+     * and moving a focused input for a change that was not about width would drop the cursor out
+     * of it mid-keystroke.
+     */
+    #placeSearch = () => {
+        const overlay = this.#nav.get().overlay
+        if (overlay === this.#searchInOverlay) {
+            return
+        }
+        this.#searchInOverlay = overlay
+        // The sidebar's header is only worth its padding and its rule while it holds a box
+        this.#root.classList.toggle("vtd-showcase-search-in-navbar", !overlay)
+        // Carry the query across rather than stranding it in the box that just went away, and put
+        // the sidebar back to its full list whenever its own filter is no longer the one in use
+        const from = (overlay ? this.#navbarSearchSlot : this.#sidebarSearchSlot).querySelector("input")
+        const to = (overlay ? this.#sidebarSearchSlot : this.#navbarSearchSlot).querySelector("input")
+        if (from && to) {
+            to.value = from.value
+            from.value = ""
+        }
+        this.#setFilter(overlay ? (to?.value ?? "") : "")
+    }
+
     override mount() {
         // Capture, so the panel closes even though `NavLink`'s own handler navigates on the same
         // click - and on the sidebar's root rather than the document, so a click anywhere else on
         // the page is not this component's business
         this.#sidebar.render().addEventListener("click", this.#closeNavOnNavigation)
+        this.#nav.registerOnChangeListener(this.#placeSearch, {hasVtKey: this})
+        this.#placeSearch()
 
         const header = this.#root.querySelector(".vtd-showcase-header") as HTMLElement | null
         if (!header) {

@@ -21,8 +21,8 @@
         "@velotype/veloserver": "jsr:@velotype/veloserver@^0.2.0",
         "@velotype/velodesign": "../src/index.ts",
         "@velotype/velodesign/jsx-runtime": "../src/core/jsx-runtime.ts",
-        "@velotype/velotype/jsx-runtime": "jsr:@velotype/velotype@^0.0.27",
-        "@velotype/velotype": "jsr:@velotype/velotype@^0.0.27"
+        "@velotype/velotype/jsx-runtime": "jsr:@velotype/velotype@^0.0.30",
+        "@velotype/velotype": "jsr:@velotype/velotype@^0.0.30"
     },
     "lint": {
         "rules": {

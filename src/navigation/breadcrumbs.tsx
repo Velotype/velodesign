@@ -99,22 +99,8 @@ function splitTrail(items: BreadcrumbItemType[], maxItems: number | undefined): 
     }
 }
 
-/**
- * A navigational trail showing where the current page sits in the site hierarchy.
- *
- * Two things a long or richly-labelled trail needs, both opt-in:
- *
- * - **`leading`** puts an avatar or icon beside a crumb's label.
- * - **`maxItems`** collapses the middle of the trail behind an expander once it grows past that
- *   many crumbs, keeping the root and the current page. The expander is a `Menu`, so the hidden
- *   crumbs are a real disclosure with the keyboard handling and outside-click behaviour that
- *   component already owns, rather than a second implementation of the same thing.
- */
-export const Breadcrumbs: FunctionComponent<BreadcrumbsAttrsType> = function(attrs: BreadcrumbsAttrsType, _children: RenderableElements[]): HTMLElement {
-    if (!areBreadcrumbsStylesMounted) {
-        areBreadcrumbsStylesMounted = true
-        mountStyles(
-`
+/** Stylesheet for `<Breadcrumbs/>`, mounted once on first construction */
+const breadcrumbsCss: string = `
 .vtd-breadcrumbs-list{
 display:flex;
 flex-wrap:wrap;
@@ -149,7 +135,23 @@ border-radius:0.25rem;
 line-height:1;
 }
 .vtd-breadcrumbs-expand:hover{background-color:var(--background-1);color:var(--text);}
-`, "vtd/Breadcrumbs")
+`
+
+/**
+ * A navigational trail showing where the current page sits in the site hierarchy.
+ *
+ * Two things a long or richly-labelled trail needs, both opt-in:
+ *
+ * - **`leading`** puts an avatar or icon beside a crumb's label.
+ * - **`maxItems`** collapses the middle of the trail behind an expander once it grows past that
+ *   many crumbs, keeping the root and the current page. The expander is a `Menu`, so the hidden
+ *   crumbs are a real disclosure with the keyboard handling and outside-click behaviour that
+ *   component already owns, rather than a second implementation of the same thing.
+ */
+export const Breadcrumbs: FunctionComponent<BreadcrumbsAttrsType> = function(attrs: BreadcrumbsAttrsType, _children: RenderableElements[]): HTMLElement {
+    if (!areBreadcrumbsStylesMounted) {
+        areBreadcrumbsStylesMounted = true
+        mountStyles(breadcrumbsCss, "vtd/Breadcrumbs")
     }
 
     const {head, collapsed, tail} = splitTrail(attrs.items, attrs.maxItems)

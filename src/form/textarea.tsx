@@ -27,13 +27,8 @@ export type TextareaAttrsType = {
 
 let areTextareaStylesMounted = false
 
-/**
- * A multi-line input box accepting text input from the user
- */
-export const Textarea: FunctionComponent<TextareaAttrsType> = function(attrs: TextareaAttrsType, _children: RenderableElements[]): HTMLTextAreaElement {
-    if (!areTextareaStylesMounted) {
-        areTextareaStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<Textarea/>`, mounted once on first construction */
+const textareaCss: string = `
 .vtd-textarea{
 padding:0.5ex 1ex;
 margin-inline-start:1ex;
@@ -43,7 +38,15 @@ background-color:var(--background-1);
 color:var(--text);
 font:inherit;
 }
-`, "vtd/Textarea")
+`
+
+/**
+ * A multi-line input box accepting text input from the user
+ */
+export const Textarea: FunctionComponent<TextareaAttrsType> = function(attrs: TextareaAttrsType, _children: RenderableElements[]): HTMLTextAreaElement {
+    if (!areTextareaStylesMounted) {
+        areTextareaStylesMounted = true
+        mountStyles(textareaCss, "vtd/Textarea")
     }
 
     return passthroughAttrsToElement<HTMLTextAreaElement>(<textarea

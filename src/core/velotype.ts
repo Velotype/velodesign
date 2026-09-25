@@ -19,7 +19,7 @@
  * tree-shaking outright. The explicit list costs nothing to maintain: a name that is missing is a
  * compile error, so it cannot silently drift the way a hand-written stand-in would.
  */
-export { Component, getComponent, passthroughAttrsToElement, setStylesheet } from "@velotype/velotype"
+export { Component, getComponent, passthroughAttrsToElement, RenderObject, RenderObjectArray, replaceElementWithRoot, setStylesheet } from "@velotype/velotype"
 export type {
     AnchorElement,
     ChildrenAttr,
@@ -27,7 +27,6 @@ export type {
     FunctionComponent,
     IdAttr,
     RenderBasic,
-    RenderObject,
     RenderableElements,
     StylePassthroughAttrs,
     TargetedEvent,

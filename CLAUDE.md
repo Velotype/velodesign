@@ -21,7 +21,7 @@
   | `data-display/` | Badge, Card, Table, DataTable, AsyncDataTable, CodeBlock, Calendar, Tree, Resizable … |
   | `data-entry/` | DatePicker, Slider, Combobox, Upload, Rate, Form |
   | `charts/` | LineChart, AreaChart, BarChart, PieChart, Gauge, Sparkline |
-  | `core/` | **Not a category.** Cross-cutting infrastructure imported by components in several categories, so it belongs to none of them: `utilities.ts`, `theme.ts`, `history.ts`, `strings.ts`, `license.ts`, `search-highlight.tsx`, `styles.ts`, and the two barrels `velotype.ts` / `jsx-runtime.ts` - **every velotype import in the package goes through those two**, for reasons in *The bundle size is measured, not asserted* below. |
+  | `core/` | **Not a category.** Cross-cutting infrastructure imported by components in several categories, so it belongs to none of them: `utilities.ts`, `theme.ts`, `history.ts`, `strings.ts`, `license.ts`, `search-highlight.tsx`, `styles.ts`, `dom-lifecycle.ts`, and the two barrels `velotype.ts` / `jsx-runtime.ts` - **every velotype import in the package goes through those two**, for reasons in *The bundle size is measured, not asserted* below. |
 
   Two placements are judgement calls rather than showcase facts: `PageSelector` and `Resizable`
   have no story at all, so they went to `navigation/` (client-side routing) and `data-display/`
@@ -92,7 +92,74 @@ A third, rarer shape: an **imperative function**, not a component at all, for so
 - **A persistent, imperatively-controllable DOM handle** the component must reference again later (`Modal` builds its `<dialog>` once in the *constructor* and stores it in a private field so `showModal()`/`close()`/`setConfirmDisabled()` can act on it directly; `Menu` does the same for its `<details>` element). When you need this, build the JSX tree in the constructor and have `render()` just `return this.#element` — don't rebuild it in `render()`.
 - **Global event listeners that must be added/removed with the component's lifecycle** (`mount()`/`unmount()`). `PageSelector` listens for `popstate`/`locationchange` to know when to reselect a page; `NavLink` listens for the same two events to know when to recompute whether it's the active link; `Menu` listens for document `click` to close itself on an outside click. Always add in `mount()`, remove the *same* bound listener reference in `unmount()` (store it as a class field / arrow-function property, not a fresh closure each time, or `removeEventListener` won't match it).
 - **Internal state that changes after construction and must trigger a re-render.** Call `this.refresh()` when it changes. `refresh()` unmounts and deletes the whole subtree and re-runs `render()` from scratch — **this means any `ElementHandle`/DOM reference you held from before the refresh is now stale**; if you're writing an Astral test that clicks something and triggers a refresh, re-query every selector you need *after* the click rather than reusing a handle captured before it (`NavLink`'s test actually failed this way once — reusing a pre-click handle to read a post-click attribute threw; the fix was re-querying with `page.$(...)` after the click).
-- **Swapping a sub-tree in place without a full refresh**, when only part of the component changes: `this.replaceChild(oldChild, newChild)` (`TextEditableField` uses this to swap its view/edit halves). Prefer `refresh()` unless you specifically need to avoid re-rendering sibling content.
+- **Swapping a sub-tree in place without a full refresh**, when only part of the component changes: `this.replaceChild(oldChild, newChild)` (`TextEditableField` uses this to swap its view/edit halves). Prefer `refresh()` unless you specifically need to avoid re-rendering sibling content. ⚠️ Use `this.replaceChild`, **never** the native `element.replaceChild`/`replaceChildren`/`appendChild` - see *Changing the DOM after construction* immediately below.
+
+### Changing the DOM after construction: `core/dom-lifecycle.ts`, never the native methods
+
+**The rule, in one line: a component never calls `element.replaceChildren(...)`, `element.appendChild(...)` or `element.remove()`. It calls one of three helpers from `core/dom-lifecycle.ts` and passes itself.**
+
+| Instead of | Call |
+|---|---|
+| `host.replaceChildren(...xs)` | `setChildren(this, host, xs)` |
+| `host.appendChild(x)` | `appendChild(this, host, x)` |
+| `el.remove()` | `removeElement(this, el)` |
+| `el.replaceWith(newEl)` | `this.replaceChild(el, newEl)` |
+
+`core/dom-lifecycle.ts` carries the full reasoning - read it before touching any of this. The short version:
+
+**Why.** Writing `<Foo/>` in JSX constructs the component, runs its `render()`, registers the instance in velotype's key map and stamps that key onto the root element. It does **not** call `mount()` - it cannot, because nothing is on the page yet. `mount()` comes later, from a walk of the freshly-attached subtree looking for those stamped keys, and velotype reaches that walk from exactly three kinds of place: `replaceElementWithRoot` (app boot), `refresh()`, and the `Component` methods `replaceChildrenOfChild` / `appendToChild` / `prependToChild` / `replaceChild` / `removeChild`, which velotype core installs on every instance. `unmount()` is the same walk in reverse. A native DOM call is not among them, so it puts elements on the page and skips both halves:
+
+- **`mount()` never runs.** Everything renders and looks right - the markup is identical either way. What is missing is every subscription the component makes to something *outside* itself: a `popstate`/`locationchange` listener, a `document` click-away handler, a `matchMedia` watcher, a `mountStyles()` call. The component is inert with respect to the rest of the page and looks completely normal.
+- **`unmount()` never runs either, and that half leaks.** Unmounting strips a component out of velotype's global listener registry and releases its vtKey. Elements dropped by a native call are gone from the DOM and still in both, holding a detached tree alive. In a list rebuilt per keystroke that is a leak per keystroke.
+
+**This is where the Sidebar's active-page marker bug came from.** Every row is a `NavLink`, a `NavLink` does all of its work in `mount()`, and `setItems` attached its tree with a bare `body.replaceChildren(...)` - so no row ever subscribed to `popstate`, and the sidebar went on pointing at whichever page the reader first loaded however far they browsed from it. `Sidebar#syncActiveLinks` still exists, but for a different reason now: ordering, documented on the method.
+
+**Why helpers rather than the velotype methods directly.** Because the correct call differs between the constructor and everywhere else, and getting it wrong is silent *in both directions*. In the constructor the subtree is not on the page yet, so nothing needs mounting - and the five methods are installed on the instance only *after* the constructor returns, so calling one there hits the base-class stub, which returns `false` and writes nothing at all. After the constructor the native call is the silent one. Most of the components involved - `DataTable`, `AsyncDataTable`, `SelectMenu`, `Calendar`, `CalendarRange` - call the same private `#renderX()` from their constructor *and* from their state handlers, so neither answer is right for the whole method. The helpers branch on `element.isConnected`, which decides it exactly rather than approximately, and throw rather than no-op if handed an element the component does not own.
+
+**Two things this does not cover:**
+
+1. **Attribute, class, `textContent` and style writes are fine anywhere** - `classList.toggle`, `setAttribute`, `scrollIntoView`, `.value =`. They add and remove no components, so no lifecycle is involved. `Combobox`'s highlight toggling and `SelectMenu`'s `#updateSelectedClasses` are deliberately this.
+2. **`charts/` is exempt and stays on raw DOM calls.** Charts build SVG through `document.createElementNS` (velotype's JSX cannot emit `<svg>` at all - gotcha 2), and every one of their content attrs is typed `string`, so there is never a component anywhere in a chart to mount.
+
+**A `FunctionComponent` cannot do any of this** - there is no instance to pass. `Alert` and `Tag` are classes for exactly this reason and no other: both remove themselves from the page on dismiss, and both hold arbitrary consumer `children`. If a new component needs to add or remove content after it is on the page, it is a class. `showToast` is the one case with no component at all, so its container is a `ToastContainer` component mounted through `replaceElementWithRoot`, giving the toasts something to be added and removed *through*.
+
+`tests/basic_tests.test.ts` has a guard - *"swapping a subtree in place runs velotype's mount and unmount lifecycle"* - built on a `MountProbe` in `tests/test_modules/combobox.tsx` that does nothing but count its own `mount()`/`unmount()` calls. Counting is the only way to test this: a missed mount leaves no trace in the DOM.
+
+### `RenderObjectArray` for a list that mutates a point at a time, `setChildren` for one that is recomputed
+
+velotype's `RenderObjectArray` is the canonical way to render a list, and it carries the lifecycle
+on every mutation - `push`, `pushAll`, `deleteAt`, `delete`, `clear`, `set`. Reach for it when the
+list changes **one item at a time**. `showToast` is the case in this package: one toast arrives, an
+earlier one times out, and nothing else on screen is rebuilt - so a toast mid-animation is not
+interrupted by the next one arriving.
+
+For a list that is **recomputed whole** from a filter or a page of data, keep `setChildren`.
+`Combobox` was migrated to prove the shape and is the reason the rest were not:
+
+1. **`clear()` and `set()` replace the wrapper element.** Both re-run the array's own render
+   function and `replaceElement` the result, so a held reference to the wrapper goes stale - taking
+   the panel's open/closed class and its scroll position with it. A full rebuild has to be
+   `deleteAt` + `pushAll`, which touch only the items.
+2. **`deleteAt(0, 0)` deletes one row, not none** (`deleteCount > 0 ? deleteCount : 1`), so every
+   clear needs a length guard first.
+3. **A row that is not an item cannot live in the array.** `Combobox`'s no-match row is a permanent
+   `<li>` toggled with `hidden` rather than added and removed, because taking it off the page would
+   release a vtKey that showing it again needs.
+4. **The renderFunction gets no index**, so anything index-based - `Combobox`'s highlight - moves to
+   a DOM query plus a `findIndex` over the array's values.
+
+None of that buys anything when every item is rebuilt regardless. `Command`, `DataTable`,
+`AsyncDataTable`, `Calendar` and `CalendarRange` all have that shape and stay on `setChildren`.
+
+`wrapperElementTag` is worth knowing either way: it makes the wrapper element *itself* the `<ul>` or
+`<tbody>`, so nothing sits between a `role="listbox"` and the `role="option"` rows it owns.
+
+Only the default `<div>` wrapper is `display:contents`; a named tag is created unstyled, so the
+component's stylesheet decides its display (velotype 0.0.30). Before that every wrapper carried the
+inline style, which beats any class - `Combobox`'s panel drew no box and ignored both `display:none`
+and its open class, so the showcase's navbar search spilled its results inline and never closed,
+while every test that counted option rows passed. *"the combobox panel is hidden when closed and a
+positioned box when open"* guards it.
 
 ### Avoid `refresh()` on any component that accepts children — via `children` or via an attrs field typed as `RenderableElements`/`RenderableElements[]`
 
@@ -101,7 +168,7 @@ possible DOM update, so it is the first thing to rule out.
 
 `refresh()` unmounts and rebuilds the *entire* subtree, and that subtree can include consumer-supplied content you don't own — another component with its own state (a `TextBox` mid-edit, a nested `DataTable`, anything holding focus or internal state). Rebuilding it from scratch on every internal state change of *your* component silently discards that state, and the consumer has no way to opt out. If a component's attrs include a bare `RenderableElements`/`RenderableElements[]`/a row-render callback, or it takes `children`, its internal state transitions should **never** call `this.refresh()` — reach for one of these instead, both already proven out in this package:
 
-1. **Build once in the constructor, then targeted-update via `replaceChildren`/class toggles on stored element refs.** `Command`'s `#renderList()`, `SelectMenu`'s per-method updates, and `DataTable`'s `#renderTable()` all do this: persistent fields (`#tbodyEl`, `#panelEl`, ...) get built once in the constructor, and every state-changing method rebuilds *only* the specific pieces that actually depend on that state, leaving everything else (a search `TextBox`, an unrelated toolbar button) untouched and never remounted. `DataTable` used to call `refresh()` on every sort/search/page/column-visibility change; the toolbar and column-menu panel don't depend on any of that state, so it was refreshing (and risking mid-interaction stale-reference bugs in) parts of the tree that never needed to change at all.
+1. **Build once in the constructor, then targeted-update via `setChildren`/class toggles on stored element refs** (`setChildren(this, host, xs)`, *never* `host.replaceChildren(...xs)` - see the section above)**.** `Command`'s `#renderList()`, `SelectMenu`'s per-method updates, and `DataTable`'s `#renderTable()` all do this: persistent fields (`#tbodyEl`, `#panelEl`, ...) get built once in the constructor, and every state-changing method rebuilds *only* the specific pieces that actually depend on that state, leaving everything else (a search `TextBox`, an unrelated toolbar button) untouched and never remounted. `DataTable` used to call `refresh()` on every sort/search/page/column-visibility change; the toolbar and column-menu panel don't depend on any of that state, so it was refreshing (and risking mid-interaction stale-reference bugs in) parts of the tree that never needed to change at all.
 2. **Keep every consumer-supplied panel mounted permanently, toggle which one is visible with a CSS class.** `Tabs` and `Carousel` both do this now: every tab's `content` / every carousel `slide` is built once in the constructor and stays in the DOM the whole time (same trade-off `Accordion` already made for its sections, via native `<details>`), and switching just toggles a `-active` class on the relevant button/panel pair — the previously-visible one is never torn down, so whatever state it held (typed text, scroll position, a mid-flow child component) survives being switched away from and back to. This does mean *all* panels/slides get constructed up front rather than lazily — an accepted trade-off, matching `Accordion`'s.
 
 The only components still calling `refresh()` are `Calendar` (`#changeMonth`) — its attrs (`value: Date`, `onSelectDate`) don't accept any consumer content at all, every rendered cell is self-generated, so there's no external state at risk and a full re-render is the simplest correct option.
@@ -218,6 +285,40 @@ The generic is declared `<T extends HTMLElement>`. `HTMLDetailsElement` (used th
 
 ## Styling
 
+### The CSS is a module-level const, never a literal inside the constructor
+
+Every component in the package declares its stylesheet as a module-scope `const <name>Css: string`
+sitting just above the component, and the constructor is one line:
+
+```tsx
+/** Stylesheet for `<Stack/>`, mounted once on first construction */
+const stackCss: string = `
+.vtd-stack{display:flex;width:100%;box-sizing:border-box;}
+`
+
+export const Stack: FunctionComponent<StackAttrsType> = function(attrs, children) {
+    if (!areStackStylesMounted) {
+        areStackStylesMounted = true
+        mountStyles(stackCss, "vtd/Stack")
+    }
+    ...
+```
+
+**This is purely for reading.** `Navbar` carries 3.7KB of CSS, `CodeBlock` 7KB, `DataTable` 5KB and
+`Sidebar` 32KB - inline, those pushed the actual component logic hundreds of lines down its own
+file, and a class was unreadable without scrolling past a stylesheet first. Nothing about *when*
+the sheet is attached changes: `mountStyles` is still called lazily on first construction, so
+cascade order is exactly what it was.
+
+Naming is mechanical, from the `mountStyles` key: `"vtd/DataTable"` → `dataTableCss`. Keep any
+prose comment about the CSS *above* the const rather than between `=` and the template literal.
+
+The one exception is `core/theme.ts`, whose palette sheet is parameterised by selector and by the
+caller's colour overrides, so there is no single string to hoist - it is a `themeCss(selector,
+options)` builder function instead, split out for the same reason.
+
+### One sheet per component, through `mountStyles`
+
 One `mountStyles(cssText, "vtd/ComponentName")` call per component, from `core/styles.ts`. **Nothing
 in `src/` calls `setStylesheet` directly** - that is what makes the cascade deterministic, and the
 reason is worth understanding before adding a component.
@@ -314,8 +415,9 @@ When adding a new component with any button/placeholder/label content, ask "what
 ⚠️ **This rule was audited "across the whole package in one pass" and two violations survived it**:
 `Combobox` rendered `"No matches"` and `Command` rendered `"No results"`, each with no attr and no
 theme option to change them. Both were invisible to that audit because they are not defaults at all
-- there is no `attrs.x || "..."` to grep for, just a literal inside a `replaceChildren` call in a
-private render method. Both now take a `noMatchMessage` attr defaulting to
+- there is no `attrs.x || "..."` to grep for, just a literal inside a list-rebuilding call in a
+private render method. Note the fourth pattern below never matched those two either: the strings
+sat inside JSX (`<li>No matches</li>`), which the *third* pattern is what actually catches. Both now take a `noMatchMessage` attr defaulting to
 `<CommonThemeOptions.emptySymbol/>`.
 
 So grep for the *rendering*, not for the defaulting. These four patterns between them find every
@@ -325,8 +427,42 @@ shape the rule cares about, and it was the last one that hid:
 grep -rnE '(\?\?|\|\|)\s*"[^"]{2,}"' src/                 # a defaulted string
 grep -rnE '(aria-label|title|placeholder|alt)="[A-Za-z]' src/  # a literal attribute
 grep -rnE '>[A-Za-z]{2,}<' src/                                # a JSX text node
-grep -rnE 'replaceChildren\("|textContent = "[A-Za-z]' src/   # an imperative write
+grep -rnE 'setChildren\(this, [^,]+, \["|textContent = "[A-Za-z]' src/  # an imperative write
 ```
+
+One more grep worth keeping to hand, for a different rule - the lifecycle one above. It finds
+every native structural DOM call in `src/`, which outside a constructor (and outside `charts/`) is
+always a bug:
+
+```sh
+grep -rnE '\.(replaceChildren|appendChild|prepend|replaceWith|insertBefore)\(|\.remove\(\)' src/ \
+    | grep -v '^src/charts/'
+```
+
+Outside `core/dom-lifecycle.ts`'s own docstrings it returns exactly three hits today, each a case
+the rule does not reach:
+
+- `toast.tsx` appends an empty placeholder `<div>` to `document.body`, which
+  `replaceElementWithRoot` then swaps for the real container one line later. velotype exports no
+  "mount into this parent" entry point, only "replace this element", so a root mount needs
+  something already on the page to replace. The placeholder holds nothing, so there is no lifecycle
+  to run for it.
+- `icon.ts` assembles a detached `<svg>` through `createElementNS`, because velotype's JSX cannot
+  emit `<svg>` at all (gotcha 2) - the same exemption as `charts/`.
+- `combobox.tsx` adds its no-match row to the panel in the *constructor*, where nothing is on the
+  page yet. It is not an array item, so `#options` cannot carry it - see the section below.
+
+**Nothing else builds its tree imperatively, including in a constructor.** A constructor *may*
+safely use native calls, since nothing it builds is on the page yet - but "safe" is not a reason to
+write it that way, and conditional children belong in the JSX like every other conditional child:
+
+```tsx
+{attrs.resizable ? this.#buildResizeHandle() : null}
+```
+
+`Sidebar` appended its resize handle imperatively for no reason other than that it was conditional;
+as one more line in the panel's JSX it reads the same as the four siblings above it and removes a
+call site that looked like the bug. A third hit means someone added one. Check it against the rule.
 
 ## Theme options: `CommonThemeOptions` and the `XThemeOptions` escape hatch
 
@@ -867,6 +1003,8 @@ These are non-obvious and have each caused a real bug in this package at least o
 6. **A bare array of sibling children (from `.map()`) needs its own wrapper element if it sits alongside another element in the same parent** - `<div>{singleElement}{arrayFromMap}</div>` (two `{}` expressions as direct children of the same parent, where the second is an array) silently breaks later DOM-reference-based updates to the array's *own* elements: mutating an attribute on an element you got back from that `.map()` (e.g. toggling a class or a `hidden` attribute you stored a reference to) has no visible effect, even though the elements are genuinely present in the DOM with the right content. `Tabs`' rewrite hit this directly - panels built as `{tabs.map(tab => <div>...)}` as a second child of the same wrapper as the tab-button list never responded to `panel.removeAttribute("hidden")`; wrapping the exact same array in its own `<div class="vtd-tabs-panels">{tabs.map(...)}</div>` fixed it immediately, no other change needed. The fix is mechanical: whenever a `.map()`-produced array is a *sibling* of other JSX content (not the sole child of its parent), give it its own single wrapper element rather than leaving it as a bare array child.
 7. **A JSX-constructed value assigned to a shared/module-level constant is built exactly once - reusing it in more than one place moves it, it doesn't clone it.** `<Foo/>` evaluates its `Component`/element immediately, at the point the JSX is evaluated; if that result is stored in a `const` at module scope and then embedded in two different trees (e.g. two instances of a gallery component, both handed the same `const rows = [...]` containing JSX in a `content`/`node` field), the *second* one to actually mount steals the underlying DOM node away from the first, leaving the first with nothing there at all (not an error - just silently empty). Symptom: content that's present and correct in one of two supposedly-identical instances (e.g. a dark-theme gallery column) and inexplicably missing in the other. Two confirmed real occurrences: the showcase's `ExampleDoc.node` (now a `() => RenderableElements` factory, called fresh by every page that shows it, rather than a precomputed value - see its doc comment in `docs.tsx`) and a `Tabs` gallery test fixture with a shared `const sampleTabs` array holding a `<TextBox/>`. The fix is always the same: make the value a factory function and call it fresh at each use site, never a shared precomputed constant, whenever a JSX-built value might be displayed/mounted in more than one place.
 8. **A native `<dialog>`'s own UA stylesheet caps its size while open**, independent of anything you write: `dialog:modal { max-width/max-height: calc((100% - 6px) - 2em); }` applies unless an author rule overrides it, and - because UA rules always lose to *any* author rule regardless of selector specificity - even a single conflicting property in your own stylesheet (e.g. `max-height:90vh` on the wrong element) is what was silently masking this in `Drawer` for a while: removing that stray rule didn't fully fix a "doesn't reach the true edge" bug on its own, because nothing was left to override the browser's own `calc(...)` cap either. If a `<dialog>`-based component (`Drawer`, `Modal`, `Command`) needs to genuinely fill its container/viewport, set `max-width:none; max-height:none;` explicitly rather than assuming "I didn't set a max-width" means there isn't one.
+9. **A component put on the page with a native DOM call never gets its `mount()`** - and never gets its `unmount()` either, so its listeners and its vtKey leak. `el.replaceChildren(...)`, `el.appendChild(...)` and `el.remove()` are not among the paths velotype dispatches the lifecycle from; `setChildren`/`appendChild`/`removeElement` from `core/dom-lifecycle.ts` are. Nothing about the rendered DOM shows the difference, which is what makes this one dangerous - see *Changing the DOM after construction* above for the mechanism, the exemptions, and the Sidebar bug it caused.
+10. **Reach `globalThis` through `core/utilities.ts`, not directly.** `addGlobalListener`, `removeGlobalListener`, `dispatchGlobalEvent`, `setTimeoutHelper`, `clearTimeoutHelper`, `requestFrame`, `matchMediaHelper`, `getPathname`, `setHref`, `pushHistoryState`, `getInnerHeight`, `getScrollY` - the same pattern the file already used for `consoleLog` and `setAttributeHelper`. `globalThis` is a global, so a minifier can shorten neither it nor the property after it; these helpers are module-internal, so esbuild renames them to a letter at every call site. They are wrapper *functions*, never `const x = globalThis.foo` aliases - `console.log` tolerates being called unbound, `addEventListener`/`setTimeout`/`matchMedia` throw "Illegal invocation". ⚠️ **The measured payoff is small and it is not the main reason to do it**: across 31 call sites this saved 178 bytes raw and *cost* 82 after gzip, because gzip already collapses 31 copies of `globalThis.addEventListener` into back-references. What it does buy is one place to change and a uniform call shape - and converting them made the compiler surface three sites that would have thrown off a browser, where `matchMedia` genuinely does not exist.
 
 ## Testing & showcase harness
 
@@ -875,7 +1013,7 @@ Every component gets the same fan-out, even though not every component gets dedi
 1. `src/<name>.tsx` + `src/index.ts` export (always).
 2. `tests/test_modules/<name>.tsx` — a "gallery" page rendering every documented state (disabled/checked/each `type`/etc.) twice, side by side, in `data-theme="light"` and `data-theme="dark"` containers, wrapped in `<TestModulePage>` (adds the "Home page" link + dark-mode toggle), calling `Theme.injectStyles()` and `setThemeOnSelector(...)` on both container ids at module load. Copy the closest existing gallery module's boilerplate rather than writing it from scratch.
 3. `tests/deno.json` — one `"bundle-<name>"` task: `deno bundle ./test_modules/<name>.tsx --output ./build/<name>.js --sourcemap=linked` (note: `--sourcemap` requires an explicit value — `linked`/`inline`/`external` — under current Deno; a bare boolean flag errors).
-4. `tests/base_server.ts` — add `<name>` to the `setOfModules` array (nothing else in that file needs to change; routing/script-tag serving is already generic over that list).
+4. Nothing to register. `tests/base_server.ts` scans `test_modules/` through `allModules()` from `bundle.ts`, so a new gallery is served as soon as the file exists - it only filters out `explorer` (the index page) and `module-page` (the shared chrome). A hand-written list beside the scan is how a module once 404'd as a silent 10s test timeout.
 5. `tests/test_modules/showcase.tsx` — a short section alongside the other components, for a combined at-a-glance view.
 6. `tests/basic_tests.test.ts` gets new `itWrap(...)` assertions **only** for components with real interactive/stateful behavior worth regression-testing (state that changes on click, a value that updates, an open/closed toggle) — not for every component. Purely visual/static ones (`Badge`, `Card`, `Divider`, `Breadcrumbs`, `Navbar`, `Sidebar`, `Spinner`, `Avatar`) are gallery-only, no assertions.
 
@@ -1339,7 +1477,7 @@ Three pieces make the framework module work, and each one matters:
 
 - `showcase/src/velotype-module.ts` is a one-line `export *` that exists only to be a bundle
   entrypoint. `deno bundle` resolves an entrypoint as a **file path rather than through the import
-  map**, so bundling velotype directly means writing `jsr:@velotype/velotype@0.0.27` into a task and
+  map**, so bundling velotype directly means writing `jsr:@velotype/velotype@0.0.30` into a task and
   keeping that in step with the `imports` entry by hand. A local module is resolved the ordinary way
   instead, so the version stays declared once.
 - `main.tsx` is bundled with `--external` for velodesign *and* both velotype specifiers, so it ships

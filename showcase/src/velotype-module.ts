@@ -4,7 +4,7 @@
  *
  * It exists so the version stays declared in exactly one place. `deno bundle` resolves an
  * entrypoint as a file path rather than through the import map, so bundling velotype directly would
- * mean writing `jsr:@velotype/velotype@0.0.27` into a task and keeping that in step with the
+ * mean writing `jsr:@velotype/velotype@0.0.30` into a task and keeping that in step with the
  * `imports` entry by hand. A one-line local module is resolved the ordinary way instead.
  *
  * `export *` is enough because velotype has no default export, and its `.` and `./jsx-runtime`

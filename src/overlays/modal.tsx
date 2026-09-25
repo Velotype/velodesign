@@ -29,13 +29,8 @@ export type ModalAttrsType = {
     cancelButtonChildren?: RenderableElements
 } & ChildrenAttr
 
-/**
- * A Modal that renders over top of the page
- */
-export class Modal extends Component<ModalAttrsType> {
-    /** Mount this Component */
-    override mount() {
-        mountStyles(`
+/** Stylesheet for `<Modal/>`, mounted once on first construction */
+const modalCss: string = `
 .vtd-modal{
 margin:auto;
 padding:1em;
@@ -52,7 +47,15 @@ margin:0.5em 0;
 .vtd-modal-inner{
 padding:0.5em;
 }
-`, "vtd/Modal")
+`
+
+/**
+ * A Modal that renders over top of the page
+ */
+export class Modal extends Component<ModalAttrsType> {
+    /** Mount this Component */
+    override mount() {
+        mountStyles(modalCss, "vtd/Modal")
     }
 
     /** The underlying `<dialog/>` element */

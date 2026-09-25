@@ -16,6 +16,8 @@ export type ServerContextMetadata = {
     st?: number
 }
 
+import { allModules } from "./bundle.ts"
+
 export async function startAppServer(server_port: number): Promise<Server<ServerContextMetadata>> {
     const router: Router<ServerContextMetadata> = new Router<ServerContextMetadata>({
         context_metadata_constructor: () => ({}),
@@ -37,14 +39,16 @@ export async function startAppServer(server_port: number): Promise<Server<Server
             }
         }
     ))
-    const setOfModules = ['button','icon','page-selector','text-box','modal','text-form-field','radio-button','showcase','time-ago',
-        'checkbox','toggle','textarea','select','select-menu','badge','card','alert','tooltip','spinner','tabs','divider',
-        'nav-link','breadcrumbs','pagination','navbar','sidebar','menu',
-        'toast','accordion','avatar',
-        'progress','skeleton','tag','empty','collapse','statistic','list','timeline','aspect-ratio','scroll-area',
-        'date-picker','date-time-picker','date-time-range-picker','slider','input-number','color-picker','combobox','upload',
-        'drawer','popover','popconfirm','steps','rate',
-        'table','form','context-menu','resizable','carousel','calendar','calendar-range','tree','command','button-group','data-table','async-data-table','charts','typography','layout','code-block','table-of-contents','theme-options']
+    /*
+     * Discovered, not listed. This used to be a hand-written array beside `bundle.ts`'s own
+     * directory scan, so a new gallery module bundled fine and then 404'd - which surfaces as a
+     * 10-second `waitForSelector` timeout and says nothing about the cause. One source of truth
+     * removes the whole failure.
+     *
+     * `explorer` is the index page served at `/` and `module-page` is the shared chrome, so neither
+     * is a module route.
+     */
+    const setOfModules = (await allModules()).filter((module) => module != "explorer" && module != "module-page")
     setOfModules.forEach((module) => {
         router.get(`/${module}`, function() {
             const response = new Response(`<!DOCTYPE html><html><body>

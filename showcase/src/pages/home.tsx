@@ -1,7 +1,7 @@
 import { Component, setStylesheet } from "@velotype/velotype"
 import type { EmptyAttrs } from "@velotype/velotype"
 
-import { Badge, Button, Card, Grid, Heading, History, I, Paragraph, Stack, Statistic, Text } from "@velotype/velodesign"
+import { Badge, Card, Grid, Heading, History, I, Paragraph, Stack, Statistic, Text } from "@velotype/velodesign"
 import { componentDocs, groupedDocs } from "../data/docs.tsx"
 import { bundleSize } from "../data/bundle-size.ts"
 import { categoryPageUrl } from "./category-page.tsx"
@@ -49,10 +49,6 @@ border-block-end:1px solid var(--background-4);
                 <Paragraph type="muted">A themed UI component library for Velotype that wraps native HTML elements instead of
                     reimplementing them - {componentDocs.length} components across {groups.length} categories,
                     with zero JavaScript UI framework dependency.</Paragraph>
-                <Stack justify="center" gap="lg">
-                    <Button type="primary" onClick={() => History.changeLocation(`/components/${componentDocs[0].slug}`)}>Browse components</Button>
-                    <Button type="secondary" onClick={() => History.changeLocation("/theme")}>Customize theme</Button>
-                </Stack>
             </section>
 
             <section class="vtd-showcase-stats">
@@ -63,13 +59,18 @@ border-block-end:1px solid var(--background-4);
                     {/*
                       * Measured, not claimed: scripts/bundle-size.ts bundles src/index.ts minified
                       * and this page's own build task regenerates the figure first, so it cannot
-                      * drift from the source it was built with. gzip is what a browser pulls down,
-                      * which is why it leads and the raw size is the suffix.
+                      * drift from the source it was built with. gzip is what a browser pulls down.
+                      *
+                      * The two sit together because together they are the whole cost: this page is
+                      * loading exactly these two modules through the import map in
+                      * showcase/server.ts, so the pair is what a consumer downloads.
                       */}
                     {/* ownGzip, not gzip: the second has velotype folded in, and a consumer does not
-                        pay that to velodesign - velotype is its own module import, which is exactly
-                        how this page is loading it, through the import map in showcase/server.ts */}
-                    <Statistic title="Whole library, gzipped" value={(bundleSize.ownGzip / 1024).toFixed(1)} suffix={<Text type="muted"> KB</Text>}/>
+                        pay that to velodesign - it would also double-count the figure beside it */}
+                    <Statistic title="velodesign, gzipped" value={(bundleSize.ownGzip / 1024).toFixed(1)} suffix={<Text type="muted"> KB</Text>}/>
+                    {/* The whole framework as its own module, not the slice velodesign reaches -
+                        that slice is smaller and is not a file anyone ever downloads */}
+                    <Statistic title="velotype, gzipped" value={(bundleSize.velotypeGzip / 1024).toFixed(1)} suffix={<Text type="muted"> KB</Text>}/>
                 </Stack>
             </section>
 

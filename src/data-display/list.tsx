@@ -44,14 +44,8 @@ export type ListAttrsType = {
 
 let areListStylesMounted = false
 
-/**
- * A styled list of items, each with optional leading/trailing slots
- */
-export const List: FunctionComponent<ListAttrsType> = function(attrs: ListAttrsType, _children: RenderableElements[]): HTMLElement {
-    if (!areListStylesMounted) {
-        areListStylesMounted = true
-        mountStyles(
-`
+/** Stylesheet for `<List/>`, mounted once on first construction */
+const listCss: string = `
 .vtd-list{width:100%;box-sizing:border-box;list-style:none;padding:0;margin:0;}
 .vtd-list-item{
 position:relative;
@@ -77,7 +71,15 @@ border-block-end:1px solid var(--background-4);
 .vtd-list-item-link-button{display:block;width:100%;text-align:inherit;background:transparent;border:none;color:inherit;font:inherit;padding:0;cursor:pointer;}
 .vtd-list-item-link::after{content:"";position:absolute;inset:0;z-index:0;}
 .vtd-list-item :is(a,button,input,select,textarea):not(.vtd-list-item-link):not(.vtd-list-item-link-button){position:relative;z-index:1;}
-`, "vtd/List")
+`
+
+/**
+ * A styled list of items, each with optional leading/trailing slots
+ */
+export const List: FunctionComponent<ListAttrsType> = function(attrs: ListAttrsType, _children: RenderableElements[]): HTMLElement {
+    if (!areListStylesMounted) {
+        areListStylesMounted = true
+        mountStyles(listCss, "vtd/List")
     }
 
     const listClass = `vtd-list${attrs.zebra ? " vtd-list-zebra" : ""}${attrs.highlightOnHover ? " vtd-list-hoverable" : ""}`

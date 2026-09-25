@@ -45,13 +45,8 @@ export type ButtonAttrsType = {
  */
 let areButtonStylesMounted = false
 
-/**
- * An interactable Button
- */
-export const Button: FunctionComponent<ButtonAttrsType> = function(attrs: ButtonAttrsType, children: RenderableElements[]): HTMLButtonElement {
-    if (!areButtonStylesMounted) {
-        areButtonStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<Button/>`, mounted once on first construction */
+const buttonCss: string = `
 .vtd-button{
 position:relative;
 padding:0.25rem 0.5rem;
@@ -102,7 +97,15 @@ transform:translate3d(-50%, -50%, 0);
 display:inline-block;
 visibility:hidden;
 }
-`, "vtd/Button")
+`
+
+/**
+ * An interactable Button
+ */
+export const Button: FunctionComponent<ButtonAttrsType> = function(attrs: ButtonAttrsType, children: RenderableElements[]): HTMLButtonElement {
+    if (!areButtonStylesMounted) {
+        areButtonStylesMounted = true
+        mountStyles(buttonCss, "vtd/Button")
     }
 
     /** If the Button is in loading state */

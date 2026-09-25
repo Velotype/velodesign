@@ -1,4 +1,5 @@
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
+import { setChildren } from "../core/dom-lifecycle.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 
@@ -32,6 +33,66 @@ export type SelectMenuAttrsType<OptionType> = {
 } & IdAttr & StylePassthroughAttrs
 
 let areSelectMenuStylesMounted = false
+
+/** Stylesheet for `<SelectMenu/>`, mounted once on first construction */
+const selectMenuCss: string = `
+.vtd-select-menu{position:relative;display:inline-block;}
+.vtd-select-menu-trigger{
+display:inline-flex;
+align-items:center;
+gap:0.75em;
+min-width:8em;
+max-width:100%;
+box-sizing:border-box;
+padding:0.5ex 1ex;
+border-radius:0.25rem;
+border:1px solid var(--background-5);
+background-color:var(--background-1);
+color:var(--text);
+font:inherit;
+text-align:start;
+cursor:pointer;
+}
+.vtd-select-menu-trigger:disabled{cursor:not-allowed;opacity:0.6;}
+.vtd-select-menu-value{flex-grow:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.vtd-select-menu-placeholder{opacity:0.6;}
+.vtd-select-menu-chevron{
+flex-shrink:0;
+width:0.6em;
+height:0.6em;
+border:solid var(--text);
+border-width:0 0.12em 0.12em 0;
+transform:rotate(45deg);
+margin-block-start:-0.3em;
+}
+.vtd-select-menu-panel{
+position:absolute;
+top:100%;
+left:0;
+z-index:1000;
+min-width:max(100%, 14em);
+box-sizing:border-box;
+margin:0;
+margin-block-start:0.25em;
+padding:0.25em;
+max-height:16em;
+overflow:auto;
+list-style:none;
+background-color:var(--background-1);
+border:1px solid var(--background-4);
+border-radius:0.25rem;
+box-shadow:0 2px 8px rgba(0,0,0,0.15);
+display:none;
+}
+.vtd-select-menu-panel-open{display:block;}
+.vtd-select-menu-option{padding:0.5em 0.75em;border-radius:0.25rem;cursor:pointer;}
+` +
+/* The keyboard's position in the list - see Menu for why this is a tint and not a ring */
+`
+.vtd-select-menu-option-highlighted{background-color:var(--primary-3);}
+.vtd-select-menu-option-selected{background-color:var(--primary-3);}
+.vtd-select-menu-option-disabled{opacity:0.5;cursor:not-allowed;}
+`
 
 /**
  * A `<Select/>`-alike for when a plain text label per option isn't enough: each option (and,
@@ -147,15 +208,36 @@ export class SelectMenu<OptionType> extends Component<SelectMenuAttrsType<Option
         })
     }
 
-    /** Rewrites just the trigger's display content - never the trigger button itself, so it never loses focus */
-    #renderTriggerValue() {
+    /**
+     * What the trigger currently displays: the selected option drawn by the consumer's own
+     * `renderValue`/`renderOption`, or the placeholder.
+     *
+     * Split out from `#renderTriggerValue` below so the *constructor* can put the initial content
+     * straight into `#valueEl` as it builds it. See that method for why it may not call it.
+     */
+    #triggerValueContent(): RenderableElements {
         const selected = this.#attrs.options.find(option => this.#attrs.getValue(option) == this.#selectedValue)
         if (!selected) {
-            this.#valueEl.replaceChildren(<span class="vtd-select-menu-placeholder" style={{display: "contents"}}>{this.#attrs.placeholder}</span>)
-            return
+            return <span class="vtd-select-menu-placeholder" style={{display: "contents"}}>{this.#attrs.placeholder}</span>
         }
         const renderValue = this.#attrs.renderValue || this.#attrs.renderOption
-        this.#valueEl.replaceChildren(<span style={{display: "contents"}}>{renderValue(selected)}</span>)
+        return <span style={{display: "contents"}}>{renderValue(selected)}</span>
+    }
+
+    /**
+     * Rewrites just the trigger's display content - never the trigger button itself, so it never
+     * loses focus.
+     *
+     * `setChildren`, never `#valueEl.replaceChildren` - see core/dom-lifecycle.ts.
+     * `renderValue`/`renderOption` are consumer callbacks, so what goes in here is arbitrary
+     * consumer content.
+     *
+     * The constructor does not call this. It could - `setChildren` handles the not-yet-attached
+     * case - but building `#valueEl` with `#triggerValueContent()` inline reads better and keeps
+     * this method to the one job its name describes.
+     */
+    #renderTriggerValue() {
+        setChildren(this, this.#valueEl, [this.#triggerValueContent()])
     }
 
     #handleTriggerKeyDown = (event: KeyboardEvent) => {
@@ -189,65 +271,7 @@ export class SelectMenu<OptionType> extends Component<SelectMenuAttrsType<Option
 
         if (!areSelectMenuStylesMounted) {
             areSelectMenuStylesMounted = true
-            mountStyles(
-`
-.vtd-select-menu{position:relative;display:inline-block;}
-.vtd-select-menu-trigger{
-display:inline-flex;
-align-items:center;
-gap:0.75em;
-min-width:8em;
-max-width:100%;
-box-sizing:border-box;
-padding:0.5ex 1ex;
-border-radius:0.25rem;
-border:1px solid var(--background-5);
-background-color:var(--background-1);
-color:var(--text);
-font:inherit;
-text-align:start;
-cursor:pointer;
-}
-.vtd-select-menu-trigger:disabled{cursor:not-allowed;opacity:0.6;}
-.vtd-select-menu-value{flex-grow:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.vtd-select-menu-placeholder{opacity:0.6;}
-.vtd-select-menu-chevron{
-flex-shrink:0;
-width:0.6em;
-height:0.6em;
-border:solid var(--text);
-border-width:0 0.12em 0.12em 0;
-transform:rotate(45deg);
-margin-block-start:-0.3em;
-}
-.vtd-select-menu-panel{
-position:absolute;
-top:100%;
-left:0;
-z-index:1000;
-min-width:max(100%, 14em);
-box-sizing:border-box;
-margin:0;
-margin-block-start:0.25em;
-padding:0.25em;
-max-height:16em;
-overflow:auto;
-list-style:none;
-background-color:var(--background-1);
-border:1px solid var(--background-4);
-border-radius:0.25rem;
-box-shadow:0 2px 8px rgba(0,0,0,0.15);
-display:none;
-}
-.vtd-select-menu-panel-open{display:block;}
-.vtd-select-menu-option{padding:0.5em 0.75em;border-radius:0.25rem;cursor:pointer;}
-` +
-/* The keyboard's position in the list - see Menu for why this is a tint and not a ring */
-`
-.vtd-select-menu-option-highlighted{background-color:var(--primary-3);}
-.vtd-select-menu-option-selected{background-color:var(--primary-3);}
-.vtd-select-menu-option-disabled{opacity:0.5;cursor:not-allowed;}
-`, "vtd/SelectMenu")
+            mountStyles(selectMenuCss, "vtd/SelectMenu")
         }
 
         this.#optionEls = attrs.options.map(option => {
@@ -262,7 +286,7 @@ display:none;
             return el
         })
 
-        this.#valueEl = <span class="vtd-select-menu-value"/>
+        this.#valueEl = <span class="vtd-select-menu-value">{this.#triggerValueContent()}</span>
         // tabindex=-1 because a scrolling listbox is otherwise a dead tab stop. Chrome makes any
         // scrollable element focusable when it has no focusable children, which is right for a
         // region a reader has to scroll themselves and wrong here: the arrow keys already move the
@@ -290,7 +314,6 @@ display:none;
         </div>
 
         this.#updateSelectedClasses()
-        this.#renderTriggerValue()
 
         passthroughAttrsToElement<HTMLDivElement>(this.#root, attrs)
     }

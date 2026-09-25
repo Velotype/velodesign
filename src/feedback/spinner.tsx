@@ -14,13 +14,8 @@ export type SpinnerAttrsType = {
 
 let areSpinnerStylesMounted = false
 
-/**
- * A standalone animated loading indicator
- */
-export const Spinner: FunctionComponent<SpinnerAttrsType> = function(attrs: SpinnerAttrsType, _children: RenderableElements[]): HTMLSpanElement {
-    if (!areSpinnerStylesMounted) {
-        areSpinnerStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<Spinner/>`, mounted once on first construction */
+const spinnerCss: string = `
 @keyframes vtd-spinner-rotate{to{transform:rotate(360deg);}}
 .vtd-spinner{
 display:inline-block;
@@ -30,7 +25,15 @@ border:0.15em solid color-mix(in srgb, currentColor 25%, transparent);
 border-top-color:currentColor;
 animation:vtd-spinner-rotate 0.6s linear infinite;
 }
-`, "vtd/Spinner")
+`
+
+/**
+ * A standalone animated loading indicator
+ */
+export const Spinner: FunctionComponent<SpinnerAttrsType> = function(attrs: SpinnerAttrsType, _children: RenderableElements[]): HTMLSpanElement {
+    if (!areSpinnerStylesMounted) {
+        areSpinnerStylesMounted = true
+        mountStyles(spinnerCss, "vtd/Spinner")
     }
 
     const size = attrs.size || "1em"

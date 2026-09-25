@@ -32,6 +32,29 @@ export type PopconfirmAttrsType = {
 
 let arePopconfirmStylesMounted = false
 
+/** Stylesheet for `<Popconfirm/>`, mounted once on first construction */
+const popconfirmCss: string = `
+.vtd-popconfirm{position:relative;display:inline-block;}
+.vtd-popconfirm-trigger{cursor:pointer;display:inline-block;}
+.vtd-popconfirm-content{
+display:none;
+position:absolute;
+top:100%;
+left:0;
+z-index:1000;
+margin-block-start:0.4em;
+min-width:14em;
+padding:0.75em 1em;
+background-color:var(--background-1);
+border:1px solid var(--background-4);
+border-radius:0.25rem;
+box-shadow:0 2px 8px rgba(0,0,0,0.15);
+}
+.vtd-popconfirm-content.vtd-popconfirm-open{display:block;}
+.vtd-popconfirm-title{margin-block-end:0.75em;}
+.vtd-popconfirm-actions{display:flex;justify-content:end;gap:0.5em;}
+`
+
 /**
  * Wraps `children` (the trigger - typically a real `Button`, e.g. "Delete") with a small
  * inline "are you sure?" bubble, for confirming a destructive action without the weight of a
@@ -109,27 +132,7 @@ export class Popconfirm extends Component<PopconfirmAttrsType> {
         this.#attrs = attrs
         if (!arePopconfirmStylesMounted) {
             arePopconfirmStylesMounted = true
-            mountStyles(`
-.vtd-popconfirm{position:relative;display:inline-block;}
-.vtd-popconfirm-trigger{cursor:pointer;display:inline-block;}
-.vtd-popconfirm-content{
-display:none;
-position:absolute;
-top:100%;
-left:0;
-z-index:1000;
-margin-block-start:0.4em;
-min-width:14em;
-padding:0.75em 1em;
-background-color:var(--background-1);
-border:1px solid var(--background-4);
-border-radius:0.25rem;
-box-shadow:0 2px 8px rgba(0,0,0,0.15);
-}
-.vtd-popconfirm-content.vtd-popconfirm-open{display:block;}
-.vtd-popconfirm-title{margin-block-end:0.75em;}
-.vtd-popconfirm-actions{display:flex;justify-content:end;gap:0.5em;}
-`, "vtd/Popconfirm")
+            mountStyles(popconfirmCss, "vtd/Popconfirm")
         }
 
         this.#bubble = <div class="vtd-popconfirm-content">

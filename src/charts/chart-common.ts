@@ -230,20 +230,8 @@ export function drawAxes(
 
 let areChartStylesMounted = false
 
-/**
- * Mounts the stylesheet every chart shares, once.
- *
- * One key for the whole category, for the same reason `DataTable`/`AsyncDataTable` share one: two
- * stylesheets are two places for a tick's font size to diverge, and charts that don't match each
- * other are worse than charts that don't match anything.
- */
-export function mountChartStyles(): void {
-    if (areChartStylesMounted) {
-        return
-    }
-    areChartStylesMounted = true
-    mountStyles(
-`
+/** Stylesheet for `<Chart/>`, mounted once on first construction */
+const chartCss: string = `
 .vtd-chart{width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:0.5em;position:relative;}
 .vtd-chart-svg{display:block;width:100%;overflow:visible;}
 ` +
@@ -358,7 +346,21 @@ transition:opacity 0.1s ease-out;
 @media (prefers-reduced-motion: reduce){
 .vtd-chart-bar,.vtd-chart-arc,.vtd-chart-tooltip{transition:none;}
 }
-`, "vtd/Chart", "base")
+`
+
+/**
+ * Mounts the stylesheet every chart shares, once.
+ *
+ * One key for the whole category, for the same reason `DataTable`/`AsyncDataTable` share one: two
+ * stylesheets are two places for a tick's font size to diverge, and charts that don't match each
+ * other are worse than charts that don't match anything.
+ */
+export function mountChartStyles(): void {
+    if (areChartStylesMounted) {
+        return
+    }
+    areChartStylesMounted = true
+    mountStyles(chartCss, "vtd/Chart", "base")
 }
 
 /** Builds the legend row; returns undefined when there is nothing worth labelling */

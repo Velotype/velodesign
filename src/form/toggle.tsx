@@ -26,15 +26,8 @@ export type ToggleAttrsType = {
  */
 let areToggleStylesMounted = false
 
-/**
- * An interactable Toggle (switch), for boolean settings
- *
- * `<Toggle name="some-name"/>Enable notifications</Toggle>`
- */
-export const Toggle: FunctionComponent<ToggleAttrsType> = function(attrs: ToggleAttrsType, children: RenderableElements[]): HTMLLabelElement {
-    if (!areToggleStylesMounted) {
-        areToggleStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<Toggle/>`, mounted once on first construction */
+const toggleCss: string = `
 .vtd-toggle-container{
 cursor:pointer;
 display:inline-flex;
@@ -85,7 +78,17 @@ background-color:var(--background);
 .vtd-toggle-disabled{opacity:0.5;cursor:not-allowed;}
 .vtd-toggle-container:has(> .vtd-toggle-input:disabled){cursor:not-allowed;}
 .vtd-toggle-input:focus-visible ~ .vtd-toggle-track{outline:2px solid var(--primary-7);outline-offset:2px;}
-`, "vtd/Toggle")
+`
+
+/**
+ * An interactable Toggle (switch), for boolean settings
+ *
+ * `<Toggle name="some-name"/>Enable notifications</Toggle>`
+ */
+export const Toggle: FunctionComponent<ToggleAttrsType> = function(attrs: ToggleAttrsType, children: RenderableElements[]): HTMLLabelElement {
+    if (!areToggleStylesMounted) {
+        areToggleStylesMounted = true
+        mountStyles(toggleCss, "vtd/Toggle")
     }
 
     return passthroughAttrsToElement<HTMLLabelElement>(<label class="vtd-toggle-container">

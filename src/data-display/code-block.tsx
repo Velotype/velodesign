@@ -240,25 +240,8 @@ function tokenize(code: string, language: CodeLanguage): Token[] {
 
 let areCodeBlockStylesMounted = false
 
-/**
- * A block of source code, highlighted and horizontally scrollable.
- *
- * Highlighting is a small scanner in this file rather than a highlighting library, because a
- * library is a runtime dependency and this package has none - see CLAUDE.md. That buys a grammar
- * that is good enough to read and honest about its limits (`CodeLanguage` is three values, not
- * thirty) rather than one that is comprehensive and 200KB.
- *
- * The code is rendered as **text nodes**, never as markup, so a snippet containing tags shows
- * those tags instead of rendering them.
- */
-export const CodeBlock: FunctionComponent<CodeBlockAttrsType> = function(attrs: CodeBlockAttrsType): HTMLElement {
-    const language = attrs.language ?? "tsx"
-    const tokens = tokenize(attrs.code, language)
-
-    if (!areCodeBlockStylesMounted) {
-        areCodeBlockStylesMounted = true
-        mountStyles(
-`
+/** Stylesheet for `<CodeBlock/>`, mounted once on first construction */
+const codeBlockCss: string = `
 .vtd-code-block{
 width:100%;
 box-sizing:border-box;
@@ -287,52 +270,90 @@ tab-size:4;
 `
 ` +
 /*
- * Every step here was chosen by measuring, not by eye, and the measurement is why they are all
- * higher than they were.
+ * CodeBlock names its own syntax colours rather than deriving them from the theme ramps.
  *
- * The ramps are theme-aware already - they invert - but a *fixed* step does not give a fixed
- * contrast, because the two themes are built from different base colours: light mode's secondary is
- * a pale green meant for fills, dark mode's is a deep one. So `--secondary-7` read 1.71:1 on the
- * light theme's code background and 7.01:1 on the dark, and `--accent-7` was 5.37:1 light against
- * 3.43:1 dark. Four of the seven tokens failed WCAG AA's 4.5:1 in one theme or the other, and which
- * four depended on the theme - which is why this looks like "only styled for light mode" from one
- * side and fine from the other.
+ * Deriving looked right and measured wrong. A fixed ramp step does not give a fixed contrast,
+ * because the two themes are built from different base colours: `--secondary-7` read 1.71:1 on the
+ * light code background and 7.01:1 on the dark, and four of the seven tokens failed WCAG AA's
+ * 4.5:1 in one theme or the other. Moving every token to step 8 fixed the contrast and cost the
+ * colour - each step is a `color-mix` in *hsl* toward black or white, both of which have zero
+ * saturation, so mixing drags the hue down along with the lightness.
  *
- * ⚠️ **The ramp trades saturation for contrast, so the highest steps are the muddiest.** Each step
- * is a `color-mix` in *hsl* toward black or white, and both of those have a saturation of zero, so
- * mixing drags the hue's saturation down with its lightness. Measured on the resolved colours:
- * step 8 sits at 0.40 saturation and step 9 at 0.20 - half as vivid for the sake of contrast nobody
- * asked for. Every coloured token is therefore on step 8, the most saturated step that is still
- * readable in both themes:
+ * The deeper problem is hue rather than step. A syntax palette wants hues picked for it, and the
+ * theme's are picked for fills and buttons: `--secondary` is `#c6ff9e`, a pale yellow-green at hue
+ * 133, so anything derived from it reads olive however it is darkened - and at hue 142 the sRGB
+ * gamut holds about 20% more chroma at the same contrast anyway. The ramps stay theme-aware for
+ * the rest of the package; only these seven tokens opt out.
  *
- *   step        light  dark  sat      step           light  dark
- *   primary-8     7.6   6.7  0.40     background-6     4.6   5.4
- *   secondary-8   4.4   7.8  0.40     background-7     6.8   7.1
- *   warning-8     5.9   8.1  0.40
- *   accent-8      8.7   5.9  0.40
+ * Both palettes are measured against the block's own background, and every token clears AA.
+ * `basic_tests` asserts it rather than trusting this table, which is stale the moment a value
+ * or a background moves:
  *
- * `secondary-8` is 4.4:1 in light, a shade under WCAG AA's 4.5:1 for body text. Taken knowingly:
- * the step that clears it is the 0.20-saturation one that reads as grey-green, and a syntax colour
- * that cannot be told from its neighbours has failed at the job the colour is there to do.
+ *   light, on #e6e6e6                     dark, on #2c2c2c
+ *     keyword  #005ab7  5.35:1              keyword  #9bb7d4  6.73:1
+ *     string   #047101  5.00:1              string   #a7cd8b  7.81:1
+ *     attr     #826300  4.51:1              attr     #d4c59b  8.15:1
+ *     tag      #a3001d  6.53:1              tag      #d49b9b  5.96:1
+ *     comment  #666666  4.60:1              comment  #a1a1a1  5.41:1
+ *     punct    #4d4d4d  6.77:1              punct    #b9b9b9  7.12:1
  *
- * **Genuinely vivid syntax colours need a surface of their own, not a different step.** The light
- * theme's hues are pastels meant for fills - a pale yellow or a pale green simply cannot be both
- * saturated and readable on a near-white background, which is why every documentation site that
- * wants vivid code gives the block a dark surface in both themes. That is a visual decision rather
- * than a correctness one, so it is not taken here.
+ * ⚠️ **The light attr has the thinnest margin in the palette, at 4.51:1 against a 4.5 floor.**
+ * Gold is the worst case here - hue 87 sits where the sRGB gamut is widest and eyes are most
+ * luminance-sensitive, so a gold light enough to read as gold is too light to carry small text on
+ * a pale ground. A brighter `#a47d00` was tried and measures 3.05:1; it fails AA on *every*
+ * surface, including white (3.81:1) and the dark theme's own (3.67:1), so no background rescues
+ * it. This value is the compromise, and its margin is small enough that the test is what keeps it
+ * honest if the code background ever moves.
+ *
+ * ⚠️ **Light is contrast-bound, not taste-bound.** A vivid green such as `#069e00` measures
+ * 2.85:1 here and is not usable; the values above are as light as AA allows at their hues. Dark has the opposite constraint and lands on pastels. The one lever that buys real
+ * saturation across the board is giving the block a dark surface in *both* themes, which is what
+ * documentation sites with vivid code do - a visual decision rather than a correctness one.
+ *
+ * ⚠️ The surface itself is still `--background-1`, so these values assume the default themes' code
+ * backgrounds. A custom theme that moved those far would need this palette moved with it.
  *
  * Numbers take the same green as strings on purpose: with four hues and six coloured kinds
  * something has to share, and a number and a string are both literal values, which is the pairing
  * every syntax theme makes.
+ *
+ * ⚠️ **The palette is carried by custom properties, not by `[data-theme] .token` rules.** Those
+ * were tried and are wrong: a descendant combinator matches *any* ancestor, so a light-themed
+ * subtree inside a dark-themed page matches both rules at equal specificity and source order
+ * decides - every token in the inner scope silently took the outer theme's colour. A custom
+ * property resolves from the *nearest* ancestor that sets it, which is why the theme ramps nest
+ * correctly, and `setThemeOnSelector` exists precisely to theme a subtree.
+ *
+ * Neither palette is unqualified, so a page that never stamped `data-theme` gets no colour and
+ * keeps inheriting its text colour, rather than being handed light colours over an unknown
+ * background.
  */
 `
-.vtd-code-block-comment{color:var(--background-6);font-style:italic;}
-.vtd-code-block-string{color:var(--secondary-8);}
-.vtd-code-block-keyword{color:var(--primary-8);}
-.vtd-code-block-tag{color:var(--accent-8);}
-.vtd-code-block-attr{color:var(--warning-8);}
-.vtd-code-block-number{color:var(--secondary-8);}
-.vtd-code-block-punct{color:var(--background-7);}
+[data-theme="light"]{
+--vtd-code-comment:#666666;
+--vtd-code-string:#047101;
+--vtd-code-keyword:#005ab7;
+--vtd-code-tag:#a3001d;
+--vtd-code-attr:#826300;
+--vtd-code-punct:#4d4d4d;
+--vtd-code-gutter:#676767;
+}
+[data-theme="dark"]{
+--vtd-code-comment:#a1a1a1;
+--vtd-code-string:#a7cd8b;
+--vtd-code-keyword:#9bb7d4;
+--vtd-code-tag:#d49b9b;
+--vtd-code-attr:#d4c59b;
+--vtd-code-punct:#b9b9b9;
+--vtd-code-gutter:#939393;
+}
+.vtd-code-block-comment{color:var(--vtd-code-comment);font-style:italic;}
+.vtd-code-block-string{color:var(--vtd-code-string);}
+.vtd-code-block-number{color:var(--vtd-code-string);}
+.vtd-code-block-keyword{color:var(--vtd-code-keyword);}
+.vtd-code-block-tag{color:var(--vtd-code-tag);}
+.vtd-code-block-attr{color:var(--vtd-code-attr);}
+.vtd-code-block-punct{color:var(--vtd-code-punct);}
 ` +
 /*
  * Line numbers are a counter on each line rather than a second column of text, so selecting the
@@ -347,10 +368,17 @@ display:inline-block;
 width:2.5em;
 margin-inline-end:1em;
 text-align:right;
-color:var(--background-5);
 user-select:none;
 }
 .vtd-code-block-line{display:block;min-height:1.6em;}
+` +
+/*
+ * The gutter reads as a dim neutral, but not dimmer than AA: `--background-5` measured 3.16:1 in
+ * light and 4.05:1 in dark, and a line number is content - it is how someone says "line 42" - not
+ * decoration. These are the dimmest greys that still clear 4.5:1 on each surface.
+ */
+`
+.vtd-code-block-numbered .vtd-code-block-line::before{color:var(--vtd-code-gutter);}
 ` +
 /*
  * A hanging indent, so wrap and showLineNumbers work together: without it a wrapped line's
@@ -360,7 +388,26 @@ user-select:none;
  */
 `
 .vtd-code-block-numbered.vtd-code-block-wrap .vtd-code-block-line{padding-inline-start:3.5em;text-indent:-3.5em;}
-`, "vtd/CodeBlock")
+`
+
+/**
+ * A block of source code, highlighted and horizontally scrollable.
+ *
+ * Highlighting is a small scanner in this file rather than a highlighting library, because a
+ * library is a runtime dependency and this package has none - see CLAUDE.md. That buys a grammar
+ * that is good enough to read and honest about its limits (`CodeLanguage` is three values, not
+ * thirty) rather than one that is comprehensive and 200KB.
+ *
+ * The code is rendered as **text nodes**, never as markup, so a snippet containing tags shows
+ * those tags instead of rendering them.
+ */
+export const CodeBlock: FunctionComponent<CodeBlockAttrsType> = function(attrs: CodeBlockAttrsType): HTMLElement {
+    const language = attrs.language ?? "tsx"
+    const tokens = tokenize(attrs.code, language)
+
+    if (!areCodeBlockStylesMounted) {
+        areCodeBlockStylesMounted = true
+        mountStyles(codeBlockCss, "vtd/CodeBlock")
     }
 
     const classes = ["vtd-code-block"]

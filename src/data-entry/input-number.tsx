@@ -29,14 +29,8 @@ export type InputNumberAttrsType = {
 
 let areInputNumberStylesMounted = false
 
-/**
- * A themed numeric input, wrapping a native `<input type="number"/>` (including its
- * built-in up/down steppers and keyboard handling)
- */
-export const InputNumber: FunctionComponent<InputNumberAttrsType> = function(attrs: InputNumberAttrsType, _children: RenderableElements[]): HTMLInputElement {
-    if (!areInputNumberStylesMounted) {
-        areInputNumberStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<InputNumber/>`, mounted once on first construction */
+const inputNumberCss: string = `
 .vtd-input-number{
 padding:0.5ex 1ex;
 margin-inline-start:1ex;
@@ -48,7 +42,16 @@ font:inherit;
 width:8em;
 }
 .vtd-input-number:disabled{cursor:not-allowed;opacity:0.6;}
-`, "vtd/InputNumber")
+`
+
+/**
+ * A themed numeric input, wrapping a native `<input type="number"/>` (including its
+ * built-in up/down steppers and keyboard handling)
+ */
+export const InputNumber: FunctionComponent<InputNumberAttrsType> = function(attrs: InputNumberAttrsType, _children: RenderableElements[]): HTMLInputElement {
+    if (!areInputNumberStylesMounted) {
+        areInputNumberStylesMounted = true
+        mountStyles(inputNumberCss, "vtd/InputNumber")
     }
 
     return passthroughAttrsToElement<HTMLInputElement>(<input

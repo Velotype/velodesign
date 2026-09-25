@@ -107,6 +107,133 @@ export const MenuThemeOptions: {
 
 let areMenuStylesMounted = false
 
+/** Stylesheet for `<Menu/>`, mounted once on first construction */
+const menuCss: string = `
+.vtd-menu{
+position:relative;
+display:inline-block;
+}
+.vtd-menu-trigger{
+cursor:pointer;
+display:inline-block;
+list-style:none;
+user-select:none;
+padding:0.25rem 0.5rem;
+border-radius:0.25rem;
+}
+.vtd-menu-trigger::-webkit-details-marker{display:none;}
+.vtd-menu-trigger::marker{display:none;content:"";}
+.vtd-menu-trigger:hover{background-color:var(--background-1);}
+.vtd-menu-list{
+position:absolute;
+top:100%;
+left:0;
+z-index:1000;
+min-width:10em;
+margin-block-start:0.25em;
+padding:0.25em;
+list-style:none;
+background-color:var(--background-1);
+border:1px solid var(--background-4);
+border-radius:0.25rem;
+box-shadow:0 2px 8px rgba(0,0,0,0.15);
+}
+.vtd-menu-item{
+display:block;
+padding:0.4em 0.75em;
+border-radius:0.25rem;
+color:inherit;
+text-decoration:none;
+}
+.vtd-menu-item:hover{background-color:var(--background-2);}
+` +
+/*
+ * Keyboard position in a popup list is a tinted fill, not a ring: the rows are full-bleed inside
+ * the panel, so an offset outline would run into its edges. It must differ from hover, which is
+ * where this was wrong - Menu and ContextMenu highlighted the focused row with exactly the colour
+ * their hover already used, so moving through a menu by keyboard looked the same as pointing at it,
+ * and on a row the pointer happened to rest on it looked like nothing at all. Same tint as Command
+ * and the two listboxes, so one colour means one thing everywhere in the package.
+ */
+`
+.vtd-menu-item:focus-visible{background-color:var(--primary-3);outline:none;}
+.vtd-menu-item-disabled{opacity:0.5;cursor:not-allowed;pointer-events:none;}
+` +
+/*
+ * The tick is always rendered and only its opacity changes, so the label sits in the same place
+ * whether or not this is the selected entry. Rendering it conditionally would move every label in
+ * the group sideways each time the reader picked a different one.
+ */
+`
+.vtd-menu-item-checkable{display:flex;align-items:center;gap:0.4em;}
+.vtd-menu-check{
+display:inline-flex;
+align-items:center;
+justify-content:center;
+flex-shrink:0;
+width:1em;
+opacity:0;
+color:var(--primary);
+}
+.vtd-menu-item-checkable[aria-checked="true"]{font-weight:bold;}
+.vtd-menu-item-checkable[aria-checked="true"] .vtd-menu-check{opacity:1;}
+` +
+/*
+ * An entry is the positioning context for its own submenu, so a flyout sits beside the row that
+ * opened it rather than beside the menu as a whole.
+ */
+`
+.vtd-menu-entry{position:relative;}
+` +
+/* A divider belongs to the entry below it, drawn in its margin so no row changes height */
+`
+.vtd-menu-entry-divided{
+margin-block-start:0.3em;
+padding-block-start:0.3em;
+border-block-start:1px solid var(--background-4);
+}
+` +
+/* The parent row is a div, not a link - there is nothing to navigate to, and a link that only
+   opened a submenu would be announced as a destination */
+`
+.vtd-menu-item-parent{cursor:pointer;display:flex;align-items:center;gap:0.5em;}
+` +
+/* A caret drawn in CSS, for the same reason the rest of the package does: no icon-font dependency */
+`
+.vtd-menu-item-parent::after{
+content:"";
+margin-inline-start:auto;
+width:0.4em;
+height:0.4em;
+border:solid currentcolor;
+border-width:0.1em 0.1em 0 0;
+transform:rotate(45deg);
+flex-shrink:0;
+}
+.vtd-menu-sublist{
+display:none;
+position:absolute;
+inset-inline-start:100%;
+top:-0.25em;
+min-width:10em;
+padding:0.25em;
+margin:0;
+list-style:none;
+background-color:var(--background-1);
+border:1px solid var(--background-4);
+border-radius:0.25rem;
+box-shadow:0 2px 8px rgba(0,0,0,0.15);
+}
+` +
+/*
+ * One open state, set by both pointer and keyboard. A :hover rule as well would race it: the
+ * pointer could open one branch while the keyboard had another open, and neither would know.
+ */
+`
+.vtd-menu-entry-open > .vtd-menu-sublist{display:block;}
+.vtd-menu-entry-open > .vtd-menu-item-parent{background-color:var(--background-2);}
+`
+
 /**
  * A dropdown menu, for either a submenu of navigational links or a small actions menu.
  *
@@ -359,132 +486,7 @@ export class Menu extends Component<MenuAttrsType> {
         this.#attrs = attrs
         if (!areMenuStylesMounted) {
             areMenuStylesMounted = true
-            mountStyles(
-`
-.vtd-menu{
-position:relative;
-display:inline-block;
-}
-.vtd-menu-trigger{
-cursor:pointer;
-display:inline-block;
-list-style:none;
-user-select:none;
-padding:0.25rem 0.5rem;
-border-radius:0.25rem;
-}
-.vtd-menu-trigger::-webkit-details-marker{display:none;}
-.vtd-menu-trigger::marker{display:none;content:"";}
-.vtd-menu-trigger:hover{background-color:var(--background-1);}
-.vtd-menu-list{
-position:absolute;
-top:100%;
-left:0;
-z-index:1000;
-min-width:10em;
-margin-block-start:0.25em;
-padding:0.25em;
-list-style:none;
-background-color:var(--background-1);
-border:1px solid var(--background-4);
-border-radius:0.25rem;
-box-shadow:0 2px 8px rgba(0,0,0,0.15);
-}
-.vtd-menu-item{
-display:block;
-padding:0.4em 0.75em;
-border-radius:0.25rem;
-color:inherit;
-text-decoration:none;
-}
-.vtd-menu-item:hover{background-color:var(--background-2);}
-` +
-/*
- * Keyboard position in a popup list is a tinted fill, not a ring: the rows are full-bleed inside
- * the panel, so an offset outline would run into its edges. It must differ from hover, which is
- * where this was wrong - Menu and ContextMenu highlighted the focused row with exactly the colour
- * their hover already used, so moving through a menu by keyboard looked the same as pointing at it,
- * and on a row the pointer happened to rest on it looked like nothing at all. Same tint as Command
- * and the two listboxes, so one colour means one thing everywhere in the package.
- */
-`
-.vtd-menu-item:focus-visible{background-color:var(--primary-3);outline:none;}
-.vtd-menu-item-disabled{opacity:0.5;cursor:not-allowed;pointer-events:none;}
-` +
-/*
- * The tick is always rendered and only its opacity changes, so the label sits in the same place
- * whether or not this is the selected entry. Rendering it conditionally would move every label in
- * the group sideways each time the reader picked a different one.
- */
-`
-.vtd-menu-item-checkable{display:flex;align-items:center;gap:0.4em;}
-.vtd-menu-check{
-display:inline-flex;
-align-items:center;
-justify-content:center;
-flex-shrink:0;
-width:1em;
-opacity:0;
-color:var(--primary);
-}
-.vtd-menu-item-checkable[aria-checked="true"]{font-weight:bold;}
-.vtd-menu-item-checkable[aria-checked="true"] .vtd-menu-check{opacity:1;}
-` +
-/*
- * An entry is the positioning context for its own submenu, so a flyout sits beside the row that
- * opened it rather than beside the menu as a whole.
- */
-`
-.vtd-menu-entry{position:relative;}
-` +
-/* A divider belongs to the entry below it, drawn in its margin so no row changes height */
-`
-.vtd-menu-entry-divided{
-margin-block-start:0.3em;
-padding-block-start:0.3em;
-border-block-start:1px solid var(--background-4);
-}
-` +
-/* The parent row is a div, not a link - there is nothing to navigate to, and a link that only
-   opened a submenu would be announced as a destination */
-`
-.vtd-menu-item-parent{cursor:pointer;display:flex;align-items:center;gap:0.5em;}
-` +
-/* A caret drawn in CSS, for the same reason the rest of the package does: no icon-font dependency */
-`
-.vtd-menu-item-parent::after{
-content:"";
-margin-inline-start:auto;
-width:0.4em;
-height:0.4em;
-border:solid currentcolor;
-border-width:0.1em 0.1em 0 0;
-transform:rotate(45deg);
-flex-shrink:0;
-}
-.vtd-menu-sublist{
-display:none;
-position:absolute;
-inset-inline-start:100%;
-top:-0.25em;
-min-width:10em;
-padding:0.25em;
-margin:0;
-list-style:none;
-background-color:var(--background-1);
-border:1px solid var(--background-4);
-border-radius:0.25rem;
-box-shadow:0 2px 8px rgba(0,0,0,0.15);
-}
-` +
-/*
- * One open state, set by both pointer and keyboard. A :hover rule as well would race it: the
- * pointer could open one branch while the keyboard had another open, and neither would know.
- */
-`
-.vtd-menu-entry-open > .vtd-menu-sublist{display:block;}
-.vtd-menu-entry-open > .vtd-menu-item-parent{background-color:var(--background-2);}
-`, "vtd/Menu")
+            mountStyles(menuCss, "vtd/Menu")
         }
 
         this.#summaryElement = <summary class="vtd-menu-trigger" aria-label={attrs.ariaLabel}>{attrs.trigger}</summary>

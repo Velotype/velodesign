@@ -1,5 +1,5 @@
 import type { EmptyAttrs, RenderableElements } from "@velotype/velotype"
-import { Component, getComponent, RenderBasic } from "@velotype/velotype"
+import { Component, getComponent, RenderBasic, RenderObject } from "@velotype/velotype"
 
 import { stories } from "../../../tests/test_modules/explorer-schema.tsx"
 import type { ComponentStory } from "../../../tests/test_modules/explorer-schema.tsx"
@@ -13,6 +13,8 @@ import {
     LineChart, AreaChart, BarChart, PieChart, Gauge, Sparkline,
     Heading, Text, Paragraph, Stack, Grid, CodeBlock, TableOfContents,
     Textarea, TextEditableField, TextFormField, TextNonEditableField, TimeAgo, Timeline, Toggle,
+    History, highlightMatch,
+    EditableField, bindValue,
     Tooltip, Tree, Upload, AsyncDataTable,
 } from "@velotype/velodesign"
 
@@ -156,6 +158,7 @@ const descriptions: Record<string, string> = {
     TextNonEditableField: "A read-only label/value pair, styled consistently with the other form-field components.",
     TextFormField: "A label paired with a TextBox, bound to a RenderBasic field value.",
     TextEditableField: "A label/value pair that swaps between a read view and an inline-editable TextBox with confirm/cancel.",
+    EditableField: "A label/value row that swaps into an editor in place, saves, and swaps back. The editor is whatever you pass, so it works with any control in the package - and onSave can be async, keeping the reader's draft and showing the reason if it fails.",
     // Navigation
     NavLink: "A Link that also knows whether it matches the current location, for highlighting active navigation items.",
     Link: "An anchor that navigates within the app via History.changeLocation instead of a full page reload.",
@@ -360,6 +363,7 @@ const typeDefinitions: Record<string, TypeDoc> = {
             {name: "trailing", type: "RenderableElements", description: "Content at the trailing edge of the row - a count, a Badge."},
             {name: "children", type: "SidebarItemType[]", description: "Nested entries. An entry with children renders as a collapsible group."},
             {name: "defaultOpen", type: "boolean", defaultValue: "false", description: "Whether this group starts expanded."},
+            {name: "dividerBefore", type: "boolean", defaultValue: "false", description: "Draws a rule above this entry, for separating one run of entries from the next. Ignored on the first entry, where it would be a rule against the top of the list, and suppressed on the collapsed rail, where a full-width line between two bare glyphs reads as a break in the strip rather than as a grouping. Same name and behaviour as MenuItemType's."},
         ],
     },
     SidebarProfileType: {
@@ -456,6 +460,8 @@ const typeDefinitions: Record<string, TypeDoc> = {
         fields: [
             {name: "value", type: "string", required: true, description: "The value written into the input when chosen."},
             {name: "label", type: "string", defaultValue: "the value", description: "Text shown in the list, when it should differ from the value."},
+            {name: "searchText", type: "string", defaultValue: "the label, else the value", description: "Text matched against the query, when the option should be findable by more than it shows - e.g. \"Button Form\" so that typing a category finds everything in it. Show the text you match on wherever you can: a match in text the row never displays finds the row but cannot explain why it is there."},
+            {name: "onSelect", type: "() => void", description: "Called when this option is picked, by click or Enter, after the input has taken its value and the panel has closed. This is what makes the panel a way of going somewhere rather than only a way of filling in the box."},
         ],
     },
     SelectOptionType: {
@@ -710,9 +716,25 @@ const themeOptionDefinitions: Record<string, TypeDoc> = {
             {name: "cancelSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.cancelSymbol", description: "Content of the cancel button."},
         ],
     },
+    SidebarThemeOptions: {
+        name: "SidebarThemeOptions",
+        description: "The glyph the overlay panel's close control uses.",
+        fields: [
+            {name: "closeSymbol", type: "ThemeSymbol", defaultValue: "an arrow curving up and back", description: "Dismisses the overlay panel. Its own glyph rather than CommonThemeOptions.closeSymbol: in overlay mode the header can hold a search box, and that box has a cross for emptying it - two crosses a few pixels apart, one clearing a field and one shutting the panel. A cross is the right mark for clearing, so the panel takes an arrow that says where it goes instead."},
+        ],
+    },
+    EditableFieldThemeOptions: {
+        name: "EditableFieldThemeOptions",
+        description: "The glyphs EditableField uses. TextFormFieldThemeOptions is the same object under its former name.",
+        fields: [
+            {name: "confirmSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.confirmSymbol", description: "Saves an edit."},
+            {name: "cancelSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.cancelSymbol", description: "Discards an edit."},
+            {name: "editSymbol", type: "ThemeSymbol", defaultValue: "a pencil", description: "Starts an edit. No counterpart elsewhere in the package, so it stays local."},
+        ],
+    },
     TextFormFieldThemeOptions: {
         name: "TextFormFieldThemeOptions",
-        description: "The glyphs the editable text fields use.",
+        description: "The glyphs the editable text fields use. Deprecated alias of EditableFieldThemeOptions.",
         fields: [
             {name: "confirmSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.confirmSymbol", description: "Confirms an inline edit."},
             {name: "cancelSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.cancelSymbol", description: "Cancels an inline edit."},
@@ -745,6 +767,7 @@ const componentThemeOptions: Record<string, string[]> = {
     Empty: ["CommonThemeOptions", "EmptyThemeOptions"],
     Tag: ["CommonThemeOptions", "TagThemeOptions"],
     Breadcrumbs: ["CommonThemeOptions", "BreadcrumbsThemeOptions"],
+    Sidebar: ["SidebarThemeOptions"],
     Pagination: ["CommonThemeOptions", "PaginationThemeOptions"],
     Modal: ["CommonThemeOptions", "ModalThemeOptions"],
     Drawer: ["CommonThemeOptions", "DrawerThemeOptions"],
@@ -752,6 +775,7 @@ const componentThemeOptions: Record<string, string[]> = {
     Popconfirm: ["CommonThemeOptions", "PopconfirmThemeOptions"],
     TextFormField: ["CommonThemeOptions", "TextFormFieldThemeOptions"],
     TextEditableField: ["CommonThemeOptions", "TextFormFieldThemeOptions"],
+    EditableField: ["CommonThemeOptions", "EditableFieldThemeOptions"],
     TextNonEditableField: ["CommonThemeOptions", "TextFormFieldThemeOptions"],
     DataTable: ["CommonThemeOptions", "DataTableThemeOptions"],
     AsyncDataTable: ["CommonThemeOptions", "DataTableThemeOptions"],
@@ -856,6 +880,18 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "field", type: "RenderBasic<string>", required: true, description: "The bound reactive value."},
         {name: "type", type: "TextBoxType", defaultValue: "text", description: "Input type while editing."},
         {name: "fieldName", type: "string", description: "Name for the underlying <input> while editing."},
+    ],
+    EditableField: [
+        {name: "value", type: "RenderObject<T>", required: true, description: "The saved value. Written only once a save succeeds."},
+        {name: "edit", type: "(draft: RenderObject<T>) => RenderableElements", required: true, description: "Renders the control for editing, bound to a draft seeded from value. Nothing the reader types reaches value until the save succeeds, which is what makes cancel free."},
+        {name: "display", type: "(value: T) => RenderableElements", description: "Renders the saved value for reading. Defaults to String(value) - give it something for the empty case."},
+        {name: "onSave", type: "(value: T) => void | Promise<void>", description: "Persists the edit. A promise puts the field in a saving state; a rejection keeps the reader in edit mode with their draft and shows the reason. Without one the field just writes value."},
+        {name: "label", type: "RenderableElements", description: "Label for the field, shown in both modes."},
+        {name: "hint", type: "RenderableElements", description: "Guidance shown under the control, in both modes."},
+        {name: "required", type: "boolean", defaultValue: "false", description: "Marks the field required. Does not validate - that is onSave's to reject."},
+        {name: "editLabel", type: "string", defaultValue: '"Edit"', description: "Accessible name for the control that starts an edit."},
+        {name: "confirmLabel", type: "string", defaultValue: '"Save"', description: "Accessible name for the control that saves."},
+        {name: "cancelLabel", type: "string", defaultValue: '"Cancel"', description: "Accessible name for the control that discards."},
     ],
     NavLink: [
         {name: "to", type: "string", required: true, description: "Target URL."},
@@ -1265,6 +1301,8 @@ const attrTables: Record<string, AttrDoc[]> = {
     ],
     Combobox: [
         {name: "options", type: "ComboboxOptionType[]", required: true, description: "Suggested options."},
+        {name: "clearOnSelect", type: "boolean", defaultValue: "false", description: "Empties the input after a pick instead of leaving the chosen value in it. For a box that finds something rather than fills in a field - pair it with onSelect. Leaving the last pick in the box means clearing it by hand before searching again, and makes a pick that goes nowhere new - the page you are already on - look as though nothing happened. No further input event is emitted for the clear."},
+        {name: "renderOption", type: "(option, query) => RenderableElements", description: "Draws an option as markup - an icon, a trailing category - instead of its label text. Given the current query as well, because the match has to stay visible: the default rendering marks the part of the label that matched, and a custom one that ignores the query silently drops that feedback. Run the query through highlightMatch on whichever text the reader is searching. Named to match SelectMenu's."},
         {name: "value", type: "string", description: "Current value."},
         {name: "placeholder", type: "string", description: "Placeholder text."},
         {name: "noMatchMessage", type: "RenderableElements", defaultValue: "CommonThemeOptions.emptySymbol", description: "Shown in the panel when the query matches none of the options."},
@@ -1308,7 +1346,7 @@ export function OpenCount(attrs: {items: string[]}) {
     return <Badge type="primary">{total} open</Badge>
 }`
 
-const CODE_SAMPLE_CSS = `/* Token colours only - never a literal */
+const CODE_SAMPLE_CSS = `/* The surface follows the theme; the syntax colours do not */
 .vtd-code-block {
     background-color: var(--background-1);
     border: 1px solid var(--background-4);
@@ -1362,6 +1400,11 @@ const col = {display: "flex", flexDirection: "column", gap: "0.75em"} as const
 
 const textFormFieldValue = new RenderBasic<string>("editable value")
 const textEditableFieldValue = new RenderBasic<string>("click edit to change me")
+/* One per example, so editing the plain one does not also change what the saving one shows */
+const editableName = new RenderObject<string>("Ada Lovelace")
+const editablePlan = new RenderObject<string>("pro")
+const editableSaving = new RenderObject<string>("saves after a moment")
+const editableFailing = new RenderObject<string>("this one refuses")
 const selectMenuSelection = new RenderBasic<string>("Jamie Rivera")
 
 /**
@@ -1391,6 +1434,31 @@ class CalendarRangeDemo extends Component<EmptyAttrs> {
 }
 
 /** A long option list for Combobox, so its search/filter behavior actually has something to filter */
+/*
+ * Rich labels plus onSelect - the shape the showcase's own Navbar search uses.
+ *
+ * Spelled out rather than derived from `componentDocs`: that is declared further down this file,
+ * so reading it here would touch it before it is initialised.
+ */
+const comboboxRichEntries = [
+    {name: "Button", group: "Form", slug: "button"},
+    {name: "Card", group: "Data Display", slug: "card"},
+    {name: "Modal", group: "Overlays", slug: "modal"},
+]
+const comboboxRichOptions = comboboxRichEntries.map(entry => ({
+    value: entry.name,
+    searchText: `${entry.name} ${entry.group}`,
+    onSelect: () => History.changeLocation(`/components/${entry.slug}`),
+}))
+/** The query reaches the row, so it can mark what matched - in the name and in the category */
+const comboboxRenderRichOption = (option: {value: string}, query: string) => {
+    const entry = comboboxRichEntries.find(candidate => candidate.name == option.value)
+    return <span style={{display: "flex", alignItems: "center", gap: "0.5em", width: "100%"}}>
+        <span style={{flexGrow: 1}}>{highlightMatch(option.value, query)}</span>
+        <Text type="muted">{highlightMatch(entry?.group ?? "", query)}</Text>
+    </span>
+}
+
 const comboboxCountryOptions = [
     "Argentina", "Australia", "Austria", "Belgium", "Brazil", "Canada", "Chile", "China", "Colombia",
     "Denmark", "Egypt", "Finland", "France", "Germany", "Greece", "India", "Indonesia", "Ireland",
@@ -1571,6 +1639,45 @@ renderOption={option => <span style={{display: "flex", alignItems: "center", gap
     ],
     TextEditableField: [
         {label: "Default", node: () => <TextEditableField field={textEditableFieldValue}>Label:</TextEditableField>, code: `<TextEditableField field={textEditableFieldValue}>Label:</TextEditableField>`},
+    ],
+    EditableField: [
+        {label: "Default", node: () => <EditableField<string>
+            label="Display name"
+            value={editableName}
+            display={(value) => value || "Not set"}
+            edit={(draft) => <TextBox type="text" {...bindValue(draft)}/>}/>, code: `<EditableField<string>
+label="Display name"
+value={name}
+display={(value) => value || "Not set"}
+edit={(draft) => <TextBox type="text" {...bindValue(draft)}/>}/>`},
+        {label: "Any control, not just a TextBox", node: () => <EditableField<string>
+            label="Plan"
+            value={editablePlan}
+            display={(value) => value === "pro" ? "Pro" : "Free"}
+            edit={(draft) => <Select options={[{value: "free", label: "Free"}, {value: "pro", label: "Pro"}]} {...bindValue(draft)}/>}/>, code: `<EditableField<string>
+label="Plan"
+value={plan}
+display={(value) => value === "pro" ? "Pro" : "Free"}
+edit={(draft) => <Select options={[{value: "free", label: "Free"}, {value: "pro", label: "Pro"}]} {...bindValue(draft)}/>}/>`},
+        {label: "Saving", node: () => <EditableField<string>
+            label="Nickname"
+            hint="The save takes a moment, so the controls dim while it runs"
+            value={editableSaving}
+            edit={(draft) => <TextBox type="text" {...bindValue(draft)}/>}
+            onSave={() => new Promise<void>((resolve) => setTimeout(resolve, 900))}/>, code: `<EditableField<string>
+label="Nickname"
+value={nickname}
+edit={(draft) => <TextBox type="text" {...bindValue(draft)}/>}
+onSave={async (value) => { await api.save(value) }}/>`},
+        {label: "A save that fails", node: () => <EditableField<string>
+            label="Locked"
+            value={editableFailing}
+            edit={(draft) => <TextBox type="text" {...bindValue(draft)}/>}
+            onSave={() => Promise.reject(new Error("Could not save - try again"))}/>, code: `<EditableField<string>
+label="Locked"
+value={locked}
+edit={(draft) => <TextBox type="text" {...bindValue(draft)}/>}
+onSave={() => Promise.reject(new Error("Could not save - try again"))}/>`},
     ],
     Form: [
         {label: "Basic form", node: () => <Form onSubmit={() => {}}>
@@ -2405,6 +2512,27 @@ load={async (query) => {
     ],
     Combobox: [
         {label: "Default (44 options - try typing to search)", node: () => <Combobox placeholder="Choose a country" options={comboboxCountryOptions}/>, code: `<Combobox placeholder="Choose a country" options={comboboxCountryOptions}/>`},
+        {label: "Rich rows that go somewhere (try \"overlays\")", node: () => <Combobox
+            placeholder="Search components"
+            clearOnSelect
+            options={comboboxRichOptions}
+            renderOption={comboboxRenderRichOption}/>, code: `<Combobox
+    placeholder="Search components"
+    options={[
+        {
+            value: "Button",
+            // Matched on more than the row shows, so typing a category finds everything in it
+            searchText: "Button Form",
+            // Makes the panel a way of going somewhere, not just of filling the box
+            onSelect: () => History.changeLocation("/components/button"),
+        },
+        ...
+    ]}
+    // Given the query as well as the option, so the row can still show what matched
+    renderOption={(option, query) => <span style={{display: "flex", gap: "0.5em", width: "100%"}}>
+        <span style={{flexGrow: 1}}>{highlightMatch(option.value, query)}</span>
+        <Text type="muted">{highlightMatch(groupOf(option), query)}</Text>
+    </span>}/>`},
     ],
     Upload: [
         {label: "Default", node: () => <Upload accept="image/*">Click or drag a file here</Upload>, code: `<Upload accept="image/*">Click or drag a file here</Upload>`},

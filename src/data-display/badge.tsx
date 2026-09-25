@@ -17,13 +17,8 @@ export type BadgeAttrsType = {
 
 let areBadgeStylesMounted = false
 
-/**
- * A small inline label, typically used to show a status or count
- */
-export const Badge: FunctionComponent<BadgeAttrsType> = function(attrs: BadgeAttrsType, children: RenderableElements[]): HTMLSpanElement {
-    if (!areBadgeStylesMounted) {
-        areBadgeStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<Badge/>`, mounted once on first construction */
+const badgeCss: string = `
 .vtd-badge{
 display:inline-block;
 padding:0.1em 0.6em;
@@ -38,7 +33,15 @@ vertical-align:middle;
 .vtd-badge-warning{background-color:var(--warning-3);border:1px solid var(--warning-6);}
 .vtd-badge-danger{background-color:var(--accent-3);border:1px solid var(--accent-6);}
 .vtd-badge-neutral{background-color:var(--background-1);border:1px solid var(--background-6);}
-`, "vtd/Badge")
+`
+
+/**
+ * A small inline label, typically used to show a status or count
+ */
+export const Badge: FunctionComponent<BadgeAttrsType> = function(attrs: BadgeAttrsType, children: RenderableElements[]): HTMLSpanElement {
+    if (!areBadgeStylesMounted) {
+        areBadgeStylesMounted = true
+        mountStyles(badgeCss, "vtd/Badge")
     }
 
     return passthroughAttrsToElement<HTMLSpanElement>(<span class={`vtd-badge vtd-badge-${attrs.type||"neutral"}`}>

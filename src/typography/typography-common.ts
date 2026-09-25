@@ -17,18 +17,6 @@ export type TextType = "muted" | "primary" | "secondary" | "warning" | "danger"
 
 let areTypographyStylesMounted = false
 
-/**
- * Mounts the stylesheet the three typography components share, once.
- *
- * One key for the category, matching `DataTable`/`AsyncDataTable` and the charts: a heading and a
- * paragraph that disagree about line height are worse than either being wrong on its own.
- */
-export function mountTypographyStyles(): void {
-    if (areTypographyStylesMounted) {
-        return
-    }
-    areTypographyStylesMounted = true
-    mountStyles(
 /*
  * WARNING: muted is var(--background-6), NOT var(--text-alt). Despite the name, --text-alt is the
  * *inverse* text colour - in dark mode it is the light theme's near-black - so muted text styled
@@ -36,7 +24,8 @@ export function mountTypographyStyles(): void {
  * the page background toward its contrast colour, which makes -6 a real muted foreground in both
  * themes. This is the single trap this component exists to stop every consumer rediscovering.
  */
-`
+/** Stylesheet for `<Typography/>`, mounted once on first construction */
+const typographyCss: string = `
 .vtd-text-muted{color:var(--background-6);}
 .vtd-text-primary{color:var(--primary);}
 .vtd-text-secondary{color:var(--secondary);}
@@ -80,7 +69,20 @@ background-color:var(--background-1);
 padding:0.1em 0.35em;
 border-radius:0.2rem;
 }
-`, "vtd/Typography", "base")
+`
+
+/**
+ * Mounts the stylesheet the three typography components share, once.
+ *
+ * One key for the category, matching `DataTable`/`AsyncDataTable` and the charts: a heading and a
+ * paragraph that disagree about line height are worse than either being wrong on its own.
+ */
+export function mountTypographyStyles(): void {
+    if (areTypographyStylesMounted) {
+        return
+    }
+    areTypographyStylesMounted = true
+    mountStyles(typographyCss, "vtd/Typography", "base")
 }
 
 /** Builds the class list for a piece of text from its semantic type and modifiers */
