@@ -1,6 +1,7 @@
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
+import { getInnerHeight, getScrollY } from "../core/utilities.ts"
 
 /**
  * One entry in a `<TableOfContents/>`
@@ -40,41 +41,8 @@ export type TableOfContentsAttrsType = {
 
 let areTableOfContentsStylesMounted = false
 
-/**
- * A list of a page's sections, with the one currently in view highlighted and each entry linking
- * to its section.
- *
- * `items` is data the consumer passes, not something scraped out of the DOM. Deriving the list by
- * querying for headings looks convenient and is a lifecycle hazard - it has to run after the
- * content it describes is mounted, and silently produces an empty list when it doesn't. The page
- * already knows its own sections.
- *
- * **Which entry is current is tracked with an `IntersectionObserver`, never a scroll handler.** A
- * `scroll` listener fires at display rate and would have to read layout on every event to answer
- * the same question - precisely what "Interaction must only touch the DOM that actually changed"
- * rules out. The observer instead reports only when a section actually crosses the band, and the
- * callback still returns early when the resulting entry is unchanged, so scrolling the length of
- * one long section does no DOM work at all.
- */
-export class TableOfContents extends Component<TableOfContentsAttrsType> {
-    #root: HTMLElement
-    #links = new Map<string, HTMLAnchorElement>()
-    /** Last reported intersection state per id, keyed in `items` order */
-    #state = new Map<string, {intersecting: boolean, top: number}>()
-    #activeId: string | undefined = undefined
-    #observer: IntersectionObserver | undefined = undefined
-    #items: TableOfContentsItemType[]
-    #topOffset: number
-
-    constructor(attrs: TableOfContentsAttrsType, children: RenderableElements[]) {
-        super(attrs, children)
-        this.#items = attrs.items
-        this.#topOffset = attrs.topOffset ?? 0
-
-        if (!areTableOfContentsStylesMounted) {
-            areTableOfContentsStylesMounted = true
-            mountStyles(
-`
+/** Stylesheet for `<TableOfContents/>`, mounted once on first construction */
+const tableOfContentsCss: string = `
 .vtd-table-of-contents{width:100%;box-sizing:border-box;}
 .vtd-table-of-contents-header{
 font-size:0.75em;
@@ -116,7 +84,42 @@ font-weight:bold;
 @media (prefers-reduced-motion: reduce){
 .vtd-table-of-contents-link{transition:none;}
 }
-`, "vtd/TableOfContents")
+`
+
+/**
+ * A list of a page's sections, with the one currently in view highlighted and each entry linking
+ * to its section.
+ *
+ * `items` is data the consumer passes, not something scraped out of the DOM. Deriving the list by
+ * querying for headings looks convenient and is a lifecycle hazard - it has to run after the
+ * content it describes is mounted, and silently produces an empty list when it doesn't. The page
+ * already knows its own sections.
+ *
+ * **Which entry is current is tracked with an `IntersectionObserver`, never a scroll handler.** A
+ * `scroll` listener fires at display rate and would have to read layout on every event to answer
+ * the same question - precisely what "Interaction must only touch the DOM that actually changed"
+ * rules out. The observer instead reports only when a section actually crosses the band, and the
+ * callback still returns early when the resulting entry is unchanged, so scrolling the length of
+ * one long section does no DOM work at all.
+ */
+export class TableOfContents extends Component<TableOfContentsAttrsType> {
+    #root: HTMLElement
+    #links = new Map<string, HTMLAnchorElement>()
+    /** Last reported intersection state per id, keyed in `items` order */
+    #state = new Map<string, {intersecting: boolean, top: number}>()
+    #activeId: string | undefined = undefined
+    #observer: IntersectionObserver | undefined = undefined
+    #items: TableOfContentsItemType[]
+    #topOffset: number
+
+    constructor(attrs: TableOfContentsAttrsType, children: RenderableElements[]) {
+        super(attrs, children)
+        this.#items = attrs.items
+        this.#topOffset = attrs.topOffset ?? 0
+
+        if (!areTableOfContentsStylesMounted) {
+            areTableOfContentsStylesMounted = true
+            mountStyles(tableOfContentsCss, "vtd/TableOfContents")
         }
 
         const list: HTMLElement = <ol class="vtd-table-of-contents-list">
@@ -187,10 +190,10 @@ font-weight:bold;
      */
     #isScrolledToBottom(): boolean {
         const height = document.documentElement.scrollHeight
-        if (height <= globalThis.innerHeight + 2) {
+        if (height <= getInnerHeight() + 2) {
             return false
         }
-        return globalThis.scrollY + globalThis.innerHeight >= height - 2
+        return getScrollY() + getInnerHeight() >= height - 2
     }
 
     /** The first section inside the band, or failing that the last one scrolled past */

@@ -12,6 +12,12 @@ export type AspectRatioAttrsType = {
 
 let areAspectRatioStylesMounted = false
 
+/** Stylesheet for `<AspectRatio/>`, mounted once on first construction */
+const aspectRatioCss: string = `
+.vtd-aspect-ratio{position:relative;width:100%;overflow:hidden;}
+.vtd-aspect-ratio > *{position:absolute;inset:0;width:100%;height:100%;}
+`
+
 /**
  * Constrains its `children` (typically a single image/video/iframe/map embed) to a fixed
  * width:height ratio, via pure CSS `aspect-ratio` - no JS measurement needed
@@ -19,10 +25,7 @@ let areAspectRatioStylesMounted = false
 export const AspectRatio: FunctionComponent<AspectRatioAttrsType> = function(attrs: AspectRatioAttrsType, children: RenderableElements[]): HTMLDivElement {
     if (!areAspectRatioStylesMounted) {
         areAspectRatioStylesMounted = true
-        mountStyles(`
-.vtd-aspect-ratio{position:relative;width:100%;overflow:hidden;}
-.vtd-aspect-ratio > *{position:absolute;inset:0;width:100%;height:100%;}
-`, "vtd/AspectRatio")
+        mountStyles(aspectRatioCss, "vtd/AspectRatio")
     }
 
     return passthroughAttrsToElement<HTMLDivElement>(<div class="vtd-aspect-ratio" style={{aspectRatio: `${attrs.ratio || 1}`}}>

@@ -12,13 +12,8 @@ export type DividerAttrsType = {
 
 let areDividerStylesMounted = false
 
-/**
- * A thin themed line used to visually separate content
- */
-export const Divider: FunctionComponent<DividerAttrsType> = function(attrs: DividerAttrsType, _children: RenderableElements[]): HTMLElement {
-    if (!areDividerStylesMounted) {
-        areDividerStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<Divider/>`, mounted once on first construction */
+const dividerCss: string = `
 .vtd-divider-horizontal{
 width:100%;
 box-sizing:border-box;
@@ -32,7 +27,15 @@ align-self:stretch;
 border-inline-start:1px solid var(--background-5);
 margin-inline:0.5em;
 }
-`, "vtd/Divider")
+`
+
+/**
+ * A thin themed line used to visually separate content
+ */
+export const Divider: FunctionComponent<DividerAttrsType> = function(attrs: DividerAttrsType, _children: RenderableElements[]): HTMLElement {
+    if (!areDividerStylesMounted) {
+        areDividerStylesMounted = true
+        mountStyles(dividerCss, "vtd/Divider")
     }
 
     if (attrs.orientation == "vertical") {

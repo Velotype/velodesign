@@ -30,16 +30,8 @@ export type RadioButtonAttrsType = {
  */
 let areButtonStylesMounted = false
 
-/**
- * An interactable RadioButton
- * 
- * `<RadioButton name="group-name"/>Some option</RadioButton>`
- */
-export const RadioButton: FunctionComponent<RadioButtonAttrsType> = function(attrs: RadioButtonAttrsType, children: RenderableElements[]): HTMLLabelElement {
-    if (!areButtonStylesMounted) {
-        areButtonStylesMounted = true
-        mountStyles(
-`
+/** Stylesheet for `<RadioButton/>`, mounted once on first construction */
+const radioButtonCss: string = `
 .vtd-radio-button-container{
 cursor:pointer;
 display:inline-flex;
@@ -98,7 +90,17 @@ border-color:var(--primary-7);
 /* As Checkbox: the ring belongs on the visible control, not the hidden input */
 `
 .vtd-radio-button-input:focus-visible ~ .vtd-radio-button{outline:2px solid var(--primary-7);outline-offset:2px;}
-`, "vtd/RadioButton")
+`
+
+/**
+ * An interactable RadioButton
+ * 
+ * `<RadioButton name="group-name"/>Some option</RadioButton>`
+ */
+export const RadioButton: FunctionComponent<RadioButtonAttrsType> = function(attrs: RadioButtonAttrsType, children: RenderableElements[]): HTMLLabelElement {
+    if (!areButtonStylesMounted) {
+        areButtonStylesMounted = true
+        mountStyles(radioButtonCss, "vtd/RadioButton")
     }
 
     return passthroughAttrsToElement<HTMLLabelElement>(<label class="vtd-radio-button-container">

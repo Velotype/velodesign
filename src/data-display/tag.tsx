@@ -1,6 +1,7 @@
-import {passthroughAttrsToElement} from "../core/velotype.ts"
+import { Component, passthroughAttrsToElement } from "../core/velotype.ts"
+import { removeElement } from "../core/dom-lifecycle.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
+import type { ChildrenAttr, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
 /**
@@ -30,15 +31,8 @@ export type TagAttrsType = {
 
 let areTagStylesMounted = false
 
-/**
- * A small inline label, like `Badge`, but optionally removable - for filter chips,
- * multi-select values, etc.
- */
-export const Tag: FunctionComponent<TagAttrsType> = function(attrs: TagAttrsType, children: RenderableElements[]): HTMLSpanElement {
-    if (!areTagStylesMounted) {
-        areTagStylesMounted = true
-        mountStyles(
-`
+/** Stylesheet for `<Tag/>`, mounted once on first construction */
+const tagCss: string = `
 .vtd-tag{
 display:inline-flex;
 align-items:center;
@@ -56,16 +50,16 @@ vertical-align:middle;
 .vtd-tag-danger{background-color:var(--accent-3);border:1px solid var(--accent-6);}
 .vtd-tag-neutral{background-color:var(--background-1);border:1px solid var(--background-6);}
 ` +
-/*
- * A real target with a real hover, not a glyph that gets slightly darker.
- *
- * Going from opacity 0.7 to 1 is the whole signal this used to give, which is both faint and
- * unlike every other interactive control in the package - the sidebar's chevron, a Menu row and a
- * TextBox's clear button all take a background on hover. An interactive element should say so the
- * same way wherever it appears, so this now does too, and it gets a square big enough to aim at
- * and a focus ring for the keyboard.
- */
-`
+    /*
+     * A real target with a real hover, not a glyph that gets slightly darker.
+     *
+     * Going from opacity 0.7 to 1 is the whole signal this used to give, which is both faint and
+     * unlike every other interactive control in the package - the sidebar's chevron, a Menu row and a
+     * TextBox's clear button all take a background on hover. An interactive element should say so the
+     * same way wherever it appears, so this now does too, and it gets a square big enough to aim at
+     * and a focus ring for the keyboard.
+     */
+    `
 .vtd-tag-remove{
 position:relative;
 cursor:pointer;
@@ -87,19 +81,19 @@ opacity:0.7;
 transition:opacity 0.12s ease-in-out, background-color 0.12s ease-in-out;
 }
 ` +
-/* --background, not a step of the ramp: the tag already carries a tint of its own type, so a
-   neighbouring grey reads as muddy where the page's own background reads as a clear chip - and it
-   flips with the theme, which a fixed rgba() would not */
-`
+    /* --background, not a step of the ramp: the tag already carries a tint of its own type, so a
+       neighbouring grey reads as muddy where the page's own background reads as a clear chip - and it
+       flips with the theme, which a fixed rgba() would not */
+    `
 ` +
-/*
- * The hit area is extended past the visual control rather than the control being made bigger. A Tag
- * is small by design and a 24px button would set the height of the whole chip; an overlay centred
- * on the 1.35em square reaches WCAG 2.2 SC 2.5.8's 24px without moving a pixel of the layout. It
- * extends about three pixels either side, which is inside the Tag's own padding rather than over a
- * neighbouring control.
- */
-`
+    /*
+     * The hit area is extended past the visual control rather than the control being made bigger. A Tag
+     * is small by design and a 24px button would set the height of the whole chip; an overlay centred
+     * on the 1.35em square reaches WCAG 2.2 SC 2.5.8's 24px without moving a pixel of the layout. It
+     * extends about three pixels either side, which is inside the Tag's own padding rather than over a
+     * neighbouring control.
+     */
+    `
 .vtd-tag-remove::after{
 content:"";
 position:absolute;
@@ -116,15 +110,31 @@ height:100%;
 @media (prefers-reduced-motion: reduce){
 .vtd-tag-remove{transition:none;}
 }
-`, "vtd/Tag")
-    }
+`
 
-    const tagElement: HTMLSpanElement = <span class={`vtd-tag vtd-tag-${attrs.type||"neutral"}`}>
-        {children}
-        {attrs.onRemove && <button type="button" class="vtd-tag-remove" aria-label={attrs.removeLabel} onClick={() => {
-            attrs.onRemove?.()
-            tagElement.remove()
-        }}><TagThemeOptions.closeSymbol/></button>}
-    </span>
-    return passthroughAttrsToElement<HTMLSpanElement>(tagElement, attrs)
+/**
+ * A small inline label, like `Badge`, but optionally removable - for filter chips,
+ * multi-select values, etc.
+ *
+ * A class rather than a `FunctionComponent` for the same reason as `Alert`: removing takes the tag
+ * off the page, and that has to run velotype's unmount lifecycle for the consumer content inside
+ * it. `removeElement` needs a Component to do that through. See `core/dom-lifecycle.ts`.
+ */
+export class Tag extends Component<TagAttrsType> {
+    /** Render this Component */
+    override render(attrs: TagAttrsType, children: RenderableElements[]): HTMLSpanElement {
+        if (!areTagStylesMounted) {
+            areTagStylesMounted = true
+            mountStyles(tagCss, "vtd/Tag")
+        }
+
+        const tagElement: HTMLSpanElement = <span class={`vtd-tag vtd-tag-${attrs.type||"neutral"}`}>
+            {children}
+            {attrs.onRemove && <button type="button" class="vtd-tag-remove" aria-label={attrs.removeLabel} onClick={() => {
+                attrs.onRemove?.()
+                removeElement(this, tagElement)
+            }}><TagThemeOptions.closeSymbol/></button>}
+        </span>
+        return passthroughAttrsToElement<HTMLSpanElement>(tagElement, attrs)
+    }
 }

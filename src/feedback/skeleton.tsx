@@ -23,13 +23,8 @@ export type SkeletonAttrsType = {
 
 let areSkeletonStylesMounted = false
 
-/**
- * An animated placeholder shown in place of content that hasn't loaded yet
- */
-export const Skeleton: FunctionComponent<SkeletonAttrsType> = function(attrs: SkeletonAttrsType, _children: RenderableElements[]): HTMLElement {
-    if (!areSkeletonStylesMounted) {
-        areSkeletonStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<Skeleton/>`, mounted once on first construction */
+const skeletonCss: string = `
 @keyframes vtd-skeleton-pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
 .vtd-skeleton{
 display:block;
@@ -40,7 +35,15 @@ animation:vtd-skeleton-pulse 1.5s ease-in-out infinite;
 .vtd-skeleton-text:last-child{margin-block-end:0;width:70%;}
 .vtd-skeleton-circular{border-radius:50%;}
 .vtd-skeleton-rectangular{border-radius:0.25rem;}
-`, "vtd/Skeleton")
+`
+
+/**
+ * An animated placeholder shown in place of content that hasn't loaded yet
+ */
+export const Skeleton: FunctionComponent<SkeletonAttrsType> = function(attrs: SkeletonAttrsType, _children: RenderableElements[]): HTMLElement {
+    if (!areSkeletonStylesMounted) {
+        areSkeletonStylesMounted = true
+        mountStyles(skeletonCss, "vtd/Skeleton")
     }
 
     const variant = attrs.variant || "text"

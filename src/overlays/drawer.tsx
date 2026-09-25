@@ -33,15 +33,8 @@ export type DrawerAttrsType = {
     enterFrom?: DrawerPlacement
 } & ChildrenAttr
 
-/**
- * A panel that slides in from a viewport edge, over top of the page - like `Modal`, but for
- * side/top/bottom-anchored content (filters, detail views, mobile nav) rather than a centered dialog
- */
-export class Drawer extends Component<DrawerAttrsType> {
-    /** Mount this Component */
-    override mount() {
-        mountStyles(
-`
+/** Stylesheet for `<Drawer/>`, mounted once on first construction */
+const drawerCss: string = `
 .vtd-drawer{
 position:fixed;
 margin:0;
@@ -88,7 +81,16 @@ backdrop-filter: blur(2px);
 @keyframes vtd-drawer-in-bottom{from{transform:translateY(100%);}to{transform:translateY(0);}}
 .vtd-drawer-separator{margin:0.5em 0;}
 .vtd-drawer-inner{padding:0.5em;}
-`, "vtd/Drawer")
+`
+
+/**
+ * A panel that slides in from a viewport edge, over top of the page - like `Modal`, but for
+ * side/top/bottom-anchored content (filters, detail views, mobile nav) rather than a centered dialog
+ */
+export class Drawer extends Component<DrawerAttrsType> {
+    /** Mount this Component */
+    override mount() {
+        mountStyles(drawerCss, "vtd/Drawer")
     }
 
     /** The underlying `<dialog/>` element */

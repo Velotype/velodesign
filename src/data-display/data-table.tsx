@@ -1,4 +1,5 @@
 import { Component, getComponent, passthroughAttrsToElement } from "../core/velotype.ts"
+import { setChildren } from "../core/dom-lifecycle.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { Pagination } from "../navigation/pagination.tsx"
 import { Select } from "../form/select.tsx"
@@ -209,9 +210,9 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
         const pageRows = pageSize > 0 ? allRows.slice((currentPage - 1) * pageSize, currentPage * pageSize) : allRows
 
         const {colElements, cols} = buildColGroup(visibleColumns, this.#columnWidths)
-        this.#colgroupEl.replaceChildren(...cols)
+        setChildren(this, this.#colgroupEl, cols)
 
-        this.#theadRowEl.replaceChildren(...buildHeaderCells({
+        setChildren(this, this.#theadRowEl, buildHeaderCells({
             columns: visibleColumns,
             isSortable: (column) => !!(column as DataTableColumnType<RowType>).sortValue,
             sortKey: this.#sortKey,
@@ -232,9 +233,9 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
             rowHrefSpa: attrs.rowHrefSpa,
             onRowSelect: attrs.onRowSelect
         })
-        this.#tbodyEl.replaceChildren(...(allRows.length == 0
+        setChildren(this, this.#tbodyEl, allRows.length == 0
             ? [buildStatusRow(visibleColumns.length, attrs.emptyMessage)]
-            : bodyRows))
+            : bodyRows)
         this.#tbodyEl.classList.toggle("vtd-data-table-zebra", attrs.zebra)
         this.#tbodyEl.classList.toggle("vtd-data-table-hoverable", attrs.highlightOnHover)
 
@@ -257,7 +258,7 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
                 </div>)
             }
         }
-        this.#footerEl.replaceChildren(...footerChildren)
+        setChildren(this, this.#footerEl, footerChildren)
     }
 
     /** Create a new `<DataTableInner/>` Component */

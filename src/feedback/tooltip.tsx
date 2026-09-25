@@ -19,15 +19,8 @@ export type TooltipAttrsType = {
 
 let areTooltipStylesMounted = false
 
-/**
- * Wraps `children` (the trigger) with a themed tooltip bubble shown on hover/focus
- *
- * `<Tooltip content="More info">hover me</Tooltip>`
- */
-export const Tooltip: FunctionComponent<TooltipAttrsType> = function(attrs: TooltipAttrsType, children: RenderableElements[]): HTMLSpanElement {
-    if (!areTooltipStylesMounted) {
-        areTooltipStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<Tooltip/>`, mounted once on first construction */
+const tooltipCss: string = `
 .vtd-tooltip-wrapper{
 position:relative;
 display:inline-block;
@@ -55,7 +48,17 @@ opacity:1;
 .vtd-tooltip-bottom{top:100%;left:50%;transform:translate(-50%,0.4em);}
 .vtd-tooltip-left{right:100%;top:50%;transform:translate(-0.4em,-50%);}
 .vtd-tooltip-right{left:100%;top:50%;transform:translate(0.4em,-50%);}
-`, "vtd/Tooltip")
+`
+
+/**
+ * Wraps `children` (the trigger) with a themed tooltip bubble shown on hover/focus
+ *
+ * `<Tooltip content="More info">hover me</Tooltip>`
+ */
+export const Tooltip: FunctionComponent<TooltipAttrsType> = function(attrs: TooltipAttrsType, children: RenderableElements[]): HTMLSpanElement {
+    if (!areTooltipStylesMounted) {
+        areTooltipStylesMounted = true
+        mountStyles(tooltipCss, "vtd/Tooltip")
     }
 
     const placement = attrs.placement || "top"

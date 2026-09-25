@@ -1,6 +1,7 @@
 import {} from "./velotype.ts"
 import { mountStyles } from "./styles.ts"
 import { setAttributeHelper } from "./utilities.ts"
+import { matchMediaHelper, setTimeoutHelper } from "../core/utilities.ts"
 
 //
 // TODO make gradients ?
@@ -203,7 +204,10 @@ export const ColorScheme: {
             // every branch and leave currentColorScheme at its initial `light` - so a first visit
             // ignored a reader whose browser asks for dark, and the `default` scheme was a value
             // that could be set but was never the starting point.
-            currentColorScheme = globalThis.matchMedia('(prefers-color-scheme: light)').matches ? light : dark
+            // `?.matches`, because `matchMedia` is genuinely absent off a browser. This branch
+            // then reads as "no light preference" and falls to dark, which is the same answer it
+            // gives a browser that reports no preference at all.
+            currentColorScheme = matchMediaHelper('(prefers-color-scheme: light)')?.matches ? light : dark
         }
         // Set theme on the html element
         if (currentColorScheme == light) {
@@ -215,18 +219,15 @@ export const ColorScheme: {
 }
 
 /**
- * Injects CSS styles for the Velodesign Theme on the `selector` CSS Selector
+ * The palette for one `selector`, as CSS text.
  *
- * Note: Selected element(s) need `data-theme="light"` or `data-theme="dark"` for theme to
- * work properly
- *
- * `mountStyles` only applies the styles for a given `selector` once by default - calling
- * this again for the same `selector` with different `options` is a no-op unless `resetSheet`
- * is `true`, which replaces the previously-injected stylesheet with one built from the new
- * `options` (e.g. for a live theme editor letting a user preview color changes in real time).
+ * A function rather than a const - unlike every other stylesheet in the package this one is
+ * parameterised, by the selector it is scoped to and by the caller's colour overrides, so there is
+ * no single string to hoist. Split out all the same, so `setThemeOnSelector` below reads as the
+ * one thing it does.
  */
-export function setThemeOnSelector(selector: string, options?: ThemeColorOptions | undefined, resetSheet: boolean = false): void {
-    mountStyles(`
+function themeCss(selector: string, options?: ThemeColorOptions | undefined): string {
+    return `
 ${selector}[data-theme="light"]{
 ${textColors("text", options?.textLightColor || defaultTextLightColor, options?.textDarkColor || defaultTextDarkColor)}
 ${backgroundColorGradient("background", options?.backgroundLightColor || defaultBackgroundLightColor, options?.backgroundLightAltColor || defaultBackgroundLightAltColor)}
@@ -244,8 +245,39 @@ ${middleColorSpread("warning", black, options?.warningDarkColor || defaultWarnin
 ${middleColorSpread("accent", black, options?.accentDarkColor || defaultAccentDarkColor, white)}
 color-scheme:dark;}
 ${selector}{color:var(--text);background-color:var(--background);}
-${selector} a{color:var(--text)}`,`vtd/Theme on ${selector}`, "theme", resetSheet)
+${selector} a{color:var(--text)}`
 }
+
+/**
+ * Injects CSS styles for the Velodesign Theme on the `selector` CSS Selector
+ *
+ * Note: Selected element(s) need `data-theme="light"` or `data-theme="dark"` for theme to
+ * work properly
+ *
+ * `mountStyles` only applies the styles for a given `selector` once by default - calling
+ * this again for the same `selector` with different `options` is a no-op unless `resetSheet`
+ * is `true`, which replaces the previously-injected stylesheet with one built from the new
+ * `options` (e.g. for a live theme editor letting a user preview color changes in real time).
+ */
+export function setThemeOnSelector(selector: string, options?: ThemeColorOptions | undefined, resetSheet: boolean = false): void {
+    mountStyles(themeCss(selector, options), `vtd/Theme on ${selector}`, "theme", resetSheet)
+}
+
+/** Stylesheet: the colour transition, mounted a beat after load so the page arrives cleanly */
+const themeTransitionCss: string = `body{transition:color 0.25s ease-in-out,background-color 0.25s ease-in-out;}`
+
+/** Stylesheet: Velodesign CSS reset */
+const resetCss: string = `*{margin:0;padding:0;line-height:calc(1em + 4px);box-sizing:border-box;}
+html{-moz-text-size-adjust:none;-webkit-text-size-adjust:none;text-size-adjust:none;scroll-behavior:smooth;interpolate-size:allow-keywords;}
+body{-webkit-font-smoothing:antialiased;min-width:250px}
+img,svg{display:inline-block;max-width:100%;}
+input,button,textarea,select{font:inherit;}
+p,h1,h2,h3{overflow-wrap:break-word;}
+p{text-wrap:pretty;}
+h1,h2,h3{text-wrap:balance;}
+menu,ul,ol{list-style:none;}
+button{color:inherit;border:none;}
+:target{scroll-margin-block:20ex;}`
 
 /**
  * A collection of functions to manage the Theme
@@ -266,25 +298,15 @@ export const Theme: {
             // -- https://www.joshwcomeau.com/css/custom-css-reset/
             // -- https://www.joshwcomeau.com/snippets/html/interpolate-size/
             // -- https://piccalil.li/blog/a-more-modern-css-reset/
-            mountStyles(`*{margin:0;padding:0;line-height:calc(1em + 4px);box-sizing:border-box;}
-html{-moz-text-size-adjust:none;-webkit-text-size-adjust:none;text-size-adjust:none;scroll-behavior:smooth;interpolate-size:allow-keywords;}
-body{-webkit-font-smoothing:antialiased;min-width:250px}
-img,svg{display:inline-block;max-width:100%;}
-input,button,textarea,select{font:inherit;}
-p,h1,h2,h3{overflow-wrap:break-word;}
-p{text-wrap:pretty;}
-h1,h2,h3{text-wrap:balance;}
-menu,ul,ol{list-style:none;}
-button{color:inherit;border:none;}
-:target{scroll-margin-block:20ex;}`,"Velodesign CSS reset", "reset")
+            mountStyles(resetCss,"Velodesign CSS reset", "reset")
         }
 
         // Set Theme on `<html>` element
         setThemeOnSelector(":root", options)
 
         // Delay setting transitions so that the page loads cleanly
-        globalThis.setTimeout(function(){
-            mountStyles(`body{transition:color 0.25s ease-in-out,background-color 0.25s ease-in-out;}`,"Velodesign Theme Color transitions", "theme")
+        setTimeoutHelper(function(){
+            mountStyles(themeTransitionCss, "Velodesign Theme Color transitions", "theme")
         },150)
 
         //Trigger initial color scheme selection

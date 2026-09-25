@@ -37,13 +37,8 @@ export type SelectAttrsType = {
 
 let areSelectStylesMounted = false
 
-/**
- * A themed dropdown for choosing one of a fixed set of options
- */
-export const Select: FunctionComponent<SelectAttrsType> = function(attrs: SelectAttrsType, _children: RenderableElements[]): HTMLSpanElement {
-    if (!areSelectStylesMounted) {
-        areSelectStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<Select/>`, mounted once on first construction */
+const selectCss: string = `
 .vtd-select-wrapper{
 position:relative;
 display:inline-block;
@@ -72,7 +67,15 @@ border-width:0 0.12em 0.12em 0;
 transform:translateY(-70%) rotate(45deg);
 pointer-events:none;
 }
-`, "vtd/Select")
+`
+
+/**
+ * A themed dropdown for choosing one of a fixed set of options
+ */
+export const Select: FunctionComponent<SelectAttrsType> = function(attrs: SelectAttrsType, _children: RenderableElements[]): HTMLSpanElement {
+    if (!areSelectStylesMounted) {
+        areSelectStylesMounted = true
+        mountStyles(selectCss, "vtd/Select")
     }
 
     return passthroughAttrsToElement<HTMLSpanElement>(<span class="vtd-select-wrapper">

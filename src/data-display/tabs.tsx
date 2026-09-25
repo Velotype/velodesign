@@ -26,6 +26,75 @@ export type TabsAttrsType = {
 
 let areTabsStylesMounted = false
 
+/** Stylesheet for `<Tabs/>`, mounted once on first construction */
+const tabsCss: string = `
+.vtd-tabs{
+width:100%;
+box-sizing:border-box;
+}
+.vtd-tabs-list{
+display:flex;
+gap:0.25em;
+border-block-end:1px solid var(--background-4);
+` +
+/*
+ * A tab strip scrolls rather than wrapping. Wrapping puts some tabs on a second line above the
+ * panel they label, which reads as two separate rows of controls; scrolling keeps one strip and is
+ * what every platform does with more tabs than fit. `flex-shrink:0` on the tab stops the browser
+ * squeezing them all to illegible slivers instead of overflowing, which is the default and is
+ * worse - it was 168px of sideways page scroll at phone width before this.
+ *
+ * `scrollbar-width:thin` rather than hidden: a strip that scrolls with no indication it scrolls is
+ * a row of tabs a reader does not know are there.
+ */
+`
+overflow-x:auto;
+scrollbar-width:thin;
+}
+.vtd-tabs-tab{flex-shrink:0;}
+.vtd-tabs-tab{
+position:relative;
+cursor:pointer;
+background:transparent;
+border:none;
+border-block-end:2px solid transparent;
+color:inherit;
+font:inherit;
+padding:0.5em 1em;
+margin-block-end:-1px;
+}
+` +
+/*
+ * A real font-weight:bold on .vtd-tabs-tab-active would widen the label text and shift every
+ * tab after it - so ::after carries a permanently-bold, invisible copy of the same label
+ * (via attr(data-label), set below only when the label is a plain string) that reserves the
+ * bold width up front. height:0/overflow:hidden keep it from taking any vertical space or
+ * being paintable; visibility:hidden (rather than opacity/color tricks) is what keeps
+ * generated content out of the accessible name computation. A rich (non-string) label has no
+ * data-label, so attr() resolves to an empty string and this becomes a no-op for it - the
+ * label just won't have its width pre-reserved, same as before this fix.
+ */
+`
+.vtd-tabs-tab::after{
+content:attr(data-label);
+display:block;
+height:0;
+overflow:hidden;
+visibility:hidden;
+font-weight:bold;
+}
+.vtd-tabs-tab:hover{background-color:var(--background-1);}
+.vtd-tabs-tab-active{
+border-block-end:2px solid var(--primary);
+font-weight:bold;
+}
+.vtd-tabs-panel{
+display:none;
+padding:1em 0;
+}
+.vtd-tabs-panel-active{display:block;}
+`
+
 /**
  * A set of labeled panels where only one panel is shown at a time.
  *
@@ -103,74 +172,7 @@ export class Tabs extends Component<TabsAttrsType> {
         this.#activeKey = attrs.initialKey || attrs.tabs[0]?.key
         if (!areTabsStylesMounted) {
             areTabsStylesMounted = true
-            mountStyles(
-`
-.vtd-tabs{
-width:100%;
-box-sizing:border-box;
-}
-.vtd-tabs-list{
-display:flex;
-gap:0.25em;
-border-block-end:1px solid var(--background-4);
-` +
-/*
- * A tab strip scrolls rather than wrapping. Wrapping puts some tabs on a second line above the
- * panel they label, which reads as two separate rows of controls; scrolling keeps one strip and is
- * what every platform does with more tabs than fit. `flex-shrink:0` on the tab stops the browser
- * squeezing them all to illegible slivers instead of overflowing, which is the default and is
- * worse - it was 168px of sideways page scroll at phone width before this.
- *
- * `scrollbar-width:thin` rather than hidden: a strip that scrolls with no indication it scrolls is
- * a row of tabs a reader does not know are there.
- */
-`
-overflow-x:auto;
-scrollbar-width:thin;
-}
-.vtd-tabs-tab{flex-shrink:0;}
-.vtd-tabs-tab{
-position:relative;
-cursor:pointer;
-background:transparent;
-border:none;
-border-block-end:2px solid transparent;
-color:inherit;
-font:inherit;
-padding:0.5em 1em;
-margin-block-end:-1px;
-}
-` +
-/*
- * A real font-weight:bold on .vtd-tabs-tab-active would widen the label text and shift every
- * tab after it - so ::after carries a permanently-bold, invisible copy of the same label
- * (via attr(data-label), set below only when the label is a plain string) that reserves the
- * bold width up front. height:0/overflow:hidden keep it from taking any vertical space or
- * being paintable; visibility:hidden (rather than opacity/color tricks) is what keeps
- * generated content out of the accessible name computation. A rich (non-string) label has no
- * data-label, so attr() resolves to an empty string and this becomes a no-op for it - the
- * label just won't have its width pre-reserved, same as before this fix.
- */
-`
-.vtd-tabs-tab::after{
-content:attr(data-label);
-display:block;
-height:0;
-overflow:hidden;
-visibility:hidden;
-font-weight:bold;
-}
-.vtd-tabs-tab:hover{background-color:var(--background-1);}
-.vtd-tabs-tab-active{
-border-block-end:2px solid var(--primary);
-font-weight:bold;
-}
-.vtd-tabs-panel{
-display:none;
-padding:1em 0;
-}
-.vtd-tabs-panel-active{display:block;}
-`, "vtd/Tabs")
+            mountStyles(tabsCss, "vtd/Tabs")
         }
 
         this.#root = <div class="vtd-tabs">

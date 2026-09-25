@@ -31,6 +31,11 @@ export type GridAttrsType = {
 
 let areGridStylesMounted = false
 
+/** Stylesheet for `<Grid/>`, mounted once on first construction */
+const gridCss: string = `
+.vtd-grid{display:grid;width:100%;box-sizing:border-box;}
+`
+
 /**
  * Two-dimensional layout: cells that reflow to fill the width they are given.
  *
@@ -41,9 +46,7 @@ let areGridStylesMounted = false
 export const Grid: FunctionComponent<GridAttrsType> = function(attrs: GridAttrsType, children: RenderableElements[]): HTMLDivElement {
     if (!areGridStylesMounted) {
         areGridStylesMounted = true
-        mountStyles(`
-.vtd-grid{display:grid;width:100%;box-sizing:border-box;}
-`, "vtd/Grid")
+        mountStyles(gridCss, "vtd/Grid")
     }
 
     // A fixed count wins when given, since asking for both is a contradiction rather than a blend

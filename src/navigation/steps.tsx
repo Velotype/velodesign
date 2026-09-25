@@ -27,14 +27,8 @@ export type StepsAttrsType = {
 
 let areStepsStylesMounted = false
 
-/**
- * A horizontal sequence of numbered steps, for wizards/checkout flows, showing which are
- * done, current, or upcoming
- */
-export const Steps: FunctionComponent<StepsAttrsType> = function(attrs: StepsAttrsType, _children: RenderableElements[]): HTMLElement {
-    if (!areStepsStylesMounted) {
-        areStepsStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<Steps/>`, mounted once on first construction */
+const stepsCss: string = `
 .vtd-steps{width:100%;box-sizing:border-box;display:flex;list-style:none;padding:0;margin:0;}
 .vtd-steps-item{
 position:relative;
@@ -71,7 +65,16 @@ font-weight:bold;
 .vtd-steps-item-done .vtd-steps-marker{background-color:var(--primary-3);border-color:var(--primary-6);}
 .vtd-steps-title{margin-block-start:0.5em;font-weight:bold;font-size:0.9em;}
 .vtd-steps-description{font-size:0.8em;opacity:0.7;margin-block-start:0.15em;}
-`, "vtd/Steps")
+`
+
+/**
+ * A horizontal sequence of numbered steps, for wizards/checkout flows, showing which are
+ * done, current, or upcoming
+ */
+export const Steps: FunctionComponent<StepsAttrsType> = function(attrs: StepsAttrsType, _children: RenderableElements[]): HTMLElement {
+    if (!areStepsStylesMounted) {
+        areStepsStylesMounted = true
+        mountStyles(stepsCss, "vtd/Steps")
     }
 
     return passthroughAttrsToElement<HTMLElement>(<ol class="vtd-steps">

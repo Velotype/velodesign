@@ -1,5 +1,6 @@
 import { Component } from "../core/velotype.ts"
 import type { FunctionComponent, EmptyAttrs, RenderableElements } from "../core/velotype.ts"
+import { addGlobalListener, getPathname, removeGlobalListener } from "../core/utilities.ts"
 
 /**
  * One routable page in a `<PageSelector pages={[...]}/>`
@@ -28,20 +29,20 @@ export class PageSelector extends Component<PageSelectorAttrsType> {
 
     /** Mount this Component */
     override mount() {
-        globalThis.addEventListener('popstate', this.refresh)
-        globalThis.addEventListener('locationchange', this.refresh)
+        addGlobalListener('popstate', this.refresh)
+        addGlobalListener('locationchange', this.refresh)
     }
 
     /** Unmount this Component */
     override unmount() {
-        globalThis.removeEventListener('popstate', this.refresh)
-        globalThis.removeEventListener('locationchange', this.refresh)
+        removeGlobalListener('popstate', this.refresh)
+        removeGlobalListener('locationchange', this.refresh)
     }
 
     /** Render this Component */
     override render(attrs: PageSelectorAttrsType): RenderableElements {
         const page = attrs.pages.find(function(page: PageSelectorPageType) {
-            if (globalThis.location.pathname == page.basename) {
+            if (getPathname() == page.basename) {
                 return true
             }
             return false

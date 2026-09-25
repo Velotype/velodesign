@@ -23,6 +23,29 @@ export type PopoverAttrsType = {
 
 let arePopoverStylesMounted = false
 
+/** Stylesheet for `<Popover/>`, mounted once on first construction */
+const popoverCss: string = `
+.vtd-popover{position:relative;display:inline-block;}
+.vtd-popover-trigger{cursor:pointer;display:inline-block;}
+.vtd-popover-content{
+display:none;
+position:absolute;
+z-index:1000;
+min-width:12em;
+max-width:20em;
+padding:0.75em 1em;
+background-color:var(--background-1);
+border:1px solid var(--background-4);
+border-radius:0.25rem;
+box-shadow:0 2px 8px rgba(0,0,0,0.15);
+}
+.vtd-popover-content.vtd-popover-open{display:block;}
+.vtd-popover-top{bottom:100%;left:0;margin-block-end:0.4em;}
+.vtd-popover-bottom{top:100%;left:0;margin-block-start:0.4em;}
+.vtd-popover-left{right:100%;top:0;margin-inline-end:0.4em;}
+.vtd-popover-right{left:100%;top:0;margin-inline-start:0.4em;}
+`
+
 /**
  * Wraps `trigger` with a themed popover bubble of rich, click-triggered content.
  *
@@ -106,27 +129,7 @@ export class Popover extends Component<PopoverAttrsType> {
         this.#attrs = attrs
         if (!arePopoverStylesMounted) {
             arePopoverStylesMounted = true
-            mountStyles(`
-.vtd-popover{position:relative;display:inline-block;}
-.vtd-popover-trigger{cursor:pointer;display:inline-block;}
-.vtd-popover-content{
-display:none;
-position:absolute;
-z-index:1000;
-min-width:12em;
-max-width:20em;
-padding:0.75em 1em;
-background-color:var(--background-1);
-border:1px solid var(--background-4);
-border-radius:0.25rem;
-box-shadow:0 2px 8px rgba(0,0,0,0.15);
-}
-.vtd-popover-content.vtd-popover-open{display:block;}
-.vtd-popover-top{bottom:100%;left:0;margin-block-end:0.4em;}
-.vtd-popover-bottom{top:100%;left:0;margin-block-start:0.4em;}
-.vtd-popover-left{right:100%;top:0;margin-inline-end:0.4em;}
-.vtd-popover-right{left:100%;top:0;margin-inline-start:0.4em;}
-`, "vtd/Popover")
+            mountStyles(popoverCss, "vtd/Popover")
         }
 
         const placement = attrs.placement || "bottom"

@@ -18,23 +18,8 @@ export type ResizableAttrsType = {
 
 let areResizableStylesMounted = false
 
-/**
- * Wraps `children` in a container with a draggable edge handle that resizes it.
- *
- * The drag listeners are added to `document` only for the duration of an active drag
- * (added in the handle's `onPointerDown`, removed on `pointerup`) rather than for the whole
- * component lifecycle, so there's no need for `mount()`/`unmount()` here.
- */
-export class Resizable extends Component<ResizableAttrsType> {
-    /** The resizable container */
-    #wrapper: HTMLDivElement
-
-    /** Create a new `<Resizable/>` Component */
-    constructor(attrs: ResizableAttrsType, children: RenderableElements[]) {
-        super(attrs, children)
-        if (!areResizableStylesMounted) {
-            areResizableStylesMounted = true
-            mountStyles(`
+/** Stylesheet for `<Resizable/>`, mounted once on first construction */
+const resizableCss: string = `
 .vtd-resizable{position:relative;overflow:auto;}
 .vtd-resizable-handle{position:absolute;background-color:transparent;` +
 /*
@@ -57,7 +42,25 @@ export class Resizable extends Component<ResizableAttrsType> {
 .vtd-resizable-handle-bottom{left:0;right:0;bottom:0;height:0.4em;min-height:24px;cursor:ns-resize;}
 .vtd-resizable-handle-right:hover,.vtd-resizable-handle-right.vtd-resizable-handle-active{background:linear-gradient(to right,transparent calc(100% - 0.4em),var(--primary-6) calc(100% - 0.4em));}
 .vtd-resizable-handle-bottom:hover,.vtd-resizable-handle-bottom.vtd-resizable-handle-active{background:linear-gradient(to bottom,transparent calc(100% - 0.4em),var(--primary-6) calc(100% - 0.4em));}
-`, "vtd/Resizable")
+`
+
+/**
+ * Wraps `children` in a container with a draggable edge handle that resizes it.
+ *
+ * The drag listeners are added to `document` only for the duration of an active drag
+ * (added in the handle's `onPointerDown`, removed on `pointerup`) rather than for the whole
+ * component lifecycle, so there's no need for `mount()`/`unmount()` here.
+ */
+export class Resizable extends Component<ResizableAttrsType> {
+    /** The resizable container */
+    #wrapper: HTMLDivElement
+
+    /** Create a new `<Resizable/>` Component */
+    constructor(attrs: ResizableAttrsType, children: RenderableElements[]) {
+        super(attrs, children)
+        if (!areResizableStylesMounted) {
+            areResizableStylesMounted = true
+            mountStyles(resizableCss, "vtd/Resizable")
         }
 
         const direction = attrs.direction || "right"

@@ -50,7 +50,7 @@
         "@std/testing": "jsr:@std/testing@^1.0.16",
         "@velotype/veloserver": "jsr:@velotype/veloserver@^0.2.0",
         "@velotype/velodesign/jsx-runtime": "./src/core/jsx-runtime.ts",
-        "@velotype/velotype/jsx-runtime": "jsr:@velotype/velotype@^0.0.27",
-        "@velotype/velotype": "jsr:@velotype/velotype@^0.0.27"
+        "@velotype/velotype/jsx-runtime": "jsr:@velotype/velotype@^0.0.30",
+        "@velotype/velotype": "jsr:@velotype/velotype@^0.0.30"
     }
   }

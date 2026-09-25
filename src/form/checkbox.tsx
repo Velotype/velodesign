@@ -32,16 +32,8 @@ export type CheckboxAttrsType = {
  */
 let areCheckboxStylesMounted = false
 
-/**
- * An interactable Checkbox
- *
- * `<Checkbox name="some-name"/>Some option</Checkbox>`
- */
-export const Checkbox: FunctionComponent<CheckboxAttrsType> = function(attrs: CheckboxAttrsType, children: RenderableElements[]): HTMLLabelElement {
-    if (!areCheckboxStylesMounted) {
-        areCheckboxStylesMounted = true
-        mountStyles(
-`
+/** Stylesheet for `<Checkbox/>`, mounted once on first construction */
+const checkboxCss: string = `
 .vtd-checkbox-container{
 cursor:pointer;
 display:inline-flex;
@@ -118,7 +110,17 @@ border-color:var(--primary-5);
 /* The input is 0x0 and transparent, so the ring has to be drawn on the box beside it */
 `
 .vtd-checkbox-input:focus-visible ~ .vtd-checkbox{outline:2px solid var(--primary-7);outline-offset:2px;}
-`, "vtd/Checkbox")
+`
+
+/**
+ * An interactable Checkbox
+ *
+ * `<Checkbox name="some-name"/>Some option</Checkbox>`
+ */
+export const Checkbox: FunctionComponent<CheckboxAttrsType> = function(attrs: CheckboxAttrsType, children: RenderableElements[]): HTMLLabelElement {
+    if (!areCheckboxStylesMounted) {
+        areCheckboxStylesMounted = true
+        mountStyles(checkboxCss, "vtd/Checkbox")
     }
 
     return passthroughAttrsToElement<HTMLLabelElement>(<label class="vtd-checkbox-container">

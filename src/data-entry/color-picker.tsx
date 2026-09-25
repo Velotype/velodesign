@@ -19,14 +19,8 @@ export type ColorPickerAttrsType = {
 
 let areColorPickerStylesMounted = false
 
-/**
- * A themed color swatch input, wrapping a native `<input type="color"/>` - the browser
- * supplies the actual color-picking UI
- */
-export const ColorPicker: FunctionComponent<ColorPickerAttrsType> = function(attrs: ColorPickerAttrsType, _children: RenderableElements[]): HTMLInputElement {
-    if (!areColorPickerStylesMounted) {
-        areColorPickerStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<ColorPicker/>`, mounted once on first construction */
+const colorPickerCss: string = `
 .vtd-color-picker{
 appearance:none;
 -webkit-appearance:none;
@@ -42,7 +36,16 @@ cursor:pointer;
 .vtd-color-picker::-webkit-color-swatch{border:none;border-radius:0.25rem;}
 .vtd-color-picker::-moz-color-swatch{border:none;border-radius:0.25rem;}
 .vtd-color-picker:disabled{cursor:not-allowed;opacity:0.6;}
-`, "vtd/ColorPicker")
+`
+
+/**
+ * A themed color swatch input, wrapping a native `<input type="color"/>` - the browser
+ * supplies the actual color-picking UI
+ */
+export const ColorPicker: FunctionComponent<ColorPickerAttrsType> = function(attrs: ColorPickerAttrsType, _children: RenderableElements[]): HTMLInputElement {
+    if (!areColorPickerStylesMounted) {
+        areColorPickerStylesMounted = true
+        mountStyles(colorPickerCss, "vtd/ColorPicker")
     }
 
     return passthroughAttrsToElement<HTMLInputElement>(<input

@@ -35,16 +35,8 @@ export type RateAttrsType = {
 let areRateStylesMounted = false
 let rateInstanceCounter = 0
 
-/**
- * An interactable star rating, built on a group of visually-hidden native radio inputs -
- * the classic CSS `~` general-sibling-selector star-rating trick, so hover/checked
- * highlighting and keyboard selection all come from the browser for free, same trade-off
- * as `RadioButton`/`Checkbox` wrapping a hidden native input for their visual box.
- */
-export const Rate: FunctionComponent<RateAttrsType> = function(attrs: RateAttrsType, _children: RenderableElements[]): HTMLSpanElement {
-    if (!areRateStylesMounted) {
-        areRateStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<Rate/>`, mounted once on first construction */
+const rateCss: string = `
 .vtd-rate{
 display:inline-flex;
 flex-direction:row-reverse;
@@ -72,7 +64,18 @@ transition:color 0.1s ease-in;
 .vtd-rate-danger .vtd-rate-star:hover ~ .vtd-rate-star{color:var(--accent-6);}
 .vtd-rate-disabled .vtd-rate-star{cursor:not-allowed;}
 .vtd-rate-input:focus-visible ~ .vtd-rate-star{outline:2px solid var(--primary-7);outline-offset:2px;}
-`, "vtd/Rate")
+`
+
+/**
+ * An interactable star rating, built on a group of visually-hidden native radio inputs -
+ * the classic CSS `~` general-sibling-selector star-rating trick, so hover/checked
+ * highlighting and keyboard selection all come from the browser for free, same trade-off
+ * as `RadioButton`/`Checkbox` wrapping a hidden native input for their visual box.
+ */
+export const Rate: FunctionComponent<RateAttrsType> = function(attrs: RateAttrsType, _children: RenderableElements[]): HTMLSpanElement {
+    if (!areRateStylesMounted) {
+        areRateStylesMounted = true
+        mountStyles(rateCss, "vtd/Rate")
     }
 
     const count = attrs.count || 5

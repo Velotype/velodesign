@@ -4,6 +4,23 @@ import type {EmptyAttrs} from "@velotype/velotype"
 import { Button, setThemeOnSelector, showToast, Theme } from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 
+/**
+ * Mount/unmount tallies for the probe below, read out of the page by the test.
+ *
+ * Deliberately a local copy rather than a shared helper: `tests/bundle.ts` decides a module is
+ * stale from its own `.tsx` and from `src/`, so a helper shared across test modules would be
+ * edited without anything that imports it being rebuilt.
+ */
+const lifecycle = {mounts: 0, unmounts: 0};
+(globalThis as unknown as {vtdLifecycle: typeof lifecycle}).vtdLifecycle = lifecycle
+
+/** Records whether velotype ran its lifecycle - a missed `mount()` leaves no trace in the DOM */
+class MountProbe extends Component<EmptyAttrs> {
+    override mount() { lifecycle.mounts++ }
+    override unmount() { lifecycle.unmounts++ }
+    override render() { return <span class="vtd-test-probe">probe</span> }
+}
+
 class ToastGallery extends Component<EmptyAttrs> {
     override render() {
         return <div style={{marginTop:"10px", display: "flex", gap: "12px", flexWrap: "wrap"}}>
@@ -13,6 +30,9 @@ class ToastGallery extends Component<EmptyAttrs> {
             <Button id="toast-danger-btn" type="secondary" onClick={()=>{showToast("Something went wrong", {type: "danger"})}}>Show danger toast</Button>
             <Button id="toast-quick-btn" type="secondary" onClick={()=>{showToast("Gone in a flash", {duration: 500})}}>Show quick toast (500ms)</Button>
             <Button id="toast-sticky-btn" type="secondary" onClick={()=>{showToast("Stays until dismissed", {duration: 0})}}>Show sticky toast</Button>
+            {/* A toast whose message is a consumer component - the case that needs mount()/unmount()
+              * to run when the toast is pushed into, and deleted from, the container's list */}
+            <Button id="toast-probe-btn" type="secondary" onClick={()=>{showToast(<MountProbe/>, {duration: 0})}}>Show probed toast</Button>
         </div>
     }
 }

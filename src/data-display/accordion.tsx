@@ -27,6 +27,13 @@ export type AccordionAttrsType = {
 
 let areAccordionStylesMounted = false
 
+/** Stylesheet for `<Accordion/>`, mounted once on first construction */
+const accordionCss: string = `
+.vtd-accordion{width:100%;box-sizing:border-box;}
+.vtd-accordion-item{margin-block-end:0.5em;}
+.vtd-accordion-item:last-child{margin-block-end:0;}
+`
+
 /**
  * A list of collapsible sections, built on native `<details>`/`<summary>` pairs.
  *
@@ -45,11 +52,7 @@ export const Accordion: FunctionComponent<AccordionAttrsType> = function(attrs: 
     if (!areAccordionStylesMounted) {
         areAccordionStylesMounted = true
         // Only what belongs to the list - a section's own look lives in the shared stylesheet
-        mountStyles(`
-.vtd-accordion{width:100%;box-sizing:border-box;}
-.vtd-accordion-item{margin-block-end:0.5em;}
-.vtd-accordion-item:last-child{margin-block-end:0;}
-`, "vtd/Accordion")
+        mountStyles(accordionCss, "vtd/Accordion")
     }
 
     // Shared and pushed into as each section is built, so every member sees the whole group. Empty

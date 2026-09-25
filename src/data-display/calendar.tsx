@@ -1,4 +1,5 @@
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
+import { setChildren } from "../core/dom-lifecycle.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { Button } from "../form/button.tsx"
@@ -23,45 +24,8 @@ function isSameDay(a: Date, b: Date): boolean {
     return a.getFullYear() == b.getFullYear() && a.getMonth() == b.getMonth() && a.getDate() == b.getDate()
 }
 
-/**
- * A month-grid date picker with prev/next month navigation and a selectable day
- *
- * Implements the ARIA APG "Date Picker Dialog" grid keyboard model: one day cell at a time is
- * a Tab stop (a roving `tabindex`, tracked as `#focusedDate` - `value`/today, in that preference
- * order, until an arrow key moves it), Left/Right/Up/Down move a day/week at a time, Home/End
- * jump to the start/end of the current week, and PageUp/PageDown step a month (Shift+PageUp/Down
- * a year) - crossing a month boundary rebuilds the grid and then refocuses the same date's new
- * cell, since the old one no longer exists once that happens.
- *
- * Unlike almost every other stateful `Component` in this package (see the "Avoid refresh()"
- * section of CLAUDE.md), `#header`/`#gridEl` are built once and updated via `#renderGrid()`
- * rather than `this.refresh()`-ing the whole component on every navigation - not for the usual
- * "don't tear down consumer content" reason (a Calendar has none), but because refocusing a day
- * cell after a month change needs a stable element to query the freshly-built grid through, and
- * `refresh()` replaces the component's entire rendered tree out from under any reference to it.
- */
-export class Calendar extends Component<CalendarAttrsType> {
-    /** First day of the month currently displayed */
-    #viewDate: Date
-    /** The date that currently holds the grid's roving tabindex/focus */
-    #focusedDate: Date
-    #attrs: CalendarAttrsType
-
-    #root: HTMLDivElement
-    #titleEl: HTMLSpanElement = <span class="vtd-calendar-title"/>
-    #gridEl: HTMLDivElement = <div class="vtd-calendar-grid" role="grid"/>
-
-    /** Create a new `<Calendar/>` Component */
-    constructor(attrs: CalendarAttrsType, children: RenderableElements[]) {
-        super(attrs, children)
-        this.#attrs = attrs
-        const today = new Date()
-        this.#viewDate = attrs.value ? new Date(attrs.value.getFullYear(), attrs.value.getMonth(), 1) : new Date(today.getFullYear(), today.getMonth(), 1)
-        this.#focusedDate = attrs.value ?? today
-        if (!areCalendarStylesMounted) {
-            areCalendarStylesMounted = true
-            mountStyles(
-`
+/** Stylesheet for `<Calendar/>`, mounted once on first construction */
+const calendarCss: string = `
 .vtd-calendar{width:20em;max-width:100%;}
 .vtd-calendar-header{display:flex;align-items:center;justify-content:space-between;margin-block-end:0.5em;}
 .vtd-calendar-title{font-weight:bold;}
@@ -105,7 +69,46 @@ cursor:pointer;
 `
 .vtd-calendar-day.vtd-calendar-day-today:hover{background-color:var(--primary-2);}
 .vtd-calendar-day.vtd-calendar-day-selected:hover{background-color:var(--primary-6);}
-`, "vtd/Calendar")
+`
+
+/**
+ * A month-grid date picker with prev/next month navigation and a selectable day
+ *
+ * Implements the ARIA APG "Date Picker Dialog" grid keyboard model: one day cell at a time is
+ * a Tab stop (a roving `tabindex`, tracked as `#focusedDate` - `value`/today, in that preference
+ * order, until an arrow key moves it), Left/Right/Up/Down move a day/week at a time, Home/End
+ * jump to the start/end of the current week, and PageUp/PageDown step a month (Shift+PageUp/Down
+ * a year) - crossing a month boundary rebuilds the grid and then refocuses the same date's new
+ * cell, since the old one no longer exists once that happens.
+ *
+ * Unlike almost every other stateful `Component` in this package (see the "Avoid refresh()"
+ * section of CLAUDE.md), `#header`/`#gridEl` are built once and updated via `#renderGrid()`
+ * rather than `this.refresh()`-ing the whole component on every navigation - not for the usual
+ * "don't tear down consumer content" reason (a Calendar has none), but because refocusing a day
+ * cell after a month change needs a stable element to query the freshly-built grid through, and
+ * `refresh()` replaces the component's entire rendered tree out from under any reference to it.
+ */
+export class Calendar extends Component<CalendarAttrsType> {
+    /** First day of the month currently displayed */
+    #viewDate: Date
+    /** The date that currently holds the grid's roving tabindex/focus */
+    #focusedDate: Date
+    #attrs: CalendarAttrsType
+
+    #root: HTMLDivElement
+    #titleEl: HTMLSpanElement = <span class="vtd-calendar-title"/>
+    #gridEl: HTMLDivElement = <div class="vtd-calendar-grid" role="grid"/>
+
+    /** Create a new `<Calendar/>` Component */
+    constructor(attrs: CalendarAttrsType, children: RenderableElements[]) {
+        super(attrs, children)
+        this.#attrs = attrs
+        const today = new Date()
+        this.#viewDate = attrs.value ? new Date(attrs.value.getFullYear(), attrs.value.getMonth(), 1) : new Date(today.getFullYear(), today.getMonth(), 1)
+        this.#focusedDate = attrs.value ?? today
+        if (!areCalendarStylesMounted) {
+            areCalendarStylesMounted = true
+            mountStyles(calendarCss, "vtd/Calendar")
         }
 
         this.#gridEl.addEventListener("keydown", this.#handleGridKeyDown)
@@ -190,7 +193,7 @@ cursor:pointer;
         const days = Array.from({length: 42}, (_, i) => new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i))
         const weeks = Array.from({length: 6}, (_, i) => days.slice(i * 7, i * 7 + 7))
 
-        this.#gridEl.replaceChildren(
+        setChildren(this, this.#gridEl, [
             <div class="vtd-calendar-weekdays" role="row">
                 {weekdayLabels.map(label => <span class="vtd-calendar-weekday" role="columnheader">{label}</span>)}
             </div>,
@@ -211,7 +214,7 @@ cursor:pointer;
                         }}>{day.getDate()}</button>
                 })}
             </div>),
-        )
+        ])
     }
 
     /** Render this Component */

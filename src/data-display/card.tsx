@@ -14,13 +14,6 @@ export type CardAttrsType = {
 
 let areCardStylesMounted = false
 
-/**
- * A themed container with optional header/footer slots, for grouping related content
- */
-export const Card: FunctionComponent<CardAttrsType> = function(attrs: CardAttrsType, children: RenderableElements[]): HTMLDivElement {
-    if (!areCardStylesMounted) {
-        areCardStylesMounted = true
-        mountStyles(
 /*
  * Three regions, three jobs, and they have to look like it.
  *
@@ -34,7 +27,8 @@ export const Card: FunctionComponent<CardAttrsType> = function(attrs: CardAttrsT
  * relationship a hover has to a resting row, which is small on purpose. A header that announced
  * itself with a real colour would make every card on a page compete with its own content.
  */
-`
+/** Stylesheet for `<Card/>`, mounted once on first construction */
+const cardCss: string = `
 .vtd-card{
 width:100%;
 box-sizing:border-box;
@@ -68,7 +62,15 @@ padding:0.75em 1em;
 background-color:var(--background-2);
 border-block-start:1px solid var(--background-4);
 }
-`, "vtd/Card")
+`
+
+/**
+ * A themed container with optional header/footer slots, for grouping related content
+ */
+export const Card: FunctionComponent<CardAttrsType> = function(attrs: CardAttrsType, children: RenderableElements[]): HTMLDivElement {
+    if (!areCardStylesMounted) {
+        areCardStylesMounted = true
+        mountStyles(cardCss, "vtd/Card")
     }
 
     return passthroughAttrsToElement<HTMLDivElement>(<div class="vtd-card">

@@ -24,6 +24,15 @@ export type StackAttrsType = {
 
 let areStackStylesMounted = false
 
+/** Stylesheet for `<Stack/>`, mounted once on first construction */
+const stackCss: string = `
+.vtd-stack{display:flex;width:100%;box-sizing:border-box;}
+` +
+/* An inline stack sizes to its content, like the text it sits among */
+`
+.vtd-stack-inline{display:inline-flex;width:auto;}
+`
+
 /**
  * One-dimensional layout: a row or column of children with a consistent gap.
  *
@@ -45,14 +54,7 @@ let areStackStylesMounted = false
 export const Stack: FunctionComponent<StackAttrsType> = function(attrs: StackAttrsType, children: RenderableElements[]): HTMLDivElement {
     if (!areStackStylesMounted) {
         areStackStylesMounted = true
-        mountStyles(
-`
-.vtd-stack{display:flex;width:100%;box-sizing:border-box;}
-` +
-/* An inline stack sizes to its content, like the text it sits among */
-`
-.vtd-stack-inline{display:inline-flex;width:auto;}
-`, "vtd/Stack")
+        mountStyles(stackCss, "vtd/Stack")
     }
 
     const direction = attrs.direction ?? "row"

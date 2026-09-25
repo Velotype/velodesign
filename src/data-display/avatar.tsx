@@ -34,14 +34,8 @@ export type AvatarAttrsType = {
 
 let areAvatarStylesMounted = false
 
-/**
- * A small circular image (or initials fallback) representing a person or entity
- */
-export const Avatar: FunctionComponent<AvatarAttrsType> = function(attrs: AvatarAttrsType, _children: RenderableElements[]): HTMLSpanElement {
-    if (!areAvatarStylesMounted) {
-        areAvatarStylesMounted = true
-        mountStyles(
-`
+/** Stylesheet for `<Avatar/>`, mounted once on first construction */
+const avatarCss: string = `
 .vtd-avatar{
 position:relative;
 display:inline-flex;
@@ -76,7 +70,15 @@ height:100%;
 object-fit:cover;
 }
 .vtd-avatar-img-hidden{display:none;}
-`, "vtd/Avatar")
+`
+
+/**
+ * A small circular image (or initials fallback) representing a person or entity
+ */
+export const Avatar: FunctionComponent<AvatarAttrsType> = function(attrs: AvatarAttrsType, _children: RenderableElements[]): HTMLSpanElement {
+    if (!areAvatarStylesMounted) {
+        areAvatarStylesMounted = true
+        mountStyles(avatarCss, "vtd/Avatar")
     }
 
     const size = attrs.size || "2.5em"

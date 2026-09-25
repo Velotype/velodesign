@@ -1,4 +1,5 @@
 import { Component, passthroughAttrsToElement } from "../core/velotype.ts"
+import { setChildren } from "../core/dom-lifecycle.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { Button } from "../form/button.tsx"
 import { ButtonGroup } from "../form/button-group.tsx"
@@ -281,8 +282,8 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
     #renderHead() {
         const visibleColumns = this.#visibleColumns()
         const {colElements, cols} = buildColGroup(visibleColumns, this.#columnWidths)
-        this.#colgroupEl.replaceChildren(...cols)
-        this.#theadRowEl.replaceChildren(...buildHeaderCells({
+        setChildren(this, this.#colgroupEl, cols)
+        setChildren(this, this.#theadRowEl, buildHeaderCells({
             columns: visibleColumns,
             isSortable: (column) => !!(column as AsyncDataTableColumnType<RowType>).sortable,
             sortKey: this.#sortKey,
@@ -302,20 +303,20 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
         const colspan = Math.max(1, visibleColumns.length)
 
         if (this.#state === "error") {
-            this.#tbodyEl.replaceChildren(buildStatusRow(colspan,
-                attrs.renderError ? attrs.renderError(this.#error) : String(this.#error)))
+            setChildren(this, this.#tbodyEl, [buildStatusRow(colspan,
+                attrs.renderError ? attrs.renderError(this.#error) : String(this.#error))])
         } else if (this.#state === "loading" && this.#rows.length === 0) {
             // Only the first load shows a spinner in place of content; a reload with rows already
             // on screen keeps them and fades instead (the class toggle below).
-            this.#tbodyEl.replaceChildren(buildStatusRow(colspan,
-                <span class="vtd-data-table-status"><Spinner label={attrs.loadingLabel}/></span>))
+            setChildren(this, this.#tbodyEl, [buildStatusRow(colspan,
+                <span class="vtd-data-table-status"><Spinner label={attrs.loadingLabel}/></span>)])
         } else if (this.#rows.length === 0) {
             const message = this.#renderedSearch
                 ? (attrs.noMatchMessage ?? attrs.emptyMessage ?? <DataTableThemeOptions.emptySymbol/>)
                 : (attrs.emptyMessage ?? <DataTableThemeOptions.emptySymbol/>)
-            this.#tbodyEl.replaceChildren(buildStatusRow(colspan, message))
+            setChildren(this, this.#tbodyEl, [buildStatusRow(colspan, message)])
         } else {
-            this.#tbodyEl.replaceChildren(...buildBodyRows({
+            setChildren(this, this.#tbodyEl, buildBodyRows({
                 rows: this.#rows,
                 columns: visibleColumns,
                 searchQuery: this.#renderedSearch,
@@ -383,7 +384,7 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
             </div>)
         }
 
-        this.#footerEl.replaceChildren(...children)
+        setChildren(this, this.#footerEl, children)
     }
 
     constructor(attrs: AsyncDataTableAttrsType<RowType>, children: RenderableElements[]) {

@@ -27,16 +27,8 @@ export type DateTimePickerAttrsType = {
 
 let areDateTimePickerStylesMounted = false
 
-/**
- * A themed date-and-time input, wrapping a native `<input type="datetime-local"/>` - like
- * `DatePicker`, the browser supplies the calendar/time picker UI and all keyboard/locale
- * handling for free. For picking a *span* of date-times rather than one, see
- * `DateTimeRangePicker`.
- */
-export const DateTimePicker: FunctionComponent<DateTimePickerAttrsType> = function(attrs: DateTimePickerAttrsType, _children: RenderableElements[]): HTMLInputElement {
-    if (!areDateTimePickerStylesMounted) {
-        areDateTimePickerStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<DateTimePicker/>`, mounted once on first construction */
+const dateTimePickerCss: string = `
 .vtd-date-time-picker{
 padding:0.5ex 1ex;
 margin-inline-start:1ex;
@@ -48,7 +40,18 @@ font:inherit;
 color-scheme:inherit;
 }
 .vtd-date-time-picker:disabled{cursor:not-allowed;opacity:0.6;}
-`, "vtd/DateTimePicker")
+`
+
+/**
+ * A themed date-and-time input, wrapping a native `<input type="datetime-local"/>` - like
+ * `DatePicker`, the browser supplies the calendar/time picker UI and all keyboard/locale
+ * handling for free. For picking a *span* of date-times rather than one, see
+ * `DateTimeRangePicker`.
+ */
+export const DateTimePicker: FunctionComponent<DateTimePickerAttrsType> = function(attrs: DateTimePickerAttrsType, _children: RenderableElements[]): HTMLInputElement {
+    if (!areDateTimePickerStylesMounted) {
+        areDateTimePickerStylesMounted = true
+        mountStyles(dateTimePickerCss, "vtd/DateTimePicker")
     }
 
     return passthroughAttrsToElement<HTMLInputElement>(<input

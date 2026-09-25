@@ -50,50 +50,8 @@ type Branch = {
     content: HTMLDivElement
 }
 
-/**
- * A hierarchical, expandable/collapsible list, built on nested native `<details>`/`<summary>`
- * pairs - each node carries its own open/closed state.
- *
- * Nodes open and close with the same animation as `Collapse` and `Accordion`, from the same
- * `disclosure-view.tsx`. It takes the *mechanism* and not the chrome: a tree row is not a header,
- * so it keeps its own hover, its own chevron and its own indentation, and never gets the border
- * box or header fill those two draw.
- *
- * **A class rather than a `FunctionComponent`, because its open/closed state has to be readable
- * and drivable from outside.** A filterable tree needs exactly that: the filter has to be able to
- * reveal a branch whose child matched, and has to be able to put the reader's own expansions back
- * afterwards. Reading `<details open>` out of the DOM would work and would make a consumer depend
- * on the markup this component happens to emit, so it is a method instead.
- *
- * The tree is built once in the constructor and `render()` returns it, so **never call
- * `refresh()` here**: `label` is `RenderableElements`, so it can hold a consumer's own components,
- * and rebuilding would silently discard whatever state those hold. Every method below does a
- * targeted DOM update instead.
- */
-export class Tree extends Component<TreeAttrsType> {
-    #root: HTMLUListElement
-    /** Every branch node by key, so open/close can address one without walking the DOM */
-    #branches = new Map<string, Branch>()
-    /**
-     * Branch keys in document order, parents before their children.
-     *
-     * Kept separately because a branch can only register itself *after* its children have been
-     * rendered - it needs the content element they build. Iterating the map would therefore
-     * report the deepest node first, which is not what a caller reading "in order" expects.
-     */
-    #branchOrder: string[] = []
-    /** Each branch's parent branch, so `reveal` can walk up without searching the DOM */
-    #parents = new Map<string, string | undefined>()
-    #onToggle?: (node: TreeNodeType, open: boolean) => void
-
-    constructor(attrs: TreeAttrsType, children: RenderableElements[]) {
-        super(attrs, children)
-        this.#onToggle = attrs.onToggle
-        mountDisclosureStyles()
-        if (!areTreeStylesMounted) {
-            areTreeStylesMounted = true
-            mountStyles(
-`
+/** Stylesheet for `<Tree/>`, mounted once on first construction */
+const treeCss: string = `
 .vtd-tree{width:100%;box-sizing:border-box;list-style:none;padding:0;margin:0;}
 .vtd-tree-children{list-style:none;padding-inline-start:1.25em;margin:0;}
 .vtd-tree-node{margin-block:0.1em;}
@@ -192,7 +150,51 @@ transition:transform 0.15s ease-in-out;
 @media (prefers-reduced-motion: reduce){
 .vtd-tree-chevron::before{transition:none;}
 }
-`, "vtd/Tree")
+`
+
+/**
+ * A hierarchical, expandable/collapsible list, built on nested native `<details>`/`<summary>`
+ * pairs - each node carries its own open/closed state.
+ *
+ * Nodes open and close with the same animation as `Collapse` and `Accordion`, from the same
+ * `disclosure-view.tsx`. It takes the *mechanism* and not the chrome: a tree row is not a header,
+ * so it keeps its own hover, its own chevron and its own indentation, and never gets the border
+ * box or header fill those two draw.
+ *
+ * **A class rather than a `FunctionComponent`, because its open/closed state has to be readable
+ * and drivable from outside.** A filterable tree needs exactly that: the filter has to be able to
+ * reveal a branch whose child matched, and has to be able to put the reader's own expansions back
+ * afterwards. Reading `<details open>` out of the DOM would work and would make a consumer depend
+ * on the markup this component happens to emit, so it is a method instead.
+ *
+ * The tree is built once in the constructor and `render()` returns it, so **never call
+ * `refresh()` here**: `label` is `RenderableElements`, so it can hold a consumer's own components,
+ * and rebuilding would silently discard whatever state those hold. Every method below does a
+ * targeted DOM update instead.
+ */
+export class Tree extends Component<TreeAttrsType> {
+    #root: HTMLUListElement
+    /** Every branch node by key, so open/close can address one without walking the DOM */
+    #branches = new Map<string, Branch>()
+    /**
+     * Branch keys in document order, parents before their children.
+     *
+     * Kept separately because a branch can only register itself *after* its children have been
+     * rendered - it needs the content element they build. Iterating the map would therefore
+     * report the deepest node first, which is not what a caller reading "in order" expects.
+     */
+    #branchOrder: string[] = []
+    /** Each branch's parent branch, so `reveal` can walk up without searching the DOM */
+    #parents = new Map<string, string | undefined>()
+    #onToggle?: (node: TreeNodeType, open: boolean) => void
+
+    constructor(attrs: TreeAttrsType, children: RenderableElements[]) {
+        super(attrs, children)
+        this.#onToggle = attrs.onToggle
+        mountDisclosureStyles()
+        if (!areTreeStylesMounted) {
+            areTreeStylesMounted = true
+            mountStyles(treeCss, "vtd/Tree")
         }
 
         const contents: HTMLElement[] = []

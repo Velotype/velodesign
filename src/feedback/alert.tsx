@@ -1,6 +1,7 @@
-import {passthroughAttrsToElement} from "../core/velotype.ts"
+import { Component, passthroughAttrsToElement } from "../core/velotype.ts"
+import { removeElement } from "../core/dom-lifecycle.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
+import type { ChildrenAttr, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
 /**
@@ -32,13 +33,8 @@ export type AlertAttrsType = {
 
 let areAlertStylesMounted = false
 
-/**
- * An inline message box used to draw attention to important information
- */
-export const Alert: FunctionComponent<AlertAttrsType> = function(attrs: AlertAttrsType, children: RenderableElements[]): HTMLDivElement {
-    if (!areAlertStylesMounted) {
-        areAlertStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<Alert/>`, mounted once on first construction */
+const alertCss: string = `
 .vtd-alert{
 width:100%;
 box-sizing:border-box;
@@ -67,8 +63,8 @@ line-height:1;
 padding:0.15em 0.4em;
 border-radius:0.25rem;
 ` +
-/* A 24px floor on the control a reader taps to dismiss - see the touch target note in CLAUDE.md */
-`
+    /* A 24px floor on the control a reader taps to dismiss - see the touch target note in CLAUDE.md */
+    `
 min-width:24px;
 min-height:24px;
 display:inline-flex;
@@ -76,18 +72,34 @@ align-items:center;
 justify-content:center;
 }
 .vtd-alert-dismiss:hover{background-color:var(--background-3);}
-`, "vtd/Alert")
-    }
+`
 
-    const alertElement: HTMLDivElement = <div class={`vtd-alert vtd-alert-${attrs.type||"info"}`} role="alert">
-        <div class="vtd-alert-body">
-            {attrs.title && <div class="vtd-alert-title">{attrs.title}</div>}
-            <div>{children}</div>
+/**
+ * An inline message box used to draw attention to important information
+ *
+ * A class rather than a `FunctionComponent` for one reason: dismissing takes the alert off the
+ * page, and taking something off the page has to run velotype's unmount lifecycle for everything
+ * inside it - `children` here is arbitrary consumer content. `removeElement` needs a Component to
+ * do that through, and a `FunctionComponent` has none. See `core/dom-lifecycle.ts`.
+ */
+export class Alert extends Component<AlertAttrsType> {
+    /** Render this Component */
+    override render(attrs: AlertAttrsType, children: RenderableElements[]): HTMLDivElement {
+        if (!areAlertStylesMounted) {
+            areAlertStylesMounted = true
+            mountStyles(alertCss, "vtd/Alert")
+        }
+
+        const alertElement: HTMLDivElement = <div class={`vtd-alert vtd-alert-${attrs.type||"info"}`} role="alert">
+            <div class="vtd-alert-body">
+                {attrs.title && <div class="vtd-alert-title">{attrs.title}</div>}
+                <div>{children}</div>
+            </div>
+            {attrs.onDismiss && <button type="button" class="vtd-alert-dismiss" aria-label={attrs.dismissLabel} onClick={() => {
+                attrs.onDismiss?.()
+                removeElement(this, alertElement)
+            }}><AlertThemeOptions.closeSymbol/></button>}
         </div>
-        {attrs.onDismiss && <button type="button" class="vtd-alert-dismiss" aria-label={attrs.dismissLabel} onClick={() => {
-            attrs.onDismiss?.()
-            alertElement.remove()
-        }}><AlertThemeOptions.closeSymbol/></button>}
-    </div>
-    return passthroughAttrsToElement<HTMLDivElement>(alertElement, attrs)
+        return passthroughAttrsToElement<HTMLDivElement>(alertElement, attrs)
+    }
 }

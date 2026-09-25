@@ -18,17 +18,20 @@ export type StatisticAttrsType = {
 
 let areStatisticStylesMounted = false
 
+/** Stylesheet for `<Statistic/>`, mounted once on first construction */
+const statisticCss: string = `
+.vtd-statistic-title{font-size:0.85em;opacity:0.7;margin-block-end:0.25em;}
+.vtd-statistic-value{font-size:1.75em;font-weight:bold;line-height:1.2;}
+.vtd-statistic-affix{font-size:0.6em;font-weight:normal;margin-inline:0.15em;}
+`
+
 /**
  * A labeled numeric stat tile, for dashboards/KPI summaries
  */
 export const Statistic: FunctionComponent<StatisticAttrsType> = function(attrs: StatisticAttrsType, _children: RenderableElements[]): HTMLDivElement {
     if (!areStatisticStylesMounted) {
         areStatisticStylesMounted = true
-        mountStyles(`
-.vtd-statistic-title{font-size:0.85em;opacity:0.7;margin-block-end:0.25em;}
-.vtd-statistic-value{font-size:1.75em;font-weight:bold;line-height:1.2;}
-.vtd-statistic-affix{font-size:0.6em;font-weight:normal;margin-inline:0.15em;}
-`, "vtd/Statistic")
+        mountStyles(statisticCss, "vtd/Statistic")
     }
 
     return passthroughAttrsToElement<HTMLDivElement>(<div class="vtd-statistic">

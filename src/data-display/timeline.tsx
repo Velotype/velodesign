@@ -26,13 +26,8 @@ export type TimelineAttrsType = {
 
 let areTimelineStylesMounted = false
 
-/**
- * A vertical list of dated/ordered events, each with a dot marker on a connecting line
- */
-export const Timeline: FunctionComponent<TimelineAttrsType> = function(attrs: TimelineAttrsType, _children: RenderableElements[]): HTMLElement {
-    if (!areTimelineStylesMounted) {
-        areTimelineStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<Timeline/>`, mounted once on first construction */
+const timelineCss: string = `
 .vtd-timeline{width:100%;box-sizing:border-box;list-style:none;padding:0;margin:0;}
 .vtd-timeline-item{
 position:relative;
@@ -72,7 +67,15 @@ background-color:var(--background-4);
 .vtd-timeline-body{flex-grow:1;min-width:0;}
 .vtd-timeline-title{font-weight:bold;}
 .vtd-timeline-description{font-size:0.9em;opacity:0.7;margin-block-start:0.15em;}
-`, "vtd/Timeline")
+`
+
+/**
+ * A vertical list of dated/ordered events, each with a dot marker on a connecting line
+ */
+export const Timeline: FunctionComponent<TimelineAttrsType> = function(attrs: TimelineAttrsType, _children: RenderableElements[]): HTMLElement {
+    if (!areTimelineStylesMounted) {
+        areTimelineStylesMounted = true
+        mountStyles(timelineCss, "vtd/Timeline")
     }
 
     return passthroughAttrsToElement<HTMLElement>(<ul class="vtd-timeline">

@@ -30,14 +30,8 @@ export type EmptyAttrsType = {
 
 let areEmptyStylesMounted = false
 
-/**
- * A placeholder shown in place of a list/table/section that has no data, optionally
- * with a `children` slot for a follow-up action (e.g. a "Create one" `Button`)
- */
-export const Empty: FunctionComponent<EmptyAttrsType> = function(attrs: EmptyAttrsType, children: RenderableElements[]): HTMLDivElement {
-    if (!areEmptyStylesMounted) {
-        areEmptyStylesMounted = true
-        mountStyles(`
+/** Stylesheet for `<Empty/>`, mounted once on first construction */
+const emptyCss: string = `
 .vtd-empty{
 width:100%;
 box-sizing:border-box;
@@ -53,7 +47,16 @@ color:var(--text);
 .vtd-empty-icon{font-size:2.5em;opacity:0.4;line-height:1;}
 .vtd-empty-title{font-weight:bold;}
 .vtd-empty-description{opacity:0.7;font-size:0.9em;}
-`, "vtd/Empty")
+`
+
+/**
+ * A placeholder shown in place of a list/table/section that has no data, optionally
+ * with a `children` slot for a follow-up action (e.g. a "Create one" `Button`)
+ */
+export const Empty: FunctionComponent<EmptyAttrsType> = function(attrs: EmptyAttrsType, children: RenderableElements[]): HTMLDivElement {
+    if (!areEmptyStylesMounted) {
+        areEmptyStylesMounted = true
+        mountStyles(emptyCss, "vtd/Empty")
     }
 
     return passthroughAttrsToElement<HTMLDivElement>(<div class="vtd-empty" role="status">

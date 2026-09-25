@@ -39,6 +39,60 @@ export type CarouselAttrsType = {
 
 let areCarouselStylesMounted = false
 
+/** Stylesheet for `<Carousel/>`, mounted once on first construction */
+const carouselCss: string = `
+.vtd-carousel{width:100%;box-sizing:border-box;position:relative;overflow:hidden;border-radius:0.5rem;}
+.vtd-carousel-track{position:relative;}
+.vtd-carousel-slide{display:flex;align-items:center;justify-content:center;}
+.vtd-carousel-slide[hidden]{display:none;}
+` +
+/*
+ * Scoped under the carousel's own root, and it has to be: these rules land on a `Button`, so they
+ * compete with `.vtd-button` at equal specificity in the same layer, where source order decides -
+ * and Button's sheet always mounts second, because a Carousel constructs one. `.vtd-button` sets
+ * `position:relative` for its loading spinner, so the unscoped rule lost every time and the arrows
+ * rendered in flow underneath the slide instead of over it. Measured: computed position was
+ * `relative`, with prev and next stacked together at the bottom-left corner.
+ */
+`
+.vtd-carousel .vtd-carousel-nav{
+position:absolute;
+top:50%;
+transform:translateY(-50%);
+z-index:1;
+}
+.vtd-carousel .vtd-carousel-nav-prev{left:0.5em;}
+.vtd-carousel .vtd-carousel-nav-next{right:0.5em;left:auto;}
+.vtd-carousel-dots{display:flex;justify-content:center;gap:0.5em;padding-block-start:0.75em;}
+.vtd-carousel-dot{
+`+
+/*
+ * The dot a reader sees is 0.6em; the control they tap is 24px square, drawn as a transparent box
+ * with the dot painted by ::before. Sizing the button itself to the dot made a 10x10 target - the
+ * smallest anywhere in the package, and less than half of what WCAG 2.2 SC 2.5.8 asks. The dots
+ * keep their 0.5em gap, so at 24px apiece the targets sit edge to edge without overlapping.
+ */
+`
+min-width:24px;
+min-height:24px;
+display:flex;
+align-items:center;
+justify-content:center;
+background:transparent;
+border:none;
+cursor:pointer;
+padding:0;
+}
+.vtd-carousel-dot::before{
+content:"";
+width:0.6em;
+height:0.6em;
+border-radius:50%;
+background-color:var(--background-4);
+}
+.vtd-carousel-dot-active::before{background-color:var(--primary);}
+`
+
 /**
  * A single-slide-at-a-time carousel with prev/next arrows and optional dot indicators.
  *
@@ -170,58 +224,7 @@ export class Carousel extends Component<CarouselAttrsType> {
         this.#autoplayActive = !!attrs.autoplay
         if (!areCarouselStylesMounted) {
             areCarouselStylesMounted = true
-            mountStyles(`
-.vtd-carousel{width:100%;box-sizing:border-box;position:relative;overflow:hidden;border-radius:0.5rem;}
-.vtd-carousel-track{position:relative;}
-.vtd-carousel-slide{display:flex;align-items:center;justify-content:center;}
-.vtd-carousel-slide[hidden]{display:none;}
-` +
-/*
- * Scoped under the carousel's own root, and it has to be: these rules land on a `Button`, so they
- * compete with `.vtd-button` at equal specificity in the same layer, where source order decides -
- * and Button's sheet always mounts second, because a Carousel constructs one. `.vtd-button` sets
- * `position:relative` for its loading spinner, so the unscoped rule lost every time and the arrows
- * rendered in flow underneath the slide instead of over it. Measured: computed position was
- * `relative`, with prev and next stacked together at the bottom-left corner.
- */
-`
-.vtd-carousel .vtd-carousel-nav{
-position:absolute;
-top:50%;
-transform:translateY(-50%);
-z-index:1;
-}
-.vtd-carousel .vtd-carousel-nav-prev{left:0.5em;}
-.vtd-carousel .vtd-carousel-nav-next{right:0.5em;left:auto;}
-.vtd-carousel-dots{display:flex;justify-content:center;gap:0.5em;padding-block-start:0.75em;}
-.vtd-carousel-dot{
-`+
-/*
- * The dot a reader sees is 0.6em; the control they tap is 24px square, drawn as a transparent box
- * with the dot painted by ::before. Sizing the button itself to the dot made a 10x10 target - the
- * smallest anywhere in the package, and less than half of what WCAG 2.2 SC 2.5.8 asks. The dots
- * keep their 0.5em gap, so at 24px apiece the targets sit edge to edge without overlapping.
- */
-`
-min-width:24px;
-min-height:24px;
-display:flex;
-align-items:center;
-justify-content:center;
-background:transparent;
-border:none;
-cursor:pointer;
-padding:0;
-}
-.vtd-carousel-dot::before{
-content:"";
-width:0.6em;
-height:0.6em;
-border-radius:50%;
-background-color:var(--background-4);
-}
-.vtd-carousel-dot-active::before{background-color:var(--primary);}
-`, "vtd/Carousel")
+            mountStyles(carouselCss, "vtd/Carousel")
         }
 
         const total = attrs.slides.length

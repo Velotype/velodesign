@@ -184,17 +184,13 @@ font-weight:bold;
 color:var(--background-6);
 margin-block:0 0.5em;
 }
-.vtd-showcase-example-preview{
-border:1px solid var(--background-4);
-/* Square off the edge the code block butts against - the two read as one unit */
+/*
+ * Squares off the edge the code block butts against, so the two read as one unit. Two classes so
+ * it out-specifies the base rule in AppShell's sheet rather than depending on which loaded last.
+ */
+.vtd-showcase-example-preview.vtd-showcase-example-preview-joined{
 border-radius:0.5rem 0.5rem 0 0;
 border-block-end:none;
-padding:2em;
-display:flex;
-align-items:center;
-min-height:3em;
-background-image:radial-gradient(color-mix(in srgb, var(--background-4) 35%, transparent) 1px, transparent 1px);
-background-size:16px 16px;
 }
 /* CodeBlock draws the panel; this only joins it to the preview sitting directly above */
 .vtd-showcase-example-code{border-radius:0 0 0.5rem 0.5rem;}
@@ -247,7 +243,7 @@ background-size:16px 16px;
                     {/* A real heading, so the document outline cascades h1 > h2 > h3 rather than
                         leaving each example's label as loose text the outline cannot see */}
                     <Heading level={3} id={exampleId(example.label)} class="vtd-showcase-example-label">{example.label}</Heading>
-                    <div class="vtd-showcase-example-preview">{example.node()}</div>
+                    <div class="vtd-showcase-example-preview vtd-showcase-example-preview-joined">{example.node()}</div>
                     <CodeBlock
                         class="vtd-showcase-example-code"
                         showLineNumbers

@@ -1,6 +1,8 @@
-import type { RenderableElements } from "../core/velotype.ts"
+import { Component, getComponent, RenderObjectArray, replaceElementWithRoot } from "../core/velotype.ts"
+import type { EmptyAttrs, RenderableElements } from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
+import { setTimeoutHelper } from "../core/utilities.ts"
 
 /**
  * Options to customize `<Toast/>` Theme
@@ -28,12 +30,68 @@ export type ToastOptions = {
 }
 
 let areToastStylesMounted = false
-let toastContainer: HTMLDivElement | undefined
+/**
+ * The one shared stack every toast is added to, and the only reason it is a Component at all.
+ *
+ * `showToast` is an imperative function with no component of its own, so without this there would
+ * be nothing to add and remove toasts *through* - and a toast's `message` is consumer content that
+ * may hold components needing `mount()`/`unmount()`. See `core/dom-lifecycle.ts`.
+ */
+/** One visible toast, as data. The element is `#toasts`'s render function's business */
+type ToastEntry = {
+    message: RenderableElements
+    type: ToastType
+    dismissLabel?: string
+}
 
-function ensureToastContainer(): HTMLDivElement {
-    if (!areToastStylesMounted) {
-        areToastStylesMounted = true
-        mountStyles(`
+class ToastContainer extends Component<EmptyAttrs> {
+    /**
+     * The toasts on screen, as a `RenderObjectArray`.
+     *
+     * This is the one list in the package that genuinely mutates a point at a time - one toast
+     * arrives, another times out - rather than being recomputed whole, which is exactly what
+     * `RenderObjectArray` is for. `push` and `delete` touch one element; nothing else on screen is
+     * rebuilt, so a toast already fading in is not interrupted by a second one arriving.
+     *
+     * `delete` matches on object identity through `findIndex`, so every entry has to be its own
+     * object - `showToast` builds a fresh one per call, and two identical toasts are still two
+     * entries. It is also idempotent: dismissing one that already timed out finds nothing and does
+     * nothing, which is what lets the timeout below stay unconditional.
+     *
+     * The wrapper element velotype puts around the list is `display:contents`, so the toasts stay
+     * direct flex children of `.vtd-toast-container` and the column gap still applies to them.
+     */
+    #toasts: RenderObjectArray<ToastEntry> = new RenderObjectArray<ToastEntry>({
+        renderFunction: (entry: ToastEntry) => <div class={`vtd-toast vtd-toast-${entry.type}`} role="status">
+            <div class="vtd-toast-body">{entry.message}</div>
+            <button type="button" class="vtd-toast-dismiss" aria-label={entry.dismissLabel} onClick={() => {
+                this.dismiss(entry)
+            }}><ToastThemeOptions.closeSymbol/></button>
+        </div>
+    })
+
+    #root: HTMLDivElement = <div class="vtd-toast-container">{this.#toasts}</div>
+
+    /** Put a toast on the page */
+    add(entry: ToastEntry): void {
+        this.#toasts.push(entry)
+    }
+
+    /** Take a toast off the page. A no-op if it is already gone. */
+    dismiss(entry: ToastEntry): void {
+        this.#toasts.delete(entry)
+    }
+
+    /** Render this Component */
+    override render(): HTMLDivElement {
+        return this.#root
+    }
+}
+
+let toastContainer: ToastContainer | undefined
+
+/** Stylesheet for `<Toast/>`, mounted once on first construction */
+const toastCss: string = `
 .vtd-toast-container{
 position:fixed;
 bottom:1em;
@@ -76,14 +134,27 @@ padding:0.15em 0.4em;
 border-radius:0.25rem;
 }
 .vtd-toast-dismiss:hover{background-color:var(--background-3);}
-`, "vtd/Toast")
+`
+
+function ensureToastContainer(): ToastContainer {
+    if (!areToastStylesMounted) {
+        areToastStylesMounted = true
+        mountStyles(toastCss, "vtd/Toast")
     }
     let container = toastContainer
     if (!container) {
-        const newContainer: HTMLDivElement = <div class="vtd-toast-container"/>
-        document.body.appendChild(newContainer)
-        toastContainer = newContainer
-        container = newContainer
+        // Mounted through `replaceElementWithRoot` rather than appended to `document.body`
+        // directly, because that is one of the three paths velotype dispatches the mount lifecycle
+        // from - and a toast's `message` is arbitrary consumer content that may well be a
+        // component. A bare `body.appendChild` would put the container on the page with no
+        // Component behind it, leaving nothing to add and remove toasts *through*. See
+        // `core/dom-lifecycle.ts`.
+        const containerEl: HTMLDivElement = <ToastContainer/>
+        const placeholder = document.createElement("div")
+        document.body.appendChild(placeholder)
+        replaceElementWithRoot(containerEl, placeholder)
+        container = getComponent<ToastContainer>(containerEl)
+        toastContainer = container
     }
     return container
 }
@@ -97,20 +168,19 @@ border-radius:0.25rem;
  */
 export function showToast(message: RenderableElements, options?: ToastOptions): void {
     const container = ensureToastContainer()
-    const type = options?.type || "info"
+    const entry: ToastEntry = {
+        message,
+        type: options?.type || "info",
+        dismissLabel: options?.dismissLabel
+    }
+    container.add(entry)
+
     const duration = options?.duration ?? 4000
-
-    const toastElement: HTMLDivElement = <div class={`vtd-toast vtd-toast-${type}`} role="status">
-        <div class="vtd-toast-body">{message}</div>
-        <button type="button" class="vtd-toast-dismiss" aria-label={options?.dismissLabel} onClick={() => {
-            toastElement.remove()
-        }}><ToastThemeOptions.closeSymbol/></button>
-    </div>
-    container.appendChild(toastElement)
-
     if (duration > 0) {
-        globalThis.setTimeout(() => {
-            toastElement.remove()
+        // Unconditional, because dismissing a toast the reader already closed finds nothing in the
+        // array and does nothing - there is no double-removal to guard against.
+        setTimeoutHelper(() => {
+            container.dismiss(entry)
         }, duration)
     }
 }
