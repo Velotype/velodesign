@@ -1,6 +1,7 @@
 import {passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
+import { History } from "../core/history.ts"
 
 /**
  * A single entry in a `<List/>`
@@ -90,7 +91,7 @@ border-block-end:1px solid var(--background-4);
                 {item.leading && <span class="vtd-list-item-leading">{item.leading}</span>}
                 <span class="vtd-list-item-body">
                     {item.href
-                        ? <a class="vtd-list-item-link" href={item.href}>{titleEl}</a>
+                        ? <a class="vtd-list-item-link" href={History.resolveHref(item.href)}>{titleEl}</a>
                         : useButton
                         ? <button type="button" class="vtd-list-item-link vtd-list-item-link-button" onClick={() => item.onSelect?.()}>{titleEl}</button>
                         : titleEl}

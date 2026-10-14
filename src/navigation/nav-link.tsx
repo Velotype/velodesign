@@ -96,13 +96,13 @@ font-weight:bold;
     /** Render this Component */
     override render(attrs: NavLinkAttrsType, children: RenderableElements[]): HTMLAnchorElement {
         const exact = attrs.exact === undefined ? true : attrs.exact
-        const isActive = exact ? globalThis.location.pathname == attrs.to : globalThis.location.pathname.startsWith(attrs.to)
+        const isActive = exact ? History.getPathname() == attrs.to : History.getPathname().startsWith(attrs.to)
         const activeClass = attrs.activeClass || "vtd-nav-link-active"
         const spa = attrs.spa ?? false
         const soleChild = children.length == 1 ? children[0] : undefined
         const plainTextLabel = typeof soleChild == "string" || typeof soleChild == "number" || typeof soleChild == "bigint" ? String(soleChild) : undefined
         return passthroughAttrsToElement<HTMLAnchorElement>(<a
-            href={attrs.to}
+            href={History.resolveHref(attrs.to)}
             class={`vtd-nav-link${isActive ? ` ${activeClass}` : ""}`}
             data-label={plainTextLabel}
             aria-current={isActive ? "page" : undefined}

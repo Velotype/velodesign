@@ -1,5 +1,6 @@
 import { Component } from "../core/velotype.ts"
 import type { FunctionComponent, EmptyAttrs, RenderableElements } from "../core/velotype.ts"
+import { History } from "../core/history.ts"
 
 /**
  * One routable page in a `<PageSelector pages={[...]}/>`
@@ -41,7 +42,7 @@ export class PageSelector extends Component<PageSelectorAttrsType> {
     /** Render this Component */
     override render(attrs: PageSelectorAttrsType): RenderableElements {
         const page = attrs.pages.find(function(page: PageSelectorPageType) {
-            if (globalThis.location.pathname == page.basename) {
+            if (History.getPathname() == page.basename) {
                 return true
             }
             return false

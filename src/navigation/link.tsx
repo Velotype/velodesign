@@ -41,7 +41,7 @@ export const Link: FunctionComponent<LinkAttrsType> = function(attrs: LinkAttrsT
     const spa = attrs.spa ?? false
     return passthroughAttrsToElement<HTMLAnchorElement>(<a
         class="vtd-link"
-        href={attrs.to}
+        href={History.resolveHref(attrs.to)}
         onClick={spa ? (event: Event) => {
             event.preventDefault()
             History.changeLocation(attrs.to)

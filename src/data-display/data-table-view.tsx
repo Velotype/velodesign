@@ -283,7 +283,7 @@ export function buildBodyRows<RowType>(options: DataTableBodyOptions<RowType>): 
                     {href
                         ? <a
                             class="vtd-data-table-row-link"
-                            href={href}
+                            href={History.resolveHref(href)}
                             onClick={options.rowHrefSpa ? (event: MouseEvent) => {
                                 // Only a plain left-click routes client-side. A modified click
                                 // (new tab/window, download, or any non-primary button) is left
