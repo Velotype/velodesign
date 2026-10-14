@@ -1,7 +1,7 @@
 import { Component, getComponent, RenderBasic, RenderObject, setStylesheet } from "@velotype/velotype"
 import type { EmptyAttrs, RenderableElements } from "@velotype/velotype"
 
-import { Avatar, Button, ColorScheme, highlightMatch, I, Link, Navbar, searchHighlightCss, Sidebar, Text, TextBox } from "@velotype/velodesign"
+import { Avatar, Button, ColorScheme, highlightMatch, History, I, Link, Navbar, searchHighlightCss, Sidebar, Text, TextBox } from "@velotype/velodesign"
 import type { SidebarNavState } from "@velotype/velodesign"
 import { categoryIconKey, searchIconKey } from "./data/category-icons.ts"
 import type { MenuItemType, SidebarItemType } from "@velotype/velodesign"
@@ -85,7 +85,7 @@ class ContentArea extends Component<EmptyAttrs> {
     }
 
     override render(): RenderableElements {
-        const pathname = globalThis.location.pathname
+        const pathname = History.getPathname()
         if (pathname == "/" || pathname == "") {
             return <HomePage/>
         }

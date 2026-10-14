@@ -315,7 +315,7 @@ export class Menu extends Component<MenuAttrsType> {
             const row: HTMLAnchorElement = <a
                 role={checkable ? "menuitemradio" : "menuitem"}
                 aria-checked={checkable ? (isSelected ? "true" : "false") : undefined}
-                href={item.href || "#"}
+                href={item.href ? History.resolveHref(item.href) : "#"}
                 aria-disabled={item.disabled}
                 class={`vtd-menu-item${checkable ? " vtd-menu-item-checkable" : ""}${item.disabled ? " vtd-menu-item-disabled" : ""}`}
                 onClick={(event: Event) => {

@@ -1,10 +1,16 @@
 import { replaceElementWithRoot } from "@velotype/velotype"
 
-import { Theme } from "@velotype/velodesign"
+import { History, Theme } from "@velotype/velodesign"
 import { AppShell } from "./app-shell.tsx"
 import { loadSavedTheme } from "./pages/theme-builder.tsx"
 import { applySymbols, loadSavedSymbols } from "./data/theme-symbols.ts"
 import { registerCategoryIcons } from "./data/category-icons.ts"
+
+// Local dev (showcase/server.ts) serves this app at the domain root, same as any consumer's own
+// site, so there's nothing to configure there. The GitHub Pages build is the one deployment that
+// serves it under a path prefix (a project site's own repo-name subdirectory) - its own index.html
+// sets this global before main.js runs, and it's absent everywhere else.
+History.configureBasePath((globalThis as unknown as {__VELODESIGN_BASE_PATH__?: string}).__VELODESIGN_BASE_PATH__ ?? "")
 
 Theme.injectStyles(loadSavedTheme())
 // Before anything renders: a theme-option symbol is read when a component is *built*, not resolved

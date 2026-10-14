@@ -1,7 +1,7 @@
 {
     "name": "@velotype/velodesign",
     "license": "MIT",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "exports": {
         ".": "./src/index.ts",
         // Not a second entrypoint a consumer has any reason to import - it is here so that
