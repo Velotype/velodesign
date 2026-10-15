@@ -1,3 +1,5 @@
+/** @jsxRuntime classic */
+/** @jsx h */
 import { h } from "../core/jsx.ts"
 
 

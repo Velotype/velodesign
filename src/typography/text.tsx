@@ -1,3 +1,5 @@
+/** @jsxRuntime classic */
+/** @jsx h */
 import { h } from "../core/jsx.ts"
 import { passthroughAttrsToElement } from "../core/velotype.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"

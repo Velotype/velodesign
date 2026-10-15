@@ -16,6 +16,14 @@ import type { JSX as VelotypeJSX } from "@velotype/velotype/jsx-runtime"
  * `jsxImportSource` is its own export ("export 'jsx-runtime' not found"), even once that export
  * is published, so such a package cannot be published.
  *
+ * ⚠️ **Every `.tsx` file also starts with the `@jsxRuntime classic` and `@jsx h` pragmas (and
+ * `@jsxFrag f` if it uses a fragment), as block comments.** The config alone is not enough: a
+ * consumer compiles this package with the `jsx` mode from its `deno.json` but not the factory, so
+ * a file without the pragmas calls `React.createElement`, which does not exist. 0.1.2 was
+ * published like that and broke every consumer. `@jsxRuntime classic` is also what lets a
+ * consumer's own automatic config compile these files, which otherwise fails with "pragma cannot be
+ * set when runtime is automatic". `deno task check-jsx` fails when a pragma is missing.
+ *
  * Not exported from `index.ts`: a consumer has no reason to use it.
  */
 // deno-lint-ignore no-explicit-any

@@ -1,3 +1,5 @@
+/** @jsxRuntime classic */
+/** @jsx h */
 import { h } from "../core/jsx.ts"
 import {type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs, type TargetedEvent, type TargetedInputEvent} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"

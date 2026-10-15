@@ -39,6 +39,12 @@ jobs:
       - name: Lint
         run: deno lint
 
+      # A consumer compiles this package with the config's jsx mode but not its jsxFactory, so a
+      # .tsx file without its @jsx pragma calls React.createElement. 0.1.2 shipped that way. Nothing
+      # else here compiles the package as a dependency, so this does.
+      - name: Compiles as a dependency
+        run: deno task check-jsx
+
       # A JSR version is immutable, so the time to find a packaging problem is now and not during
       # a publish.
       - name: Publish dry run

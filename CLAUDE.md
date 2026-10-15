@@ -1658,6 +1658,15 @@ Three things about the barrel that are easy to get wrong:
   none of which point at the barrel. It restates velotype's three members, because a type-only
   import of a namespace cannot be aliased into one (`export import` fails under
   `isolatedModules`).
+- ⚠️ **Each `.tsx` file starts with the `@jsxRuntime classic` and `@jsx h` pragmas (and `@jsxFrag f`
+  if it uses a fragment), as block comments, even though `deno.json` sets the factory.** A consumer
+  compiles the package with the `jsx` mode from its `deno.json` and **not** `jsxFactory`, so a file
+  without the pragmas calls `React.createElement` and fails with "React is not defined". 0.1.2 was
+  published that way and broke every consumer, and nothing in this repository noticed, because here
+  the root config supplies the factory. `@jsxRuntime classic` is also what lets a consumer's own
+  automatic config compile these files (without it, the `@jsx` pragma fails with "pragma cannot be
+  set when runtime is automatic"). `deno task check-jsx` bundles with a config that has the
+  factories removed and with an automatic one, which are what a dependency can get, and CI runs it.
 - ⚠️ **A local variable named `h` or `f` shadows the factory.** JSX in that scope would call the
   wrong thing, and the compiler does not warn. None exist in `src/` today.
 - **`deno lint`'s `verbatim-module-syntax` is excluded.** It reads `h` as used only in types and
@@ -1671,12 +1680,11 @@ jsr:@velotype/velodesign" - for 0.1.1 and again for 0.1.2, when the registry alr
 `deno publish --dry-run` resolves it from the working tree and cannot catch that. A relative import
 of a local factory has no such resolution to fail.
 
-⚠️ **Which transform applies to velodesign's own `.tsx` files depends on who compiles them.**
-Compiled as part of a consumer's graph - which is what a relative-path import makes them - they take
-the *consumer's* config: with its automatic transform the `h` import is unused and the compiler
-writes 73 statements rather than one. That is why the showcase builds `velodesign.js` as its own
-module with `--config ../deno.json`: under the root config velodesign's files take velodesign's own
-setting, which is also what a published package gets.
+⚠️ **The pragmas make the transform the same whoever compiles the files.** A file that a consumer's
+graph compiles, such as the tests and the showcase through a relative import, would otherwise take
+the *consumer's* config and emit 73 jsx import statements instead of one. With `@jsxRuntime classic`
+it calls `h` whatever the config says. The showcase still builds `velodesign.js` as its own module
+with `--config ../deno.json`, as before.
 
 A `@jsxImportSource` pragma in each file was tried as a way to make it independent of the compiling
 config. It overrides the emitted import but **not** the type resolution, so it fails to typecheck -
