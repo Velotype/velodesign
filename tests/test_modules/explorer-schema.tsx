@@ -3,6 +3,7 @@ import type { RenderableElements } from "@velotype/velotype"
 
 import {
     CodeBlock, type CodeLanguage,
+    type CSSPropertyValue,
     TableOfContents,
     Accordion,
     addLicense,
@@ -362,7 +363,7 @@ export const stories: ComponentStory[] = [
         // Renders its own targets: the component observes real elements by id, so a story with
         // nothing to point at would show a list that never highlights
         render: (attrs) => <div style={{display: "flex", gap: "1.5em", alignItems: "flex-start"}}>
-            <div style={{flexGrow: 1, minWidth: 0}}>
+            <div style={{flexGrow: 1, minWidth: "0"}}>
                 {[["toc-story-one", "Getting started", 2], ["toc-story-two", "Configuration", 2], ["toc-story-three", "Options", 3]].map(
                     ([id, label]) => <div>
                         <Heading id={id as string} level={3}>{label as string}</Heading>
@@ -446,7 +447,7 @@ export const stories: ComponentStory[] = [
         controls: {
             size: {kind: "text", label: "size"},
         },
-        render: (attrs) => <Spinner size={attrs.size as string}/>,
+        render: (attrs) => <Spinner size={attrs.size as CSSPropertyValue<"width">}/>,
     },
 
     // --- Overlays ---
@@ -518,7 +519,7 @@ export const stories: ComponentStory[] = [
             src: {kind: "text", label: "src"},
             size: {kind: "text", label: "size"},
         },
-        render: (attrs) => <Avatar initials={attrs.initials as string} src={(attrs.src as string) || undefined} size={attrs.size as string}/>,
+        render: (attrs) => <Avatar initials={attrs.initials as string} src={(attrs.src as string) || undefined} size={attrs.size as CSSPropertyValue<"width">}/>,
     },
     {
         name: "TimeAgo", group: "Data Display",
@@ -860,7 +861,7 @@ export const stories: ComponentStory[] = [
         controls: {
             maxHeight: {kind: "text", label: "maxHeight"},
         },
-        render: (attrs) => <ScrollArea maxHeight={attrs.maxHeight as string} style={{maxWidth: "260px", border: "1px solid var(--background-4)", borderRadius: "0.25rem", padding: "8px"}}>
+        render: (attrs) => <ScrollArea maxHeight={attrs.maxHeight as CSSPropertyValue<"maxHeight">} style={{maxWidth: "260px", border: "1px solid var(--background-4)", borderRadius: "0.25rem", padding: "8px"}}>
             {Array.from({length: 20}).map((_, i) => <div style={{padding: "4px 0"}}>Row {i + 1}</div>)}
         </ScrollArea>,
     },
@@ -1162,6 +1163,6 @@ export const stories: ComponentStory[] = [
         controls: {
             size: {kind: "text", label: "size (style.height)"},
         },
-        render: (attrs) => <I i="gear" style={{height: attrs.size as string}}/>,
+        render: (attrs) => <I i="gear" style={{height: attrs.size as CSSPropertyValue<"height">}}/>,
     },
 ]

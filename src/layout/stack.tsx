@@ -1,5 +1,6 @@
 import {passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
+import type { CSSPropertyValue } from "../core/css-value.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { cssAlign, cssJustify, resolveGap } from "./spacing.ts"
 import type { AlignItems, GapSize, JustifyContent } from "./spacing.ts"
@@ -11,7 +12,7 @@ export type StackAttrsType = {
     /** Lay children out in a row or a column (default: `"row"`) */
     direction?: "row" | "column"
     /** Space between children - a scale step, or any CSS length (default: `"md"`) */
-    gap?: GapSize | string
+    gap?: GapSize | CSSPropertyValue<"gap">
     /** How children line up across the stack's cross axis */
     align?: AlignItems
     /** How children are distributed along the stack's main axis */

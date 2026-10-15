@@ -1,5 +1,6 @@
 import {passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
+import type { CSSPropertyValue } from "../core/css-value.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /**
@@ -7,7 +8,7 @@ import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, Style
  */
 export type ScrollAreaAttrsType = {
     /** CSS max-height of the scrollable region */
-    maxHeight?: string
+    maxHeight?: CSSPropertyValue<"maxHeight">
 } & IdAttr & StylePassthroughAttrs & ChildrenAttr
 
 let areScrollAreaStylesMounted = false

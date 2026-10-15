@@ -1,5 +1,6 @@
 import {passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
+import type { CSSPropertyValue } from "../core/css-value.ts"
 import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /**
@@ -14,9 +15,9 @@ export type SkeletonAttrsType = {
     /** Shape of the placeholder (default: `"text"`) */
     variant?: SkeletonVariant
     /** CSS width */
-    width?: string
+    width?: CSSPropertyValue<"width">
     /** CSS height (ignored for `variant: "text"`, which sizes to one line) */
-    height?: string
+    height?: CSSPropertyValue<"height">
     /** For `variant: "text"`, how many lines to render (default: `1`) */
     lines?: number
 } & IdAttr & StylePassthroughAttrs

@@ -85,6 +85,7 @@ import type { TextType } from "./typography/typography-common.ts"
 import { Stack, type StackAttrsType } from "./layout/stack.tsx"
 import { Grid, type GridAttrsType } from "./layout/grid.tsx"
 import type { GapSize, AlignItems, JustifyContent } from "./layout/spacing.ts"
+import type { CSSPropertyValue } from "./core/css-value.ts"
 import { LineChart, AreaChart, type LineChartAttrsType, type AreaChartAttrsType } from "./charts/line-chart.ts"
 import { BarChart, type BarChartAttrsType } from "./charts/bar-chart.ts"
 import { PieChart, type PieChartAttrsType, type PieSliceType } from "./charts/pie-chart.ts"
@@ -354,6 +355,7 @@ export {
     Grid,
     type GridAttrsType,
     type GapSize,
+    type CSSPropertyValue,
     type AlignItems,
     type JustifyContent,
 

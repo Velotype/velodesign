@@ -26,7 +26,7 @@
     "jsr:@std/testing@^1.0.16": "1.0.20",
     "jsr:@std/yaml@1": "1.2.0",
     "jsr:@velotype/veloserver@0.2": "0.2.0",
-    "jsr:@velotype/velotype@^0.0.27": "0.0.27",
+    "jsr:@velotype/velotype@~0.3.1": "0.3.1",
     "jsr:@zip-js/zip-js@^2.7.52": "2.12.0"
   },
   "jsr": {
@@ -124,8 +124,8 @@
         "jsr:@std/media-types"
       ]
     },
-    "@velotype/velotype@0.0.27": {
-      "integrity": "40512f9bcebfcf9c1bbfd6e5190b381c2f55991935b23adf833499b70afaafff"
+    "@velotype/velotype@0.3.1": {
+      "integrity": "d1fe7c6c8c1c4e896add41ee156b7e646c998d841c321d599cc79fb5a3ac1694"
     },
     "@zip-js/zip-js@2.12.0": {
       "integrity": "4eff3c3daeb191b9c2c1b0c13e4010e544d42531b406d7eceb40abf692fefc1f"
@@ -137,7 +137,7 @@
       "jsr:@std/assert@^1.0.16",
       "jsr:@std/testing@^1.0.16",
       "jsr:@velotype/veloserver@0.2",
-      "jsr:@velotype/velotype@^0.0.27"
+      "jsr:@velotype/velotype@~0.3.1"
     ]
   }
 }

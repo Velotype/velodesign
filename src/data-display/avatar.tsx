@@ -1,5 +1,6 @@
 import {type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
+import type { CSSPropertyValue } from "../core/css-value.ts"
 
 /**
  * Which of the theme's colours an initials avatar is drawn in.
@@ -23,7 +24,7 @@ export type AvatarAttrsType = {
     /** Fallback content shown when there's no `src`, or the image at `src` fails to load */
     initials?: string
     /** CSS size (default: `"2.5em"`) */
-    size?: string
+    size?: CSSPropertyValue<"width">
     /**
      * Which theme colour to draw the initials fallback in (default: `"primary"`).
      *

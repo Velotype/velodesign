@@ -1,5 +1,6 @@
 import {passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
+import type { CSSPropertyValue } from "../core/css-value.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /**
@@ -30,7 +31,7 @@ export type TableColumnType<RowType> = {
      * column and squeezes its neighbours. Under fixed layout the columns that declare no width
      * share whatever is left, and long content wraps inside its cell rather than pushing out.
      */
-    width?: number | string
+    width?: number | CSSPropertyValue<"width">
 }
 
 /**
@@ -44,7 +45,7 @@ export type TableAttrsType<RowType> = {
 } & IdAttr & StylePassthroughAttrs
 
 /** A column width as CSS: a bare number is px, a string passes straight through */
-function cssLength(width: number | string | undefined): string | undefined {
+function cssLength(width: number | CSSPropertyValue<"width"> | undefined): CSSPropertyValue<"width"> | undefined {
     if (width === undefined) {
         return undefined
     }

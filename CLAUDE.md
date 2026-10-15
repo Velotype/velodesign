@@ -21,7 +21,7 @@
   | `data-display/` | Badge, Card, Table, DataTable, AsyncDataTable, CodeBlock, Calendar, Tree, Resizable … |
   | `data-entry/` | DatePicker, Slider, Combobox, Upload, Rate, Form |
   | `charts/` | LineChart, AreaChart, BarChart, PieChart, Gauge, Sparkline |
-  | `core/` | **Not a category.** Cross-cutting infrastructure imported by components in several categories, so it belongs to none of them: `utilities.ts`, `theme.ts`, `history.ts`, `strings.ts`, `license.ts`, `search-highlight.tsx`, `styles.ts`, and the two barrels `velotype.ts` / `jsx-runtime.ts` - **every velotype import in the package goes through those two**, for reasons in *The bundle size is measured, not asserted* below. |
+  | `core/` | **Not a category.** Cross-cutting infrastructure imported by components in several categories, so it belongs to none of them: `utilities.ts`, `theme.ts`, `history.ts`, `strings.ts`, `license.ts`, `search-highlight.tsx`, `styles.ts`, `css-value.ts`, and the two barrels `velotype.ts` / `jsx-runtime.ts` - **every velotype import in the package goes through those two**, for reasons in *The bundle size is measured, not asserted* below. |
 
   Two placements are judgement calls rather than showcase facts: `PageSelector` and `Resizable`
   have no story at all, so they went to `navigation/` (client-side routing) and `data-display/`
@@ -202,6 +202,21 @@ Then the component signature is just `FunctionComponent<FooAttrsType>` / `Compon
 - `IdAttr` — `{ id?: string }`
 - `StylePassthroughAttrs` — `{ class?: string, style?: StyleAttrType }`
 - `ChildrenAttr` — `{ children?: RenderableElements }`
+
+**An attr that ends up in a `style` object is typed `CSSPropertyValue<"property">`, never `string`**
+(`core/css-value.ts`, exported from `index.ts`). Since velotype 0.3 every `style` value is checked
+against the property it is assigned to - `width` takes a length, a percentage or a keyword, and a
+bare `"2.5"` is a type error - so a `string` attr cannot reach `style` without a cast, and the cast
+would hand velotype exactly the unchecked value it exists to reject. Typing the attr instead moves
+the check to the consumer's call site, where the mistake is: `<Avatar size="2.5"/>` fails to
+compile rather than rendering an avatar with no size. `CSSPropertyValue` is derived from velotype's
+own attribute types, so it cannot drift from what velotype accepts. A helper that computes a style
+value (`resolveGap`, `cssAlign`, `Table`'s `cssLength`) returns the same type, which is what lets
+TypeScript check a computed `` `flex-${align}` `` rather than widening it to `string`.
+
+The one place a cast is right is where free text genuinely becomes a CSS value: the Explorer's text
+controls (`explorer-schema.tsx`) cast to the property's type, because that input is arbitrary by
+construction.
 
 None of these three give you arbitrary attribute passthrough (no `aria-*`, no `data-*`) — a custom component only accepts exactly what its own `XAttrsType` declares. If you pass `aria-current` (or anything else) to `<Button>`, that's a type error unless `ButtonAttrsType` explicitly declares it. Native tags (`<div>`, `<a>`, `<li>`, ...) accept the full `HTMLAttributes`/ARIA set directly — this only bites you when wrapping a *custom* component.
 
@@ -1324,7 +1339,7 @@ Three pieces make the framework module work, and each one matters:
 
 - `showcase/src/velotype-module.ts` is a one-line `export *` that exists only to be a bundle
   entrypoint. `deno bundle` resolves an entrypoint as a **file path rather than through the import
-  map**, so bundling velotype directly means writing `jsr:@velotype/velotype@0.0.27` into a task and
+  map**, so bundling velotype directly means writing `jsr:@velotype/velotype@0.3.1` into a task and
   keeping that in step with the `imports` entry by hand. A local module is resolved the ordinary way
   instead, so the version stays declared once.
 - `main.tsx` is bundled with `--external` for velodesign *and* both velotype specifiers, so it ships
