@@ -4,9 +4,6 @@
     "version": "0.1.1",
     "exports": {
         ".": "./src/index.ts",
-        // Not a second entrypoint a consumer has any reason to import - it is here so that
-        // `jsxImportSource` below can name a real published export instead of a config-local
-        // alias. See src/core/jsx-runtime.ts.
         "./jsx-runtime": "./src/core/jsx-runtime.ts"
     },
     "publish": {
@@ -18,19 +15,13 @@
     },
     "tasks": {
         "size": "deno run --allow-read --allow-write --allow-run --allow-env ./scripts/bundle-size.ts",
-        // The gate: every module bundled and driven. `bundle.ts` skips what is already current, so
-        // a repeat run costs 0.3s rather than 24s, and it bundles in parallel when it does work.
         "test": "cd ./tests/ && deno run -A ./bundle.ts && cd .. && deno test --allow-read --allow-net --allow-sys --allow-env --allow-write --allow-run",
-        // For iterating. Both narrow the bundling and the tests from one list, so a test can never
-        // run against a module that was not rebuilt. Neither is a substitute for `test`.
         "test:only": "deno run -A ./scripts/run-tests.ts",
         "test:changed": "deno run -A ./scripts/run-tests.ts --changed",
         "test-manual": "cd ./tests/ && deno run 'bundle*' && cd .. && deno run --allow-read --allow-net --allow-sys ./tests/manual_server.ts"
     },
     "lint": {
         "rules": {
-            // velotype's JSX has no `key` prop at all, so every list render trips this React rule -
-            // 72 findings, none of them real. Excluded so `deno lint` can be a CI gate.
             "exclude": [
                 "jsx-key"
             ]
@@ -38,9 +29,6 @@
     },
     "compilerOptions": {
         "jsx": "react-jsx",
-        // velodesign's own re-export of velotype's runtime, not velotype's directly: the compiler
-        // writes this specifier into all 72 .tsx files, and one module means one import statement
-        // in a consumer's bundle rather than 72. src/core/jsx-runtime.ts explains the rest.
         "jsxImportSource": "@velotype/velodesign",
         "lib": ["dom", "deno.ns", "esnext"]
     },
