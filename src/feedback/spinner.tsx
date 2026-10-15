@@ -1,5 +1,6 @@
 import {passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
+import type { CSSPropertyValue } from "../core/css-value.ts"
 import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /**
@@ -7,7 +8,7 @@ import type { FunctionComponent, IdAttr, RenderableElements, StylePassthroughAtt
  */
 export type SpinnerAttrsType = {
     /** CSS size of the spinner (default: `"1em"`) */
-    size?: string
+    size?: CSSPropertyValue<"width">
     /** Accessible label announced by screen readers. No default - the library doesn't assume a language; set this (e.g. to "Loading") if the spinner isn't already described by surrounding text */
     label?: string
 } & IdAttr & StylePassthroughAttrs

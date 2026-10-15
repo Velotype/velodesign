@@ -340,7 +340,7 @@ export class Sidebar extends Component<SidebarAttrsType> {
      * interpolated, so the switch is left to animate like any other change.
      */
 
-    #switchTimer: number | undefined
+    #switchTimer: ReturnType<typeof setTimeout> | undefined
 
     /**
      * Holds the *panel* still while the mode changes, and nothing else.

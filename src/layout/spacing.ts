@@ -1,3 +1,5 @@
+import type { CSSPropertyValue } from "../core/css-value.ts"
+
 /**
  * The package's spacing scale, shared by `Stack` and `Grid`.
  *
@@ -10,7 +12,7 @@
  */
 export type GapSize = "none" | "xs" | "sm" | "md" | "lg" | "xl"
 
-const SCALE: Record<GapSize, string> = {
+const SCALE: Record<GapSize, CSSPropertyValue<"gap">> = {
     none: "0",
     xs: "0.25em",
     sm: "0.5em",
@@ -20,11 +22,15 @@ const SCALE: Record<GapSize, string> = {
 }
 
 /** Resolves a gap to a CSS length - a scale step, or a raw length passed straight through */
-export function resolveGap(gap: GapSize | string | undefined, fallback: GapSize = "md"): string {
+export function resolveGap(gap: GapSize | CSSPropertyValue<"gap"> | undefined, fallback: GapSize = "md"): CSSPropertyValue<"gap"> {
     if (gap === undefined) {
         return SCALE[fallback]
     }
-    return (SCALE as Record<string, string>)[gap] ?? gap
+    return isGapSize(gap) ? SCALE[gap] : gap
+}
+
+function isGapSize(gap: string): gap is GapSize {
+    return Object.hasOwn(SCALE, gap)
 }
 
 /** How items line up across the container's cross axis */
@@ -33,14 +39,14 @@ export type AlignItems = "start" | "center" | "end" | "stretch" | "baseline"
 export type JustifyContent = "start" | "center" | "end" | "between" | "around"
 
 /** CSS values for the shorthand alignment names, which read better than the flexbox spellings */
-export function cssAlign(align: AlignItems | undefined): string | undefined {
+export function cssAlign(align: AlignItems | undefined): CSSPropertyValue<"alignItems"> | undefined {
     if (align === undefined) {
         return undefined
     }
     return align === "start" || align === "end" ? `flex-${align}` : align
 }
 
-export function cssJustify(justify: JustifyContent | undefined): string | undefined {
+export function cssJustify(justify: JustifyContent | undefined): CSSPropertyValue<"justifyContent"> | undefined {
     if (justify === undefined) {
         return undefined
     }

@@ -1,5 +1,6 @@
 import {passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
+import type { CSSPropertyValue } from "../core/css-value.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { cssAlign, resolveGap } from "./spacing.ts"
 import type { AlignItems, GapSize } from "./spacing.ts"
@@ -24,7 +25,7 @@ export type GridAttrsType = {
      */
     minColumnWidth?: string
     /** Space between cells - a scale step, or any CSS length (default: `"md"`) */
-    gap?: GapSize | string
+    gap?: GapSize | CSSPropertyValue<"gap">
     /** How cells line up within their row */
     align?: AlignItems
 } & IdAttr & StylePassthroughAttrs & ChildrenAttr

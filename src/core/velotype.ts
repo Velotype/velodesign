@@ -26,6 +26,7 @@ export type {
     EmptyAttrs,
     FunctionComponent,
     IdAttr,
+    JSX,
     RenderBasic,
     RenderObject,
     RenderableElements,

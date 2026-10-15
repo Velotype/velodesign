@@ -485,7 +485,7 @@ const typeDefinitions: Record<string, TypeDoc> = {
             {name: "header", type: "RenderableElements", required: true, description: "Content of the column's header cell."},
             {name: "render", type: "(row: RowType) => RenderableElements", required: true, description: "Renders a row's value for this column."},
             {name: "align", type: '"start" | "center" | "end"', defaultValue: "start", description: "Text alignment for this column's cells."},
-            {name: "width", type: "number | string", description: "Column width - a number is px, a string any CSS length. Setting it on any column switches the table to fixed layout."},
+            {name: "width", type: 'number | CSSPropertyValue<"width">', description: "Column width - a number is px, a string any CSS length. Setting it on any column switches the table to fixed layout."},
             {name: "sortDirection", type: '"asc" | "desc"', description: "Shows a sort indicator in the header. Table holds no sort state - sorting rows is the caller's job."},
             {name: "onSortClick", type: "() => void", description: "Makes the header clickable, called to request a sort change."},
         ],
@@ -939,7 +939,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "placement", type: '"top" | "bottom" | "left" | "right"', defaultValue: "top", description: "Side of the trigger to show the bubble on."},
     ],
     Spinner: [
-        {name: "size", type: "string", defaultValue: '"1em"', description: "CSS size."},
+        {name: "size", type: 'CSSPropertyValue<"width">', defaultValue: '"1em"', description: "CSS size."},
         {name: "label", type: "string", description: "Accessible label announced by screen readers."},
     ],
     Progress: [
@@ -950,8 +950,8 @@ const attrTables: Record<string, AttrDoc[]> = {
     ],
     Skeleton: [
         {name: "variant", type: '"text" | "circular" | "rectangular"', defaultValue: "text", description: "Placeholder shape."},
-        {name: "width", type: "string", description: "CSS width of the placeholder."},
-        {name: "height", type: "string", description: "CSS height of the placeholder."},
+        {name: "width", type: 'CSSPropertyValue<"width">', description: "CSS width of the placeholder."},
+        {name: "height", type: 'CSSPropertyValue<"height">', description: "CSS height of the placeholder."},
         {name: "lines", type: "number", defaultValue: "1", description: "Number of lines for the text variant."},
     ],
     Empty: [
@@ -1009,7 +1009,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "src", type: "string", description: "Image URL."},
         {name: "initials", type: "string", description: "Fallback shown when there's no image (or it fails to load)."},
         {name: "alt", type: "string", description: "Alt text for the image."},
-        {name: "size", type: "string", defaultValue: '"2.5em"', description: "CSS size."},
+        {name: "size", type: 'CSSPropertyValue<"width">', defaultValue: '"2.5em"', description: "CSS size."},
         {name: "type", type: "AvatarType", defaultValue: '"primary"', description: "Which theme colour the initials fallback is drawn in. A colour name rather than a colour, so the palette supplies a light and a dark value for each and the contrast holds in both themes. An avatar showing an image covers its own background anyway."},
     ],
     TimeAgo: [
@@ -1055,7 +1055,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "ratio", type: "number", defaultValue: "1", description: "Width divided by height, e.g. 16/9."},
     ],
     ScrollArea: [
-        {name: "maxHeight", type: "string", description: "CSS max-height of the scrollable region."},
+        {name: "maxHeight", type: 'CSSPropertyValue<"maxHeight">', description: "CSS max-height of the scrollable region."},
     ],
     Table: [
         {name: "columns", type: "TableColumnType<RowType>[]", required: true, description: "Column definitions, each with a render(row) function. A column may also carry align, width, and sortDirection/onSortClick to show a sort indicator."},
@@ -1122,7 +1122,7 @@ const attrTables: Record<string, AttrDoc[]> = {
     ],
     Stack: [
         {name: "direction", type: '"row" | "column"', defaultValue: "row", description: "Lay children out in a row or a column."},
-        {name: "gap", type: "GapSize | string", defaultValue: "md", description: "Space between children: none | xs | sm | md | lg | xl, or any CSS length. The scale is in em, so a gap scales with its container's type."},
+        {name: "gap", type: 'GapSize | CSSPropertyValue<"gap">', defaultValue: "md", description: "Space between children: none | xs | sm | md | lg | xl, or any CSS length. The scale is in em, so a gap scales with its container's type."},
         {name: "align", type: "AlignItems", description: "start | center | end | stretch | baseline. A column stretches by default - pass start for content-sized children like badges."},
         {name: "justify", type: "JustifyContent", description: "start | center | end | between | around."},
         {name: "wrap", type: "boolean", defaultValue: "true for a row, never for a column", description: "Let children wrap onto further lines."},
@@ -1131,7 +1131,7 @@ const attrTables: Record<string, AttrDoc[]> = {
     Grid: [
         {name: "minColumnWidth", type: "string", defaultValue: "16em", description: "Fit as many columns as will hold this width, then share the remainder. This is the responsive default - it reflows without a media query."},
         {name: "columns", type: "number", description: "A fixed number of equal columns instead. Prefer minColumnWidth unless the count itself is meaningful - a fixed count has to be re-chosen at every breakpoint."},
-        {name: "gap", type: "GapSize | string", defaultValue: "md", description: "Space between cells."},
+        {name: "gap", type: 'GapSize | CSSPropertyValue<"gap">', defaultValue: "md", description: "Space between cells."},
         {name: "align", type: "AlignItems", description: "How cells line up within their row."},
     ],
     LineChart: [
@@ -1698,7 +1698,7 @@ renderOption={option => <span style={{display: "flex", alignItems: "center", gap
 
     TableOfContents: [
         {label: "With the current section highlighted", node: () => <div style={{display: "flex", gap: "1.5em", alignItems: "flex-start", width: "100%"}}>
-            <div style={{flexGrow: 1, minWidth: 0}}>
+            <div style={{flexGrow: 1, minWidth: "0"}}>
                 <Heading id="toc-demo-install" level={4}>Installation</Heading>
                 <Paragraph type="muted">Scroll this page and the entry for the section you are reading lights up.</Paragraph>
                 <Heading id="toc-demo-usage" level={4}>Usage</Heading>
