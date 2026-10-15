@@ -1,3 +1,4 @@
+import { h } from "../core/jsx.ts"
 
 
 import { type RenderBasic, Component, type RenderableElements, type ChildrenAttr, type FunctionComponent, type AnchorElement, type StylePassthroughAttrs, type IdAttr, passthroughAttrsToElement } from "../core/velotype.ts"

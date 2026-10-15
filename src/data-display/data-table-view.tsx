@@ -1,3 +1,4 @@
+import { h } from "../core/jsx.ts"
 import {} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { RenderableElements } from "../core/velotype.ts"

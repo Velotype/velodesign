@@ -21,7 +21,7 @@
   | `data-display/` | Badge, Card, Table, DataTable, AsyncDataTable, CodeBlock, Calendar, Tree, Resizable … |
   | `data-entry/` | DatePicker, Slider, Combobox, Upload, Rate, Form |
   | `charts/` | LineChart, AreaChart, BarChart, PieChart, Gauge, Sparkline |
-  | `core/` | **Not a category.** Cross-cutting infrastructure imported by components in several categories, so it belongs to none of them: `utilities.ts`, `theme.ts`, `history.ts`, `strings.ts`, `license.ts`, `search-highlight.tsx`, `styles.ts`, `css-value.ts`, and the two barrels `velotype.ts` / `jsx-runtime.ts` - **every velotype import in the package goes through those two**, for reasons in *The bundle size is measured, not asserted* below. |
+  | `core/` | **Not a category.** Cross-cutting infrastructure imported by components in several categories, so it belongs to none of them: `utilities.ts`, `theme.ts`, `history.ts`, `strings.ts`, `license.ts`, `search-highlight.tsx`, `styles.ts`, `css-value.ts`, and the two barrels `velotype.ts` / `jsx.ts` - **every velotype import in the package goes through those two**, for reasons in *The bundle size is measured, not asserted* below. |
 
   Two placements are judgement calls rather than showcase facts: `PageSelector` and `Resizable`
   have no story at all, so they went to `navigation/` (client-side routing) and `data-display/`
@@ -1332,7 +1332,7 @@ Sizes served, which is also what a consumer downloads:
 | `main.js` (the showcase itself) | 202.2 KB |
 
 `velodesign.js` is bundled with the **root** config (`--config ../deno.json`), not the showcase's.
-Built under the showcase's it would compile against the showcase's `jsxImportSource` and emit 73 jsx
+Built under the showcase's it would compile with the showcase's automatic JSX transform and emit 73 jsx
 import statements instead of one - the same asymmetry described under the bundle size below.
 
 Three pieces make the framework module work, and each one matters:
@@ -1634,11 +1634,12 @@ statements and 9,415 bytes in every consumer bundle**, and because the statement
 tree-shaking that cost was flat: a Button-only bundle measured 15,964 bytes, of which 9,415 were
 import statements for components that had been shaken out.
 
-**So `src/core/velotype.ts` is the only module in `src/` that names `@velotype/velotype`**, and
-`src/core/jsx-runtime.ts` is the only one that names `@velotype/velotype/jsx-runtime`. Everything
-else imports from the barrel, and `deno.json`'s `jsxImportSource` points at velodesign's own
-`./jsx-runtime` export so the compiler writes one specifier into all 73 `.tsx` files instead of 73.
-Two statements in the bundle, and a Button-only bundle is **6,605 bytes**.
+**So `src/core/velotype.ts` is the only module in `src/` that names `@velotype/velotype`**, except
+`src/core/jsx.ts`, which is the JSX factory. Everything else imports from those two, and every
+`.tsx` file imports `h` (and `f`, where it uses a fragment) from `jsx.ts`, because `deno.json` sets
+`"jsx": "react"` with `jsxFactory` `h` and `jsxFragmentFactory` `f`. The compiler writes calls to
+`h`, so no jsx runtime specifier is written into any of the 73 `.tsx` files. Two statements in the
+bundle, and a Button-only bundle is **6,605 bytes**.
 
 `scripts/bundle-size.ts` asserts exactly two, rather than trusting it. An import that goes around
 the barrel still compiles and still renders; it shows up only as bytes, in everyone's bundle.
@@ -1651,26 +1652,35 @@ Three things about the barrel that are easy to get wrong:
   emits a namespace import plus a `__reExport` helper and rewrites every call site to
   `(0, ns.foo)()` - an indirect property access that defeats tree-shaking outright. An explicit list
   costs nothing to keep current: a missing name is a compile error.
-- ⚠️ **The JSX barrel must re-export `JSX` as a type.** `jsxImportSource` resolves
-  `JSX.IntrinsicElements` through that module, so re-exporting only `jsx`/`jsxs`/`Fragment` leaves
-  every intrinsic element untyped - 616 `TS7026` errors, none of which point at the barrel.
-- **`./jsx-runtime` is in `exports` for resolution, not for consumers.** A config-local `#alias`
-  works when building here, but a published package is resolved by whoever imports it, and a real
-  export is one less thing that has to survive that. A consumer has velodesign's own name mapped
-  already - that is how they imported it.
+- ⚠️ **The factory must carry the `JSX` namespace.** With a custom `jsxFactory`, TypeScript looks
+  for `JSX.IntrinsicElements` on the factory itself (`h.JSX`), so `jsx.ts` declares a namespace
+  merged onto `h`. Without it every intrinsic element is untyped - hundreds of `TS7026` errors,
+  none of which point at the barrel. It restates velotype's three members, because a type-only
+  import of a namespace cannot be aliased into one (`export import` fails under
+  `isolatedModules`).
+- ⚠️ **A local variable named `h` or `f` shadows the factory.** JSX in that scope would call the
+  wrong thing, and the compiler does not warn. None exist in `src/` today.
+- **`deno lint`'s `verbatim-module-syntax` is excluded.** It reads `h` as used only in types and
+  its autofix would turn the import into `import type`, removing the runtime factory. A file with
+  no JSX does not import `h`, or `no-unused-vars` flags it.
 
-⚠️ **Which `jsxImportSource` applies to velodesign's own `.tsx` files depends on who compiles
-them.** Compiled as part of a consumer's graph - which is what a relative-path import makes them -
-they take the *consumer's*, and emit 73 statements rather than one. That is why the showcase builds
-`velodesign.js` as its own module with `--config ../deno.json`: under the root config velodesign's
-files take velodesign's own setting, which is also what a published package gets.
+⚠️ **Why this is not `jsxImportSource` pointing at the package's own `./jsx-runtime` export,** which
+is what it was. That collapses the 73 specifiers into one too, and it type-checks and bundles
+locally, but JSR's server cannot build the module graph for it - "export 'jsx-runtime' not found in
+jsr:@velotype/velodesign" - for 0.1.1 and again for 0.1.2, when the registry already had the export.
+`deno publish --dry-run` resolves it from the working tree and cannot catch that. A relative import
+of a local factory has no such resolution to fail.
+
+⚠️ **Which transform applies to velodesign's own `.tsx` files depends on who compiles them.**
+Compiled as part of a consumer's graph - which is what a relative-path import makes them - they take
+the *consumer's* config: with its automatic transform the `h` import is unused and the compiler
+writes 73 statements rather than one. That is why the showcase builds `velodesign.js` as its own
+module with `--config ../deno.json`: under the root config velodesign's files take velodesign's own
+setting, which is also what a published package gets.
 
 A `@jsxImportSource` pragma in each file was tried as a way to make it independent of the compiling
 config. It overrides the emitted import but **not** the type resolution, so it fails to typecheck -
 `TS2875`, pointing at a module path that is fine. Don't reach for it again.
-
-Both `showcase/deno.json` and `tests/deno.json` map `@velotype/velodesign/jsx-runtime` at
-velodesign's barrel, which is what a consumer naming the package gets for free.
 
 An earlier note here said `--external` did not hold velotype out at all. That was wrong - it works,
 and `--external "@velotype/velotype"` alone covers the `/jsx-runtime` subpath too, byte for byte.

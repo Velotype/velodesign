@@ -1,3 +1,4 @@
+import { h } from "../core/jsx.ts"
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"

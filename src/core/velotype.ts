@@ -11,7 +11,7 @@
  * statements for components that had been shaken out. Through this barrel the same bundle is 6,605.
  *
  * So the rule is: **nothing in `src/` imports `@velotype/velotype` except this file and its
- * `jsx-runtime.ts` sibling.** A new component imports from here.
+ * `jsx.ts` sibling, which is the JSX factory.** A new component imports from here.
  *
  * ⚠️ **It has to be an explicit list - never `export *`.** Against an external package esbuild
  * cannot enumerate the names, so it falls back to a namespace import plus a `__reExport` helper and

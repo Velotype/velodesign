@@ -1,3 +1,4 @@
+import { h } from "../core/jsx.ts"
 import {type ChildrenAttr, Component, type RenderableElements, type FunctionComponent, type TargetedMouseEvent, type StylePassthroughAttrs, type IdAttr, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import { Button, type ButtonType } from "../form/button.tsx"
