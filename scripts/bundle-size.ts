@@ -18,7 +18,7 @@
  * ⚠️ **The externalized bundle must contain exactly two import statements**, and that is asserted
  * rather than assumed. esbuild emits one per source module that imports the package and never
  * merges them, so velodesign routes every velotype name through `src/core/velotype.ts` and its
- * `jsx-runtime.ts` sibling; a third statement here means a module has gone around the barrel and
+ * `jsx.ts` sibling; a third statement here means a module has gone around the barrel and
  * is quietly costing every consumer bundle an import statement it cannot tree-shake away. This
  * check replaced a transform that collapsed the duplicates after the fact, which fixed the
  * measurement while leaving consumers to pay the bytes.
@@ -61,7 +61,7 @@ async function bundleText(entry: string, external: string[]): Promise<string> {
  * Asserts that holding velotype out leaves exactly one import statement per specifier.
  *
  * Nothing in `src/` may import `@velotype/velotype` except `src/core/velotype.ts` and
- * `src/core/jsx-runtime.ts`, so a correct bundle has two statements and no more. The failure this
+ * `src/core/jsx.ts`, so a correct bundle has two statements and no more. The failure this
  * catches is invisible otherwise: an import that goes around the barrel still compiles, still
  * renders, and only shows up as bytes - and it shows up in *every* consumer bundle, because esbuild
  * keeps an external import statement for every module it scanned whether or not that module

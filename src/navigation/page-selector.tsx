@@ -1,3 +1,4 @@
+import { h } from "../core/jsx.ts"
 import { Component } from "../core/velotype.ts"
 import type { FunctionComponent, EmptyAttrs, RenderableElements } from "../core/velotype.ts"
 import { History } from "../core/history.ts"

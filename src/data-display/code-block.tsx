@@ -1,3 +1,4 @@
+import { h } from "../core/jsx.ts"
 
 import {passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"

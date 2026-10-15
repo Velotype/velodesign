@@ -1,3 +1,4 @@
+import { h } from "./jsx.ts"
 import type { RenderableElements } from "./velotype.ts"
 
 /**
