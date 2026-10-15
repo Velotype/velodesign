@@ -29,6 +29,6 @@ export function highlightMatch(text: string, query: string): RenderableElements[
 /** Shared CSS for `.vtd-search-highlight` - append this into any component's own `setStylesheet`
  * call that uses `highlightMatch` (see CLAUDE.md's Styling section on why each component keeps
  * its own complete, independently-keyed stylesheet rather than importing a shared one). */
-export const searchHighlightCss = `
+export const searchHighlightCss: string = `
 .vtd-search-highlight{background-color:var(--warning-3);color:inherit;border-radius:0.2em;}
 `
