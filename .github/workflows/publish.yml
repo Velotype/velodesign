@@ -20,4 +20,14 @@ jobs:
       # immutable, so a bad one is permanent.
       - name: Verify the package builds and publishes cleanly
         run: deno publish --dry-run
-      - run: npx jsr publish
+      # JSR cannot publish with the jsxImportSource that deno.json sets. It names this package's own
+      # ./jsx-runtime export, and JSR's server fails to build the module graph ("export 'jsx-runtime'
+      # not found in jsr:@velotype/velodesign"). That happened for 0.1.1 and for 0.1.2, and the second
+      # time the registry already had the export, so it is not a matter of publishing it first.
+      # deno publish --dry-run resolves it locally and cannot catch this. 0.1.0 used
+      # @velotype/velotype, and so does the published package, so publish with that.
+      - name: Publish with Velotype as the JSX import source
+        run: |
+          sed -i 's#"jsxImportSource": "@velotype/velodesign"#"jsxImportSource": "@velotype/velotype"#' deno.json
+          grep '"jsxImportSource"' deno.json
+          npx jsr publish --allow-dirty
