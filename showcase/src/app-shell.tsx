@@ -1,10 +1,10 @@
 import { Component, getComponent, RenderBasic, RenderObject, setStylesheet } from "@velotype/velotype"
 import type { EmptyAttrs, RenderableElements } from "@velotype/velotype"
 
-import { Avatar, Button, ColorScheme, highlightMatch, History, I, Link, Navbar, searchHighlightCss, Sidebar, Text, TextBox } from "@velotype/velodesign"
+import { Button, ColorScheme, highlightMatch, History, I, Link, Navbar, searchHighlightCss, Sidebar, Text, TextBox } from "@velotype/velodesign"
 import type { SidebarNavState } from "@velotype/velodesign"
 import { categoryIconKey, searchIconKey } from "./data/category-icons.ts"
-import type { MenuItemType, SidebarItemType } from "@velotype/velodesign"
+import type { SidebarItemType } from "@velotype/velodesign"
 import { docBySlug, groupByGroupSlug, groupedDocs } from "./data/docs.tsx"
 import { HomePage } from "./pages/home.tsx"
 import { ComponentPage } from "./pages/component-page.tsx"
@@ -143,24 +143,6 @@ function saveSidebarWidth(width: number) {
     try {
         localStorage.setItem(sidebarWidthKey, String(width))
     } catch { /* as above - the drag still works, it just isn't remembered */ }
-}
-
-/**
- * The Light / Dark / System group for the account menu.
- *
- * `selected` is a function, not a boolean, because the header's own dark-mode button changes the
- * same setting: a reading taken when the menu was built would describe whatever was true then, and
- * `Menu` re-reads a function every time it opens. It reads the *preference* rather than the scheme
- * in effect - `getColorScheme` has already resolved System to light or dark, so it would tick Light
- * for a reader who asked to follow a browser that happens to prefer it.
- */
-function themeMenuItems(apply: (scheme: "light" | "dark" | "default") => void): MenuItemType[] {
-    const selected = (scheme: string) => () => ColorScheme.getColorSchemePreference() == scheme
-    return [
-        {label: "Light", keepOpen: true, selected: selected("light"), onClick: () => apply("light")},
-        {label: "Dark", keepOpen: true, selected: selected("dark"), onClick: () => apply("dark")},
-        {label: "System", keepOpen: true, selected: selected("default"), onClick: () => apply("default")},
-    ]
 }
 
 let areShellStylesMounted = false
@@ -317,24 +299,6 @@ ${searchHighlightCss}
                 if (!this.#filterText.trim()) {
                     this.#openCategories = new Set(this.#sidebar.getTree().getOpenKeys())
                 }
-            }}
-            profile={{
-                avatar: <Avatar initials="VD" size="1.9em"/>,
-                name: "Velo Designer",
-                detail: "design@velotype.dev",
-                menuAriaLabel: "Account",
-                menuItems: [
-                    {label: "Theme builder", href: "/theme", spa: true},
-                    // keepOpen + selected: the three are a radio group, so Menu moves the tick
-                    // itself on a click and the menu stays put - switching theme is something a
-                    // reader may well want to do twice, and closing on the click takes the choices
-                    // away at the moment the page changes colour. The selected value is read from
-                    // getColorSchemePreference, not getColorScheme: the latter has already resolved
-                    // System to light or dark, so it would show Light ticked for a reader who chose
-                    // to follow a browser that happens to prefer it.
-                    {label: "Theme", children: themeMenuItems(scheme => this.#applyColorScheme(scheme))},
-                    {label: "velodesign on JSR", dividerBefore: true, href: "https://jsr.io/@velotype/velodesign"},
-                ],
             }}/>)
 
         const themeToggle = <Button type="secondary" onClick={() => {
@@ -352,6 +316,7 @@ ${searchHighlightCss}
                 brand={<Link spa to="/" class="vtd-showcase-brand">velodesign</Link>}
                 leading={<Text type="muted">Component showcase</Text>}>
                 <Link spa to="/theme" class="vtd-showcase-header-link">Theme builder</Link>
+                <a href="https://jsr.io/@velotype/velodesign" class="vtd-showcase-header-link">JSR</a>
                 <a href="https://velotype.github.io/" class="vtd-showcase-header-link">The Velocity Project</a>
                 {themeToggle}
             </Navbar>
