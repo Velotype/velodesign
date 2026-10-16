@@ -352,6 +352,7 @@ ${searchHighlightCss}
                 brand={<Link spa to="/" class="vtd-showcase-brand">velodesign</Link>}
                 leading={<Text type="muted">Component showcase</Text>}>
                 <Link spa to="/theme" class="vtd-showcase-header-link">Theme builder</Link>
+                <a href="https://velotype.github.io/" class="vtd-showcase-header-link">The Velocity Project</a>
                 {themeToggle}
             </Navbar>
             <div class="vtd-showcase-body">
