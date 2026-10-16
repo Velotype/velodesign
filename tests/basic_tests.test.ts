@@ -1,7 +1,7 @@
 /// <reference lib="deno.ns" />
 
 import { afterAll, beforeAll, describe, it } from "@std/testing/bdd"
-import { fail, assertEquals } from "@std/assert"
+import { assert, fail, assertEquals } from "@std/assert"
 
 import type {Server} from "@velotype/veloserver"
 
@@ -154,6 +154,38 @@ describe('basic component rendering', () => {
 
     itWrap("render default button", "button", "#default-button", async (selection: ElementHandle) => {
         assertEquals(await selection.innerText(),"default button")
+    })
+
+    // Browsers make localStorage *throw* when storage is blocked - Safari in third-party iframes,
+    // strict tracking protection, opaque origins. Theme.injectStyles() reads it first thing, so an
+    // unguarded read stopped every consumer from mounting there. This blocks storage before any
+    // page script runs, the way such a browser does, and checks the page still renders and themes.
+    it({name: "components still mount when storage access throws",
+        ignore: selectedModules !== undefined && !selectedModules.has("button"),
+        fn: async () => {
+            const bindings = page.unsafelyGetCelestialBindings()
+            const {identifier} = await bindings.Page.addScriptToEvaluateOnNewDocument({source: `
+                Object.defineProperty(window, "localStorage", {configurable: true, get() {
+                    throw new DOMException("The operation is insecure.", "SecurityError")
+                }})`})
+            try {
+                await page.goto(`${baseUrl}/button`, {waitUntil: "load"})
+                const button = await page.waitForSelector("#default-button")
+                assertEquals(await button.innerText(), "default button")
+                const state = await page.evaluate(() => {
+                    let blocked = false
+                    try { void localStorage } catch { blocked = true }
+                    return {blocked, theme: document.documentElement.getAttribute("data-theme")}
+                })
+                // Proves the block was really in force, not that the test passed by accident.
+                assertEquals(state.blocked, true)
+                // Falls back to the browser's preference rather than leaving the page unthemed.
+                assert(state.theme === "light" || state.theme === "dark", `expected a theme, got ${state.theme}`)
+            } finally {
+                // One tab serves the whole suite; leaving storage blocked would break every test after this.
+                await bindings.Page.removeScriptToEvaluateOnNewDocument({identifier})
+            }
+        }
     })
 
     itWrap("set of time-ago tests", "time-ago", "#timeago-page", async (_pageLoadSelection: ElementHandle) => {

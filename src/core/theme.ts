@@ -142,6 +142,45 @@ const defaultScheme = "default"
 let currentColorScheme: ColorSchemeType = light
 
 /**
+ * The reader's choice when storage is unavailable - kept for the life of the page so picking a
+ * scheme still works, it just isn't remembered across visits.
+ */
+let unstoredPreference: string | null = null
+
+/*
+ * Every storage access goes through these three, because **accessing `localStorage` can throw**,
+ * not just return null. Browsers do it whenever storage is blocked: Safari for third-party
+ * iframes by default, Firefox and Brave under strict tracking protection, some private modes, and
+ * any page with an opaque origin. Unguarded, the throw escaped `Theme.injectStyles()` - which
+ * every consumer calls first thing - so a component embedded in another site's iframe never got
+ * as far as mounting. A missing preference falls back to the browser's, exactly as a first visit
+ * does.
+ */
+function readPreference(): string | null {
+    try {
+        return localStorage.getItem(localThemeKey)
+    } catch {
+        return unstoredPreference
+    }
+}
+
+function writePreference(value: string): void {
+    try {
+        localStorage.setItem(localThemeKey, value)
+    } catch {
+        unstoredPreference = value
+    }
+}
+
+function clearPreference(): void {
+    try {
+        localStorage.removeItem(localThemeKey)
+    } catch {
+        unstoredPreference = null
+    }
+}
+
+/**
  * A collection of functions to manage the Color scheme
  */
 export const ColorScheme: {
@@ -173,7 +212,7 @@ export const ColorScheme: {
         return currentColorScheme
     },
     getColorSchemePreference: function() {
-        const stored = localStorage.getItem(localThemeKey)
+        const stored = readPreference()
         if (stored == dark) {
             return dark
         }
@@ -185,11 +224,11 @@ export const ColorScheme: {
         return defaultScheme
     },
     setColorScheme: function(newScheme: ColorSchemeType) {
-        localStorage.setItem(localThemeKey, newScheme)
+        writePreference(newScheme)
         ColorScheme.resetColorScheme()
     },
     resetColorScheme: function() {
-        const localColorScheme = localStorage.getItem(localThemeKey)
+        const localColorScheme = readPreference()
         if (localColorScheme == dark) {
             currentColorScheme = dark
         } else if (localColorScheme == light) {
@@ -197,7 +236,7 @@ export const ColorScheme: {
         } else {
             if (localColorScheme && localColorScheme != defaultScheme) {
                 //Invalid value, reset localStorage
-                localStorage.removeItem(localThemeKey)
+                clearPreference()
             }
             // Use browser default. This is also the no-preference case, which used to fall through
             // every branch and leave currentColorScheme at its initial `light` - so a first visit
