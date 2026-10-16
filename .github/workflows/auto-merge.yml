@@ -26,34 +26,16 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      actions: write
     steps:
       - name: Turn on auto-merge for this pull request
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # A merge is attributed to whoever turned auto-merge on. With the workflow token that is
+          # github-actions, and GitHub does not start workflows (such as the Pages deploy on push)
+          # for anything that account does. AUTO_MERGE_TOKEN is a personal access token (or app
+          # token) with pull-request write access; with it the merge counts as that user's, and the
+          # push to main deploys the site like any other. Without the secret this falls back to the
+          # workflow token, and a merge then needs a manual Pages deploy.
+          GH_TOKEN: ${{ secrets.AUTO_MERGE_TOKEN || secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: gh pr merge --auto --squash "$PR_URL"
 
-      # GitHub merges the pull request itself once the checks pass, and a merge made that way does
-      # not start pages.yml's `push` trigger (nor a `pull_request: closed` one) - so the site
-      # stayed on its old build after every merge. Dispatching a workflow is the one thing the
-      # workflow token may start, so this job waits for the merge and dispatches the deploy.
-      # It gives up after 30 minutes; a pull request that is still open by then is a failing check
-      # someone needs to look at anyway, and a later merge dispatches its own deploy.
-      - name: Deploy Pages once it has merged
-        timeout-minutes: 35
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
-        run: |
-          for _ in $(seq 1 90); do
-            state=$(gh pr view "$PR_URL" --json state --jq .state)
-            if [ "$state" = "MERGED" ]; then
-              gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
-              exit 0
-            fi
-            if [ "$state" = "CLOSED" ]; then
-              exit 0
-            fi
-            sleep 20
-          done
