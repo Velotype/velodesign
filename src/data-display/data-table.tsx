@@ -52,6 +52,11 @@ export type DataTableAttrsType<RowType> = {
     searchable?: boolean
     /** Placeholder for the search input */
     searchPlaceholder?: string
+    /**
+     * Accessible name for the search input, which has no visible label. No default - the library
+     * doesn't assume a language; without it the placeholder (if any) is all a screen reader gets.
+     */
+    searchLabel?: string
     /** Alternate row background colors for readability (default: `false`) */
     zebra?: boolean
     /** Highlight a row's background on hover (default: `true`, matching this component's original behavior) */
@@ -349,6 +354,7 @@ export class DataTable<RowType> extends Component<DataTableAttrsType<RowType>> {
                 type="text"
                 class="vtd-data-table-search"
                 placeholder={attrs.searchPlaceholder}
+                ariaLabel={attrs.searchLabel ?? attrs.searchPlaceholder}
                 onInput={(event: Event) => {
                     if (event.target instanceof HTMLInputElement) { inner.setSearchQuery(event.target.value) }
                 }}/>

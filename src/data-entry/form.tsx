@@ -68,10 +68,25 @@ export const FormField: FunctionComponent<FormFieldAttrsType> = function(attrs: 
 `, "vtd/FormField")
     }
 
-    return passthroughAttrsToElement<HTMLDivElement>(<div class="vtd-form-field">
-        {attrs.label ? <label class="vtd-form-field-label">{attrs.label}{attrs.required ? <span class="vtd-form-field-required">*</span> : null}</label> : null}
+    const label: HTMLLabelElement | null = attrs.label
+        ? <label class="vtd-form-field-label">{attrs.label}{attrs.required ? <span class="vtd-form-field-required">*</span> : null}</label>
+        : null
+    const field: HTMLDivElement = <div class="vtd-form-field">
+        {label}
         {children}
         {attrs.hint ? <span class="vtd-form-field-hint">{attrs.hint}</span> : null}
         {attrs.error ? <span class="vtd-form-field-error" role="alert">{attrs.error}</span> : null}
-    </div>, attrs)
+    </div>
+    // The label names the field's control for assistive technology: `for` its first input,
+    // select or textarea, giving that control an id when it has none. A label that only sits
+    // beside its control is read as stray text, and the control as unnamed.
+    const control = label ? field.querySelector<HTMLElement>("input:not([type=hidden]), select, textarea") : null
+    if (label && control) {
+        if (!control.id) {control.id = `vtd-field-${++formFieldIds}`}
+        label.htmlFor = control.id
+    }
+    return passthroughAttrsToElement<HTMLDivElement>(field, attrs)
 }
+
+/** Ids handed to controls a FormField labels, when they bring none of their own */
+let formFieldIds = 0

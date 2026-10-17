@@ -43,6 +43,11 @@ export type TextBoxAttrsType = {
     clearable?: boolean
     /** Accessible name for that control. No default - the library doesn't assume a language */
     clearLabel?: string
+    /**
+     * Accessible name for the input itself, for a box with no visible label (a search field).
+     * Inside a `FormField` the field's label already names it.
+     */
+    ariaLabel?: string
 } & IdAttr & StylePassthroughAttrs
 
 let areTextBoxStylesMounted = false
@@ -104,6 +109,7 @@ line-height:1;
             value={attrs.value}
             autocomplete={autocomplete}
             placeholder={attrs.placeholder}
+            aria-label={attrs.ariaLabel}
             required={attrs.required}/>, attrs)
     }
     let inputType: "text" | "email" | "tel" = "text"
@@ -127,6 +133,7 @@ line-height:1;
         // ever false once the field has a value - and which needs a placeholder to exist at all.
         // A single space keeps that true without putting anything on screen.
         placeholder={attrs.clearable ? (attrs.placeholder ?? " ") : attrs.placeholder}
+        aria-label={attrs.ariaLabel}
         required={attrs.required}/>
     if (!attrs.clearable) {
         return passthroughAttrsToElement<HTMLInputElement>(input, attrs)
