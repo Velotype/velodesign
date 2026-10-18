@@ -160,6 +160,33 @@ describe('basic component rendering', () => {
     // strict tracking protection, opaque origins. Theme.injectStyles() reads it first thing, so an
     // unguarded read stopped every consumer from mounting there. This blocks storage before any
     // page script runs, the way such a browser does, and checks the page still renders and themes.
+    // A FormField's label has to name its control for assistive technology - a label that only
+    // sits beside it is read as stray text, and the control as unnamed. Each label must point at
+    // the control inside its own field, and the ids it hands out must be unique on the page (the
+    // form page renders its gallery twice, once per theme).
+    it({name: "form field labels name their controls",
+        ignore: selectedModules !== undefined && !selectedModules.has("form"),
+        fn: async () => {
+            await page.goto(`${baseUrl}/form`, {waitUntil: "networkidle0"})
+            const state = await page.evaluate(() => {
+                const labels = [...document.querySelectorAll<HTMLLabelElement>(".vtd-form-field-label")]
+                // The labelled controls' ids - the page's own fixtures repeat ids per theme.
+                const ids = labels.map(l => l.htmlFor).filter(id => id !== "")
+                return {
+                    labels: labels.length,
+                    linked: labels.filter(l => {
+                        const target = l.htmlFor ? document.getElementById(l.htmlFor) : null
+                        return target !== null && l.closest(".vtd-form-field")!.contains(target) && /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName)
+                    }).length,
+                    duplicateIds: ids.length - new Set(ids).size
+                }
+            })
+            if (state.labels === 0) {fail("ERROR: the form page rendered no field labels")}
+            assertEquals(state.linked, state.labels, `every label should name its own control, ${state.linked} of ${state.labels} do`)
+            assertEquals(state.duplicateIds, 0, "generated ids must be unique")
+        }
+    })
+
     it({name: "components still mount when storage access throws",
         ignore: selectedModules !== undefined && !selectedModules.has("button"),
         fn: async () => {

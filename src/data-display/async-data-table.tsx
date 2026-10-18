@@ -95,6 +95,11 @@ export type AsyncDataTableAttrsType<RowType> = {
     searchable?: boolean
     /** Placeholder for the search input */
     searchPlaceholder?: string
+    /**
+     * Accessible name for the search input, which has no visible label. No default - the library
+     * doesn't assume a language; without it the placeholder (if any) is all a screen reader gets.
+     */
+    searchLabel?: string
     /** How long to wait after the last keystroke before calling `load` (default: `200`) */
     debounceMs?: number
     /**
@@ -401,6 +406,7 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
                 type="text"
                 class="vtd-data-table-search"
                 placeholder={attrs.searchPlaceholder}
+                ariaLabel={attrs.searchLabel ?? attrs.searchPlaceholder}
                 onInput={(event: Event) => {
                     if (event.target instanceof HTMLInputElement) { this.#setSearch(event.target.value) }
                 }}/>
