@@ -2454,6 +2454,32 @@ describe('basic component rendering', () => {
     })
 
 
+    // Every form control used to carry a 1ex leading margin, which sat it a little right of the
+    // label above it in every FormField - and a Select stretched to its field kept its natural
+    // width inside a wider wrapper, so the chevron (placed against the wrapper) floated outside
+    // the box. Measured, not eyeballed: both read as "slightly off", never as broken.
+    itWrap("form controls line up with their labels, and a stretched select keeps its chevron inside", "form", "#default-form", async (_selection: ElementHandle) => {
+        const geometry = await page.evaluate(`(() => {
+            const scope = document.getElementById("showcase-theme-light")
+            const fields = [...scope.querySelectorAll("#default-form .vtd-form-field")]
+            const offsets = fields.map((field) => {
+                const label = field.querySelector(".vtd-form-field-label").getBoundingClientRect()
+                const control = field.querySelector(".vtd-text-box, .vtd-select, .vtd-textarea").getBoundingClientRect()
+                return Math.round(control.left - label.left)
+            })
+            const wrapper = scope.querySelector("#default-form .vtd-select-wrapper").getBoundingClientRect()
+            const select = scope.querySelector("#default-form .vtd-select").getBoundingClientRect()
+            const chevron = scope.querySelector("#default-form .vtd-select-chevron").getBoundingClientRect()
+            return {offsets, wrapperWidth: Math.round(wrapper.width), selectWidth: Math.round(select.width),
+                chevronInside: chevron.right <= select.right && chevron.left >= select.left}
+        })()`) as {offsets: number[], wrapperWidth: number, selectWidth: number, chevronInside: boolean}
+        if (geometry.offsets.length != 4) {fail(`ERROR: expected 4 fields, found ${geometry.offsets.length}`)}
+        if (geometry.offsets.some((offset) => offset != 0)) {fail(`ERROR: controls sit off their labels by ${geometry.offsets.join(", ")}px`)}
+        if (geometry.selectWidth != geometry.wrapperWidth) {fail(`ERROR: a ${geometry.wrapperWidth}px select wrapper holds a ${geometry.selectWidth}px select`)}
+        if (!geometry.chevronInside) {fail("ERROR: the select's chevron sits outside the select")}
+    })
+
+
     // A rule that lands on another component's element competes with that component's own rule at
     // equal specificity in the same layer, where source order decides - and the other component's
     // sheet mounts second whenever this one constructs it. Carousel's arrows lost that race to

@@ -93,7 +93,7 @@ export function mountDataTableStyles(): void {
 `
 .vtd-data-table-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5em;}
 .vtd-data-table-search-wrapper{display:flex;flex:1 1 12em;min-width:0;align-items:center;gap:0.5em;}
-.vtd-data-table-search-wrapper .vtd-text-box{width:100%;max-width:20em;margin-inline-start:0;box-sizing:border-box;}
+.vtd-data-table-search-wrapper .vtd-text-box{width:100%;max-width:20em;box-sizing:border-box;}
 ` +
 /* The auto margin keeps the button trailing-aligned in the searchable={false} case, where it's the row's only child */
 `

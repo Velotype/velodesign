@@ -59,7 +59,8 @@ display:inline-block;
 .vtd-select{
 appearance:none;
 padding:0.5ex 2em 0.5ex 1ex;
-margin-inline-start:1ex;
+width:100%;
+box-sizing:border-box;
 border-radius:0.25rem;
 border:1px solid var(--background-5);
 background-color:var(--background-1);
@@ -74,7 +75,6 @@ top:50%;
 right:0.75em;
 width:0.6em;
 height:0.6em;
-margin-inline-start:-1ex;
 border:solid var(--text);
 border-width:0 0.12em 0.12em 0;
 transform:translateY(-70%) rotate(45deg);

@@ -61,7 +61,6 @@ export const TextBox: FunctionComponent<TextBoxAttrsType> = function(attrs: Text
 `
 .vtd-text-box{
 padding:0.5ex 1ex;
-margin-inline-start:1ex;
 }
 ` +
 /* Only present when clearable is set - an unwrapped input is still the default shape */
