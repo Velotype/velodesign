@@ -42,7 +42,6 @@ export const InputNumber: FunctionComponent<InputNumberAttrsType> = function(att
         mountStyles(`
 .vtd-input-number{
 padding:0.5ex 1ex;
-margin-inline-start:1ex;
 border-radius:0.25rem;
 border:1px solid var(--background-5);
 background-color:var(--background-1);

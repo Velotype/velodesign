@@ -785,6 +785,22 @@ be set but was never the starting point, which made the whole option half a feat
 Note this flips the default appearance for any consumer whose users prefer dark, with no code change
 on their side.
 
+**A site designed in one scheme says so: `Theme.injectStyles(options, reset, "light")`.** Without
+it, a light-only site on a computer set to dark rendered every component - badges, alerts, steps -
+in its dark palette on a page whose own styles stayed light, and the only way out was to reset
+`data-theme` after the call and hope nothing called `resetColorScheme` again. The fixed scheme wins
+over a stored preference and the browser's alike, and `getColorSchemePreference` reports it.
+
+## A control's spacing belongs to whatever places it
+
+Every text box, textarea, select, date picker and number input carried `margin-inline-start:1ex`,
+which existed for the one layout where a control follows its label on the same line. In a
+`FormField` - the control under its label - it sat every control 7px right of the label, and inside
+`TextBox`'s clearable wrapper it pushed a `width:100%` input past the wrapper's edge. The margin is
+gone; the layouts that put a label beside a control (`TextFormField`, `TextEditableField`, the
+tables' page-size control) set a gap themselves. A `Select` fills its wrapper, so stretching the
+component stretches the box and the chevron stays inside it.
+
 ## Charts
 
 Six components - `LineChart`, `AreaChart`, `BarChart`, `PieChart`, `Gauge`, `Sparkline` - over two

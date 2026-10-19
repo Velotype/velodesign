@@ -1,7 +1,7 @@
 import {replaceElementWithRoot, Component} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
-import { Button, Form, FormField, setThemeOnSelector, TextBox, Theme } from "../../src/index.ts"
+import { Button, Form, FormField, Select, setThemeOnSelector, Textarea, TextBox, Theme } from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 
 class FormGallery extends Component<EmptyAttrs> {
@@ -13,6 +13,12 @@ class FormGallery extends Component<EmptyAttrs> {
                 </FormField>
                 <FormField label="Email" error="Enter a valid email address">
                     <TextBox type="email" name="email"/>
+                </FormField>
+                <FormField label="Size">
+                    <Select style={{width: "100%"}} options={[{value: "s", label: "Small"}, {value: "m", label: "Medium"}]}/>
+                </FormField>
+                <FormField label="Notes">
+                    <Textarea name="notes"/>
                 </FormField>
                 <Button type="primary">Submit</Button>
             </Form></div>

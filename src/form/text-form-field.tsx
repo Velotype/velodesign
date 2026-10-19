@@ -58,7 +58,7 @@ export class TextFormField extends Component<TextFormFieldAttrsType> {
     override render(attrs: TextFormFieldAttrsType, children: RenderableElements[]): HTMLDivElement {
         const updateOnInput = (attrs.updateOnInput === undefined) ? true : attrs.updateOnInput
         return passthroughAttrsToElement(<div style={{marginBlockStart: "1ex",marginBlockEnd: "1ex",display:"flex",alignItems:"center"}}>
-            <label for={`vtd-${this.vtKey}`}>
+            <label for={`vtd-${this.vtKey}`} style={{display:"inline-flex",alignItems:"center",gap:"1ex"}}>
                 {children}
                 <TextBox
                     id={`vtd-${this.vtKey}`}
@@ -101,7 +101,7 @@ export class TextEditableField extends Component<TextEditableFieldAttrsType> {
     }
     /** Render this Component */
     override render(attrs: TextEditableFieldAttrsType, children: RenderableElements[]): HTMLDivElement {
-        const editControls = <span style={{display:"inline-flex",alignItems:"center",gap:"4px"}}>
+        const editControls = <span style={{display:"inline-flex",alignItems:"center",gap:"4px",marginInlineStart:"1ex"}}>
             <TextBox
                 id={`vtd-${this.vtKey}`}
                 name={attrs.fieldName}

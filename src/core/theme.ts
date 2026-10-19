@@ -140,6 +140,13 @@ const light = "light"
 const dark = "dark"
 const defaultScheme = "default"
 let currentColorScheme: ColorSchemeType = light
+/**
+ * The one scheme a site was designed for, when it has only one - set by `Theme.injectStyles`.
+ * While set it wins over both a stored preference and the browser's: a light-only site on a
+ * computer set to dark would otherwise render every component in its dark palette on a page whose
+ * own styles are light.
+ */
+let fixedColorScheme: "light" | "dark" | undefined = undefined
 
 /**
  * The reader's choice when storage is unavailable - kept for the life of the page so picking a
@@ -212,6 +219,9 @@ export const ColorScheme: {
         return currentColorScheme
     },
     getColorSchemePreference: function() {
+        if (fixedColorScheme) {
+            return fixedColorScheme
+        }
         const stored = readPreference()
         if (stored == dark) {
             return dark
@@ -229,7 +239,9 @@ export const ColorScheme: {
     },
     resetColorScheme: function() {
         const localColorScheme = readPreference()
-        if (localColorScheme == dark) {
+        if (fixedColorScheme) {
+            currentColorScheme = fixedColorScheme
+        } else if (localColorScheme == dark) {
             currentColorScheme = dark
         } else if (localColorScheme == light) {
             currentColorScheme = light
@@ -295,10 +307,13 @@ export const Theme: {
      * 
      * @param options Customizable options
      * @param includeCSSReset If a CSS Reset should be included
+     * @param fixedScheme For a site designed in one scheme only: always render it, whatever the
+     * reader stored or their browser prefers. Leave unset to follow them.
      */
-    injectStyles: (options?: ThemeColorOptions | undefined, includeCSSReset?: boolean) => void
+    injectStyles: (options?: ThemeColorOptions | undefined, includeCSSReset?: boolean, fixedScheme?: "light" | "dark") => void
 } = {
-    injectStyles(options?: ThemeColorOptions, includeCSSReset: boolean = true) {
+    injectStyles(options?: ThemeColorOptions, includeCSSReset: boolean = true, fixedScheme?: "light" | "dark") {
+        fixedColorScheme = fixedScheme
         // Optionally add Reset styles
         if (includeCSSReset) {
             // References:
