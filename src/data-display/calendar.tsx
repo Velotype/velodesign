@@ -11,10 +11,14 @@ import { CommonThemeOptions } from "../core/theme-options.ts"
  * Attrs type for `<Calendar/>` Component
  */
 export type CalendarAttrsType = {
-    /** Currently selected date, if any */
+    /** The date selected at first, if any - after that the Calendar keeps its own selection */
     value?: Date
-    /** Called when the user clicks a day cell */
+    /** Called when the user picks a day - never for a day outside `min`/`max` */
     onSelectDate?: (date: Date) => void
+    /** The earliest day that can be picked. Earlier days still show, so the month reads normally, but can't be selected */
+    min?: Date
+    /** The latest day that can be picked. Later days still show, but can't be selected */
+    max?: Date
 } & IdAttr & StylePassthroughAttrs
 
 let areCalendarStylesMounted = false
@@ -26,6 +30,11 @@ function isSameDay(a: Date, b: Date): boolean {
     return a.getFullYear() == b.getFullYear() && a.getMonth() == b.getMonth() && a.getDate() == b.getDate()
 }
 
+/** `date` at local midnight - `min`/`max` bound whole days, whatever time of day they carry */
+function startOfDay(date: Date): number {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+}
+
 /**
  * A month-grid date picker with prev/next month navigation and a selectable day
  *
@@ -35,6 +44,16 @@ function isSameDay(a: Date, b: Date): boolean {
  * jump to the start/end of the current week, and PageUp/PageDown step a month (Shift+PageUp/Down
  * a year) - crossing a month boundary rebuilds the grid and then refocuses the same date's new
  * cell, since the old one no longer exists once that happens.
+ *
+ * **The Calendar owns its selection.** `value` is where it starts; a pick moves the highlight
+ * itself and reports the day through `onSelectDate`. It used to leave the highlight on `value`,
+ * so every consumer had to rebuild the component on each pick just to show what was picked - a
+ * wrapper the showcase carried and anyone else would rediscover. The move is two class toggles,
+ * not a rebuilt grid, since nothing else about the month changed.
+ *
+ * **`min`/`max` bound the days that can be picked**, by whole day. Days outside stay rendered
+ * and focusable - removing them would break the grid's arrow-key model, and a native `disabled`
+ * button can't hold the roving focus - but carry `aria-disabled` and ignore a click or Enter.
  *
  * Unlike almost every other stateful `Component` in this package (see the "Avoid refresh()"
  * section of CLAUDE.md), `#header`/`#gridEl` are built once and updated via `#renderGrid()`
@@ -48,6 +67,8 @@ export class Calendar extends Component<CalendarAttrsType> {
     #viewDate: Date
     /** The date that currently holds the grid's roving tabindex/focus */
     #focusedDate: Date
+    /** The picked day - `value` at first, then whatever the user last picked */
+    #selected: Date | undefined
     #attrs: CalendarAttrsType
 
     #root: HTMLDivElement
@@ -61,6 +82,7 @@ export class Calendar extends Component<CalendarAttrsType> {
         const today = new Date()
         this.#viewDate = attrs.value ? new Date(attrs.value.getFullYear(), attrs.value.getMonth(), 1) : new Date(today.getFullYear(), today.getMonth(), 1)
         this.#focusedDate = attrs.value ?? today
+        this.#selected = attrs.value
         if (!areCalendarStylesMounted) {
             areCalendarStylesMounted = true
             mountStyles(
@@ -83,6 +105,8 @@ cursor:pointer;
 }
 .vtd-calendar-day:hover{background-color:var(--background-1);}
 .vtd-calendar-day-outside{opacity:0.35;}
+.vtd-calendar-day[aria-disabled="true"]{opacity:0.35;cursor:not-allowed;text-decoration:line-through;}
+.vtd-calendar-day[aria-disabled="true"]:hover{background-color:transparent;}
 ` +
 /*
  * "Today" is a subtle background tint, not a box-shadow ring - a ring reads too much like a
@@ -200,21 +224,40 @@ cursor:pointer;
             ...weeks.map(week => <div class="vtd-calendar-week" role="row">
                 {week.map(day => {
                     const outside = day.getMonth() != month
-                    const selected = attrs.value ? isSameDay(day, attrs.value) : false
+                    const selected = this.#selected ? isSameDay(day, this.#selected) : false
                     const isToday = isSameDay(day, today)
                     const isFocusable = isSameDay(day, this.#focusedDate)
-                    return <button
+                    const disabled = (attrs.min !== undefined && startOfDay(day) < startOfDay(attrs.min))
+                        || (attrs.max !== undefined && startOfDay(day) > startOfDay(attrs.max))
+                    const cell: HTMLButtonElement = <button
                         type="button"
                         role="gridcell"
                         tabindex={isFocusable ? 0 : -1}
+                        aria-selected={selected ? "true" : "false"}
+                        aria-disabled={disabled ? "true" : undefined}
                         class={`vtd-calendar-day${outside ? " vtd-calendar-day-outside" : ""}${selected ? " vtd-calendar-day-selected" : ""}${isToday ? " vtd-calendar-day-today" : ""}`}
                         onClick={() => {
                             this.#focusedDate = day
+                            if (disabled) {return}
+                            this.#select(day, cell)
                             attrs.onSelectDate?.(day)
                         }}>{day.getDate()}</button>
+                    return cell
                 })}
             </div>),
         )
+    }
+
+    /** Moves the selection to `day`, whose cell is `cell` - two class toggles, not a rebuilt grid */
+    #select(day: Date, cell: HTMLButtonElement) {
+        if (this.#selected && isSameDay(day, this.#selected)) {return}
+        this.#selected = day
+        for (const previous of this.#gridEl.querySelectorAll<HTMLButtonElement>(".vtd-calendar-day-selected")) {
+            previous.classList.remove("vtd-calendar-day-selected")
+            previous.setAttribute("aria-selected", "false")
+        }
+        cell.classList.add("vtd-calendar-day-selected")
+        cell.setAttribute("aria-selected", "true")
     }
 
     /** Render this Component */

@@ -7,7 +7,11 @@ import { TestModulePage } from "./module-page.tsx"
 class CalendarGallery extends Component<EmptyAttrs> {
     override render() {
         return <div style={{marginTop:"10px"}}>
-            <div id="default-calendar"><Calendar value={new Date(2026, 0, 15)} onSelectDate={()=>{}}/></div>
+            <div id="default-calendar"><Calendar value={new Date(2026, 0, 15)} onSelectDate={(date) => {
+                (globalThis as unknown as {__picked: string[]}).__picked = [...((globalThis as unknown as {__picked?: string[]}).__picked ?? []), date.toDateString()]
+            }}/></div>
+            {/* Only the 10th to the 20th can be picked: a deadline that must fall before an event, say */}
+            <div id="bounded-calendar" style={{marginTop: "1em"}}><Calendar value={new Date(2026, 0, 15)} min={new Date(2026, 0, 10)} max={new Date(2026, 0, 20, 18, 30)}/></div>
         </div>
     }
 }
