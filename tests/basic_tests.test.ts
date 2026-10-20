@@ -1411,6 +1411,27 @@ describe('basic component rendering', () => {
         assertEquals(disabled, 31 - 11)
     })
 
+    itWrap("Calendar with values picks several days, and takes a selection from outside", "calendar", "#multiple-calendar", async (_selection: ElementHandle) => {
+        const click = (day: number) => `(() => {
+            const scope = document.querySelector('#showcase-theme-light #multiple-calendar')
+            ;[...scope.querySelectorAll('.vtd-calendar-day:not(.vtd-calendar-day-outside)')].find(b => b.textContent === '${day}').click()
+            return [...scope.querySelectorAll('.vtd-calendar-day-selected')].map(b => b.textContent)
+        })()`
+        assertEquals(await page.evaluate(`document.querySelector('#showcase-theme-light #multiple-calendar .vtd-calendar-grid').getAttribute('aria-multiselectable')`), "true")
+        // The 15th and 16th start picked; the 20th joins them, the 15th leaves, the 10th joins.
+        assertEquals(await page.evaluate(click(20)), ["15", "16", "20"])
+        assertEquals(await page.evaluate(click(15)), ["16", "20"])
+        assertEquals(await page.evaluate(click(10)), ["10", "16", "20"])
+        assertEquals(await page.evaluate("globalThis.__days"), ["10", "16", "20"])
+        // setDates from outside clears the cells without moving the month.
+        const cleared = await page.evaluate(`(() => {
+            document.querySelector('#showcase-theme-light #multiple-clear').click()
+            const scope = document.querySelector('#showcase-theme-light #multiple-calendar')
+            return {selected: scope.querySelectorAll('.vtd-calendar-day-selected').length, title: scope.querySelector('.vtd-calendar-title').textContent}
+        })()`)
+        assertEquals(cleared, {selected: 0, title: new Date(2026, 0, 1).toLocaleDateString(undefined, {month: "long", year: "numeric"})})
+    })
+
     itWrap("Collapse and Accordion render the same disclosure widget", "collapse", "#default-collapse", async (_selection: ElementHandle) => {
         // They share `disclosure-view.tsx` precisely so they cannot drift apart again. They had a
         // stylesheet each, five rules byte-identical between them, and had already diverged where

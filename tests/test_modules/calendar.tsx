@@ -1,17 +1,24 @@
-import {replaceElementWithRoot, Component} from "@velotype/velotype"
+import {replaceElementWithRoot, Component, getComponent} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
-import { Calendar, setThemeOnSelector, Theme } from "../../src/index.ts"
+import { Button, Calendar, setThemeOnSelector, Theme } from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 
 class CalendarGallery extends Component<EmptyAttrs> {
     override render() {
+        const multiple = getComponent<Calendar>(<Calendar values={[new Date(2026, 0, 15), new Date(2026, 0, 16)]} onChangeDates={(dates) => {
+            (globalThis as unknown as {__days: string[]}).__days = dates.map(d => String(d.getDate()))
+        }}/>)
         return <div style={{marginTop:"10px"}}>
             <div id="default-calendar"><Calendar value={new Date(2026, 0, 15)} onSelectDate={(date) => {
                 (globalThis as unknown as {__picked: string[]}).__picked = [...((globalThis as unknown as {__picked?: string[]}).__picked ?? []), date.toDateString()]
             }}/></div>
             {/* Only the 10th to the 20th can be picked: a deadline that must fall before an event, say */}
             <div id="bounded-calendar" style={{marginTop: "1em"}}><Calendar value={new Date(2026, 0, 15)} min={new Date(2026, 0, 10)} max={new Date(2026, 0, 20, 18, 30)}/></div>
+            {/* Several days: a click toggles one; "Clear" sets the selection from outside */}
+            <div id="multiple-calendar" style={{marginTop: "1em"}}>{multiple}
+                <Button id="multiple-clear" type="secondary" onClick={() => multiple.setDates([])}>Clear</Button>
+            </div>
         </div>
     }
 }

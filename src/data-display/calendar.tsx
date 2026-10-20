@@ -15,6 +15,13 @@ export type CalendarAttrsType = {
     value?: Date
     /** Called when the user picks a day - never for a day outside `min`/`max` */
     onSelectDate?: (date: Date) => void
+    /**
+     * The days selected at first, for a Calendar that picks several: with `values` set, a click
+     * adds a day or takes it away again, rather than moving a single selection
+     */
+    values?: Date[]
+    /** With `values`: called after each click that changes the selection, with every picked day, earliest first */
+    onChangeDates?: (dates: Date[]) => void
     /** The earliest day that can be picked. Earlier days still show, so the month reads normally, but can't be selected */
     min?: Date
     /** The latest day that can be picked. Later days still show, but can't be selected */
@@ -28,6 +35,17 @@ const weekdayLabels = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
 /** Does `a` fall on the same calendar day as `b`? */
 function isSameDay(a: Date, b: Date): boolean {
     return a.getFullYear() == b.getFullYear() && a.getMonth() == b.getMonth() && a.getDate() == b.getDate()
+}
+
+/** Days earliest first, one of each */
+function sortDays(days: Date[]): Date[] {
+    const sorted = [...days].sort((a, b) => startOfDay(a) - startOfDay(b))
+    return sorted.filter((d, i) => i === 0 || !isSameDay(d, sorted[i - 1]))
+}
+
+function markSelected(cell: HTMLButtonElement, on: boolean): void {
+    cell.classList.toggle("vtd-calendar-day-selected", on)
+    cell.setAttribute("aria-selected", on ? "true" : "false")
 }
 
 /** `date` at local midnight - `min`/`max` bound whole days, whatever time of day they carry */
@@ -51,6 +69,11 @@ function startOfDay(date: Date): number {
  * wrapper the showcase carried and anyone else would rediscover. The move is two class toggles,
  * not a rebuilt grid, since nothing else about the month changed.
  *
+ * **With `values`, it picks several days** - a run of dates a schedule needs, say. A click toggles
+ * one day and `onChangeDates` reports the whole set; `setDates` replaces the set from outside (a
+ * list beside the Calendar that can remove a day too) with class toggles, keeping the month on
+ * screen where the user left it. The grid says `aria-multiselectable`.
+ *
  * **`min`/`max` bound the days that can be picked**, by whole day. Days outside stay rendered
  * and focusable - removing them would break the grid's arrow-key model, and a native `disabled`
  * button can't hold the roving focus - but carry `aria-disabled` and ignore a click or Enter.
@@ -67,8 +90,8 @@ export class Calendar extends Component<CalendarAttrsType> {
     #viewDate: Date
     /** The date that currently holds the grid's roving tabindex/focus */
     #focusedDate: Date
-    /** The picked day - `value` at first, then whatever the user last picked */
-    #selected: Date | undefined
+    /** The picked days - `value` (or `values`) at first, then as the user picks; at most one unless `values` is set */
+    #selected: Date[]
     #attrs: CalendarAttrsType
 
     #root: HTMLDivElement
@@ -80,9 +103,10 @@ export class Calendar extends Component<CalendarAttrsType> {
         super(attrs, children)
         this.#attrs = attrs
         const today = new Date()
-        this.#viewDate = attrs.value ? new Date(attrs.value.getFullYear(), attrs.value.getMonth(), 1) : new Date(today.getFullYear(), today.getMonth(), 1)
-        this.#focusedDate = attrs.value ?? today
-        this.#selected = attrs.value
+        this.#selected = attrs.values ? sortDays(attrs.values) : attrs.value ? [attrs.value] : []
+        const first = this.#selected[0]
+        this.#viewDate = first ? new Date(first.getFullYear(), first.getMonth(), 1) : new Date(today.getFullYear(), today.getMonth(), 1)
+        this.#focusedDate = first ?? today
         if (!areCalendarStylesMounted) {
             areCalendarStylesMounted = true
             mountStyles(
@@ -136,6 +160,7 @@ cursor:pointer;
         }
 
         this.#gridEl.addEventListener("keydown", this.#handleGridKeyDown)
+        if (attrs.values) {this.#gridEl.setAttribute("aria-multiselectable", "true")}
 
         this.#root = passthroughAttrsToElement<HTMLDivElement>(<div class="vtd-calendar">
             <div class="vtd-calendar-header">
@@ -224,7 +249,7 @@ cursor:pointer;
             ...weeks.map(week => <div class="vtd-calendar-week" role="row">
                 {week.map(day => {
                     const outside = day.getMonth() != month
-                    const selected = this.#selected ? isSameDay(day, this.#selected) : false
+                    const selected = this.#selected.some(s => isSameDay(day, s))
                     const isToday = isSameDay(day, today)
                     const isFocusable = isSameDay(day, this.#focusedDate)
                     const disabled = (attrs.min !== undefined && startOfDay(day) < startOfDay(attrs.min))
@@ -239,7 +264,12 @@ cursor:pointer;
                         onClick={() => {
                             this.#focusedDate = day
                             if (disabled) {return}
-                            this.#select(day, cell)
+                            if (attrs.values) {
+                                this.#toggle(day, cell)
+                                attrs.onChangeDates?.([...this.#selected])
+                            } else {
+                                this.#select(day, cell)
+                            }
                             attrs.onSelectDate?.(day)
                         }}>{day.getDate()}</button>
                     return cell
@@ -250,14 +280,43 @@ cursor:pointer;
 
     /** Moves the selection to `day`, whose cell is `cell` - two class toggles, not a rebuilt grid */
     #select(day: Date, cell: HTMLButtonElement) {
-        if (this.#selected && isSameDay(day, this.#selected)) {return}
-        this.#selected = day
+        if (this.#selected.length === 1 && isSameDay(day, this.#selected[0])) {return}
+        this.#selected = [day]
         for (const previous of this.#gridEl.querySelectorAll<HTMLButtonElement>(".vtd-calendar-day-selected")) {
-            previous.classList.remove("vtd-calendar-day-selected")
-            previous.setAttribute("aria-selected", "false")
+            markSelected(previous, false)
         }
-        cell.classList.add("vtd-calendar-day-selected")
-        cell.setAttribute("aria-selected", "true")
+        markSelected(cell, true)
+    }
+
+    /** With `values`: adds `day` to the selection, or takes it out - one cell's classes */
+    #toggle(day: Date, cell: HTMLButtonElement) {
+        const on = !this.#selected.some(s => isSameDay(day, s))
+        this.#selected = on ? sortDays([...this.#selected, day]) : this.#selected.filter(s => !isSameDay(day, s))
+        markSelected(cell, on)
+    }
+
+    /**
+     * Replaces the selection - for a list beside the Calendar that changes it too. The month on
+     * screen stays put; only cells whose state changed are touched. Days outside `min`/`max` are
+     * kept if given, since the caller decided they are picked.
+     */
+    setDates(dates: Date[]): void {
+        this.#selected = this.#attrs.values ? sortDays(dates) : dates.slice(0, 1)
+        const year = this.#viewDate.getFullYear()
+        const month = this.#viewDate.getMonth()
+        const firstOfMonth = new Date(year, month, 1)
+        const gridStart = new Date(year, month, 1 - firstOfMonth.getDay())
+        const cells = this.#gridEl.querySelectorAll<HTMLButtonElement>(".vtd-calendar-day")
+        cells.forEach((cell, i) => {
+            const day = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i)
+            const on = this.#selected.some(s => isSameDay(day, s))
+            if (on !== cell.classList.contains("vtd-calendar-day-selected")) {markSelected(cell, on)}
+        })
+    }
+
+    /** The picked days, earliest first */
+    getDates(): Date[] {
+        return [...this.#selected]
     }
 
     /** Render this Component */
