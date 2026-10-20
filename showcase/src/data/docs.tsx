@@ -1207,8 +1207,10 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "autoplaySlideDelays", type: "Record<number, number>", description: "Per-slide delay overrides in ms, keyed by the currently-shown slide's index."},
     ],
     Calendar: [
-        {name: "value", type: "Date", defaultValue: "today", description: "Currently selected date."},
-        {name: "onSelectDate", type: "(date) => void", description: "Called when a day cell is clicked."},
+        {name: "value", type: "Date", description: "The date selected at first. After that the Calendar keeps its own selection - a pick moves the highlight without the consumer handing it back."},
+        {name: "onSelectDate", type: "(date) => void", description: "Called when a day is picked, by click or by Enter/Space - never for a day outside min/max."},
+        {name: "min", type: "Date", description: "The earliest day that can be picked, by whole day. Earlier days still show, struck through, so the month reads normally."},
+        {name: "max", type: "Date", description: "The latest day that can be picked, by whole day."},
     ],
     CalendarRange: [
         {name: "value", type: "{start?: Date, end?: Date}", description: "Currently selected range."},
@@ -1365,24 +1367,10 @@ const textEditableFieldValue = new RenderBasic<string>("click edit to change me"
 const selectMenuSelection = new RenderBasic<string>("Jamie Rivera")
 
 /**
- * Calendar (like Carousel/DataTable/every other stateful `Component` in the library - see each
- * one's own doc comment) reads `value` once at construction and has no way to pick up a changed
- * attr on an already-mounted instance, so a docs example that just does
- * `<Calendar value={someDate} onSelectDate={...}/>` with a fixed `someDate` never visibly
- * reacts to a click - the selected-day highlight never moves, which reads as "doesn't let you
- * select a date" even though `onSelectDate` is in fact firing. This wrapper holds the selected
- * date as its own state and `refresh()`es to hand Calendar a fresh `value` on every pick -
- * safe here specifically because Calendar takes no consumer children of its own to lose.
+ * CalendarRange reads `value` once at construction and does not move its own highlight on a pick
+ * (Calendar does, since it owns its selection), so this wrapper holds the range as its own state
+ * and `refresh()`es to hand it back - safe because CalendarRange takes no consumer children.
  */
-class CalendarDemo extends Component<EmptyAttrs> {
-    #selected: Date = new Date()
-    override render(): RenderableElements {
-        return <Calendar value={this.#selected} onSelectDate={(date) => { this.#selected = date; this.refresh() }}/>
-    }
-}
-
-/** Same "read-once, refresh() to hand it a fresh value" wiring as `CalendarDemo` above - see
- * its doc comment - `CalendarRange` has the identical limitation. */
 class CalendarRangeDemo extends Component<EmptyAttrs> {
     #range: {start?: Date, end?: Date} = {}
     override render(): RenderableElements {
@@ -2221,7 +2209,12 @@ secondary. The last paragraph in a container drops its bottom margin.</Paragraph
     ]}/>`},
     ],
     Calendar: [
-        {label: "Default (pick a day)", node: () => <CalendarDemo/>, code: `<CalendarDemo/>`},
+        {label: "Default (pick a day)", node: () => <Calendar value={new Date()} onSelectDate={(date) => console.log(date)}/>,
+            code: `<Calendar value={new Date()} onSelectDate={(date) => console.log(date)}/>`},
+        {label: "Only the next two weeks", node: () => {
+            const today = new Date()
+            return <Calendar min={today} max={new Date(today.getFullYear(), today.getMonth(), today.getDate() + 14)}/>
+        }, code: `<Calendar min={today} max={twoWeeksFromToday}/>`},
     ],
     CalendarRange: [
         {label: "Default (pick a start, then an end)", node: () => <CalendarRangeDemo/>, code: `<CalendarRangeDemo/>`},

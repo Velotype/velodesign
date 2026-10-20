@@ -1391,6 +1391,26 @@ describe('basic component rendering', () => {
         }
     })
 
+    itWrap("Calendar moves its own selection, and refuses days outside min/max", "calendar", "#default-calendar", async (_selection: ElementHandle) => {
+        // Driven through page.evaluate rather than held handles - see the checklist note in CLAUDE.md.
+        const pick = (root: string, day: number) => `(() => {
+            const scope = document.querySelector('#showcase-theme-light ${root}')
+            const cell = [...scope.querySelectorAll('.vtd-calendar-day:not(.vtd-calendar-day-outside)')].find(b => b.textContent === '${day}')
+            cell.click()
+            return [...scope.querySelectorAll('.vtd-calendar-day-selected')].map(b => b.textContent + ':' + b.getAttribute('aria-selected'))
+        })()`
+        assertEquals(await page.evaluate(pick("#default-calendar", 20)), ["20:true"])
+        assertEquals(await page.evaluate(pick("#default-calendar", 22)), ["22:true"])
+        assertEquals(await page.evaluate("globalThis.__picked"), [new Date(2026, 0, 20).toDateString(), new Date(2026, 0, 22).toDateString()])
+        // The 9th is before min and the 21st after max (whose time of day doesn't matter): the
+        // selection stays on the 15th. The 20th, max's own day, can be picked.
+        assertEquals(await page.evaluate(pick("#bounded-calendar", 9)), ["15:true"])
+        assertEquals(await page.evaluate(pick("#bounded-calendar", 21)), ["15:true"])
+        assertEquals(await page.evaluate(pick("#bounded-calendar", 20)), ["20:true"])
+        const disabled = await page.evaluate(`[...document.querySelectorAll('#showcase-theme-light #bounded-calendar .vtd-calendar-day[aria-disabled="true"]:not(.vtd-calendar-day-outside)')].length`)
+        assertEquals(disabled, 31 - 11)
+    })
+
     itWrap("Collapse and Accordion render the same disclosure widget", "collapse", "#default-collapse", async (_selection: ElementHandle) => {
         // They share `disclosure-view.tsx` precisely so they cannot drift apart again. They had a
         // stylesheet each, five rules byte-identical between them, and had already diverged where
