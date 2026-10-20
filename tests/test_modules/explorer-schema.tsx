@@ -1127,6 +1127,14 @@ export const stories: ComponentStory[] = [
         render: (attrs, setAttr) => <Calendar value={new Date(attrs.selected as string)} onSelectDate={(date) => setAttr("selected", date.toDateString())}/>,
     },
     {
+        name: "Calendar (several days)", group: "Data Display",
+        // Stored as one string of toDateString()s, for the same reason as Calendar's above.
+        defaultAttrs: {days: [15, 16, 20].map(d => new Date(2026, 0, d).toDateString()).join("|")},
+        controls: {},
+        render: (attrs, setAttr) => <Calendar values={(attrs.days as string).split("|").filter(Boolean).map(d => new Date(d))}
+            onChangeDates={(dates) => setAttr("days", dates.map(d => d.toDateString()).join("|"))}/>,
+    },
+    {
         name: "CalendarRange", group: "Data Display",
         defaultAttrs: {start: new Date(2026, 0, 10).toDateString(), end: new Date(2026, 0, 15).toDateString()},
         controls: {},
