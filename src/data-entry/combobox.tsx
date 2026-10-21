@@ -15,6 +15,8 @@ export type ComboboxOptionType = {
     value: string
     /** Displayed label for this option (defaults to `value`) */
     label?: string
+    /** A second, quieter line under the label - an address under a place's name, say */
+    detail?: string
 }
 
 /**
@@ -39,6 +41,14 @@ export type ComboboxAttrsType = {
     required?: boolean
     /** Is the combobox disabled? */
     disabled?: boolean
+    /**
+     * Narrow `options` to what's typed (default true). Set false when the options are already
+     * the matches - suggestions fetched for the query as it's typed and handed in with
+     * `setOptions()` - so they're shown as given, in the order given.
+     */
+    filter?: boolean
+    /** Called with the option itself when one is picked (after the input's `input` and `change` events) */
+    onSelectOption?: (option: ComboboxOptionType) => void
     /** Callback for onInput event */
     onInput?: (event: TargetedInputEvent<HTMLInputElement>) => void
     /** Callback for onChange event */
@@ -90,7 +100,7 @@ export class Combobox extends Component<ComboboxAttrsType> {
     /** Options matching the input's current value (all options if it's empty) */
     #filteredOptions(): ComboboxOptionType[] {
         const query = this.#inputEl.value.trim().toLowerCase()
-        if (!query) {
+        if (!query || this.#attrs.filter === false) {
             return this.#attrs.options
         }
         return this.#attrs.options.filter(option => (option.label || option.value).toLowerCase().includes(query))
@@ -144,7 +154,8 @@ export class Combobox extends Component<ComboboxAttrsType> {
             class={`vtd-combobox-option${index == this.#highlightedIndex ? " vtd-combobox-option-highlighted" : ""}`}
             onClick={() => this.#selectOption(option)}
             onPointerEnter={() => this.#setHighlighted(index)}>
-            {query ? highlightMatch(option.label || option.value, query) : (option.label || option.value)}
+            {query && this.#attrs.filter !== false ? highlightMatch(option.label || option.value, query) : (option.label || option.value)}
+            {option.detail ? <span class="vtd-combobox-option-detail">{option.detail}</span> : null}
         </li>)
         this.#panelEl.replaceChildren(...this.#optionEls)
     }
@@ -155,6 +166,18 @@ export class Combobox extends Component<ComboboxAttrsType> {
         this.#inputEl.dispatchEvent(new Event("change", {bubbles: true}))
         this.#closePanel()
         this.#inputEl.focus()
+        this.#attrs.onSelectOption?.(option)
+    }
+
+    /**
+     * Replaces the suggestions - for options that arrive as the reader types (with
+     * `filter={false}`). The open list redraws in place; the input and what's typed are untouched.
+     */
+    setOptions(options: ComboboxOptionType[]) {
+        this.#attrs = {...this.#attrs, options}
+        this.#highlightedIndex = 0
+        if (document.activeElement === this.#inputEl && this.#inputEl.value.trim()) {this.#openPanel()}
+        if (this.#open) {this.#renderOptions()}
     }
 
     #handleInput = (event: TargetedInputEvent<HTMLInputElement>) => {
@@ -240,6 +263,7 @@ display:none;
 }
 .vtd-combobox-panel-open{display:block;}
 .vtd-combobox-option{padding:0.5em 0.75em;border-radius:0.25rem;cursor:pointer;}
+.vtd-combobox-option-detail{display:block;font-size:0.85em;opacity:0.7;}
 ` +
 /* The keyboard's position in the list - see Menu for why this is a tint and not a ring */
 `
