@@ -1025,6 +1025,7 @@ const attrTables: Record<string, AttrDoc[]> = {
     Tabs: [
         {name: "tabs", type: "TabType[]", required: true, description: "The tabs to render."},
         {name: "initialKey", type: "string", defaultValue: "first tab", description: "Key of the tab that starts active."},
+        {name: "onChange", type: "(key) => void", description: "Called after the active tab changes, by a click or the arrow keys - never for the tab that was already active. Pair it with initialKey to remember the choice."},
     ],
     Accordion: [
         {name: "items", type: "AccordionItemType[]", required: true, description: "The sections to render."},
@@ -1215,7 +1216,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "max", type: "Date", description: "The latest day that can be picked, by whole day."},
     ],
     EventCalendar: [
-        {name: "events", type: "EventCalendarEventType[]", required: true, description: "What to show: each has a date, a label, and optionally a time (already formatted), an href and a colour type. setEvents replaces them later."},
+        {name: "events", type: "EventCalendarEventType[]", required: true, description: "What to show: each has a date, a label, and optionally a time (already formatted), an href, a colour type, and tentative - drawn as an outline, for something that might happen. setEvents replaces them later."},
         {name: "month", type: "Date", description: "A day in the month shown first. Default this month."},
         {name: "onSelectEvent", type: "(event, click) => void", description: "Called when an event is clicked. preventDefault() the click to route an href yourself."},
         {name: "onChangeMonth", type: "(month) => void", description: "Called after the prev/next buttons change the month, with its first day - to fetch that month's events."},

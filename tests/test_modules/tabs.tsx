@@ -26,6 +26,12 @@ class TabsGallery extends Component<EmptyAttrs> {
     override render() {
         return <div style={{marginTop:"10px", maxWidth: "560px", border: "1px dashed var(--background-5)", padding: "8px"}}>
             <Tabs id="default-tabs" tabs={getSampleTabs()}/>
+            {/* Reports each change, as a consumer remembering the choice would */}
+            <Tabs id="reporting-tabs" initialKey="b" tabs={[{key: "a", label: "A", content: "Panel A"}, {key: "b", label: "B", content: "Panel B"}, {key: "c", label: "C", content: "Panel C"}]}
+                onChange={(key) => {
+                    const store = globalThis as unknown as {__tabChanges?: string[]}
+                    store.__tabChanges = [...(store.__tabChanges ?? []), key]
+                }}/>
         </div>
     }
 }

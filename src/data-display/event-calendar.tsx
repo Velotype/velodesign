@@ -22,6 +22,11 @@ export type EventCalendarEventType = {
     href?: string
     /** Its colour, default `"primary"` */
     type?: EventCalendarEventColorType
+    /**
+     * Might happen, not will - one of several proposed times, say. Drawn as an outline rather than
+     * a fill. The look carries no words, so say it in `label` too for a screen reader
+     */
+    tentative?: boolean
 }
 
 /**
@@ -121,6 +126,8 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
 .vtd-event-calendar-event-danger:hover{background-color:var(--accent-4);}
 .vtd-event-calendar-event-neutral{background-color:var(--background-1);box-shadow:inset 0 0 0 1px var(--background-5);}
 .vtd-event-calendar-event-neutral:hover{background-color:var(--background-2);}
+.vtd-event-calendar-event.vtd-event-calendar-event-tentative{background-color:transparent;box-shadow:none;border:1px dashed var(--background-6);}
+.vtd-event-calendar-event.vtd-event-calendar-event-tentative:hover{background-color:var(--background-1);}
 .vtd-event-calendar-day:not(.vtd-event-calendar-day-expanded) .vtd-event-calendar-folded{display:none;}
 .vtd-event-calendar-day-expanded .vtd-event-calendar-more{display:none;}
 .vtd-event-calendar-more{border:none;background:transparent;color:inherit;font:inherit;font-size:0.8em;padding:0.1em 0.4em;cursor:pointer;opacity:0.8;border-radius:0.25rem;}
@@ -162,7 +169,7 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
 
     /** One event, as a link or a button */
     #event(event: EventCalendarEventType, folded: boolean): HTMLLIElement {
-        const cls = `vtd-event-calendar-event vtd-event-calendar-event-${event.type ?? "primary"}`
+        const cls = `vtd-event-calendar-event vtd-event-calendar-event-${event.type ?? "primary"}${event.tentative ? " vtd-event-calendar-event-tentative" : ""}`
         const content = [event.time ? <span class="vtd-event-calendar-event-time">{event.time}</span> : null, event.label]
         const onClick = (click: MouseEvent) => this.#attrs.onSelectEvent?.(event, click)
         const title = event.time ? `${event.time} ${event.label}` : event.label
