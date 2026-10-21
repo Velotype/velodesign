@@ -6,7 +6,7 @@ import type { ComponentStory } from "../../../tests/test_modules/explorer-schema
 
 import {
     Accordion, Alert, AspectRatio, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, ButtonModal,
-    Calendar, CalendarRange, Card, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu,
+    Calendar, CalendarRange, Card, EventCalendar, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu,
     DatePicker, DateTimePicker, DateTimeRangePicker, Divider, Drawer, Empty, Form, FormField, I, InputNumber, Link, List, Menu,
     Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, ScrollArea, Select, SelectMenu,
     showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, DataTable, Tabs, Tag, TextBox,
@@ -213,6 +213,7 @@ const descriptions: Record<string, string> = {
     AsyncDataTable: "The same table, for data a server filters, sorts and pages. Give it a load() and it handles debouncing, out-of-order responses, loading and error states, and pagination.",
     Carousel: "A single-slide-at-a-time carousel with prev/next arrows and optional dot indicators.",
     Calendar: "A month-grid date picker with prev/next month navigation and a selectable day.",
+    EventCalendar: "A month of events, like a wall calendar: each day lists what falls on it, and a narrow calendar becomes a list of the days with something on.",
     CalendarRange: "A month-grid date-*range* picker: click a start day, then an end day, and the span between them highlights.",
     Tree: "A hierarchical, expandable/collapsible list built on nested native details/summary pairs. Nodes open and close with the same animation as Collapse and Accordion.",
     // Data Entry
@@ -765,6 +766,7 @@ const componentThemeOptions: Record<string, string[]> = {
     Combobox: ["CommonThemeOptions"],
     Command: ["CommonThemeOptions"],
     CalendarRange: ["CommonThemeOptions"],
+    EventCalendar: ["CommonThemeOptions"],
     Carousel: ["CommonThemeOptions"],
     Steps: ["CommonThemeOptions"],
 }
@@ -1211,6 +1213,18 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "onSelectDate", type: "(date) => void", description: "Called when a day is picked, by click or by Enter/Space - never for a day outside min/max."},
         {name: "min", type: "Date", description: "The earliest day that can be picked, by whole day. Earlier days still show, struck through, so the month reads normally."},
         {name: "max", type: "Date", description: "The latest day that can be picked, by whole day."},
+    ],
+    EventCalendar: [
+        {name: "events", type: "EventCalendarEventType[]", required: true, description: "What to show: each has a date, a label, and optionally a time (already formatted), an href and a colour type. setEvents replaces them later."},
+        {name: "month", type: "Date", description: "A day in the month shown first. Default this month."},
+        {name: "onSelectEvent", type: "(event, click) => void", description: "Called when an event is clicked. preventDefault() the click to route an href yourself."},
+        {name: "onChangeMonth", type: "(month) => void", description: "Called after the prev/next buttons change the month, with its first day - to fetch that month's events."},
+        {name: "maxPerDay", type: "number", defaultValue: "3", description: "How many events a day shows before the rest fold behind a +N button, which unfolds that day in place."},
+        {name: "moreLabel", type: "(hidden) => RenderableElements", defaultValue: "+N", description: "The folded-events button's content."},
+        {name: "emptyMessage", type: "() => RenderableElements", defaultValue: "CommonThemeOptions.emptySymbol", description: "Shown by the list layout for a month with nothing in it."},
+        {name: "weekStartsOn", type: "number", defaultValue: "0", description: "The weekday a week starts on, 0 (Sunday) to 6."},
+        {name: "layout", type: "\"auto\" | \"grid\" | \"list\"", defaultValue: "\"auto\"", description: "auto shows the grid, and the list once the calendar itself is narrower than 36em (a container query)."},
+        {name: "prevMonthLabel / nextMonthLabel", type: "string", description: "Accessible names for the month buttons, which show only a glyph."},
     ],
     CalendarRange: [
         {name: "value", type: "{start?: Date, end?: Date}", description: "Currently selected range."},
@@ -2215,6 +2229,24 @@ secondary. The last paragraph in a container drops its bottom margin.</Paragraph
             const today = new Date()
             return <Calendar min={today} max={new Date(today.getFullYear(), today.getMonth(), today.getDate() + 14)}/>
         }, code: `<Calendar min={today} max={twoWeeksFromToday}/>`},
+    ],
+    EventCalendar: [
+        {label: "A month of events", node: () => {
+            const today = new Date()
+            const on = (d: number) => new Date(today.getFullYear(), today.getMonth(), d)
+            return <EventCalendar maxPerDay={2} events={[
+                {date: on(3), label: "Bake sale", time: "9am"},
+                {date: on(3), label: "Car wash", time: "11am", type: "secondary"},
+                {date: on(3), label: "Teacher lunch", time: "12pm", type: "warning"},
+                {date: on(12), label: "Potluck", type: "secondary"},
+                {date: on(20), label: "Forms due", type: "danger"},
+            ]}/>
+        }, code: `<EventCalendar maxPerDay={2} events={[
+    {date: new Date(2026, 9, 3), label: "Bake sale", time: "9am"},
+    {date: new Date(2026, 9, 12), label: "Potluck", type: "secondary"},
+]}/>`},
+        {label: "As a list", node: () => <EventCalendar layout="list" events={[{date: new Date(), label: "Today's event"}]}/>,
+            code: `<EventCalendar layout="list" events={events}/>`},
     ],
     CalendarRange: [
         {label: "Default (pick a start, then an end)", node: () => <CalendarRangeDemo/>, code: `<CalendarRangeDemo/>`},

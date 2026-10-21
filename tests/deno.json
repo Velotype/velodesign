@@ -62,6 +62,7 @@
         "bundle-resizable": "deno bundle ./test_modules/resizable.tsx --output ./build/resizable.js --sourcemap=linked",
         "bundle-carousel": "deno bundle ./test_modules/carousel.tsx --output ./build/carousel.js --sourcemap=linked",
         "bundle-calendar": "deno bundle ./test_modules/calendar.tsx --output ./build/calendar.js --sourcemap=linked",
+        "bundle-event-calendar": "deno bundle ./test_modules/event-calendar.tsx --output ./build/event-calendar.js --sourcemap=linked",
         "bundle-calendar-range": "deno bundle ./test_modules/calendar-range.tsx --output ./build/calendar-range.js --sourcemap=linked",
         "bundle-tree": "deno bundle ./test_modules/tree.tsx --output ./build/tree.js --sourcemap=linked",
         "bundle-command": "deno bundle ./test_modules/command.tsx --output ./build/command.js --sourcemap=linked",

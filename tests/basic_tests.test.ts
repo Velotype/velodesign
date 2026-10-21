@@ -1432,6 +1432,77 @@ describe('basic component rendering', () => {
         assertEquals(cleared, {selected: 0, title: new Date(2026, 0, 1).toLocaleDateString(undefined, {month: "long", year: "numeric"})})
     })
 
+    itWrap("EventCalendar lays out a month, folds a busy day, and changes month without touching the header", "event-calendar", "#default-event-calendar", async (_selection: ElementHandle) => {
+        const state = await page.evaluate(`(() => {
+            const scope = document.querySelector('#showcase-theme-light #default-event-calendar')
+            const days = [...scope.querySelectorAll('.vtd-event-calendar-day')]
+            const eighth = days.find(d => !d.classList.contains('vtd-event-calendar-day-outside') && d.querySelector('time').textContent === '8')
+            const visible = el => el.checkVisibility()
+            return {
+                // January 2026 starts on a Thursday: four days of December lead the first week, and it runs to five weeks.
+                cells: days.length,
+                leading: days.slice(0, 4).every(d => d.classList.contains('vtd-event-calendar-day-outside')),
+                // Earliest first, two shown, two folded behind "+2".
+                order: [...eighth.querySelectorAll('.vtd-event-calendar-event')].map(e => e.textContent),
+                shown: [...eighth.querySelectorAll('.vtd-event-calendar-event')].filter(visible).length,
+                more: eighth.querySelector('.vtd-event-calendar-more').textContent,
+                link: eighth.querySelector('a.vtd-event-calendar-event').getAttribute('href'),
+            }
+        })()`)
+        assertEquals(state, {cells: 35, leading: true, order: ["9amBake sale", "11amCar wash", "12pmTeacher lunch", "3pmBook fair"], shown: 2, more: "+2", link: "#bake-sale"})
+
+        // Unfolding is one class on that day, and clicking an event reports it.
+        const unfolded = await page.evaluate(`(() => {
+            const scope = document.querySelector('#showcase-theme-light #default-event-calendar')
+            const observer = new MutationObserver(() => {})
+            observer.observe(scope, {childList: true, subtree: true})
+            scope.querySelector('.vtd-event-calendar-more').click()
+            const added = observer.takeRecords().reduce((n, r) => n + r.addedNodes.length + r.removedNodes.length, 0)
+            const day = scope.querySelector('.vtd-event-calendar-day-expanded')
+            ;[...day.querySelectorAll('.vtd-event-calendar-event')][3].click()
+            return {added, shown: [...day.querySelectorAll('.vtd-event-calendar-event')].filter(e => e.checkVisibility()).length, selected: globalThis.__selected}
+        })()`)
+        assertEquals(unfolded, {added: 0, shown: 4, selected: ["Book fair"]})
+
+        // Next month: the title's text node is the same node, the header is untouched, and February has none of January's events.
+        const moved = await page.evaluate(`(() => {
+            const scope = document.querySelector('#showcase-theme-light #default-event-calendar')
+            const header = scope.querySelector('.vtd-event-calendar-header')
+            const text = scope.querySelector('.vtd-event-calendar-title').firstChild
+            const observer = new MutationObserver(() => {})
+            observer.observe(header, {childList: true, subtree: true})
+            header.querySelectorAll('button')[1].click()
+            const headerNodes = observer.takeRecords().reduce((n, r) => n + r.addedNodes.length + r.removedNodes.length, 0)
+            return {headerNodes, same: scope.querySelector('.vtd-event-calendar-title').firstChild === text, title: text.nodeValue,
+                events: scope.querySelectorAll('.vtd-event-calendar-grid .vtd-event-calendar-event').length, month: globalThis.__month}
+        })()`)
+        assertEquals(moved, {headerNodes: 0, same: true, title: new Date(2026, 1, 1).toLocaleDateString(undefined, {month: "long", year: "numeric"}),
+            events: 0, month: new Date(2026, 1, 1).toDateString()})
+    })
+
+    itWrap("EventCalendar's list shows only the days with events, and a narrow auto calendar picks it", "event-calendar", "#list-event-calendar", async (_selection: ElementHandle) => {
+        const state = await page.evaluate(`(() => {
+            const shows = (id, part) => getComputedStyle(document.querySelector('#showcase-theme-light ' + id + ' ' + part)).display !== 'none'
+            const list = document.querySelector('#showcase-theme-light #list-event-calendar')
+            return {
+                days: [...list.querySelectorAll('.vtd-event-calendar-list-day time')].map(t => t.getAttribute('datetime')),
+                listShown: shows('#list-event-calendar', '.vtd-event-calendar-list'),
+                listGrid: shows('#list-event-calendar', '.vtd-event-calendar-grid'),
+                narrowList: shows('#narrow-event-calendar', '.vtd-event-calendar-list'),
+                narrowGrid: shows('#narrow-event-calendar', '.vtd-event-calendar-grid'),
+                // Weeks from Monday: January 2026's Thursday the 1st is the fourth cell.
+                monday: [...document.querySelectorAll('#showcase-theme-light #monday-event-calendar .vtd-event-calendar-day')].findIndex(d => !d.classList.contains('vtd-event-calendar-day-outside')),
+            }
+        })()`)
+        assertEquals(state, {days: ["2026-01-08", "2026-01-15", "2026-01-28"], listShown: true, listGrid: false, narrowList: true, narrowGrid: false, monday: 3})
+
+        const set = await page.evaluate(`(() => {
+            document.querySelector('#showcase-theme-light #settable-add').click()
+            return [...document.querySelectorAll('#showcase-theme-light #settable-event-calendar .vtd-event-calendar-grid .vtd-event-calendar-event')].map(e => e.textContent)
+        })()`)
+        assertEquals(set, ["Added"])
+    })
+
     itWrap("Collapse and Accordion render the same disclosure widget", "collapse", "#default-collapse", async (_selection: ElementHandle) => {
         // They share `disclosure-view.tsx` precisely so they cannot drift apart again. They had a
         // stylesheet each, five rules byte-identical between them, and had already diverged where
