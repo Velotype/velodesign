@@ -18,7 +18,7 @@
   | `navigation/` | NavLink, Breadcrumbs, Navbar, Sidebar, TableOfContents, Menu, Steps, PageSelector |
   | `feedback/` | Alert, Toast, Tooltip, Spinner, Progress, Skeleton, Empty |
   | `overlays/` | Modal, Drawer, Popover, Popconfirm, ContextMenu, Command |
-  | `data-display/` | Badge, Card, Table, DataTable, AsyncDataTable, CodeBlock, Calendar, Tree, Resizable … |
+  | `data-display/` | Badge, Card, Table, DataTable, AsyncDataTable, CodeBlock, Calendar, EventCalendar, Tree, Resizable … |
   | `data-entry/` | DatePicker, Slider, Combobox, Upload, Rate, Form |
   | `charts/` | LineChart, AreaChart, BarChart, PieChart, Gauge, Sparkline |
   | `core/` | **Not a category.** Cross-cutting infrastructure imported by components in several categories, so it belongs to none of them: `utilities.ts`, `theme.ts`, `history.ts`, `strings.ts`, `license.ts`, `search-highlight.tsx`, `styles.ts`, `css-value.ts`, and the two barrels `velotype.ts` / `jsx.ts` - **every velotype import in the package goes through those two**, for reasons in *The bundle size is measured, not asserted* below. |

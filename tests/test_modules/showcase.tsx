@@ -1,7 +1,7 @@
 import {replaceElementWithRoot, Component, getComponent} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
-import { Accordion, Alert, AreaChart, AsyncDataTable, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, Calendar, Card, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu, DataTable, DatePicker, Gauge, Grid, Heading, LineChart, Paragraph, PieChart, Sparkline, Stack, Text, Divider, Drawer, Empty, Form, FormField, InputNumber, List, Menu, Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, Resizable, ScrollArea, Select, SelectMenu, showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, Tabs, Tag, TextBox, Theme, Timeline, Toggle, Tooltip, Tree, Upload} from "../../src/index.ts"
+import { Accordion, Alert, AreaChart, AsyncDataTable, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, Calendar, Card, EventCalendar, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu, DataTable, DatePicker, Gauge, Grid, Heading, LineChart, Paragraph, PieChart, Sparkline, Stack, Text, Divider, Drawer, Empty, Form, FormField, InputNumber, List, Menu, Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, Resizable, ScrollArea, Select, SelectMenu, showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, Tabs, Tag, TextBox, Theme, Timeline, Toggle, Tooltip, Tree, Upload} from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 import { setThemeOnSelector } from "../../src/core/theme.ts"
 
@@ -269,6 +269,9 @@ class ShowcaseSide extends Component<EmptyAttrs> {
             <hr style={{marginTop:"10px"}}/>
             Example Calendar:
             <div style={{marginTop:"10px"}}><Calendar/></div>
+            <hr style={{marginTop:"10px"}}/>
+            Example EventCalendar:
+            <div style={{marginTop:"10px"}}><EventCalendar events={[{date: new Date(), label: "Today's event"}]}/></div>
             <hr style={{marginTop:"10px"}}/>
             Example Tree:
             <div style={{marginTop:"10px", maxWidth:"320px"}}><Tree nodes={[{key:"a",label:"src",defaultOpen:true,children:[{key:"b",label:"index.ts"}]}]}/></div>

@@ -17,6 +17,7 @@ import {
     ButtonModal,
     Calendar,
     CalendarRange,
+    EventCalendar,
     Card,
     Carousel,
     Checkbox,
@@ -1133,6 +1134,26 @@ export const stories: ComponentStory[] = [
         controls: {},
         render: (attrs, setAttr) => <Calendar values={(attrs.days as string).split("|").filter(Boolean).map(d => new Date(d))}
             onChangeDates={(dates) => setAttr("days", dates.map(d => d.toDateString()).join("|"))}/>,
+    },
+    {
+        name: "EventCalendar", group: "Data Display",
+        defaultAttrs: {maxPerDay: 2, layout: "auto"},
+        controls: {
+            maxPerDay: {kind: "number", label: "maxPerDay"},
+            layout: {kind: "select", label: "layout", options: ["auto", "grid", "list"]},
+        },
+        render: (attrs) => {
+            const today = new Date()
+            const on = (d: number) => new Date(today.getFullYear(), today.getMonth(), d)
+            return <EventCalendar maxPerDay={attrs.maxPerDay as number} layout={attrs.layout as "auto" | "grid" | "list"} events={[
+                {date: on(3), label: "Bake sale", time: "9am"},
+                {date: on(3), label: "Car wash", time: "11am", type: "secondary"},
+                {date: on(3), label: "Teacher lunch", time: "12pm", type: "warning"},
+                {date: on(12), label: "Potluck", type: "secondary"},
+                {date: on(20), label: "Field trip forms due", type: "danger"},
+                {date: on(26), label: "Book fair", type: "neutral"},
+            ]}/>
+        },
     },
     {
         name: "CalendarRange", group: "Data Display",

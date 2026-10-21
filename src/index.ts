@@ -76,6 +76,7 @@ import { Resizable, type ResizableAttrsType } from "./data-display/resizable.tsx
 import { Carousel, type CarouselAttrsType } from "./data-display/carousel.tsx"
 import { Calendar, type CalendarAttrsType } from "./data-display/calendar.tsx"
 import { CalendarRange, type CalendarRangeAttrsType, type DateRangeType } from "./data-display/calendar-range.tsx"
+import { EventCalendar, type EventCalendarAttrsType, type EventCalendarEventColorType, type EventCalendarEventType } from "./data-display/event-calendar.tsx"
 import { Tree, type TreeAttrsType, type TreeNodeType } from "./data-display/tree.tsx"
 import { Command, type CommandAttrsType, type CommandItemType } from "./overlays/command.tsx"
 import { Heading, type HeadingAttrsType } from "./typography/heading.tsx"
@@ -400,6 +401,11 @@ export {
     CalendarRange,
     type CalendarRangeAttrsType,
     type DateRangeType,
+
+    EventCalendar,
+    type EventCalendarAttrsType,
+    type EventCalendarEventColorType,
+    type EventCalendarEventType,
 
     Tree,
     type TreeAttrsType,
