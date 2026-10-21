@@ -1,4 +1,4 @@
-import {replaceElementWithRoot, Component} from "@velotype/velotype"
+import {replaceElementWithRoot, Component, getComponent} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
 import { Combobox, setThemeOnSelector, Theme } from "../../src/index.ts"
@@ -25,8 +25,23 @@ class ComboboxGallery extends Component<EmptyAttrs> {
                 placeholder="Choose a country"
                 noMatchMessage="Rien ne correspond"
                 options={countryOptions}/></div>
+            {/* Suggestions fetched as you type: shown as given, not filtered again, with a second line */}
+            <div id="async-combobox">{asyncCombobox()}</div>
         </div>
     }
+}
+
+/** A combobox fed by a pretend server: whatever is typed, it answers with places whose names don't contain it */
+function asyncCombobox(): HTMLElement {
+    const ref: {box?: Combobox} = {}
+    const el: HTMLElement = <Combobox placeholder="Search places" filter={false} options={[]}
+        onInput={() => setTimeout(() => ref.box?.setOptions([
+            {value: "place-1", label: "Rosie's", detail: "41 Main St"},
+            {value: "place-2", label: "Maple Park", detail: "200 Maple Ave"}
+        ]), 50)}
+        onSelectOption={option => { (globalThis as unknown as {picked: string}).picked = option.value }}/>
+    ref.box = getComponent<Combobox>(el)
+    return el
 }
 
 class ComboboxPage extends Component<EmptyAttrs> {

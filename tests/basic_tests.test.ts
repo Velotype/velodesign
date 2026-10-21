@@ -1931,6 +1931,31 @@ describe('basic component rendering', () => {
 
 
     /**
+     * Suggestions that arrive as the reader types (`filter={false}` and `setOptions()`) are shown
+     * as given - a server's matches needn't contain the typed text - each with its second line,
+     * and picking one hands the option itself to `onSelectOption`.
+     */
+    itWrap("a combobox shows fetched suggestions as given and reports the pick", "combobox", "#async-combobox", async (_selection: ElementHandle) => {
+        await page.evaluate(`(() => {
+            const input = document.querySelector("#showcase-theme-light #async-combobox input.vtd-combobox")
+            input.focus()
+            input.value = "pizza"
+            input.dispatchEvent(new Event("input", {bubbles: true}))
+        })()`)
+        await new Promise(resolve => setTimeout(resolve, 150))
+        const shown = await page.evaluate(`[...document.querySelectorAll("#showcase-theme-light #async-combobox .vtd-combobox-option")].map(li => li.innerText.replace(/\\s+/g, " ").trim())`) as string[]
+        if (JSON.stringify(shown) != JSON.stringify(["Rosie's 41 Main St", "Maple Park 200 Maple Ave"])) {
+            fail(`ERROR: fetched suggestions weren't shown as given: ${JSON.stringify(shown)}`)
+        }
+        await page.evaluate(`document.querySelectorAll("#showcase-theme-light #async-combobox .vtd-combobox-option")[1].click()`)
+        const picked = await page.evaluate(`({picked: globalThis.picked, value: document.querySelector("#showcase-theme-light #async-combobox input.vtd-combobox").value})`) as {picked: string, value: string}
+        if (picked.picked != "place-2" || picked.value != "place-2") {
+            fail(`ERROR: onSelectOption didn't get the picked option: ${JSON.stringify(picked)}`)
+        }
+    })
+
+
+    /**
      * `Tree`'s open/closed state has to be readable and drivable from outside, which is what makes
      * a filterable tree possible at all: reveal the branch holding a match, then put the reader's
      * own expansions back when the filter clears.
