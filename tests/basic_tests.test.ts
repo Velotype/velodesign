@@ -262,6 +262,19 @@ describe('basic component rendering', () => {
         if (!hasTeamInput) {fail("ERROR: expected the visible panel to be the Team Members tab (containing #team-tab-input)")}
     })
 
+    itWrap("tabs report a change of tab, and only a change", "tabs", "#reporting-tabs", async (_selection: ElementHandle) => {
+        const changes = await page.evaluate(`(() => {
+            const scope = document.querySelector('#showcase-theme-light #reporting-tabs')
+            const tabs = scope.querySelectorAll('.vtd-tabs-tab')
+            tabs[1].click()                 // B was already active: no change
+            tabs[0].click()                 // A
+            tabs[0].dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true}))  // B
+            tabs[1].dispatchEvent(new KeyboardEvent('keydown', {key: 'End', bubbles: true}))         // C
+            return globalThis.__tabChanges
+        })()`)
+        assertEquals(changes, ["a", "b", "c"])
+    })
+
     itWrap("tabs label text position doesn't shift when a tab becomes active", "tabs", "#default-tabs", async (_pageLoadSelection: ElementHandle) => {
         const firstTabLeftBefore = await page.evaluate(() => document.querySelector("#default-tabs .vtd-tabs-tab:nth-child(1)")!.getBoundingClientRect().left)
 
@@ -1494,7 +1507,13 @@ describe('basic component rendering', () => {
                 monday: [...document.querySelectorAll('#showcase-theme-light #monday-event-calendar .vtd-event-calendar-day')].findIndex(d => !d.classList.contains('vtd-event-calendar-day-outside')),
             }
         })()`)
-        assertEquals(state, {days: ["2026-01-08", "2026-01-15", "2026-01-28"], listShown: true, listGrid: false, narrowList: true, narrowGrid: false, monday: 3})
+        assertEquals(state, {days: ["2026-01-08", "2026-01-15", "2026-01-28", "2026-01-29"], listShown: true, listGrid: false, narrowList: true, narrowGrid: false, monday: 3})
+        // A tentative event is drawn as an outline: its own class, and no fill.
+        const tentative = await page.evaluate(`(() => {
+            const e = [...document.querySelectorAll('#showcase-theme-light #list-event-calendar .vtd-event-calendar-event')].find(e => e.textContent === 'Meeting (option)')
+            return {cls: e.classList.contains('vtd-event-calendar-event-tentative'), fill: getComputedStyle(e).backgroundColor, border: getComputedStyle(e).borderTopStyle}
+        })()`)
+        assertEquals(tentative, {cls: true, fill: "rgba(0, 0, 0, 0)", border: "dashed"})
 
         const set = await page.evaluate(`(() => {
             document.querySelector('#showcase-theme-light #settable-add').click()

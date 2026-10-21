@@ -25,6 +25,8 @@ export type TabsAttrsType = {
     tabs: TabType[]
     /** Key of the tab that starts active (defaults to the first tab) */
     initialKey?: string
+    /** Called after the active tab changes - by a click or the arrow keys, never for the tab that was already active - to remember the choice, say */
+    onChange?: (key: string) => void
 } & IdAttr & StylePassthroughAttrs
 
 let areTabsStylesMounted = false
@@ -52,6 +54,7 @@ export class Tabs extends Component<TabsAttrsType> {
     /** Panels, keyed by tab key */
     #panels: Record<string, HTMLDivElement> = {}
     #root: HTMLDivElement
+    #onChange: ((key: string) => void) | undefined
 
     /** Switch to `key`, toggling classes directly on the already-built elements */
     #activate(key: string) {
@@ -67,6 +70,7 @@ export class Tabs extends Component<TabsAttrsType> {
         this.#tabButtons[key]?.setAttribute("aria-selected", "true")
         this.#tabButtons[key]?.setAttribute("tabindex", "0")
         this.#panels[key]?.classList.add("vtd-tabs-panel-active")
+        this.#onChange?.(key)
     }
 
     /** Moves focus to the tab at `key` (as opposed to `#activate`, which also switches the
@@ -104,6 +108,7 @@ export class Tabs extends Component<TabsAttrsType> {
     constructor(attrs: TabsAttrsType, children: RenderableElements[]) {
         super(attrs, children)
         this.#activeKey = attrs.initialKey || attrs.tabs[0]?.key
+        this.#onChange = attrs.onChange
         if (!areTabsStylesMounted) {
             areTabsStylesMounted = true
             mountStyles(

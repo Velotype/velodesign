@@ -17,6 +17,7 @@ function events(): EventCalendarEventType[] {
         {date: on(8, 15), label: "Book fair", time: "3pm", type: "neutral"},
         {date: on(15), label: "Potluck", type: "secondary"},
         {date: on(28), label: "Forms due", type: "danger"},
+        {date: on(29), label: "Meeting (option)", tentative: true},
     ]
 }
 
