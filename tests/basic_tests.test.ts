@@ -1445,6 +1445,59 @@ describe('basic component rendering', () => {
         assertEquals(cleared, {selected: 0, title: new Date(2026, 0, 1).toLocaleDateString(undefined, {month: "long", year: "numeric"})})
     })
 
+    itWrap("Calendar with weeks starts on today's week and pages within min/max", "calendar", "#weeks-calendar", async (_selection: ElementHandle) => {
+        // Relative to today, so where things sit is computed in the page, the same way
+        const read = `(() => {
+            const scope = document.querySelector('#showcase-theme-light #weeks-calendar')
+            const cells = [...scope.querySelectorAll('.vtd-calendar-day')]
+            const [prev, next] = scope.querySelectorAll('.vtd-calendar-header button')
+            const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+            const t = new Date()
+            const sunday = n => iso(new Date(t.getFullYear(), t.getMonth(), t.getDate() - t.getDay() + n))
+            return {cells: cells.length, outside: scope.querySelectorAll('.vtd-calendar-day-outside').length,
+                first: cells[0].dataset.date, expected: [sunday(0), sunday(28), sunday(56)],
+                todayRow: cells.findIndex(c => c.classList.contains('vtd-calendar-day-today')) < 7,
+                monthLabels: scope.querySelectorAll('.vtd-calendar-day-month').length,
+                prev: prev.disabled, next: next.disabled, prevLabel: prev.getAttribute('aria-label')}
+        })()`
+        const nextPage = `document.querySelectorAll('#showcase-theme-light #weeks-calendar .vtd-calendar-header button')[1].click()`
+        const first = await page.evaluate(read) as {cells: number, outside: number, first: string, expected: string[], todayRow: boolean, monthLabels: number, prev: boolean, next: boolean, prevLabel: string}
+        // Four weeks, none "outside": the first is the week today is in, and the first day names its month
+        assertEquals([first.cells, first.outside, first.first, first.todayRow, first.prev, first.next, first.prevLabel],
+            [28, 0, first.expected[0], true, true, false, "Earlier weeks"])
+        if (first.monthLabels < 1) {fail("ERROR: no day says which month it is in")}
+        await page.evaluate(nextPage)
+        const second = await page.evaluate(read) as typeof first
+        assertEquals([second.first, second.prev, second.next], [first.expected[1], false, false])
+        // The third page holds max (today + 56 days), so there's nothing later to page to
+        await page.evaluate(nextPage)
+        const third = await page.evaluate(read) as typeof first
+        assertEquals([third.first, third.next], [first.expected[2], true])
+        // A picked day five weeks out opens on its page, the second
+        const later = await page.evaluate(`(() => {
+            const scope = document.querySelector('#showcase-theme-light #weeks-later-calendar')
+            const t = new Date()
+            const d = new Date(t.getFullYear(), t.getMonth(), t.getDate() - t.getDay() + 28)
+            return {first: scope.querySelector('.vtd-calendar-day').dataset.date, expected: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'),
+                selected: scope.querySelectorAll('.vtd-calendar-day-selected').length}
+        })()`) as {first: string, expected: string, selected: number}
+        assertEquals([later.first, later.selected], [later.expected, 1])
+    })
+
+    itWrap("EventCalendar with weeks shows today's week first and pages ahead", "event-calendar", "#weeks-event-calendar", async (_selection: ElementHandle) => {
+        const read = `(() => {
+            const scope = document.querySelector('#showcase-theme-light #weeks-event-calendar')
+            return {days: scope.querySelectorAll('.vtd-event-calendar-day').length,
+                outside: scope.querySelectorAll('.vtd-event-calendar-day-outside').length,
+                todayFirstRow: [...scope.querySelectorAll('.vtd-event-calendar-day')].findIndex(c => c.classList.contains('vtd-event-calendar-day-today')) < 7,
+                events: [...scope.querySelectorAll('.vtd-event-calendar-grid .vtd-event-calendar-event')].map(e => e.textContent)}
+        })()`
+        assertEquals(await page.evaluate(read), {days: 28, outside: 0, todayFirstRow: true, events: ["Today's"]})
+        await page.evaluate(`document.querySelectorAll('#showcase-theme-light #weeks-event-calendar .vtd-event-calendar-header button')[1].click()`)
+        const after = await page.evaluate(read) as {days: number, events: string[]}
+        assertEquals([after.days, after.events], [28, ["Next page's"]])
+    })
+
     itWrap("EventCalendar lays out a month, folds a busy day, and changes month without touching the header", "event-calendar", "#default-event-calendar", async (_selection: ElementHandle) => {
         const state = await page.evaluate(`(() => {
             const scope = document.querySelector('#showcase-theme-light #default-event-calendar')

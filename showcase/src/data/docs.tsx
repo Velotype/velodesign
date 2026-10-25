@@ -212,7 +212,7 @@ const descriptions: Record<string, string> = {
     Sparkline: "A tiny axis-less trend, sized to sit inside a table cell or beside a Statistic. Line, area or bar.",
     AsyncDataTable: "The same table, for data a server filters, sorts and pages. Give it a load() and it handles debouncing, out-of-order responses, loading and error states, and pagination.",
     Carousel: "A single-slide-at-a-time carousel with prev/next arrows and optional dot indicators.",
-    Calendar: "A month-grid date picker with prev/next month navigation and a selectable day.",
+    Calendar: "A month-grid date picker with prev/next month navigation and a selectable day - or rolling weeks from today's, for picking a day ahead.",
     EventCalendar: "A month of events, like a wall calendar: each day lists what falls on it, and a narrow calendar becomes a list of the days with something on.",
     CalendarRange: "A month-grid date-*range* picker: click a start day, then an end day, and the span between them highlights.",
     Tree: "A hierarchical, expandable/collapsible list built on nested native details/summary pairs. Nodes open and close with the same animation as Collapse and Accordion.",
@@ -1213,11 +1213,14 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "value", type: "Date", description: "The date selected at first. After that the Calendar keeps its own selection - a pick moves the highlight without the consumer handing it back."},
         {name: "onSelectDate", type: "(date) => void", description: "Called when a day is picked, by click or by Enter/Space - never for a day outside min/max."},
         {name: "min", type: "Date", description: "The earliest day that can be picked, by whole day. Earlier days still show, struck through, so the month reads normally."},
-        {name: "max", type: "Date", description: "The latest day that can be picked, by whole day."},
+        {name: "max", type: "Date", description: "The latest day that can be picked, by whole day. The prev/next buttons turn off once the screen reaches either bound."},
+        {name: "weeks", type: "number", description: "Shows this many weeks instead of a month, the first being the week today is in - so late in a month the screen is still the days ahead. Prev/next step that many weeks; the selection's page shows first, and a day starting a month names it."},
+        {name: "prevLabel / nextLabel", type: "string", description: "Accessible names for the prev/next buttons, which show only a glyph."},
     ],
     EventCalendar: [
         {name: "events", type: "EventCalendarEventType[]", required: true, description: "What to show: each has a date, a label, and optionally a time (already formatted), an href, a colour type, and tentative - drawn as an outline, for something that might happen. setEvents replaces them later."},
         {name: "month", type: "Date", description: "A day in the month shown first. Default this month."},
+        {name: "weeks", type: "number", description: "Shows this many weeks instead of a month, the first being the week today is in. Prev/next step that many weeks; onChangeMonth, setMonth and getMonth then deal in the first day on screen."},
         {name: "onSelectEvent", type: "(event, click) => void", description: "Called when an event is clicked. preventDefault() the click to route an href yourself."},
         {name: "onChangeMonth", type: "(month) => void", description: "Called after the prev/next buttons change the month, with its first day - to fetch that month's events."},
         {name: "maxPerDay", type: "number", defaultValue: "3", description: "How many events a day shows before the rest fold behind a +N button, which unfolds that day in place."},
@@ -1225,7 +1228,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "emptyMessage", type: "() => RenderableElements", defaultValue: "CommonThemeOptions.emptySymbol", description: "Shown by the list layout for a month with nothing in it."},
         {name: "weekStartsOn", type: "number", defaultValue: "0", description: "The weekday a week starts on, 0 (Sunday) to 6."},
         {name: "layout", type: "\"auto\" | \"grid\" | \"list\"", defaultValue: "\"auto\"", description: "auto shows the grid, and the list once the calendar itself is narrower than 36em (a container query)."},
-        {name: "prevMonthLabel / nextMonthLabel", type: "string", description: "Accessible names for the month buttons, which show only a glyph."},
+        {name: "prevLabel / nextLabel", type: "string", description: "Accessible names for the prev/next buttons, which show only a glyph."},
     ],
     CalendarRange: [
         {name: "value", type: "{start?: Date, end?: Date}", description: "Currently selected range."},
@@ -2230,6 +2233,10 @@ secondary. The last paragraph in a container drops its bottom margin.</Paragraph
             const today = new Date()
             return <Calendar min={today} max={new Date(today.getFullYear(), today.getMonth(), today.getDate() + 14)}/>
         }, code: `<Calendar min={today} max={twoWeeksFromToday}/>`},
+        {label: "Rolling weeks (this week first)", node: () => {
+            const today = new Date()
+            return <Calendar weeks={4} min={today} max={new Date(today.getFullYear(), today.getMonth(), today.getDate() + 56)} prevLabel="Earlier weeks" nextLabel="Later weeks"/>
+        }, code: `<Calendar weeks={4} min={today} max={eightWeeksFromToday} prevLabel="Earlier weeks" nextLabel="Later weeks"/>`},
     ],
     EventCalendar: [
         {label: "A month of events", node: () => {
@@ -2248,6 +2255,11 @@ secondary. The last paragraph in a container drops its bottom margin.</Paragraph
 ]}/>`},
         {label: "As a list", node: () => <EventCalendar layout="list" events={[{date: new Date(), label: "Today's event"}]}/>,
             code: `<EventCalendar layout="list" events={events}/>`},
+        {label: "Rolling weeks (this week first)", node: () => {
+            const today = new Date()
+            return <EventCalendar weeks={4} layout="grid" events={[{date: today, label: "Today's event"},
+                {date: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10), label: "Next week's"}]}/>
+        }, code: `<EventCalendar weeks={4} events={events}/>`},
     ],
     CalendarRange: [
         {label: "Default (pick a start, then an end)", node: () => <CalendarRangeDemo/>, code: `<CalendarRangeDemo/>`},

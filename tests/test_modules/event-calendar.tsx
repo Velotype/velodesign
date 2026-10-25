@@ -37,6 +37,9 @@ class EventCalendarGallery extends Component<EmptyAttrs> {
             <div id="narrow-event-calendar" style={{marginTop: "1em", width: "300px"}}><EventCalendar month={on(1)} events={events()}/></div>
             {/* Weeks starting on Monday */}
             <div id="monday-event-calendar" style={{marginTop: "1em"}}><EventCalendar month={on(1)} weekStartsOn={1} layout="grid" events={events()}/></div>
+            {/* Rolling weeks from today's: one event today, one a month out - on the second page */}
+            <div id="weeks-event-calendar" style={{marginTop: "1em"}}><EventCalendar weeks={4} layout="grid" events={[
+                {date: new Date(), label: "Today's"}, {date: new Date(Date.now() + 30 * 86400000), label: "Next page's"}]}/></div>
             {/* Events set from outside */}
             <div id="settable-event-calendar" style={{marginTop: "1em"}}>{settable}
                 <Button id="settable-add" type="secondary" onClick={() => settable.setEvents([{date: on(20), label: "Added"}])}>Add one</Button>
