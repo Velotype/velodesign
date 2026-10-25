@@ -6,6 +6,7 @@ import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { Button } from "../form/button.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
+import { monthSpanTitle } from "./calendar.tsx"
 
 /** The colour an event is drawn in - a palette name, like `Badge`'s `type` */
 export type EventCalendarEventColorType = "primary" | "secondary" | "warning" | "danger" | "neutral"
@@ -35,11 +36,16 @@ export type EventCalendarEventType = {
 export type EventCalendarAttrsType = {
     /** Everything to show, in any order. `setEvents` replaces them later */
     events: EventCalendarEventType[]
-    /** A day in the month shown first - default this month */
+    /** A day in the month shown first - default this month. With `weeks`, a day on the page shown first - default today's */
     month?: Date
+    /**
+     * Show this many weeks instead of a month, the first being the week today falls in - so what's
+     * coming up stays on screen however late in the month it is. Prev/next step that many weeks
+     */
+    weeks?: number
     /** Called when an event is clicked, with the click - `preventDefault()` it to route an `href` yourself */
     onSelectEvent?: (event: EventCalendarEventType, click: MouseEvent) => void
-    /** Called after the month on screen changes, with its first day - to fetch that month's events, say */
+    /** Called after the month on screen changes, with its first day (with `weeks`, the first day on screen) - to fetch its events, say */
     onChangeMonth?: (month: Date) => void
     /** How many events a day shows before the rest fold behind a "+N" button, default 3 */
     maxPerDay?: number
@@ -51,9 +57,9 @@ export type EventCalendarAttrsType = {
     weekStartsOn?: number
     /** `"auto"` (the default) shows the month grid, and a list of the days with events once the calendar is narrower than 36em; the others fix one */
     layout?: "auto" | "grid" | "list"
-    /** Accessible names for the previous/next month buttons, which show only a glyph */
-    prevMonthLabel?: string
-    nextMonthLabel?: string
+    /** Accessible names for the prev/next buttons, which show only a glyph - "Previous month", or with `weeks`, "Earlier weeks" */
+    prevLabel?: string
+    nextLabel?: string
 } & IdAttr & StylePassthroughAttrs
 
 let areEventCalendarStylesMounted = false
@@ -61,6 +67,10 @@ let areEventCalendarStylesMounted = false
 /** `y-m-d` of a local date, the key events are grouped by */
 function dayKey(date: Date): string {
     return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
+}
+
+function addDays(date: Date, days: number): Date {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days)
 }
 
 function isoDay(date: Date): string {
@@ -78,6 +88,11 @@ function isoDay(date: Date): string {
  * not the viewport) it lists only the days with events, each under its date. Both layouts are
  * built with the month and CSS shows one - nothing is measured, and a resize does no DOM work.
  *
+ * **With `weeks`, it shows rolling weeks rather than a month**, as `Calendar` does: the first row
+ * is the week today falls in, so late in a month the screen isn't mostly days already gone. Pages
+ * of `weeks` run back and forth from there. A day that starts a month says so ("Nov 1"), as does
+ * the first day on screen, and the list layout lists every day on the page that has events.
+ *
  * **Changing month rebuilds only the month.** The header is built once; the prev/next buttons
  * write the title's text node and replace `#monthEl`'s children. Unfolding a day is one class.
  * Weekday names and the title come from `Intl`, in the reader's locale, so nothing here is English.
@@ -85,7 +100,7 @@ function isoDay(date: Date): string {
 export class EventCalendar extends Component<EventCalendarAttrsType> {
     #attrs: EventCalendarAttrsType
     #events: EventCalendarEventType[]
-    /** First day of the month on screen */
+    /** First day of the month on screen - or with `weeks`, the first day on screen */
     #viewDate: Date
 
     #root: HTMLDivElement
@@ -97,8 +112,7 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
         super(attrs, children)
         this.#attrs = attrs
         this.#events = attrs.events
-        const start = attrs.month ?? new Date()
-        this.#viewDate = new Date(start.getFullYear(), start.getMonth(), 1)
+        this.#viewDate = this.#viewStartFor(attrs.month ?? new Date())
         if (!areEventCalendarStylesMounted) {
             areEventCalendarStylesMounted = true
             mountStyles(
@@ -152,9 +166,9 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
 
         this.#root = passthroughAttrsToElement<HTMLDivElement>(<div class={`vtd-event-calendar vtd-event-calendar-layout-${attrs.layout ?? "auto"}`}>
             <div class="vtd-event-calendar-header">
-                <Button type="text" ariaLabel={attrs.prevMonthLabel} onClick={() => this.#changeMonth(-1)}><CommonThemeOptions.prevSymbol/></Button>
+                <Button type="text" ariaLabel={attrs.prevLabel} onClick={() => this.#changeView(-1)}><CommonThemeOptions.prevSymbol/></Button>
                 <span class="vtd-event-calendar-title" aria-live="polite">{this.#titleText}</span>
-                <Button type="text" ariaLabel={attrs.nextMonthLabel} onClick={() => this.#changeMonth(1)}><CommonThemeOptions.nextSymbol/></Button>
+                <Button type="text" ariaLabel={attrs.nextLabel} onClick={() => this.#changeView(1)}><CommonThemeOptions.nextSymbol/></Button>
             </div>
             {this.#monthEl}
         </div>, attrs)
@@ -162,8 +176,30 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
         this.#renderMonth()
     }
 
-    #changeMonth(delta: number) {
-        this.setMonth(new Date(this.#viewDate.getFullYear(), this.#viewDate.getMonth() + delta, 1))
+    /** The weekday a week starts on, 0-6 */
+    #weekStart(): number {
+        return ((this.#attrs.weekStartsOn ?? 0) % 7 + 7) % 7
+    }
+
+    /** Days on screen with `weeks` - one page */
+    #pageDays(): number {
+        return Math.max(1, Math.floor(this.#attrs.weeks ?? 0)) * 7
+    }
+
+    /** Where the screen starts when it shows `date`: its month's first day, or with `weeks`, the page it falls on */
+    #viewStartFor(date: Date): Date {
+        if (!this.#attrs.weeks) {return new Date(date.getFullYear(), date.getMonth(), 1)}
+        const today = new Date()
+        const anchor = addDays(today, -((today.getDay() - this.#weekStart() + 7) % 7))
+        const page = this.#pageDays()
+        const offset = Math.round((new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime() - anchor.getTime()) / 86400000)
+        return addDays(anchor, Math.floor(offset / page) * page)
+    }
+
+    #changeView(delta: number) {
+        this.setMonth(this.#attrs.weeks
+            ? addDays(this.#viewDate, delta * this.#pageDays())
+            : new Date(this.#viewDate.getFullYear(), this.#viewDate.getMonth() + delta, 1))
         this.#attrs.onChangeMonth?.(new Date(this.#viewDate))
     }
 
@@ -184,11 +220,11 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
     #renderMonth() {
         const year = this.#viewDate.getFullYear()
         const month = this.#viewDate.getMonth()
-        const weekStart = ((this.#attrs.weekStartsOn ?? 0) % 7 + 7) % 7
+        const weekStart = this.#weekStart()
+        const weeksMode = !!this.#attrs.weeks
         const maxPerDay = Math.max(1, this.#attrs.maxPerDay ?? 3)
         const today = dayKey(new Date())
 
-        this.#titleText.nodeValue = this.#viewDate.toLocaleDateString(undefined, {month: "long", year: "numeric"})
 
         const byDay = new Map<string, EventCalendarEventType[]>()
         for (const event of [...this.#events].sort((a, b) => a.date.getTime() - b.date.getTime())) {
@@ -198,17 +234,26 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
 
         const offset = (new Date(year, month, 1).getDay() - weekStart + 7) % 7
         const daysInMonth = new Date(year, month + 1, 0).getDate()
-        const weeks = Math.ceil((offset + daysInMonth) / 7)
-        const days = Array.from({length: weeks * 7}, (_, i) => new Date(year, month, 1 - offset + i))
+        const days = weeksMode
+            ? Array.from({length: this.#pageDays()}, (_, i) => addDays(this.#viewDate, i))
+            : Array.from({length: Math.ceil((offset + daysInMonth) / 7) * 7}, (_, i) => new Date(year, month, 1 - offset + i))
+        this.#titleText.nodeValue = weeksMode
+            ? monthSpanTitle(days[0], days[days.length - 1])
+            : this.#viewDate.toLocaleDateString(undefined, {month: "long", year: "numeric"})
+        // With `weeks`, the day a month starts on, and the first on screen, say which month
+        const dateText = (d: Date) => weeksMode && (d.getDate() === 1 || d === days[0])
+            ? d.toLocaleDateString(undefined, {month: "short", day: "numeric"})
+            : String(d.getDate())
+        const inView = (d: Date) => weeksMode || d.getMonth() === month
         const weekdayName = (d: Date, style: "short" | "long") => d.toLocaleDateString(undefined, {weekday: style})
 
         const grid = <div class="vtd-event-calendar-grid">
             {days.slice(0, 7).map(d => <div class="vtd-event-calendar-weekday" aria-hidden="true">{weekdayName(d, "short")}</div>)}
             {days.map(day => {
                 const events = byDay.get(dayKey(day)) ?? []
-                const outside = day.getMonth() !== month
+                const outside = !inView(day)
                 const cell: HTMLDivElement = <div class={`vtd-event-calendar-day${outside ? " vtd-event-calendar-day-outside" : ""}${dayKey(day) === today ? " vtd-event-calendar-day-today" : ""}`}>
-                    <time class="vtd-event-calendar-date" datetime={isoDay(day)} aria-label={day.toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric"})}>{day.getDate()}</time>
+                    <time class="vtd-event-calendar-date" datetime={isoDay(day)} aria-label={day.toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric"})}>{dateText(day)}</time>
                     {events.length > 0 ? <ul class="vtd-event-calendar-events">{events.map((e, i) => this.#event(e, i >= maxPerDay))}</ul> : null}
                     {events.length > maxPerDay
                         ? <button type="button" class="vtd-event-calendar-more" onClick={() => cell.classList.add("vtd-event-calendar-day-expanded")}>
@@ -220,7 +265,7 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
             })}
         </div>
 
-        const listed = days.filter(d => d.getMonth() === month && byDay.has(dayKey(d)))
+        const listed = days.filter(d => inView(d) && byDay.has(dayKey(d)))
         const list = <ol class="vtd-event-calendar-list">
             {listed.map(day => <li class={`vtd-event-calendar-list-day${dayKey(day) === today ? " vtd-event-calendar-day-today" : ""}`}>
                 <div>
@@ -241,15 +286,15 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
         this.#renderMonth()
     }
 
-    /** Shows the month `date` falls in - without calling `onChangeMonth`, since the caller chose it */
+    /** Shows the month `date` falls in (with `weeks`, its page) - without calling `onChangeMonth`, since the caller chose it */
     setMonth(date: Date): void {
-        const next = new Date(date.getFullYear(), date.getMonth(), 1)
+        const next = this.#viewStartFor(date)
         if (next.getTime() === this.#viewDate.getTime()) {return}
         this.#viewDate = next
         this.#renderMonth()
     }
 
-    /** The first day of the month on screen */
+    /** The first day of the month on screen - or with `weeks`, the first day on screen */
     getMonth(): Date {
         return new Date(this.#viewDate)
     }

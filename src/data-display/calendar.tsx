@@ -26,6 +26,14 @@ export type CalendarAttrsType = {
     min?: Date
     /** The latest day that can be picked. Later days still show, but can't be selected */
     max?: Date
+    /**
+     * Show this many weeks instead of a month, the first being the week today falls in - so the
+     * days coming up stay on screen however late in the month it is. Prev/next step that many weeks
+     */
+    weeks?: number
+    /** Accessible names for the prev/next buttons, which show only a glyph */
+    prevLabel?: string
+    nextLabel?: string
 } & IdAttr & StylePassthroughAttrs
 
 let areCalendarStylesMounted = false
@@ -53,6 +61,27 @@ function startOfDay(date: Date): number {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
 }
 
+function addDays(date: Date, days: number): Date {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days)
+}
+
+/** Whole days from `a` to `b` - rounded, since a daylight-saving change makes one day 23 or 25 hours */
+function daysBetween(a: Date, b: Date): number {
+    return Math.round((startOfDay(b) - startOfDay(a)) / 86400000)
+}
+
+function isoDay(date: Date): string {
+    const pad = (n: number) => String(n).padStart(2, "0")
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+/** "October – November 2026" for the days from `first` to `last`, naming the year once when it's shared */
+export function monthSpanTitle(first: Date, last: Date): string {
+    const month = (d: Date, year: boolean) => d.toLocaleDateString(undefined, year ? {month: "long", year: "numeric"} : {month: "long"})
+    if (first.getFullYear() === last.getFullYear() && first.getMonth() === last.getMonth()) {return month(first, true)}
+    return `${month(first, first.getFullYear() !== last.getFullYear())} – ${month(last, true)}`
+}
+
 /**
  * A month-grid date picker with prev/next month navigation and a selectable day
  *
@@ -77,6 +106,16 @@ function startOfDay(date: Date): number {
  * **`min`/`max` bound the days that can be picked**, by whole day. Days outside stay rendered
  * and focusable - removing them would break the grid's arrow-key model, and a native `disabled`
  * button can't hold the roving focus - but carry `aria-disabled` and ignore a click or Enter.
+ * The prev/next buttons turn off once the screen reaches either bound, since nothing past it can
+ * be picked.
+ *
+ * **With `weeks`, it shows rolling weeks rather than a month.** A month grid on the 28th is four
+ * weeks of the past and a few days of the future, which is backwards for picking a day ahead. So
+ * the first row is the week today falls in, and prev/next move a page of `weeks` at a time - pages
+ * counted from today's week, so a page always starts on the same weekday and paging back returns
+ * to exactly where it began. The selection's page is shown first. A day that starts a month says
+ * the month ("Nov" over the 1), as does the first day on screen, and the title names the months
+ * the page spans.
  *
  * Unlike almost every other stateful `Component` in this package (see the "Avoid refresh()"
  * section of CLAUDE.md), `#header`/`#gridEl` are built once and updated via `#renderGrid()`
@@ -86,7 +125,7 @@ function startOfDay(date: Date): number {
  * `refresh()` replaces the component's entire rendered tree out from under any reference to it.
  */
 export class Calendar extends Component<CalendarAttrsType> {
-    /** First day of the month currently displayed */
+    /** First day of the month currently displayed - or with `weeks`, the first day on screen */
     #viewDate: Date
     /** The date that currently holds the grid's roving tabindex/focus */
     #focusedDate: Date
@@ -97,6 +136,8 @@ export class Calendar extends Component<CalendarAttrsType> {
     #root: HTMLDivElement
     #titleEl: HTMLSpanElement = <span class="vtd-calendar-title"/>
     #gridEl: HTMLDivElement = <div class="vtd-calendar-grid" role="grid"/>
+    #prevButton: HTMLButtonElement
+    #nextButton: HTMLButtonElement
 
     /** Create a new `<Calendar/>` Component */
     constructor(attrs: CalendarAttrsType, children: RenderableElements[]) {
@@ -105,7 +146,7 @@ export class Calendar extends Component<CalendarAttrsType> {
         const today = new Date()
         this.#selected = attrs.values ? sortDays(attrs.values) : attrs.value ? [attrs.value] : []
         const first = this.#selected[0]
-        this.#viewDate = first ? new Date(first.getFullYear(), first.getMonth(), 1) : new Date(today.getFullYear(), today.getMonth(), 1)
+        this.#viewDate = this.#viewStartFor(first ?? today)
         this.#focusedDate = first ?? today
         if (!areCalendarStylesMounted) {
             areCalendarStylesMounted = true
@@ -131,6 +172,8 @@ cursor:pointer;
 .vtd-calendar-day-outside{opacity:0.35;}
 .vtd-calendar-day[aria-disabled="true"]{opacity:0.35;cursor:not-allowed;text-decoration:line-through;}
 .vtd-calendar-day[aria-disabled="true"]:hover{background-color:transparent;}
+.vtd-calendar-weeks .vtd-calendar-day{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-height:2.6em;padding:0.25em 0 0.4em;line-height:1.1;}
+.vtd-calendar-day-month{font-size:0.65em;font-weight:bold;text-transform:uppercase;letter-spacing:0.03em;opacity:0.75;}
 ` +
 /*
  * "Today" is a subtle background tint, not a box-shadow ring - a ring reads too much like a
@@ -162,16 +205,61 @@ cursor:pointer;
         this.#gridEl.addEventListener("keydown", this.#handleGridKeyDown)
         if (attrs.values) {this.#gridEl.setAttribute("aria-multiselectable", "true")}
 
-        this.#root = passthroughAttrsToElement<HTMLDivElement>(<div class="vtd-calendar">
+        this.#prevButton = <Button type="text" ariaLabel={attrs.prevLabel} onClick={() => this.#changeView(-1)}><CommonThemeOptions.prevSymbol/></Button>
+        this.#nextButton = <Button type="text" ariaLabel={attrs.nextLabel} onClick={() => this.#changeView(1)}><CommonThemeOptions.nextSymbol/></Button>
+        this.#root = passthroughAttrsToElement<HTMLDivElement>(<div class={attrs.weeks ? "vtd-calendar vtd-calendar-weeks" : "vtd-calendar"}>
             <div class="vtd-calendar-header">
-                <Button type="text" onClick={() => this.#changeMonth(-1)}><CommonThemeOptions.prevSymbol/></Button>
+                {this.#prevButton}
                 {this.#titleEl}
-                <Button type="text" onClick={() => this.#changeMonth(1)}><CommonThemeOptions.nextSymbol/></Button>
+                {this.#nextButton}
             </div>
             {this.#gridEl}
         </div>, attrs)
 
         this.#renderGrid()
+    }
+
+    /** Days on screen with `weeks` - one page */
+    #pageDays(): number {
+        return Math.max(1, Math.floor(this.#attrs.weeks ?? 0)) * 7
+    }
+
+    /**
+     * Where the screen starts when it shows `date`: its month's first day, or with `weeks`, the
+     * page it falls on - pages run back and forth from the week today is in
+     */
+    #viewStartFor(date: Date): Date {
+        if (!this.#attrs.weeks) {return new Date(date.getFullYear(), date.getMonth(), 1)}
+        const today = new Date()
+        const anchor = addDays(today, -today.getDay())
+        const page = this.#pageDays()
+        return addDays(anchor, Math.floor(daysBetween(anchor, date) / page) * page)
+    }
+
+    /** The first day the grid shows: the Sunday on or before the month's first, or with `weeks`, the page's */
+    #gridStart(): Date {
+        if (this.#attrs.weeks) {return this.#viewDate}
+        return addDays(this.#viewDate, -this.#viewDate.getDay())
+    }
+
+    #isInView(date: Date): boolean {
+        if (!this.#attrs.weeks) {
+            return date.getFullYear() == this.#viewDate.getFullYear() && date.getMonth() == this.#viewDate.getMonth()
+        }
+        const offset = daysBetween(this.#viewDate, date)
+        return offset >= 0 && offset < this.#pageDays()
+    }
+
+    /** Step the screen a month, or a page of `weeks`, and re-render */
+    #changeView(delta: number) {
+        if (this.#attrs.weeks) {
+            const days = delta * this.#pageDays()
+            this.#viewDate = addDays(this.#viewDate, days)
+            this.#focusedDate = addDays(this.#focusedDate, days)
+            this.#renderGrid()
+            return
+        }
+        this.#changeMonth(delta)
     }
 
     /** Move the displayed month by `delta` months and re-render, keeping the currently-focused
@@ -189,9 +277,8 @@ cursor:pointer;
      * about to be replaced in that case, so focus must be re-applied to its replacement after */
     #moveFocusTo(date: Date) {
         this.#focusedDate = date
-        const monthChanged = date.getFullYear() != this.#viewDate.getFullYear() || date.getMonth() != this.#viewDate.getMonth()
-        if (monthChanged) {
-            this.#viewDate = new Date(date.getFullYear(), date.getMonth(), 1)
+        if (!this.#isInView(date)) {
+            this.#viewDate = this.#viewStartFor(date)
         }
         this.#renderGrid()
         this.#gridEl.querySelector<HTMLButtonElement>(".vtd-calendar-day[tabindex=\"0\"]")?.focus()
@@ -214,15 +301,16 @@ cursor:pointer;
             const next = new Date(this.#focusedDate)
             next.setDate(next.getDate() + (6 - next.getDay()))
             this.#moveFocusTo(next)
-        } else if (event.key == "PageUp") {
+        } else if (event.key == "PageUp" || event.key == "PageDown") {
+            // A month, or with `weeks` a page; Shift makes it a year either way
             event.preventDefault()
+            const sign = event.key == "PageUp" ? -1 : 1
             const next = new Date(this.#focusedDate)
-            next.setMonth(next.getMonth() + (event.shiftKey ? -12 : -1))
-            this.#moveFocusTo(next)
-        } else if (event.key == "PageDown") {
-            event.preventDefault()
-            const next = new Date(this.#focusedDate)
-            next.setMonth(next.getMonth() + (event.shiftKey ? 12 : 1))
+            if (this.#attrs.weeks && !event.shiftKey) {
+                next.setDate(next.getDate() + sign * this.#pageDays())
+            } else {
+                next.setMonth(next.getMonth() + sign * (event.shiftKey ? 12 : 1))
+            }
             this.#moveFocusTo(next)
         }
     }
@@ -230,17 +318,22 @@ cursor:pointer;
     /** Rebuilds the title and the grid's day cells to match `#viewDate`/`#focusedDate` */
     #renderGrid() {
         const attrs = this.#attrs
-        const year = this.#viewDate.getFullYear()
         const month = this.#viewDate.getMonth()
-        const firstOfMonth = new Date(year, month, 1)
-        const startOffset = firstOfMonth.getDay()
-        const gridStart = new Date(year, month, 1 - startOffset)
+        const gridStart = this.#gridStart()
         const today = new Date()
+        const count = attrs.weeks ? this.#pageDays() : 42
 
-        this.#titleEl.textContent = this.#viewDate.toLocaleDateString(undefined, {month: "long", year: "numeric"})
+        const days = Array.from({length: count}, (_, i) => addDays(gridStart, i))
+        const weeks = Array.from({length: count / 7}, (_, i) => days.slice(i * 7, i * 7 + 7))
 
-        const days = Array.from({length: 42}, (_, i) => new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i))
-        const weeks = Array.from({length: 6}, (_, i) => days.slice(i * 7, i * 7 + 7))
+        this.#titleEl.textContent = attrs.weeks
+            ? monthSpanTitle(days[0], days[days.length - 1])
+            : this.#viewDate.toLocaleDateString(undefined, {month: "long", year: "numeric"})
+        // Nothing past a bound can be picked, so there's no paging towards it
+        const shownFirst = attrs.weeks ? days[0] : this.#viewDate
+        const shownLast = attrs.weeks ? days[days.length - 1] : new Date(this.#viewDate.getFullYear(), month + 1, 0)
+        this.#prevButton.disabled = attrs.min !== undefined && startOfDay(shownFirst) <= startOfDay(attrs.min)
+        this.#nextButton.disabled = attrs.max !== undefined && startOfDay(shownLast) >= startOfDay(attrs.max)
 
         this.#gridEl.replaceChildren(
             <div class="vtd-calendar-weekdays" role="row">
@@ -248,7 +341,8 @@ cursor:pointer;
             </div>,
             ...weeks.map(week => <div class="vtd-calendar-week" role="row">
                 {week.map(day => {
-                    const outside = day.getMonth() != month
+                    const outside = !attrs.weeks && day.getMonth() != month
+                    const labelMonth = attrs.weeks && (day.getDate() === 1 || isSameDay(day, days[0]))
                     const selected = this.#selected.some(s => isSameDay(day, s))
                     const isToday = isSameDay(day, today)
                     const isFocusable = isSameDay(day, this.#focusedDate)
@@ -260,6 +354,8 @@ cursor:pointer;
                         tabindex={isFocusable ? 0 : -1}
                         aria-selected={selected ? "true" : "false"}
                         aria-disabled={disabled ? "true" : undefined}
+                        aria-label={day.toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric", year: "numeric"})}
+                        data-date={isoDay(day)}
                         class={`vtd-calendar-day${outside ? " vtd-calendar-day-outside" : ""}${selected ? " vtd-calendar-day-selected" : ""}${isToday ? " vtd-calendar-day-today" : ""}`}
                         onClick={() => {
                             this.#focusedDate = day
@@ -271,7 +367,7 @@ cursor:pointer;
                                 this.#select(day, cell)
                             }
                             attrs.onSelectDate?.(day)
-                        }}>{day.getDate()}</button>
+                        }}>{labelMonth ? <span class="vtd-calendar-day-month" aria-hidden="true">{day.toLocaleDateString(undefined, {month: "short"})}</span> : null}{day.getDate()}</button>
                     return cell
                 })}
             </div>),
@@ -302,13 +398,10 @@ cursor:pointer;
      */
     setDates(dates: Date[]): void {
         this.#selected = this.#attrs.values ? sortDays(dates) : dates.slice(0, 1)
-        const year = this.#viewDate.getFullYear()
-        const month = this.#viewDate.getMonth()
-        const firstOfMonth = new Date(year, month, 1)
-        const gridStart = new Date(year, month, 1 - firstOfMonth.getDay())
+        const gridStart = this.#gridStart()
         const cells = this.#gridEl.querySelectorAll<HTMLButtonElement>(".vtd-calendar-day")
         cells.forEach((cell, i) => {
-            const day = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i)
+            const day = addDays(gridStart, i)
             const on = this.#selected.some(s => isSameDay(day, s))
             if (on !== cell.classList.contains("vtd-calendar-day-selected")) {markSelected(cell, on)}
         })
