@@ -1,7 +1,7 @@
 import {replaceElementWithRoot, Component} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
-import { Button, setThemeOnSelector, showToast, Theme } from "../../src/index.ts"
+import { Button, Modal, setThemeOnSelector, showToast, Theme } from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 
 class ToastGallery extends Component<EmptyAttrs> {
@@ -13,6 +13,11 @@ class ToastGallery extends Component<EmptyAttrs> {
             <Button id="toast-danger-btn" type="secondary" onClick={()=>{showToast("Something went wrong", {type: "danger"})}}>Show danger toast</Button>
             <Button id="toast-quick-btn" type="secondary" onClick={()=>{showToast("Gone in a flash", {duration: 500})}}>Show quick toast (500ms)</Button>
             <Button id="toast-sticky-btn" type="secondary" onClick={()=>{showToast("Stays until dismissed", {duration: 0})}}>Show sticky toast</Button>
+            {/* A toast shown while a modal is open must show above the modal's backdrop */}
+            <div id="toast-modal"><Modal title="A modal" confirmButtonChildren="close">
+                <Button id="toast-in-modal-btn" type="secondary" onClick={()=>{showToast("Shown over a modal", {duration: 0})}}>Show toast from the modal</Button>
+            </Modal></div>
+            <Button id="toast-modal-open-btn" type="secondary" onClick={()=>{(document.querySelector("#toast-modal dialog") as HTMLDialogElement).showModal()}}>Open a modal</Button>
         </div>
     }
 }

@@ -435,6 +435,33 @@ describe('basic component rendering', () => {
         if (stillThere) {fail("ERROR: expected toast to have auto-dismissed after its duration elapsed")}
     })
 
+    itWrap("a toast shown over a modal is above its backdrop, and stays when the modal closes", "toast", "#toast-modal", async (_selection: ElementHandle) => {
+        for (let round = 0; round < 3; round++) {
+            const result = await page.evaluate(async () => {
+                const dialog = document.querySelector("#toast-modal dialog") as HTMLDialogElement
+                dialog.showModal()
+                ;(dialog.querySelector("#toast-in-modal-btn") as HTMLElement).click()
+                const toasts = document.querySelectorAll(".vtd-toast")
+                const toast = toasts[toasts.length - 1] as HTMLElement
+                const box = toast.getBoundingClientRect()
+                const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
+                const insideModal = toast.closest("dialog") === dialog
+                const onTop = !!hit && toast.contains(hit)
+                // The dialog's close event, which moves the toasts back, comes a task later; this
+                // listener was added after the toast's own, so it runs after it
+                const closed = new Promise(resolve => dialog.addEventListener("close", resolve, {once: true}))
+                dialog.close()
+                await closed
+                const backOnBody = toast.isConnected && toast.closest("dialog") === null
+                toast.remove()
+                return {insideModal, onTop, backOnBody}
+            })
+            if (!result.insideModal) {fail("ERROR: expected the toast to be placed inside the open modal")}
+            if (!result.onTop) {fail("ERROR: expected the toast to be the topmost element at its own position, above the modal's backdrop")}
+            if (!result.backOnBody) {fail("ERROR: expected the toast to stay, back on the page, once the modal closed")}
+        }
+    })
+
     itWrap("accordion exclusive group closes the other section when one is opened", "accordion", "#exclusive-accordion", async (_selection: ElementHandle) => {
         // Everything here runs through page.evaluate() rather than holding onto
         // ElementHandles across the clicks: querying/clicking via ElementHandle intermittently
