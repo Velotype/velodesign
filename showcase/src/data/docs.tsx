@@ -168,7 +168,7 @@ const descriptions: Record<string, string> = {
     Steps: "A horizontal sequence of numbered steps for wizards and checkout flows.",
     // Feedback
     Alert: "An inline message box that draws attention to important information, with an optional dismiss button.",
-    Toast: "A transient, auto-dismissing notification message, shown via the imperative showToast() function rather than placed in your JSX tree.",
+    Toast: "A transient, auto-dismissing notification message, shown via the imperative showToast() function rather than placed in your JSX tree. While a modal dialog is open, toasts show inside it - above its backdrop, where they can be clicked and read aloud - and move back to the page when it closes.",
     Tooltip: "A CSS-only hover/focus bubble that shows a short hint next to its trigger content.",
     Spinner: "A standalone animated loading indicator.",
     Progress: "A determinate progress bar, wrapping a native progress element.",

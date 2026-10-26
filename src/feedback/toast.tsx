@@ -84,11 +84,36 @@ border-radius:0.25rem;
     let container = toastContainer
     if (!container) {
         const newContainer: HTMLDivElement = <div class="vtd-toast-container"/>
-        document.body.appendChild(newContainer)
         toastContainer = newContainer
         container = newContainer
     }
+    placeToastContainer(container)
     return container
+}
+
+/** The modal `<dialog>` drawn on top, if one is open - the last one opened is the last in document order more often than not, and nested modals are rare */
+function topModalDialog(): HTMLDialogElement | undefined {
+    const open = [...document.querySelectorAll<HTMLDialogElement>("dialog[open]")].filter(d => d.matches(":modal"))
+    return open[open.length - 1]
+}
+
+/**
+ * Puts the container where a toast can be seen and heard. An open modal dialog sits in the top
+ * layer, above any `z-index`, and makes everything outside it inert - so a toast left on
+ * `document.body` would be drawn under the dialog's backdrop, unclickable, and its
+ * `role="status"` never announced. While a modal is open the container lives inside it, and it
+ * moves back to `document.body` when that dialog closes, taking any toasts still showing.
+ */
+function placeToastContainer(container: HTMLDivElement): void {
+    const dialog = topModalDialog()
+    const host: HTMLElement = dialog ?? document.body
+    if (container.parentElement === host) {return}
+    host.appendChild(container)
+    if (dialog) {
+        dialog.addEventListener("close", () => {
+            if (container.parentElement === dialog) {placeToastContainer(container)}
+        }, {once: true})
+    }
 }
 
 /**
@@ -96,7 +121,8 @@ border-radius:0.25rem;
  *
  * Unlike every other component in this library, this isn't placed in a JSX tree - just call
  * it directly (e.g. from a click handler) and it manages its own container, appended to
- * `document.body` on first use.
+ * `document.body` on first use - or, while a modal dialog is open, to that dialog, so the toast
+ * shows above its backdrop.
  */
 export function showToast(message: RenderableElements, options?: ToastOptions): void {
     const container = ensureToastContainer()
