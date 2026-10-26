@@ -15,7 +15,7 @@ import { PageSelector } from "./navigation/page-selector.tsx"
 import type { PageSelectorPageType, PageSelectorAttrsType } from "./navigation/page-selector.tsx"
 import { TextBox } from "./form/text-box.tsx"
 import type { TextBoxAttrsType, TextBoxType } from "./form/text-box.tsx"
-import { ButtonModal, type ButtonModalAttrsType, Modal, type ModalAttrsType, ModalThemeOptions } from "./overlays/modal.tsx"
+import { ButtonModal, type ButtonModalAttrsType, Modal, type ModalAttrsType, type ModalDoneType, ModalThemeOptions } from "./overlays/modal.tsx"
 import { TextFormFieldThemeOptions, type TextNonEditableFieldAttrsType, TextNonEditableField, type TextFormFieldAttrsType, TextFormField, type TextEditableFieldAttrsType, TextEditableField } from "./form/text-form-field.tsx"
 import { RadioButton, type RadioButtonAttrsType } from "./form/radio-button.tsx"
 import { TimeAgo, type TimeAgoAttrsType } from "./data-display/time-ago.ts"
@@ -140,6 +140,7 @@ export {
 
     Modal,
     type ModalAttrsType,
+    type ModalDoneType,
     ModalThemeOptions,
     ButtonModal,
     type ButtonModalAttrsType,
