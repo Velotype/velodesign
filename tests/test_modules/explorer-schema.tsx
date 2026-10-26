@@ -469,7 +469,7 @@ export const stories: ComponentStory[] = [
                 confirmButtonChildren: attrs.confirmButtonChildren as string,
                 cancelButtonChildren: attrs.cancelButtonChildren as string,
                 startConfirmDisabled: attrs.startConfirmDisabled as boolean,
-                confirmButtonOnClick: (doneLoading) => { globalThis.setTimeout(doneLoading, 600) },
+                confirmButtonOnClick: (done) => { globalThis.setTimeout(done, 600) },
             }}>Modal body content goes here.</ButtonModal>,
     },
 

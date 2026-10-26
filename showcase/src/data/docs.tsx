@@ -323,6 +323,13 @@ const methodDocs: Record<string, MethodDoc[]> = {
  * charts all point at ChartPointType, and a copy per component is how copies drift apart.
  */
 const typeDefinitions: Record<string, TypeDoc> = {
+    ModalDoneType: {
+        name: "ModalDoneType",
+        description: "What a Modal's confirmButtonOnClick calls when its work is done: done() stops the confirm button's spinner and closes the Modal. Its one optional argument takes these fields.",
+        fields: [
+            {name: "keepOpen", type: "boolean", defaultValue: "false", description: "Leave the Modal open - when the work failed and the reader should change something and try again."},
+        ],
+    },
     AccordionItemType: {
         name: "AccordionItemType",
         description: "One section of an Accordion.",
@@ -581,6 +588,7 @@ const typeDefinitions: Record<string, TypeDoc> = {
 
 /** Which named types each component's page documents, in the order they matter */
 const componentTypes: Record<string, string[]> = {
+    Modal: ["ModalDoneType"],
     Accordion: ["AccordionItemType"],
     TableOfContents: ["TableOfContentsItemType"],
     Breadcrumbs: ["BreadcrumbItemType"],
@@ -964,7 +972,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "title", type: "RenderableElements", required: true, description: "Title content."},
         {name: "confirmButtonChildren", type: "RenderableElements", required: true, description: "Confirm button content."},
         {name: "cancelButtonChildren", type: "RenderableElements", defaultValue: "ModalThemeOptions.cancelSymbol", description: "Cancel button content. A plain \"x\", not English text."},
-        {name: "confirmButtonOnClick", type: "(doneLoading) => void", description: "Called when confirm is clicked."},
+        {name: "confirmButtonOnClick", type: "(done: ModalDoneType) => void", description: "Called when confirm is clicked. The confirm button shows a spinner until it calls done(), which also closes the Modal; done({keepOpen: true}) leaves it open, for work that failed. Without it, confirming just closes the Modal."},
         {name: "startConfirmDisabled", type: "boolean", defaultValue: "false", description: "Starts the confirm button disabled."},
     ],
     Drawer: [
@@ -1784,11 +1792,11 @@ renderOption={option => <span style={{display: "flex", alignItems: "center", gap
     Modal: [
         {label: "Trigger", node: () => <ButtonModal
             openButtonText="Open modal"
-            modalAttrs={{title: "Confirm action", confirmButtonChildren: "Confirm", cancelButtonChildren: "Cancel", confirmButtonOnClick: (doneLoading) => doneLoading()}}>
+            modalAttrs={{title: "Confirm action", confirmButtonChildren: "Confirm", cancelButtonChildren: "Cancel", confirmButtonOnClick: (done) => done()}}>
             Modal body content goes here.
         </ButtonModal>, code: `<ButtonModal
     openButtonText="Open modal"
-    modalAttrs={{title: "Confirm action", confirmButtonChildren: "Confirm", cancelButtonChildren: "Cancel", confirmButtonOnClick: (doneLoading) => doneLoading()}}>
+    modalAttrs={{title: "Confirm action", confirmButtonChildren: "Confirm", cancelButtonChildren: "Cancel", confirmButtonOnClick: (done) => done()}}>
     Modal body content goes here.
 </ButtonModal>`},
     ],

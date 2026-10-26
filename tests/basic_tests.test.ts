@@ -531,6 +531,24 @@ describe('basic component rendering', () => {
         if (!confirmClosed) {fail("ERROR: expected popconfirm to close after clicking confirm")}
     })
 
+    itWrap("modal closes on confirm unless the handler keeps it open", "modal", "#closing-modal", async (_selection: ElementHandle) => {
+        // Open each, click its confirm button (the last button in the dialog), and read whether it is still open
+        const openAfterConfirm = (id: string) => page.evaluate((id: string) => {
+            const dialog = document.querySelector(`#${id} dialog`) as HTMLDialogElement
+            dialog.showModal()
+            const buttons = dialog.querySelectorAll("button")
+            ;(buttons[buttons.length - 1] as HTMLElement).click()
+            const open = dialog.open
+            dialog.close()
+            return open
+        }, {args: [id]})
+        for (let round = 0; round < 3; round++) {
+            if (await openAfterConfirm("closing-modal")) {fail("ERROR: expected done() to close the modal")}
+            if (!(await openAfterConfirm("keep-open-modal"))) {fail("ERROR: expected done({keepOpen: true}) to leave the modal open")}
+            if (await openAfterConfirm("plain-modal")) {fail("ERROR: expected confirm with no handler to close the modal")}
+        }
+    })
+
     itWrap("collapse toggles open on its header click", "collapse", "#default-collapse", async (_selection: ElementHandle) => {
         const isOpen = () => page.evaluate(() => (document.querySelector("#default-collapse details") as HTMLDetailsElement | null)?.open)
         const clickHeader = () => page.evaluate(() => (document.querySelector("#default-collapse summary") as HTMLElement | null)?.click())

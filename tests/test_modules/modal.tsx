@@ -34,6 +34,12 @@ class ModalGallery extends Component<EmptyAttrs> {
                 }}
                 openButtonText = "Open button modal"
                 >inner modal content</ButtonModal>
+            {/* Confirming closes the Modal unless the handler asks to keep it open */}
+            <div id="closing-modal"><Modal title="Closes on confirm" confirmButtonChildren="confirm"
+                confirmButtonOnClick={(done) => done()}>closes</Modal></div>
+            <div id="keep-open-modal"><Modal title="Stays open" confirmButtonChildren="confirm"
+                confirmButtonOnClick={(done) => done({keepOpen: true})}>stays open</Modal></div>
+            <div id="plain-modal"><Modal title="No handler" confirmButtonChildren="confirm">closes</Modal></div>
         </div>
     }
 }

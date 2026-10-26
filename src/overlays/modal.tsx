@@ -17,13 +17,24 @@ export const ModalThemeOptions: {
 } = themeOptions({closeSymbol: "closeSymbol", cancelSymbol: "cancelSymbol"})
 
 /**
+ * What a `<Modal/>`'s confirm handler calls when its work is done: it stops the confirm button's
+ * spinner and closes the Modal. Pass `{keepOpen: true}` to leave it open - when the work failed
+ * and the reader should change something and try again.
+ */
+export type ModalDoneType = (options?: {keepOpen?: boolean}) => void
+
+/**
  * Attrs type for `<Modal/>` Component
  */
 export type ModalAttrsType = {
     /** Should the confirm button start as disabled? */
     startConfirmDisabled?: boolean
-    /** Callback for when the confirm button is clicked */
-    confirmButtonOnClick?: (doneLoading: ()=>void) => void
+    /**
+     * Callback for when the confirm button is clicked. The button shows a spinner until the
+     * callback calls `done()`, which also closes the Modal - `done({keepOpen: true})` leaves it
+     * open. Without a callback, confirming closes the Modal at once.
+     */
+    confirmButtonOnClick?: (done: ModalDoneType) => void
     /** Title content (usually a string) */
     title: RenderableElements
     /** Confirm button content (usually a string) */
@@ -89,8 +100,15 @@ padding:0.5em;
             disabled={attrs.startConfirmDisabled}
             loadingOnClick={!!attrs.confirmButtonOnClick}
             onClick={(_event: TargetedMouseEvent<HTMLButtonElement>, doneLoading?: () => void) => {
+                // Confirming is the reader finishing with the Modal, so it closes unless the
+                // handler says otherwise - leaving that to every caller left most of them open.
                 if (attrs.confirmButtonOnClick && doneLoading) {
-                    attrs.confirmButtonOnClick(doneLoading)
+                    attrs.confirmButtonOnClick((options) => {
+                        doneLoading()
+                        if (!options?.keepOpen) {this.#dialog.close()}
+                    })
+                } else {
+                    this.#dialog.close()
                 }
             }}>{attrs.confirmButtonChildren}
         </Button>
