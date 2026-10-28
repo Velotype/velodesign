@@ -1734,6 +1734,30 @@ describe('basic component rendering', () => {
         }
     })
 
+    itWrap("an open disclosure stops clipping once it has opened, and clips again as it closes", "collapse", "#default-collapse", async (_selection: ElementHandle) => {
+        // Function form, which awaits the promise; each wait is short of Astral's deadline
+        const state = await page.evaluate(async () => {
+            const details = document.querySelector("#showcase-theme-light #default-collapse details") as HTMLDetailsElement
+            const inner = details.querySelector(".vtd-disclosure-content-inner") as HTMLElement
+            const read = () => ({opened: details.classList.contains("vtd-disclosure-opened"), overflow: getComputedStyle(inner).overflow})
+            const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+            const out: Record<string, unknown> = {closed: read()}
+            for (let i = 0; i < 3; i++) {
+                ;(details.querySelector("summary") as HTMLElement).click()
+                out[`opening${i}`] = read()
+                await wait(400)
+                out[`open${i}`] = read()
+                ;(details.querySelector("summary") as HTMLElement).click()
+                out[`closing${i}`] = read()
+                await wait(400)
+            }
+            return out
+        })
+        const shut = {opened: false, overflow: "hidden"}
+        const open = {opened: true, overflow: "visible"}
+        assertEquals(state, {closed: shut, opening0: shut, open0: open, closing0: shut, opening1: shut, open1: open, closing1: shut, opening2: shut, open2: open, closing2: shut})
+    })
+
     itWrap("a disclosure animates every toggle, not just the first", "collapse", "#default-collapse", async (_selection: ElementHandle) => {
         // The bug this guards: removing `open` stops the browser rendering that subtree, so the
         // close transition never gets a start time - it sits at playState "running", startTime
