@@ -2163,6 +2163,24 @@ describe('basic component rendering', () => {
     })
 
 
+    itWrap("hideWhenEmpty keeps the panel closed while nothing matches, and opens it when something does", "combobox", "#quiet-combobox", async (_selection: ElementHandle) => {
+        const typed = (text: string) => page.evaluate(`(() => {
+            const scope = document.querySelector("#showcase-theme-light #quiet-combobox")
+            const input = scope.querySelector("input.vtd-combobox")
+            input.focus()
+            input.value = ${JSON.stringify(text)}
+            input.dispatchEvent(new Event("input", {bubbles: true}))
+            const panel = scope.querySelector(".vtd-combobox-panel")
+            return {open: panel.classList.contains("vtd-combobox-panel-open"), empty: !!scope.querySelector(".vtd-combobox-empty")}
+        })()`) as Promise<{open: boolean, empty: boolean}>
+        // Three times over, so a state left behind by one keystroke shows in the next
+        for (let i = 0; i < 3; i++) {
+            assertEquals(await typed("zzzznothingmatchesthis"), {open: false, empty: false})
+            const some = await typed("a")
+            assertEquals(some.open, true)
+        }
+    })
+
     /**
      * Suggestions that arrive as the reader types (`filter={false}` and `setOptions()`) are shown
      * as given - a server's matches needn't contain the typed text - each with its second line,
