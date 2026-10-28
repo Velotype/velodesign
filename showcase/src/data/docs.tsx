@@ -1002,6 +1002,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "title", type: "RenderableElements", required: true, description: "Title content."},
         {name: "confirmButtonChildren", type: "RenderableElements", required: true, description: "Confirm button content."},
         {name: "cancelButtonChildren", type: "RenderableElements", defaultValue: "ModalThemeOptions.cancelSymbol", description: "Cancel button content. A plain \"x\", not English text."},
+        {name: "showCancelButton", type: "boolean", defaultValue: "true", description: "Show the footer's cancel button. Turn it off for a Modal with nothing to cancel, where the confirm button (\"Close\") is the way out."},
         {name: "confirmButtonOnClick", type: "(done: ModalDoneType) => void", description: "Called when confirm is clicked. The confirm button shows a spinner until it calls done(), which also closes the Modal; done({keepOpen: true}) leaves it open, for work that failed. Without it, confirming just closes the Modal."},
         {name: "startConfirmDisabled", type: "boolean", defaultValue: "false", description: "Starts the confirm button disabled."},
     ],

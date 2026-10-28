@@ -628,6 +628,16 @@ describe('basic component rendering', () => {
         }
     })
 
+    itWrap("modal leaves its footer cancel button out when showCancelButton is false", "modal", "#no-cancel-modal", async (_selection: ElementHandle) => {
+        const footerButtons = (id: string) => page.evaluate((id: string) => {
+            const dialog = document.querySelector(`#${id} dialog`) as HTMLDialogElement
+            // The footer is the dialog's last child; the title bar's close button is elsewhere
+            return (dialog.lastElementChild as HTMLElement).querySelectorAll("button").length
+        }, {args: [id]})
+        assertEquals(await footerButtons("no-cancel-modal"), 1)
+        assertEquals(await footerButtons("plain-modal"), 2)
+    })
+
     itWrap("collapse toggles open on its header click", "collapse", "#default-collapse", async (_selection: ElementHandle) => {
         const isOpen = () => page.evaluate(() => (document.querySelector("#default-collapse details") as HTMLDetailsElement | null)?.open)
         const clickHeader = () => page.evaluate(() => (document.querySelector("#default-collapse summary") as HTMLElement | null)?.click())

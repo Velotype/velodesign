@@ -471,12 +471,13 @@ export const stories: ComponentStory[] = [
     // --- Overlays ---
     {
         name: "Modal", group: "Overlays",
-        defaultAttrs: {openButtonText: "Open modal", title: "Confirm action", confirmButtonChildren: "Confirm", cancelButtonChildren: "Cancel", startConfirmDisabled: false},
+        defaultAttrs: {openButtonText: "Open modal", title: "Confirm action", confirmButtonChildren: "Confirm", cancelButtonChildren: "Cancel", showCancelButton: true, startConfirmDisabled: false},
         controls: {
             openButtonText: {kind: "text", label: "openButtonText"},
             title: {kind: "text", label: "modalAttrs.title"},
             confirmButtonChildren: {kind: "text", label: "modalAttrs.confirmButtonChildren"},
             cancelButtonChildren: {kind: "text", label: "modalAttrs.cancelButtonChildren"},
+            showCancelButton: {kind: "boolean", label: "modalAttrs.showCancelButton"},
             startConfirmDisabled: {kind: "boolean", label: "modalAttrs.startConfirmDisabled"},
         },
         render: (attrs) => <ButtonModal
@@ -485,6 +486,7 @@ export const stories: ComponentStory[] = [
                 title: attrs.title as string,
                 confirmButtonChildren: attrs.confirmButtonChildren as string,
                 cancelButtonChildren: attrs.cancelButtonChildren as string,
+                showCancelButton: attrs.showCancelButton as boolean,
                 startConfirmDisabled: attrs.startConfirmDisabled as boolean,
                 confirmButtonOnClick: (done) => { globalThis.setTimeout(done, 600) },
             }}>Modal body content goes here.</ButtonModal>,
