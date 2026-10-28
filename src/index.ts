@@ -18,6 +18,7 @@ import type { TextBoxAttrsType, TextBoxType } from "./form/text-box.tsx"
 import { ButtonModal, type ButtonModalAttrsType, Modal, type ModalAttrsType, type ModalDoneType, ModalThemeOptions } from "./overlays/modal.tsx"
 import { TextFormFieldThemeOptions, type TextNonEditableFieldAttrsType, TextNonEditableField, type TextFormFieldAttrsType, TextFormField, type TextEditableFieldAttrsType, TextEditableField } from "./form/text-form-field.tsx"
 import { RadioButton, type RadioButtonAttrsType } from "./form/radio-button.tsx"
+import { ChoiceCards, type ChoiceCardsAttrsType, type ChoiceCardsOptionType } from "./form/choice-cards.tsx"
 import { TimeAgo, type TimeAgoAttrsType } from "./data-display/time-ago.ts"
 import { LocalizedString, S, T, type TAttrsType } from "./core/strings.ts"
 import { Checkbox, type CheckboxAttrsType } from "./form/checkbox.tsx"
@@ -105,6 +106,10 @@ export {
 
     RadioButton,
     type RadioButtonAttrsType,
+
+    ChoiceCards,
+    type ChoiceCardsAttrsType,
+    type ChoiceCardsOptionType,
 
     Checkbox,
     type CheckboxAttrsType,
