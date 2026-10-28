@@ -141,6 +141,14 @@ transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0s;
 `
 .vtd-disclosure-content-inner{overflow:hidden;min-height:0;}
 ` +
+/* Clipping is for the animation. Once a section has finished opening it clips nothing, so a
+   tooltip, a menu or a suggestion list inside it can reach past its edge rather than being cut
+   off at the header or the border - see markOpenWhenSettled */
+`
+.vtd-disclosure.vtd-disclosure-opened,
+.vtd-disclosure.vtd-disclosure-opened > .vtd-disclosure-content > .vtd-disclosure-content-inner{overflow:visible;}
+.vtd-disclosure.vtd-disclosure-opened > .vtd-disclosure-header{border-start-start-radius:inherit;border-start-end-radius:inherit;}
+` +
 /* Equal padding all round - a zero top inset pushed the content up against the header. Scoped to
    the chrome, because a Tree node brings its own indentation instead. */
 `
@@ -202,6 +210,7 @@ export function buildDisclosureSection(options: {
         {content}
     </details>
     const section = {details, content}
+    markOpenWhenSettled(section)
 
     summary.addEventListener("click", (event: Event) => {
         if (details.open) {
@@ -221,6 +230,49 @@ export function buildDisclosureSection(options: {
     })
 
     return section
+}
+
+/**
+ * Marks a section `vtd-disclosure-opened` once it has finished opening, and only then: the content
+ * has to clip while its row grows from nothing, or it would spill over the page below for the
+ * length of the animation, but a section that stays clipped once open cuts off anything that
+ * reaches past it - a tooltip above its first control slid under the header. Driven by the
+ * element's own `toggle` event, so a section opened from code is marked too; `animateClosed`
+ * removes it before the collapse starts.
+ */
+function markOpenWhenSettled(section: DisclosureSection): void {
+    const {details, content} = section
+    if (details.open) {
+        details.classList.add("vtd-disclosure-opened")
+    }
+    details.addEventListener("toggle", () => {
+        if (!details.open) {
+            details.classList.remove("vtd-disclosure-opened")
+            return
+        }
+        if (details.classList.contains("vtd-disclosure-closing")) {
+            return
+        }
+        let done = false
+        const finish = () => {
+            if (done) {
+                return
+            }
+            done = true
+            content.removeEventListener("transitionend", onEnd)
+            if (details.open && !details.classList.contains("vtd-disclosure-closing")) {
+                details.classList.add("vtd-disclosure-opened")
+            }
+        }
+        function onEnd(event: TransitionEvent) {
+            if (event.propertyName == "grid-template-rows") {
+                finish()
+            }
+        }
+        content.addEventListener("transitionend", onEnd)
+        // No transitionend when motion is reduced or the transition is interrupted
+        setTimeout(finish, globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 0 : TRANSITION_MS + 50)
+    })
 }
 
 /**
@@ -255,6 +307,7 @@ export function animateClosed(section: DisclosureSection): void {
         details.open = false
         return
     }
+    details.classList.remove("vtd-disclosure-opened")
     details.classList.add("vtd-disclosure-closing")
 
     let settled = false
