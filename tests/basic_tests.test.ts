@@ -558,6 +558,26 @@ describe('basic component rendering', () => {
         if (!confirmClosed) {fail("ERROR: expected popconfirm to close after clicking confirm")}
     })
 
+    itWrap("popconfirm in a scrolling box opens in view, and a scroll closes it", "popconfirm", ".edge-popconfirm", async (_selection: ElementHandle) => {
+        const state = await page.evaluate(() => {
+            const scope = document.querySelector("#showcase-theme-light") as HTMLElement
+            const box = scope.querySelector(".edge-scroller") as HTMLElement
+            box.scrollLeft = box.scrollWidth
+            const wrapper = scope.querySelector(".edge-popconfirm") as HTMLElement
+            ;(wrapper.querySelector(".vtd-popconfirm-trigger") as HTMLElement).click()
+            const bubble = wrapper.querySelector(".vtd-popconfirm-content") as HTMLElement
+            const r = bubble.getBoundingClientRect()
+            const opened = {
+                open: bubble.classList.contains("vtd-popconfirm-open"),
+                inView: r.width > 0 && r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight,
+                topLayer: typeof bubble.showPopover !== "function" || bubble.matches(":popover-open")
+            }
+            box.dispatchEvent(new Event("scroll"))
+            return {...opened, closedOnScroll: !bubble.classList.contains("vtd-popconfirm-open")}
+        })
+        assertEquals(state, {open: true, inView: true, topLayer: true, closedOnScroll: true})
+    })
+
     itWrap("modal closes on confirm unless the handler keeps it open", "modal", "#closing-modal", async (_selection: ElementHandle) => {
         // Open each, click its confirm button (the last button in the dialog), and read whether it is still open
         const openAfterConfirm = (id: string) => page.evaluate((id: string) => {
