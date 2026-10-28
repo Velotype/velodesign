@@ -8,7 +8,7 @@ import {
     Accordion, Alert, AspectRatio, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, ButtonModal,
     Calendar, CalendarRange, Card, EventCalendar, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu,
     DatePicker, DateTimePicker, DateTimeRangePicker, Divider, Drawer, Empty, Form, FormField, I, InputNumber, Link, List, Menu,
-    Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, ScrollArea, Select, SelectMenu,
+    Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, ChoiceCards, Rate, ScrollArea, Select, SelectMenu,
     showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, DataTable, Tabs, Tag, TextBox,
     LineChart, AreaChart, BarChart, PieChart, Gauge, Sparkline,
     Heading, Text, Paragraph, Stack, Grid, CodeBlock, TableOfContents,
@@ -147,6 +147,7 @@ const descriptions: Record<string, string> = {
     Button: "A clickable action trigger with themed color variants and an optional loading state.",
     ButtonGroup: "Visually joins a row (or column) of Buttons into a single connected control, sharing borders instead of each having its own.",
     RadioButton: "A single option in a mutually-exclusive group, wrapping a native radio input.",
+    ChoiceCards: "One choice of a few, each a card with a title and a line saying what it means - for options that need explaining. Native radio inputs underneath.",
     Checkbox: "A tri-state (checked/unchecked/indeterminate) toggle, wrapping a native checkbox input.",
     Toggle: "A switch-style boolean control, wrapping a native checkbox input styled as a track and thumb.",
     TextBox: "A single-line text input supporting text, email, phone, and password variants.",
@@ -323,6 +324,17 @@ const methodDocs: Record<string, MethodDoc[]> = {
  * charts all point at ChartPointType, and a copy per component is how copies drift apart.
  */
 const typeDefinitions: Record<string, TypeDoc> = {
+    ChoiceCardsOptionType: {
+        name: "ChoiceCardsOptionType",
+        description: "One card of a ChoiceCards group.",
+        fields: [
+            {name: "value", type: "string", required: true, description: "Value reported to onChange, and submitted in a <form>, when this card is picked."},
+            {name: "title", type: "RenderableElements", required: true, description: "The card's heading - what the choice is."},
+            {name: "description", type: "RenderableElements", description: "A line under the title saying what picking it means."},
+            {name: "disabled", type: "boolean", defaultValue: "false", description: "Can't be picked."},
+            {name: "disabledHint", type: "RenderableElements", description: "Shown on hover or tap while the card is disabled - why it can't be picked."},
+        ],
+    },
     ModalDoneType: {
         name: "ModalDoneType",
         description: "What a Modal's confirmButtonOnClick calls when its work is done: done() stops the confirm button's spinner and closes the Modal. Its one optional argument takes these fields.",
@@ -588,6 +600,7 @@ const typeDefinitions: Record<string, TypeDoc> = {
 
 /** Which named types each component's page documents, in the order they matter */
 const componentTypes: Record<string, string[]> = {
+    ChoiceCards: ["ChoiceCardsOptionType"],
     Modal: ["ModalDoneType"],
     Accordion: ["AccordionItemType"],
     TableOfContents: ["TableOfContentsItemType"],
@@ -788,6 +801,14 @@ const attrTables: Record<string, AttrDoc[]> = {
     ],
     ButtonGroup: [
         {name: "orientation", type: '"horizontal" | "vertical"', defaultValue: "horizontal", description: "Direction to lay out the buttons."},
+    ],
+    ChoiceCards: [
+        {name: "name", type: "string", required: true, description: "Name of the radio group - each card is a native radio input in it."},
+        {name: "options", type: "ChoiceCardsOptionType[]", required: true, description: "The cards, in order."},
+        {name: "label", type: "RenderableElements", description: "The group's caption, rendered as its <legend>."},
+        {name: "value", type: "string", description: "Value of the picked card, if any."},
+        {name: "minCardWidth", type: "CSS length", defaultValue: "12em", description: "Narrowest a card gets before the row wraps; above it the cards share the width."},
+        {name: "onChange", type: "(value, event) => void", description: "Called with the picked card's value."},
     ],
     RadioButton: [
         {name: "name", type: "string", required: true, description: "Name of the radio group this button participates in."},
@@ -1461,6 +1482,22 @@ const examplesByName: Record<string, ExampleDoc[]> = {
     <Button type="secondary">Middle</Button>
     <Button type="secondary">Bottom</Button>
 </ButtonGroup>`},
+    ],
+    ChoiceCards: [
+        {label: "With descriptions", node: () => <ChoiceCards name="doc-choice" label="Who can reply?" value="list" options={[
+            {value: "list", title: "Only my guests", description: "Each gets their own link by email."},
+            {value: "anyone", title: "Anyone with the link", description: "Share it anywhere - a group chat, a QR code."},
+        ]}/>, code: `<ChoiceCards name="who" label="Who can reply?" value="list" onChange={value => save(value)} options={[
+    {value: "list", title: "Only my guests", description: "Each gets their own link by email."},
+    {value: "anyone", title: "Anyone with the link", description: "Share it anywhere - a group chat, a QR code."},
+]}/>`},
+        {label: "A disabled card says why", node: () => <ChoiceCards name="doc-choice-disabled" value="monthly" options={[
+            {value: "monthly", title: "Monthly", description: "Billed each month."},
+            {value: "yearly", title: "Yearly", description: "Seven months' price for twelve.", disabled: true, disabledHint: "Ask your workspace's owner"},
+        ]}/>, code: `<ChoiceCards name="cycle" value="monthly" options={[
+    {value: "monthly", title: "Monthly", description: "Billed each month."},
+    {value: "yearly", title: "Yearly", description: "Seven months' price for twelve.", disabled: true, disabledHint: "Ask your workspace's owner"},
+]}/>`},
     ],
     RadioButton: [
         {label: "Group", node: () => <div style={row}>

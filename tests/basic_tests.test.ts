@@ -238,6 +238,38 @@ describe('basic component rendering', () => {
         assertEquals(await selection.innerText(), "clickable checkbox (changed 1 times)")
     })
 
+    itWrap("choice cards pick one, report it, change no DOM, and keep a disabled card out", "choice-cards", "#light-choice", async (_selection: ElementHandle) => {
+        const result = await page.evaluate(() => {
+            const root = document.querySelector("#light-choice") as HTMLElement
+            const cards = [...root.querySelectorAll(".vtd-choice-cards-card")] as HTMLElement[]
+            const observer = new MutationObserver(() => {})
+            observer.observe(root, {childList: true, subtree: true, attributes: true, characterData: true})
+            // Three rounds there and back: picking only moves checked, which the CSS reads
+            for (let i = 0; i < 3; i++) {cards[1].click(); cards[0].click()}
+            cards[1].click()
+            const records = observer.takeRecords().filter(r => r.type === "childList").length
+            const inputs = [...root.querySelectorAll("input")] as HTMLInputElement[]
+            const disabledRoot = document.querySelector("#light-disabled") as HTMLElement
+            const disabledCards = [...disabledRoot.querySelectorAll(".vtd-choice-cards-card")] as HTMLElement[]
+            disabledCards[1].click()
+            const disabledInputs = [...disabledRoot.querySelectorAll("input")] as HTMLInputElement[]
+            return {
+                checked: inputs.map(i => i.checked),
+                picked: document.querySelector(".light-picked")?.textContent,
+                records,
+                legend: root.querySelector("legend")?.textContent,
+                disabledChecked: disabledInputs.map(i => i.checked),
+                hint: !!disabledRoot.querySelector(".vtd-tooltip-when-disabled .vtd-tooltip")
+            }
+        })
+        assertEquals(result.checked, [false, true])
+        assertEquals(result.picked, "anyone")
+        assertEquals(result.records, 0)
+        assertEquals(result.legend, "Who can reply?")
+        assertEquals(result.disabledChecked, [true, false])
+        assertEquals(result.hint, true)
+    })
+
     itWrap("toggle click toggles change count", "toggle", "#clickable-toggle", async (selection: ElementHandle) => {
         assertEquals(await selection.innerText(), "clickable toggle (changed 0 times)")
         await selection.click()

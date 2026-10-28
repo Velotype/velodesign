@@ -5,6 +5,7 @@
         "bundle-button": "deno bundle ./test_modules/button.tsx --output ./build/button.js --sourcemap=linked",
         "bundle-showcase": "deno bundle ./test_modules/showcase.tsx --output ./build/showcase.js --sourcemap=linked",
         "bundle-radio-button": "deno bundle ./test_modules/radio-button.tsx --output ./build/radio-button.js --sourcemap=linked",
+        "bundle-choice-cards": "deno bundle ./test_modules/choice-cards.tsx --output ./build/choice-cards.js --sourcemap=linked",
         "bundle-page-selector": "deno bundle ./test_modules/page-selector.tsx --output ./build/page-selector.js --sourcemap=linked",
         "bundle-text-box": "deno bundle ./test_modules/text-box.tsx --output ./build/text-box.js --sourcemap=linked",
         "bundle-modal": "deno bundle ./test_modules/modal.tsx --output ./build/modal.js --sourcemap=linked",

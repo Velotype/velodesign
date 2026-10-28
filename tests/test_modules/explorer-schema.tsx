@@ -46,6 +46,7 @@ import {
     Popover, type PopoverPlacement,
     Progress, type ProgressType,
     RadioButton,
+    ChoiceCards,
     Rate, type RateType,
     ScrollArea,
     Select,
@@ -182,6 +183,22 @@ export const stories: ComponentStory[] = [
             children: {kind: "text", label: "children"},
         },
         render: (attrs) => <RadioButton name="explorer-radio" checked={attrs.checked as boolean} disabled={attrs.disabled as boolean}>{attrs.children as string}</RadioButton>,
+    },
+    {
+        name: "ChoiceCards", group: "Form",
+        defaultAttrs: {label: "Who can reply?", value: "list", disabled: false},
+        controls: {
+            label: {kind: "text", label: "label"},
+            value: {kind: "select", label: "value", options: ["list", "anyone"]},
+            disabled: {kind: "boolean", label: "second option disabled"},
+        },
+        render: (attrs, setAttr) => <ChoiceCards name="explorer-choice" label={attrs.label as string} value={attrs.value as string}
+            onChange={value => setAttr("value", value)}
+            options={[
+                {value: "list", title: "Only my guests", description: "Each gets their own link by email."},
+                {value: "anyone", title: "Anyone with the link", description: "Share it anywhere - a group chat, a QR code.",
+                    disabled: attrs.disabled as boolean, disabledHint: "Not on this plan"},
+            ]}/>,
     },
     {
         name: "Checkbox", group: "Form",
