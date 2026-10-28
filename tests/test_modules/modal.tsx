@@ -40,6 +40,8 @@ class ModalGallery extends Component<EmptyAttrs> {
             <div id="keep-open-modal"><Modal title="Stays open" confirmButtonChildren="confirm"
                 confirmButtonOnClick={(done) => done({keepOpen: true})}>stays open</Modal></div>
             <div id="plain-modal"><Modal title="No handler" confirmButtonChildren="confirm">closes</Modal></div>
+            {/* Nothing to cancel: the confirm button is the only one in the footer */}
+            <div id="no-cancel-modal"><Modal title="Just a message" confirmButtonChildren="close" showCancelButton={false}>read and close</Modal></div>
         </div>
     }
 }

@@ -41,6 +41,14 @@ export type ModalAttrsType = {
     confirmButtonChildren: RenderableElements
     /** Cancel button content (default: `ModalThemeOptions.cancelSymbol` - a plain "x", not English text, so the library doesn't assume a language) */
     cancelButtonChildren?: RenderableElements
+    /**
+     * Show the footer's cancel button (default: `true`).
+     *
+     * Turn it off for a Modal with nothing to cancel - one that shows something and is closed when
+     * read, where the confirm button is the way out ("Close"). A cancel button beside it there is a
+     * second button doing the same thing, and the title bar's close button is a third.
+     */
+    showCancelButton?: boolean
 } & ChildrenAttr
 
 /**
@@ -123,9 +131,9 @@ padding:0.5em;
             <div class="vtd-modal-inner">{children}</div>
             <hr class="vtd-modal-separator"/>
             <div style={{display: "flex", alignItems: "center", justifyContent: "end"}}>
-                <Button type="text" onClick={()=>{
+                {attrs.showCancelButton === false ? null : <Button type="text" onClick={()=>{
                     this.#dialog.close()
-                }}>{attrs.cancelButtonChildren || <ModalThemeOptions.cancelSymbol/>}</Button>
+                }}>{attrs.cancelButtonChildren || <ModalThemeOptions.cancelSymbol/>}</Button>}
                 {this.#confirmButton}
             </div>
         </dialog>
