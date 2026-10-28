@@ -27,6 +27,8 @@ class ComboboxGallery extends Component<EmptyAttrs> {
                 options={countryOptions}/></div>
             {/* Suggestions fetched as you type: shown as given, not filtered again, with a second line */}
             <div id="async-combobox">{asyncCombobox()}</div>
+            {/* Suggestions as a shortcut: with none, the panel stays closed rather than saying so */}
+            <div id="quiet-combobox"><Combobox placeholder="Type a name" hideWhenEmpty options={countryOptions}/></div>
         </div>
     }
 }

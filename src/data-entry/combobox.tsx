@@ -47,6 +47,12 @@ export type ComboboxAttrsType = {
      * `setOptions()` - so they're shown as given, in the order given.
      */
     filter?: boolean
+    /**
+     * Keep the panel closed while there's nothing to suggest, instead of showing `noMatchMessage`
+     * (default false). For a field where suggestions are a shortcut and typing something new is
+     * normal - a place, a person - an empty panel under every keystroke is in the way.
+     */
+    hideWhenEmpty?: boolean
     /** Called with the option itself when one is picked (after the input's `input` and `change` events) */
     onSelectOption?: (option: ComboboxOptionType) => void
     /** Callback for onInput event */
@@ -144,6 +150,10 @@ export class Combobox extends Component<ComboboxAttrsType> {
         }
         if (options.length == 0) {
             this.#optionEls = []
+            if (this.#attrs.hideWhenEmpty) {
+                this.#closePanel()
+                return
+            }
             this.#panelEl.replaceChildren(<li class="vtd-combobox-empty">{this.#attrs.noMatchMessage ?? <CommonThemeOptions.emptySymbol/>}</li>)
             return
         }
