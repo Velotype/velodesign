@@ -45,12 +45,23 @@ let arePopconfirmStylesMounted = false
  * disclosure toggle (see `Popover`'s doc comment for how this was verified) - a real problem
  * here specifically, since `children` is the whole point and is expected to be a real
  * `Button`. Open/close state is instead tracked with a CSS class, same as `Popover`.
+ *
+ * **The bubble opens in the top layer, placed beside its trigger in the viewport.** Positioned
+ * inside its trigger, it was clipped by - or sent to the far end of - any scrolling ancestor: a
+ * Delete in the last row of a `DataTable` that scrolls sideways opened its bubble out of sight,
+ * below and to the right. Opening, it goes into the top layer (the `popover` attribute, where the
+ * browser has it; `position:fixed` otherwise), takes the trigger's place in the viewport, flips
+ * above it when there's no room below and shifts left when it would run off the right edge.
+ * Layout is read once, at that moment - never in a continuous handler. A scroll or a resize closes
+ * it rather than leaving it where the trigger used to be.
  */
 export class Popconfirm extends Component<PopconfirmAttrsType> {
     /** Wraps the trigger and the bubble */
     #wrapper: HTMLSpanElement
     /** The positioned confirmation bubble */
     #bubble: HTMLDivElement
+    /** What the bubble is placed beside */
+    #trigger: HTMLSpanElement
     /** Whatever had focus just before the bubble opened (the trigger, if it was activated by
      * keyboard), so `Escape` can restore it - not built on `<dialog>` (see the class doc
      * comment), so closing via script would otherwise leave focus stranded in the hidden bubble */
@@ -58,9 +69,19 @@ export class Popconfirm extends Component<PopconfirmAttrsType> {
     /** Attrs captured at construction, read by `#handleDocumentClick` */
     #attrs: PopconfirmAttrsType
 
+    /** The bubble is in the top layer while open, where the browser supports `popover` */
+    #inTopLayer = false
+
     /** Close the bubble */
     #close = (restoreFocus = false) => {
+        if (!this.#bubble.classList.contains("vtd-popconfirm-open")) {
+            return
+        }
         this.#bubble.classList.remove("vtd-popconfirm-open")
+        if (this.#inTopLayer) {
+            this.#inTopLayer = false
+            this.#bubble.hidePopover()
+        }
         if (restoreFocus) {
             this.#previouslyFocusedEl?.focus()
         }
@@ -68,10 +89,43 @@ export class Popconfirm extends Component<PopconfirmAttrsType> {
 
     /** Open/close the bubble */
     #toggle = () => {
-        if (!this.#bubble.classList.contains("vtd-popconfirm-open")) {
-            this.#previouslyFocusedEl = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        if (this.#bubble.classList.contains("vtd-popconfirm-open")) {
+            this.#close()
+            return
         }
-        this.#bubble.classList.toggle("vtd-popconfirm-open")
+        this.#previouslyFocusedEl = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        this.#bubble.classList.add("vtd-popconfirm-open")
+        if (typeof this.#bubble.showPopover === "function") {
+            this.#bubble.showPopover()
+            this.#inTopLayer = true
+        }
+        this.#place()
+    }
+
+    /** Beside the trigger in the viewport: below it, or above when there's no room below; never off the right edge */
+    #place() {
+        const margin = 8
+        const gap = 6
+        const trigger = this.#trigger.getBoundingClientRect()
+        const bubble = this.#bubble.getBoundingClientRect()
+        let top = trigger.bottom + gap
+        if (top + bubble.height > innerHeight - margin && trigger.top - gap - bubble.height >= margin) {
+            top = trigger.top - gap - bubble.height
+        }
+        let left = trigger.left
+        if (left + bubble.width > innerWidth - margin) {
+            left = Math.max(margin, Math.min(trigger.right, innerWidth - margin) - bubble.width)
+        }
+        this.#bubble.style.top = `${Math.round(top)}px`
+        this.#bubble.style.left = `${Math.round(left)}px`
+    }
+
+    /** The trigger moved out from under the bubble - a scroll anywhere, or a resize */
+    #handleViewportChange = (event: Event) => {
+        if (event.target instanceof Node && this.#bubble.contains(event.target)) {
+            return
+        }
+        this.#close()
     }
 
     /** Escape closes the bubble, from anywhere inside it (trigger or bubble content) */
@@ -99,11 +153,16 @@ export class Popconfirm extends Component<PopconfirmAttrsType> {
     /** Mount this Component */
     override mount() {
         document.addEventListener("click", this.#handleDocumentClick)
+        // Capture: a scroll in any scrolling ancestor, not only the page's
+        document.addEventListener("scroll", this.#handleViewportChange, true)
+        globalThis.addEventListener("resize", this.#handleViewportChange)
     }
 
     /** Unmount this Component */
     override unmount() {
         document.removeEventListener("click", this.#handleDocumentClick)
+        document.removeEventListener("scroll", this.#handleViewportChange, true)
+        globalThis.removeEventListener("resize", this.#handleViewportChange)
     }
 
     /** Create a new `<Popconfirm/>` Component */
@@ -117,11 +176,11 @@ export class Popconfirm extends Component<PopconfirmAttrsType> {
 .vtd-popconfirm-trigger{cursor:pointer;display:inline-block;}
 .vtd-popconfirm-content{
 display:none;
-position:absolute;
-top:100%;
-left:0;
+position:fixed;
+inset:auto;
 z-index:1000;
-margin-block-start:0.4em;
+margin:0;
+color:var(--text);
 min-width:14em;
 padding:0.75em 1em;
 background-color:var(--background-1);
@@ -135,7 +194,7 @@ box-shadow:0 2px 8px rgba(0,0,0,0.15);
 `, "vtd/Popconfirm")
         }
 
-        this.#bubble = <div class="vtd-popconfirm-content">
+        this.#bubble = <div class="vtd-popconfirm-content" popover="manual">
             <div class="vtd-popconfirm-title">{attrs.title}</div>
             <div class="vtd-popconfirm-actions">
                 <Button type="text" onClick={() => { this.#close() }}>{attrs.cancelButtonChildren || <PopconfirmThemeOptions.cancelSymbol/>}</Button>
@@ -143,8 +202,9 @@ box-shadow:0 2px 8px rgba(0,0,0,0.15);
             </div>
         </div>
 
+        this.#trigger = <span class="vtd-popconfirm-trigger" onClick={() => { this.#toggle() }}>{children}</span>
         this.#wrapper = <span class="vtd-popconfirm" onKeyDown={this.#handleKeyDown}>
-            <span class="vtd-popconfirm-trigger" onClick={() => { this.#toggle() }}>{children}</span>
+            {this.#trigger}
             {this.#bubble}
         </span>
 

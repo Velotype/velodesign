@@ -13,6 +13,14 @@ class PopconfirmGallery extends Component<EmptyAttrs> {
             <Popconfirm id="no-outside-close-popconfirm" title="Only closes via Cancel/Confirm." onConfirm={()=>{}} closeOnOutsideClick={false}>
                 <Button type="danger">Stays open</Button>
             </Popconfirm>
+            {/* A Delete at the far end of a box that scrolls sideways, as in the last column of a wide table */}
+            <div class="edge-scroller" style={{width: "220px", overflow: "auto", border: "1px dashed currentColor"}}>
+                <div style={{width: "700px", display: "flex", justifyContent: "end"}}>
+                    <Popconfirm class="edge-popconfirm" title="Delete this row? The bubble must stay in view." onConfirm={()=>{}}>
+                        <Button type="danger">Delete</Button>
+                    </Popconfirm>
+                </div>
+            </div>
         </div>
     }
 }
