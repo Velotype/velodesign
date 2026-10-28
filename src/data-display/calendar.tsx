@@ -42,7 +42,23 @@ export type CalendarAttrsType = {
      */
     prevDisabledHint?: RenderableElements
     nextDisabledHint?: RenderableElements
+    /**
+     * Days to call out - the event a deadline is counting towards, a holiday - each with what it
+     * is. A marked day shows a dot under its number, its label on hover, and the label in its
+     * accessible name. Marking says nothing about whether it can be picked; that's `min`/`max`.
+     */
+    marks?: CalendarMarkType[]
 } & IdAttr & StylePassthroughAttrs
+
+/**
+ * A day a `<Calendar/>` calls out
+ */
+export type CalendarMarkType = {
+    /** The day - its time of day is ignored */
+    date: Date
+    /** What it is, in the consumer's words - its tooltip, and read out with the day */
+    label: string
+}
 
 let areCalendarStylesMounted = false
 
@@ -182,6 +198,9 @@ cursor:pointer;
 .vtd-calendar-day[aria-disabled="true"]:hover{background-color:transparent;}
 .vtd-calendar-weeks .vtd-calendar-day{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-height:2.6em;padding:0.25em 0 0.4em;line-height:1.1;}
 .vtd-calendar-day-month{font-size:0.65em;font-weight:bold;text-transform:uppercase;letter-spacing:0.03em;opacity:0.75;}
+.vtd-calendar-day{position:relative;}
+.vtd-calendar-day-marked::after{content:"";position:absolute;left:50%;bottom:0.15em;width:0.35em;height:0.35em;margin-left:-0.175em;border-radius:50%;background-color:var(--accent);}
+.vtd-calendar-day-marked[aria-disabled="true"]{text-decoration:none;opacity:0.75;}
 ` +
 /*
  * "Today" is a subtle background tint, not a box-shadow ring - a ring reads too much like a
@@ -354,6 +373,7 @@ cursor:pointer;
                     const selected = this.#selected.some(s => isSameDay(day, s))
                     const isToday = isSameDay(day, today)
                     const isFocusable = isSameDay(day, this.#focusedDate)
+                    const mark = attrs.marks?.find(m => isSameDay(day, m.date))
                     const disabled = (attrs.min !== undefined && startOfDay(day) < startOfDay(attrs.min))
                         || (attrs.max !== undefined && startOfDay(day) > startOfDay(attrs.max))
                     const cell: HTMLButtonElement = <button
@@ -362,9 +382,10 @@ cursor:pointer;
                         tabindex={isFocusable ? 0 : -1}
                         aria-selected={selected ? "true" : "false"}
                         aria-disabled={disabled ? "true" : undefined}
-                        aria-label={day.toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric", year: "numeric"})}
+                        aria-label={`${day.toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric", year: "numeric"})}${mark ? `, ${mark.label}` : ""}`}
+                        title={mark?.label}
                         data-date={isoDay(day)}
-                        class={`vtd-calendar-day${outside ? " vtd-calendar-day-outside" : ""}${selected ? " vtd-calendar-day-selected" : ""}${isToday ? " vtd-calendar-day-today" : ""}`}
+                        class={`vtd-calendar-day${outside ? " vtd-calendar-day-outside" : ""}${selected ? " vtd-calendar-day-selected" : ""}${isToday ? " vtd-calendar-day-today" : ""}${mark ? " vtd-calendar-day-marked" : ""}`}
                         onClick={() => {
                             this.#focusedDate = day
                             if (disabled) {return}

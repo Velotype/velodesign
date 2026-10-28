@@ -26,6 +26,8 @@ class CalendarGallery extends Component<EmptyAttrs> {
                 prevDisabledHint="Nothing before this week" nextDisabledHint="Eight weeks ahead at most"/></div>
             {/* A picked day five weeks out opens on its page */}
             <div id="weeks-later-calendar" style={{marginTop: "1em"}}><Calendar weeks={4} value={inDays(40)}/></div>
+            {/* A deadline before an event: the event's day marked, and past max */}
+            <div id="marked-calendar" style={{marginTop: "1em"}}><Calendar value={new Date(2026, 0, 15)} max={new Date(2026, 0, 19)} marks={[{date: new Date(2026, 0, 20, 18, 0), label: "The party"}]}/></div>
             {/* Several days: a click toggles one; "Clear" sets the selection from outside */}
             <div id="multiple-calendar" style={{marginTop: "1em"}}>{multiple}
                 <Button id="multiple-clear" type="secondary" onClick={() => multiple.setDates([])}>Clear</Button>

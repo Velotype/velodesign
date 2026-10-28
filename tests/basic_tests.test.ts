@@ -1552,6 +1552,22 @@ describe('basic component rendering', () => {
             enabledBubble: "none", enabledPointer: "auto", heard: 1})
     })
 
+    itWrap("Calendar marks a day with its label, and the mark doesn't make it pickable", "calendar", "#marked-calendar", async (_selection: ElementHandle) => {
+        const result = await page.evaluate(() => {
+            const cell = document.querySelector("#marked-calendar .vtd-calendar-day[data-date=\"2026-01-20\"]") as HTMLButtonElement
+            const plain = document.querySelector("#marked-calendar .vtd-calendar-day[data-date=\"2026-01-21\"]") as HTMLButtonElement
+            return {
+                marked: cell.classList.contains("vtd-calendar-day-marked"), title: cell.title, label: cell.getAttribute("aria-label"),
+                disabled: cell.getAttribute("aria-disabled"), plainMarked: plain.classList.contains("vtd-calendar-day-marked"), plainTitle: plain.title
+            }
+        })
+        assertEquals(result.marked, true)
+        assertEquals(result.title, "The party")
+        assertEquals(result.label?.endsWith(", The party"), true)
+        assertEquals(result.disabled, "true")
+        assertEquals([result.plainMarked, result.plainTitle], [false, ""])
+    })
+
     itWrap("Calendar says why its paging stops, on the button that stopped", "calendar", "#weeks-calendar", async (_selection: ElementHandle) => {
         const state = await page.evaluate(`(() => {
             const header = document.querySelector('#showcase-theme-light #weeks-calendar .vtd-calendar-header')
