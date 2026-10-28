@@ -5,6 +5,7 @@ import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { Button } from "../form/button.tsx"
+import { Tooltip } from "../feedback/tooltip.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
 
 /**
@@ -34,6 +35,13 @@ export type CalendarAttrsType = {
     /** Accessible names for the prev/next buttons, which show only a glyph */
     prevLabel?: string
     nextLabel?: string
+    /**
+     * Why the prev/next button is disabled, shown while it is (a `Tooltip` with `whenDisabled`):
+     * the paging stops at `min`/`max`, and a reason the consumer knows - "nothing before today",
+     * "your plan reaches four weeks ahead" - beats a button that simply stops working
+     */
+    prevDisabledHint?: RenderableElements
+    nextDisabledHint?: RenderableElements
 } & IdAttr & StylePassthroughAttrs
 
 let areCalendarStylesMounted = false
@@ -209,9 +217,9 @@ cursor:pointer;
         this.#nextButton = <Button type="text" ariaLabel={attrs.nextLabel} onClick={() => this.#changeView(1)}><CommonThemeOptions.nextSymbol/></Button>
         this.#root = passthroughAttrsToElement<HTMLDivElement>(<div class={attrs.weeks ? "vtd-calendar vtd-calendar-weeks" : "vtd-calendar"}>
             <div class="vtd-calendar-header">
-                {this.#prevButton}
+                {attrs.prevDisabledHint ? <Tooltip whenDisabled placement="bottom-start" content={attrs.prevDisabledHint}>{this.#prevButton}</Tooltip> : this.#prevButton}
                 {this.#titleEl}
-                {this.#nextButton}
+                {attrs.nextDisabledHint ? <Tooltip whenDisabled placement="bottom-end" content={attrs.nextDisabledHint}>{this.#nextButton}</Tooltip> : this.#nextButton}
             </div>
             {this.#gridEl}
         </div>, attrs)
