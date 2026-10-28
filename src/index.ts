@@ -75,7 +75,7 @@ import { Form, type FormAttrsType, FormField, type FormFieldAttrsType } from "./
 import { ContextMenu, type ContextMenuAttrsType, type ContextMenuItemType } from "./overlays/context-menu.tsx"
 import { Resizable, type ResizableAttrsType } from "./data-display/resizable.tsx"
 import { Carousel, type CarouselAttrsType } from "./data-display/carousel.tsx"
-import { Calendar, type CalendarAttrsType } from "./data-display/calendar.tsx"
+import { Calendar, type CalendarAttrsType, type CalendarMarkType } from "./data-display/calendar.tsx"
 import { CalendarRange, type CalendarRangeAttrsType, type DateRangeType } from "./data-display/calendar-range.tsx"
 import { EventCalendar, type EventCalendarAttrsType, type EventCalendarEventColorType, type EventCalendarEventType } from "./data-display/event-calendar.tsx"
 import { Tree, type TreeAttrsType, type TreeNodeType } from "./data-display/tree.tsx"
@@ -403,6 +403,7 @@ export {
 
     Calendar,
     type CalendarAttrsType,
+    type CalendarMarkType,
 
     CalendarRange,
     type CalendarRangeAttrsType,

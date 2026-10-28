@@ -324,6 +324,14 @@ const methodDocs: Record<string, MethodDoc[]> = {
  * charts all point at ChartPointType, and a copy per component is how copies drift apart.
  */
 const typeDefinitions: Record<string, TypeDoc> = {
+    CalendarMarkType: {
+        name: "CalendarMarkType",
+        description: "A day a Calendar calls out.",
+        fields: [
+            {name: "date", type: "Date", required: true, description: "The day - its time of day is ignored."},
+            {name: "label", type: "string", required: true, description: "What it is, in your words - its tooltip, and read out with the day."},
+        ],
+    },
     ChoiceCardsOptionType: {
         name: "ChoiceCardsOptionType",
         description: "One card of a ChoiceCards group.",
@@ -600,6 +608,7 @@ const typeDefinitions: Record<string, TypeDoc> = {
 
 /** Which named types each component's page documents, in the order they matter */
 const componentTypes: Record<string, string[]> = {
+    Calendar: ["CalendarMarkType"],
     ChoiceCards: ["ChoiceCardsOptionType"],
     Modal: ["ModalDoneType"],
     Accordion: ["AccordionItemType"],
@@ -1245,6 +1254,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "max", type: "Date", description: "The latest day that can be picked, by whole day. The prev/next buttons turn off once the screen reaches either bound."},
         {name: "weeks", type: "number", description: "Shows this many weeks instead of a month, the first being the week today is in - so late in a month the screen is still the days ahead. Prev/next step that many weeks; the selection's page shows first, and a day starting a month names it."},
         {name: "prevLabel / nextLabel", type: "string", description: "Accessible names for the prev/next buttons, which show only a glyph."},
+        {name: "marks", type: "CalendarMarkType[]", description: "Days to call out - the event a deadline counts towards, say - each with a label. A marked day shows a dot, its label on hover, and the label in its accessible name. Whether it can be picked is still min/max."},
     ],
     EventCalendar: [
         {name: "events", type: "EventCalendarEventType[]", required: true, description: "What to show: each has a date, a label, and optionally a time (already formatted), an href, a colour type, and tentative - drawn as an outline, for something that might happen. setEvents replaces them later."},
@@ -2282,6 +2292,11 @@ secondary. The last paragraph in a container drops its bottom margin.</Paragraph
             const today = new Date()
             return <Calendar weeks={4} min={today} max={new Date(today.getFullYear(), today.getMonth(), today.getDate() + 56)} prevLabel="Earlier weeks" nextLabel="Later weeks"/>
         }, code: `<Calendar weeks={4} min={today} max={eightWeeksFromToday} prevLabel="Earlier weeks" nextLabel="Later weeks"/>`},
+        {label: "A deadline, with the event marked", node: () => {
+            const today = new Date()
+            const event = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10)
+            return <Calendar weeks={3} min={today} max={new Date(event.getFullYear(), event.getMonth(), event.getDate() - 1)} marks={[{date: event, label: "The party"}]}/>
+        }, code: `<Calendar weeks={3} min={today} max={dayBeforeTheParty} marks={[{date: partyDay, label: "The party"}]}/>`},
     ],
     EventCalendar: [
         {label: "A month of events", node: () => {
