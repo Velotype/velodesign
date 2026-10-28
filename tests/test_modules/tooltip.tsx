@@ -5,12 +5,14 @@ import { Button, setThemeOnSelector, Theme, Tooltip } from "../../src/index.ts"
 import type { TooltipPlacement } from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 
-const placements: TooltipPlacement[] = ["top", "bottom", "left", "right"]
+const placements: TooltipPlacement[] = ["top", "bottom", "left", "right", "bottom-start", "bottom-end"]
 
 class TooltipGallery extends Component<EmptyAttrs> {
     override render() {
         return <div style={{marginTop:"40px", display: "flex", gap: "40px"}}>
             {placements.map(placement => <Tooltip content={`tooltip (${placement})`} placement={placement}><Button type="secondary">{placement}</Button></Tooltip>)}
+            <Tooltip whenDisabled content="Shown only while the button is disabled" class="disabled-why"><Button type="primary" disabled>disabled</Button></Tooltip>
+            <Tooltip whenDisabled content="Never shown - the button is enabled" class="enabled-why"><Button type="primary">enabled</Button></Tooltip>
         </div>
     }
 }

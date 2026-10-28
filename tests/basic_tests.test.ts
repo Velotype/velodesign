@@ -1469,6 +1469,51 @@ describe('basic component rendering', () => {
         assertEquals(disabled, 31 - 11)
     })
 
+    itWrap("Tooltip whenDisabled explains a disabled control, and only while it is disabled", "tooltip", ".disabled-why", async (_selection: ElementHandle) => {
+        // Transitions never advance in this suite, so they are switched off to read the end state
+        const state = await page.evaluate(`(() => {
+            const style = document.createElement('style')
+            style.textContent = '*,*::before,*::after{transition:none !important}'
+            document.head.append(style)
+            const scope = document.querySelector('#showcase-theme-light')
+            const disabled = scope.querySelector('.disabled-why')
+            const enabled = scope.querySelector('.enabled-why')
+            const bubble = disabled.querySelector('.vtd-tooltip')
+            const hiddenBefore = getComputedStyle(bubble).visibility
+            let heard = 0
+            disabled.parentElement.addEventListener('click', () => heard++)
+            disabled.click()
+            enabled.querySelector('button').click()
+            disabled.focus()
+            return {
+                hiddenBefore,
+                shownOnFocus: getComputedStyle(bubble).visibility,
+                tabindex: disabled.getAttribute('tabindex'),
+                describedBy: disabled.querySelector('button').getAttribute('aria-describedby') === bubble.id,
+                buttonPointer: getComputedStyle(disabled.querySelector('button')).pointerEvents,
+                enabledBubble: getComputedStyle(enabled.querySelector('.vtd-tooltip')).display,
+                enabledPointer: getComputedStyle(enabled.querySelector('button')).pointerEvents,
+                heard
+            }
+        })()`)
+        assertEquals(state, {hiddenBefore: "hidden", shownOnFocus: "visible", tabindex: "-1", describedBy: true, buttonPointer: "none",
+            enabledBubble: "none", enabledPointer: "auto", heard: 1})
+    })
+
+    itWrap("Calendar says why its paging stops, on the button that stopped", "calendar", "#weeks-calendar", async (_selection: ElementHandle) => {
+        const state = await page.evaluate(`(() => {
+            const header = document.querySelector('#showcase-theme-light #weeks-calendar .vtd-calendar-header')
+            const [prev, next] = header.querySelectorAll('.vtd-tooltip-when-disabled')
+            return {
+                prevDisabled: prev.querySelector('button').disabled,
+                prevHint: prev.querySelector('.vtd-tooltip').textContent,
+                nextDisabled: next.querySelector('button').disabled,
+                nextHint: next.querySelector('.vtd-tooltip').textContent
+            }
+        })()`)
+        assertEquals(state, {prevDisabled: true, prevHint: "Nothing before this week", nextDisabled: false, nextHint: "Eight weeks ahead at most"})
+    })
+
     itWrap("Calendar with values picks several days, and takes a selection from outside", "calendar", "#multiple-calendar", async (_selection: ElementHandle) => {
         const click = (day: number) => `(() => {
             const scope = document.querySelector('#showcase-theme-light #multiple-calendar')

@@ -22,7 +22,8 @@ class CalendarGallery extends Component<EmptyAttrs> {
             {/* Only the 10th to the 20th can be picked: a deadline that must fall before an event, say */}
             <div id="bounded-calendar" style={{marginTop: "1em"}}><Calendar value={new Date(2026, 0, 15)} min={new Date(2026, 0, 10)} max={new Date(2026, 0, 20, 18, 30)}/></div>
             {/* Rolling weeks: this week first, eight weeks of reach - relative to today, so the test computes where things sit */}
-            <div id="weeks-calendar" style={{marginTop: "1em"}}><Calendar weeks={4} min={new Date()} max={inDays(56)} prevLabel="Earlier weeks" nextLabel="Later weeks"/></div>
+            <div id="weeks-calendar" style={{marginTop: "1em"}}><Calendar weeks={4} min={new Date()} max={inDays(56)} prevLabel="Earlier weeks" nextLabel="Later weeks"
+                prevDisabledHint="Nothing before this week" nextDisabledHint="Eight weeks ahead at most"/></div>
             {/* A picked day five weeks out opens on its page */}
             <div id="weeks-later-calendar" style={{marginTop: "1em"}}><Calendar weeks={4} value={inDays(40)}/></div>
             {/* Several days: a click toggles one; "Clear" sets the selection from outside */}
