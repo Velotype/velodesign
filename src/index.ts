@@ -16,6 +16,7 @@ import type { PageSelectorPageType, PageSelectorAttrsType } from "./navigation/p
 import { TextBox } from "./form/text-box.tsx"
 import type { TextBoxAttrsType, TextBoxType } from "./form/text-box.tsx"
 import { ButtonModal, type ButtonModalAttrsType, Modal, type ModalAttrsType, type ModalDoneType, ModalThemeOptions } from "./overlays/modal.tsx"
+import { isPlainClick, Lightbox, type LightboxAttrsType, type LightboxOptionsType, LightboxThemeOptions, openLightbox } from "./overlays/lightbox.tsx"
 import { TextFormFieldThemeOptions, type TextNonEditableFieldAttrsType, TextNonEditableField, type TextFormFieldAttrsType, TextFormField, type TextEditableFieldAttrsType, TextEditableField } from "./form/text-form-field.tsx"
 import { RadioButton, type RadioButtonAttrsType } from "./form/radio-button.tsx"
 import { ChoiceCards, type ChoiceCardsAttrsType, type ChoiceCardsOptionType } from "./form/choice-cards.tsx"
@@ -147,6 +148,13 @@ export {
     type ModalAttrsType,
     type ModalDoneType,
     ModalThemeOptions,
+
+    Lightbox,
+    type LightboxAttrsType,
+    type LightboxOptionsType,
+    LightboxThemeOptions,
+    openLightbox,
+    isPlainClick,
     ButtonModal,
     type ButtonModalAttrsType,
 

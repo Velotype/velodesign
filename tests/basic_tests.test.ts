@@ -559,6 +559,45 @@ describe('basic component rendering', () => {
         if (!classInfo.hasEnter) {fail("ERROR: expected enterFrom=\"right\" to apply the vtd-drawer-enter-right class, independent of placement")}
     })
 
+    itWrap("lightbox opens a thumbnail's picture on the page, and closes on a click beside it, the close button or Escape", "lightbox", "#default-lightbox", async (_selection: ElementHandle) => {
+        const state = () => page.evaluate(() => {
+            const dialog = document.querySelector("dialog.vtd-lightbox") as HTMLDialogElement | null
+            return {open: !!dialog?.open, src: (dialog?.querySelector("img") as HTMLImageElement | null)?.getAttribute("src")?.slice(0, 18) ?? "", label: dialog?.querySelector("button")?.getAttribute("aria-label") ?? ""}
+        })
+        const open = () => page.evaluate(() => { (document.querySelector("#default-lightbox") as HTMLAnchorElement).click() })
+        // The page stays where it is: the click opens the dialog instead of following the link
+        const before = await page.evaluate(() => location.href)
+        await open()
+        assertEquals(await state(), {open: true, src: "data:image/svg+xml", label: "Close"})
+        assertEquals(await page.evaluate(() => location.href), before)
+        // A click on the picture itself leaves it open; one beside it (the dialog's own backdrop area) closes it
+        await page.evaluate(() => { (document.querySelector("dialog.vtd-lightbox img") as HTMLElement).click() })
+        assertEquals((await state()).open, true)
+        await page.evaluate(() => { (document.querySelector("dialog.vtd-lightbox") as HTMLElement).click() })
+        assertEquals((await state()).open, false)
+        // The close button, and again - one shared dialog, so a second and third opening work the same
+        await open()
+        await page.evaluate(() => { (document.querySelector("dialog.vtd-lightbox button") as HTMLElement).click() })
+        assertEquals((await state()).open, false)
+        await open()
+        await page.keyboard.press("Escape")
+        assertEquals((await state()).open, false)
+        assertEquals(await page.evaluate(() => document.querySelectorAll("dialog.vtd-lightbox").length), 1)
+    })
+
+    itWrap("lightbox leaves a click asking for a new tab to the browser", "lightbox", "#default-lightbox", async (_selection: ElementHandle) => {
+        const prevented = await page.evaluate(() => {
+            const link = document.querySelector("#default-lightbox") as HTMLAnchorElement
+            const click = new MouseEvent("click", {bubbles: true, cancelable: true, metaKey: true})
+            // Stop the browser actually opening a tab, after the component has had its say
+            let seen = false
+            document.addEventListener("click", e => { seen = e.defaultPrevented; e.preventDefault() }, {once: true})
+            link.dispatchEvent(click)
+            return {seen, open: !!(document.querySelector("dialog.vtd-lightbox") as HTMLDialogElement | null)?.open}
+        })
+        assertEquals(prevented, {seen: false, open: false})
+    })
+
     itWrap("popover opens on trigger click and closes on an outside click", "popover", "#default-popover", async (_selection: ElementHandle) => {
         const trigger = await page.$("#default-popover .vtd-popover-trigger")
         if (!trigger) {fail("ERROR: trigger not found")}

@@ -1,9 +1,12 @@
 import {replaceElementWithRoot, Component, getComponent} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
-import { Accordion, Alert, AreaChart, AsyncDataTable, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, Calendar, Card, EventCalendar, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu, DataTable, DatePicker, Gauge, Grid, Heading, LineChart, Paragraph, PieChart, Sparkline, Stack, Text, Divider, Drawer, Empty, Form, FormField, InputNumber, List, Menu, Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, Resizable, ScrollArea, Select, SelectMenu, showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, Tabs, Tag, TextBox, Theme, Timeline, Toggle, Tooltip, Tree, Upload} from "../../src/index.ts"
+import { Accordion, Alert, Lightbox, AreaChart, AsyncDataTable, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, Calendar, Card, EventCalendar, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu, DataTable, DatePicker, Gauge, Grid, Heading, LineChart, Paragraph, PieChart, Sparkline, Stack, Text, Divider, Drawer, Empty, Form, FormField, InputNumber, List, Menu, Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, Resizable, ScrollArea, Select, SelectMenu, showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, Tabs, Tag, TextBox, Theme, Timeline, Toggle, Tooltip, Tree, Upload} from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 import { setThemeOnSelector } from "../../src/core/theme.ts"
+
+/** A picture drawn inline, so the page needs no network */
+const PICTURE = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600"><rect width="900" height="600" fill="#7c9cbf"/><circle cx="700" cy="150" r="80" fill="#f7d774"/><path d="M0 600 L250 300 L450 480 L620 330 L900 600 Z" fill="#3d5a73"/></svg>')
 
 class ShowcaseSide extends Component<EmptyAttrs> {
     override render() {
@@ -156,6 +159,8 @@ class ShowcaseSide extends Component<EmptyAttrs> {
             <hr style={{marginTop:"10px"}}/>
             Example Popover:
             <div style={{marginTop:"40px"}}><Popover trigger={<Button type="secondary">Click me</Button>} content="Rich popover content."/></div>
+            Example Lightbox:
+            <div style={{marginTop:"16px"}}><Lightbox src={PICTURE} alt="Mountains under a sun"><img src={PICTURE} alt="Mountains under a sun" style={{width: "120px", display: "block"}}/></Lightbox></div>
             <hr style={{marginTop:"10px"}}/>
             Example Popconfirm:
             <div style={{marginTop:"40px"}}><Popconfirm title="Are you sure?" onConfirm={()=>{}}><Button type="danger">Delete</Button></Popconfirm></div>

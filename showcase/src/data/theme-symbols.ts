@@ -1,6 +1,6 @@
 import {
     AlertThemeOptions, BreadcrumbsThemeOptions, ButtonThemeOptions, ChartThemeOptions, MenuThemeOptions,
-    CommonThemeOptions, DataTableThemeOptions, DrawerThemeOptions, EmptyThemeOptions,
+    CommonThemeOptions, DataTableThemeOptions, DrawerThemeOptions, EmptyThemeOptions, LightboxThemeOptions,
     ModalThemeOptions, PaginationThemeOptions, PopconfirmThemeOptions, resetThemeOptions,
     TagThemeOptions, TextFormFieldThemeOptions, ToastThemeOptions,
 } from "@velotype/velodesign"
@@ -46,6 +46,7 @@ const owners: Record<string, Record<string, ThemeSymbol>> = {
     BreadcrumbsThemeOptions: BreadcrumbsThemeOptions as unknown as Record<string, ThemeSymbol>,
     PaginationThemeOptions: PaginationThemeOptions as unknown as Record<string, ThemeSymbol>,
     ModalThemeOptions: ModalThemeOptions as unknown as Record<string, ThemeSymbol>,
+    LightboxThemeOptions: LightboxThemeOptions as unknown as Record<string, ThemeSymbol>,
     DrawerThemeOptions: DrawerThemeOptions as unknown as Record<string, ThemeSymbol>,
     MenuThemeOptions: MenuThemeOptions as unknown as Record<string, ThemeSymbol>,
     PopconfirmThemeOptions: PopconfirmThemeOptions as unknown as Record<string, ThemeSymbol>,
@@ -87,6 +88,7 @@ export const componentSymbolOptions: SymbolOption[] = [
     {owner: "PaginationThemeOptions", field: "nextSymbol", inherits: true, fallback: "›"},
     {owner: "ModalThemeOptions", field: "closeSymbol", inherits: true, fallback: "✕"},
     {owner: "ModalThemeOptions", field: "cancelSymbol", inherits: true, fallback: "✕"},
+    {owner: "LightboxThemeOptions", field: "closeSymbol", inherits: true, fallback: "✕"},
     {owner: "DrawerThemeOptions", field: "closeSymbol", inherits: true, fallback: "✕"},
     {owner: "MenuThemeOptions", field: "confirmSymbol", inherits: true, fallback: "✓"},
     {owner: "PopconfirmThemeOptions", field: "confirmSymbol", inherits: true, fallback: "✓"},
@@ -96,6 +98,7 @@ export const componentSymbolOptions: SymbolOption[] = [
     {owner: "TextFormFieldThemeOptions", field: "editSymbol", fallback: "✎"},
     {owner: "DataTableThemeOptions", field: "columnsSymbol", fallback: "▥"},
     {owner: "DataTableThemeOptions", field: "emptySymbol", fallback: "the shared empty symbol, in a sized span"},
+    {owner: "DataTableThemeOptions", field: "searchSymbol", fallback: "nothing - no label"},
     {owner: "ChartThemeOptions", field: "emptySymbol", inherits: true, fallback: "∅"},
 ]
 

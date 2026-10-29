@@ -8,13 +8,16 @@ import {
     Accordion, Alert, AspectRatio, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, ButtonModal,
     Calendar, CalendarRange, Card, EventCalendar, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu,
     DatePicker, DateTimePicker, DateTimeRangePicker, Divider, Drawer, Empty, Form, FormField, I, InputNumber, Link, List, Menu,
-    Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, ChoiceCards, Rate, ScrollArea, Select, SelectMenu,
+    Lightbox, Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, ChoiceCards, Rate, ScrollArea, Select, SelectMenu,
     showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, DataTable, Tabs, Tag, TextBox,
     LineChart, AreaChart, BarChart, PieChart, Gauge, Sparkline,
     Heading, Text, Paragraph, Stack, Grid, CodeBlock, TableOfContents,
     Textarea, TextEditableField, TextFormField, TextNonEditableField, TimeAgo, Timeline, Toggle,
     Tooltip, Tree, Upload, AsyncDataTable,
 } from "@velotype/velodesign"
+
+/** The Lightbox example's picture, drawn inline so the showcase needs no network */
+const LIGHTBOX_PICTURE = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600"><rect width="900" height="600" fill="#7c9cbf"/><circle cx="700" cy="150" r="80" fill="#f7d774"/><path d="M0 600 L250 300 L450 480 L620 330 L900 600 Z" fill="#3d5a73"/></svg>')
 
 /** One row in a component's attribute reference table */
 export type AttrDoc = {
@@ -179,6 +182,7 @@ const descriptions: Record<string, string> = {
     Modal: "A centered dialog over the page, wrapping a native <dialog>, with confirm/cancel actions built in.",
     Drawer: "A panel that slides in from a viewport edge over the page, for side/top/bottom-anchored content.",
     Popover: "A click-triggered bubble of rich content anchored to its trigger - can wrap a real Button, unlike Menu.",
+    Lightbox: "A picture looked at closely without leaving the page: a click on its thumbnail shows it as large as the screen allows over a dark backdrop, and the close button, Escape or a click beside it closes it. openLightbox() does the same for a link already in the page.",
     Popconfirm: "An inline \"are you sure?\" bubble for confirming a destructive action without the weight of a full Modal.",
     ContextMenu: "Opens a themed menu at the cursor position on right-click, in place of the browser's native context menu.",
     Command: "A searchable command-palette overlay with keyboard navigation, built on a native <dialog>.",
@@ -301,6 +305,10 @@ const methodDocs: Record<string, MethodDoc[]> = {
         {name: "setOpen(key, open, animate?)", description: "Opens or closes one branch. animate defaults to true, matching a click; pass false when the change is a consequence of something else the reader did, where a transition reads as lag."},
         {name: "setOpenKeys(keys, animate?)", description: "Makes exactly these branches open and every other one closed. animate defaults to false here, because animating several branches in opposite directions at once reads as noise."},
         {name: "reveal(key)", description: "Opens a node and every ancestor above it, so it is actually on screen. The one to use for a search match - setOpen alone leaves a closed ancestor hiding it."},
+    ],
+    Lightbox: [
+        {name: "openLightbox({src, alt?, closeLabel?})", description: "A function, not a method: shows a picture in the lightbox from code - for a page whose picture links are already in the document, such as server-rendered markup. Every Lightbox on the page shares one dialog."},
+        {name: "isPlainClick(event)", description: "A function: true for a plain left click, false when the click asks for a new tab or window. A link that calls openLightbox itself should leave the other clicks to the browser."},
     ],
     Modal: [
         {name: "showModal()", description: "Opens the modal. This is the <dialog>'s own native method, which is why calling it on the JSX value works."},
@@ -719,6 +727,13 @@ const themeOptionDefinitions: Record<string, TypeDoc> = {
             {name: "cancelSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.cancelSymbol", description: "Content of the cancel button in the footer."},
         ],
     },
+    LightboxThemeOptions: {
+        name: "LightboxThemeOptions",
+        description: "The Lightbox's close control.",
+        fields: [
+            {name: "closeSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.closeSymbol", description: "Content of the corner close button."},
+        ],
+    },
     DrawerThemeOptions: {
         name: "DrawerThemeOptions",
         description: "The Drawer's close control.",
@@ -755,6 +770,7 @@ const themeOptionDefinitions: Record<string, TypeDoc> = {
         description: "Shared by both tables, so a change reaches them together.",
         fields: [
             {name: "columnsSymbol", type: "ThemeSymbol", defaultValue: "the U+25A5 glyph", description: "Content of the column-visibility button. Only the tables draw this, so it stays local."},
+            {name: "searchSymbol", type: "ThemeSymbol", description: "A visible label before the search box - a word or an icon. Unset renders no label at all, since there is no universal word for it; an application with words sets it once for every table. With a label, the placeholder no longer stands in as the box's accessible name."},
             {name: "emptySymbol", type: "ThemeSymbol", defaultValue: "the shared empty symbol in a 2em span", description: "Shown in place of the rows when the table has none. The whole visual, 2em sizing included, so a real illustration is not stuck inside that span. Set CommonThemeOptions.emptySymbol to change the glyph alone, here and in Empty and every chart."},
         ],
     },
@@ -778,6 +794,7 @@ const componentThemeOptions: Record<string, string[]> = {
     Breadcrumbs: ["CommonThemeOptions", "BreadcrumbsThemeOptions"],
     Pagination: ["CommonThemeOptions", "PaginationThemeOptions"],
     Modal: ["CommonThemeOptions", "ModalThemeOptions"],
+    Lightbox: ["CommonThemeOptions", "LightboxThemeOptions"],
     Drawer: ["CommonThemeOptions", "DrawerThemeOptions"],
     Menu: ["CommonThemeOptions", "MenuThemeOptions"],
     Popconfirm: ["CommonThemeOptions", "PopconfirmThemeOptions"],
@@ -1010,6 +1027,11 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "title", type: "RenderableElements", description: "Title content."},
         {name: "placement", type: '"left" | "right" | "top" | "bottom"', defaultValue: "left", description: "Which edge of the viewport the drawer is anchored to."},
         {name: "enterFrom", type: '"left" | "right" | "top" | "bottom"', defaultValue: "same as placement", description: "Which direction the entrance animation slides in from."},
+    ],
+    Lightbox: [
+        {name: "src", type: "string", required: true, description: "The picture to show - also the link's address, so a click asking for a new tab opens it there."},
+        {name: "alt", type: "string", description: "The picture's alternative text, in the lightbox."},
+        {name: "closeLabel", type: "string", description: "Accessible name for the close button, which shows only LightboxThemeOptions.closeSymbol."},
     ],
     Popover: [
         {name: "trigger", type: "RenderableElements", required: true, description: "Content that opens the popover when clicked - can be a real Button."},
@@ -1870,6 +1892,13 @@ return <div>
     {drawer}
     <Button type="secondary" onClick={() => drawer.showModal()}>Open drawer</Button>
 </div>`},    ],
+    Lightbox: [
+        {label: "A thumbnail", node: () => <Lightbox src={LIGHTBOX_PICTURE} alt="Mountains under a sun" closeLabel="Close">
+            <img src={LIGHTBOX_PICTURE} alt="Mountains under a sun" style={{width: "180px", display: "block", borderRadius: "8px"}}/>
+        </Lightbox>, code: `<Lightbox src="/photos/hike.jpg" alt="Mountains under a sun" closeLabel="Close">
+    <img src="/photos/hike-small.jpg" alt="Mountains under a sun"/>
+</Lightbox>`},
+    ],
     Popover: [
         {label: "Trigger", node: () => <Popover trigger={<Button type="secondary">Click me</Button>} content="Rich popover content, shown on click."/>, code: `<Popover trigger={<Button type="secondary">Click me</Button>} content="Rich popover content, shown on click."/>`},
     ],
