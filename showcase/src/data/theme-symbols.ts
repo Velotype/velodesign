@@ -89,6 +89,8 @@ export const componentSymbolOptions: SymbolOption[] = [
     {owner: "ModalThemeOptions", field: "closeSymbol", inherits: true, fallback: "✕"},
     {owner: "ModalThemeOptions", field: "cancelSymbol", inherits: true, fallback: "✕"},
     {owner: "LightboxThemeOptions", field: "closeSymbol", inherits: true, fallback: "✕"},
+    {owner: "LightboxThemeOptions", field: "zoomInSymbol", fallback: "+"},
+    {owner: "LightboxThemeOptions", field: "zoomOutSymbol", fallback: "−"},
     {owner: "DrawerThemeOptions", field: "closeSymbol", inherits: true, fallback: "✕"},
     {owner: "MenuThemeOptions", field: "confirmSymbol", inherits: true, fallback: "✓"},
     {owner: "PopconfirmThemeOptions", field: "confirmSymbol", inherits: true, fallback: "✓"},

@@ -562,7 +562,7 @@ describe('basic component rendering', () => {
     itWrap("lightbox opens a thumbnail's picture on the page, and closes on a click beside it, the close button or Escape", "lightbox", "#default-lightbox", async (_selection: ElementHandle) => {
         const state = () => page.evaluate(() => {
             const dialog = document.querySelector("dialog.vtd-lightbox") as HTMLDialogElement | null
-            return {open: !!dialog?.open, src: (dialog?.querySelector("img") as HTMLImageElement | null)?.getAttribute("src")?.slice(0, 18) ?? "", label: dialog?.querySelector("button")?.getAttribute("aria-label") ?? ""}
+            return {open: !!dialog?.open, src: (dialog?.querySelector("img") as HTMLImageElement | null)?.getAttribute("src")?.slice(0, 18) ?? "", label: dialog?.querySelector(".vtd-lightbox-close")?.getAttribute("aria-label") ?? ""}
         })
         const open = () => page.evaluate(() => { (document.querySelector("#default-lightbox") as HTMLAnchorElement).click() })
         // The page stays where it is: the click opens the dialog instead of following the link
@@ -577,12 +577,57 @@ describe('basic component rendering', () => {
         assertEquals((await state()).open, false)
         // The close button, and again - one shared dialog, so a second and third opening work the same
         await open()
-        await page.evaluate(() => { (document.querySelector("dialog.vtd-lightbox button") as HTMLElement).click() })
+        await page.evaluate(() => { (document.querySelector("dialog.vtd-lightbox .vtd-lightbox-close") as HTMLElement).click() })
         assertEquals((await state()).open, false)
         await open()
         await page.keyboard.press("Escape")
         assertEquals((await state()).open, false)
         assertEquals(await page.evaluate(() => document.querySelectorAll("dialog.vtd-lightbox").length), 1)
+    })
+
+    itWrap("lightbox zooms in on a click on the picture or the zoom button, looks around by dragging, and opens fitted again", "lightbox", "#default-lightbox", async (_selection: ElementHandle) => {
+        const state = () => page.evaluate(() => {
+            const dialog = document.querySelector("dialog.vtd-lightbox") as HTMLDialogElement
+            const stage = dialog.querySelector(".vtd-lightbox-stage") as HTMLElement
+            const zoom = dialog.querySelector(".vtd-lightbox-zoom") as HTMLElement
+            return {open: dialog.open, zoomed: dialog.classList.contains("vtd-lightbox-zoomed"), scrolls: stage.scrollWidth > stage.clientWidth,
+                pressed: zoom.getAttribute("aria-pressed"), label: zoom.getAttribute("aria-label"), left: Math.round(stage.scrollLeft)}
+        })
+        await page.evaluate(() => { (document.querySelector("#default-lightbox") as HTMLAnchorElement).click() })
+        assertEquals(await state(), {open: true, zoomed: false, scrolls: false, pressed: "false", label: "Zoom in", left: 0})
+        // A click on the picture zooms in: the picture outgrows the screen, and the stage scrolls
+        await page.evaluate(() => {
+            const image = document.querySelector("dialog.vtd-lightbox img") as HTMLImageElement
+            const box = image.getBoundingClientRect()
+            image.dispatchEvent(new MouseEvent("click", {bubbles: true, clientX: box.left + box.width / 2, clientY: box.top + box.height / 2}))
+        })
+        const zoomed = await state()
+        assertEquals([zoomed.open, zoomed.zoomed, zoomed.scrolls, zoomed.pressed, zoomed.label], [true, true, true, "true", "Zoom out"])
+        // A drag looks around, and the click that ends it doesn't zoom back out
+        const moved = await page.evaluate(() => {
+            const image = document.querySelector("dialog.vtd-lightbox img") as HTMLImageElement
+            const stage = document.querySelector("dialog.vtd-lightbox .vtd-lightbox-stage") as HTMLElement
+            const before = stage.scrollLeft
+            const at = (type: string, x: number) => image.dispatchEvent(new PointerEvent(type, {bubbles: true, clientX: x, clientY: 100, buttons: type === "pointerup" ? 0 : 1, pointerType: "mouse"}))
+            at("pointerdown", 200)
+            at("pointermove", 180)
+            at("pointermove", 140)
+            at("pointerup", 140)
+            image.dispatchEvent(new MouseEvent("click", {bubbles: true, clientX: 140, clientY: 100}))
+            return stage.scrollLeft - before
+        })
+        assertEquals(Math.round(moved), 60)
+        assertEquals((await state()).zoomed, true)
+        // The button zooms back out, and in again
+        await page.evaluate(() => { (document.querySelector("dialog.vtd-lightbox .vtd-lightbox-zoom") as HTMLElement).click() })
+        assertEquals((await state()).zoomed, false)
+        await page.evaluate(() => { (document.querySelector("dialog.vtd-lightbox .vtd-lightbox-zoom") as HTMLElement).click() })
+        assertEquals((await state()).zoomed, true)
+        // Closed while zoomed, it opens fitted next time
+        await page.keyboard.press("Escape")
+        await page.evaluate(() => { (document.querySelector("#default-lightbox") as HTMLAnchorElement).click() })
+        assertEquals((await state()).zoomed, false)
+        await page.keyboard.press("Escape")
     })
 
     itWrap("lightbox leaves a click asking for a new tab to the browser", "lightbox", "#default-lightbox", async (_selection: ElementHandle) => {

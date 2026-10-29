@@ -182,7 +182,7 @@ const descriptions: Record<string, string> = {
     Modal: "A centered dialog over the page, wrapping a native <dialog>, with confirm/cancel actions built in.",
     Drawer: "A panel that slides in from a viewport edge over the page, for side/top/bottom-anchored content.",
     Popover: "A click-triggered bubble of rich content anchored to its trigger - can wrap a real Button, unlike Menu.",
-    Lightbox: "A picture looked at closely without leaving the page: a click on its thumbnail shows it as large as the screen allows over a dark backdrop, and the close button, Escape or a click beside it closes it. openLightbox() does the same for a link already in the page.",
+    Lightbox: "A picture looked at closely without leaving the page: a click on its thumbnail shows it as large as the screen allows over a dark backdrop, and the close button, Escape or a click beside it closes it. A click on the picture, or the zoom button, zooms in to look closer - drag, scroll or swipe to look around - and again zooms back out. openLightbox() does the same for a link already in the page.",
     Popconfirm: "An inline \"are you sure?\" bubble for confirming a destructive action without the weight of a full Modal.",
     ContextMenu: "Opens a themed menu at the cursor position on right-click, in place of the browser's native context menu.",
     Command: "A searchable command-palette overlay with keyboard navigation, built on a native <dialog>.",
@@ -307,7 +307,7 @@ const methodDocs: Record<string, MethodDoc[]> = {
         {name: "reveal(key)", description: "Opens a node and every ancestor above it, so it is actually on screen. The one to use for a search match - setOpen alone leaves a closed ancestor hiding it."},
     ],
     Lightbox: [
-        {name: "openLightbox({src, alt?, closeLabel?})", description: "A function, not a method: shows a picture in the lightbox from code - for a page whose picture links are already in the document, such as server-rendered markup. Every Lightbox on the page shares one dialog."},
+        {name: "openLightbox({src, alt?, closeLabel?, zoomInLabel?, zoomOutLabel?})", description: "A function, not a method: shows a picture in the lightbox from code - for a page whose picture links are already in the document, such as server-rendered markup. Every Lightbox on the page shares one dialog."},
         {name: "isPlainClick(event)", description: "A function: true for a plain left click, false when the click asks for a new tab or window. A link that calls openLightbox itself should leave the other clicks to the browser."},
     ],
     Modal: [
@@ -729,9 +729,11 @@ const themeOptionDefinitions: Record<string, TypeDoc> = {
     },
     LightboxThemeOptions: {
         name: "LightboxThemeOptions",
-        description: "The Lightbox's close control.",
+        description: "The Lightbox's zoom and close controls.",
         fields: [
             {name: "closeSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.closeSymbol", description: "Content of the corner close button."},
+            {name: "zoomInSymbol", type: "ThemeSymbol", defaultValue: "+", description: "Content of the zoom button while the picture fits the screen. Only the lightbox draws this, so it stays local."},
+            {name: "zoomOutSymbol", type: "ThemeSymbol", defaultValue: "−", description: "Content of the zoom button while the picture is zoomed in."},
         ],
     },
     DrawerThemeOptions: {
@@ -1032,6 +1034,8 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "src", type: "string", required: true, description: "The picture to show - also the link's address, so a click asking for a new tab opens it there."},
         {name: "alt", type: "string", description: "The picture's alternative text, in the lightbox."},
         {name: "closeLabel", type: "string", description: "Accessible name for the close button, which shows only LightboxThemeOptions.closeSymbol."},
+        {name: "zoomInLabel", type: "string", description: "Accessible name for the zoom button while the picture fits the screen."},
+        {name: "zoomOutLabel", type: "string", description: "Accessible name for the zoom button while the picture is zoomed in."},
     ],
     Popover: [
         {name: "trigger", type: "RenderableElements", required: true, description: "Content that opens the popover when clicked - can be a real Button."},
@@ -1893,9 +1897,9 @@ return <div>
     <Button type="secondary" onClick={() => drawer.showModal()}>Open drawer</Button>
 </div>`},    ],
     Lightbox: [
-        {label: "A thumbnail", node: () => <Lightbox src={LIGHTBOX_PICTURE} alt="Mountains under a sun" closeLabel="Close">
+        {label: "A thumbnail", node: () => <Lightbox src={LIGHTBOX_PICTURE} alt="Mountains under a sun" closeLabel="Close" zoomInLabel="Zoom in" zoomOutLabel="Zoom out">
             <img src={LIGHTBOX_PICTURE} alt="Mountains under a sun" style={{width: "180px", display: "block", borderRadius: "8px"}}/>
-        </Lightbox>, code: `<Lightbox src="/photos/hike.jpg" alt="Mountains under a sun" closeLabel="Close">
+        </Lightbox>, code: `<Lightbox src="/photos/hike.jpg" alt="Mountains under a sun" closeLabel="Close" zoomInLabel="Zoom in" zoomOutLabel="Zoom out">
     <img src="/photos/hike-small.jpg" alt="Mountains under a sun"/>
 </Lightbox>`},
     ],
