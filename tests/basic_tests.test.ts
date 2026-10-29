@@ -982,6 +982,28 @@ describe('basic component rendering', () => {
         if (offenders.length > 0) {fail(`ERROR: a stale response overwrote the newest - rows not matching "riley": ${JSON.stringify(offenders)}`)}
     })
 
+    itWrap("async-data-table mounts what its rows render, so a popover in a cell closes on an outside click", "async-data-table", "#popover-async-table", async (_selection: ElementHandle) => {
+        // The rows are put in after the table is already on the page. Before replaceMountedChildren
+        // they went in with a plain replaceChildren, so a Popover in a cell was never mounted, never
+        // added its document click listener, and stayed open whatever was clicked.
+        const booted = await waitForCondition(`${dataRowsExpression("popover-async-table")}.length > 0`)
+        if (!booted) {fail("ERROR: the popover table never loaded")}
+        const openCount = `document.getElementById("popover-async-table").querySelectorAll(".vtd-popover-open").length`
+        await page.evaluate(`document.getElementById("popover-async-table").querySelector(".vtd-popover-trigger button").click()`)
+        assertEquals(await page.evaluate(openCount), 1, "the row's popover opens")
+        await page.evaluate(`document.body.click()`)
+        assertEquals(await page.evaluate(openCount), 0, "a click outside closes it")
+    })
+
+    itWrap("async-data-table labels its search box with DataTableThemeOptions.searchSymbol, and shows no label without one", "async-data-table", "#default-async-table", async (_selection: ElementHandle) => {
+        const label = await page.evaluate(`(() => {
+            const wrapper = document.getElementById("default-async-table").querySelector(".vtd-data-table-search-wrapper")
+            return {tag: wrapper.tagName, label: wrapper.querySelector(".vtd-data-table-search-label") !== null}
+        })()`)
+        // A <label> around the box, so a word set as the symbol names the box and a click on it focuses it
+        assertEquals(label, {tag: "LABEL", label: false})
+    })
+
     itWrap("async-data-table keeps the search input focused across a reload", "async-data-table", "#default-async-table", async (_selection: ElementHandle) => {
         await page.evaluate(() => {
             const input = document.querySelector("#default-async-table .vtd-data-table-search") as HTMLInputElement

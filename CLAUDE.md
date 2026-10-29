@@ -628,7 +628,15 @@ had icon substitutes, so they became `DataTableThemeOptions.columnsSymbol` (`▥
 renders no caption when unset - the same call `Empty`'s `title` makes. And an icon-only button has
 no accessible name, which is why `Button` gained an `ariaLabel` attr and both tables expose
 `columnToggleLabel`; setting it is on the consumer, with no default, like every other ARIA label
-here.
+here. The search box's visible label, `.searchSymbol`, defaults to nothing at all (no span is
+rendered), since a placeholder-only box is the library's old look and there's no universal word for
+it; an application with words sets it once for every table.
+
+**Rows go in with `replaceMountedChildren`** (`src/core/mounting.ts`), never a bare
+`replaceChildren`: both tables re-fill their body and footer after they're on the page, and content
+put in that way is never mounted, so a `Popover` or `Popconfirm` in a cell never added its
+outside-click listener. The same goes for any component that re-fills its own DOM with content a
+consumer rendered.
 
 ## `Card` is three regions, and they have to look like three regions
 

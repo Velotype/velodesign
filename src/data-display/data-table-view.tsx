@@ -62,9 +62,16 @@ export const DataTableThemeOptions: {
     columnsSymbol: ThemeSymbol
     /** Shown in place of the rows when there are none. The whole visual, sizing included; set `CommonThemeOptions.emptySymbol` to change just the glyph, here and in `Empty` and every chart */
     emptySymbol: ThemeSymbol
+    /**
+     * A visible label before the search box - a word ("Search") or an icon. Empty by default: the
+     * library doesn't assume a language, and a box with only a placeholder loses its meaning as soon
+     * as someone types, so an application that has the words should set them here, once for every table
+     */
+    searchSymbol: ThemeSymbol
 } = themeOptions({}, {
     columnsSymbol: function() {return <span aria-hidden="true">▥</span>},
-    emptySymbol: function() {return <span class="vtd-data-table-empty-icon" aria-hidden="true"><CommonThemeOptions.emptySymbol/></span>}
+    emptySymbol: function() {return <span class="vtd-data-table-empty-icon" aria-hidden="true"><CommonThemeOptions.emptySymbol/></span>},
+    searchSymbol: function() {return null}
 })
 
 let areDataTableStylesMounted = false
@@ -94,6 +101,7 @@ export function mountDataTableStyles(): void {
 .vtd-data-table-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5em;}
 .vtd-data-table-search-wrapper{display:flex;flex:1 1 12em;min-width:0;align-items:center;gap:0.5em;}
 .vtd-data-table-search-wrapper .vtd-text-box{width:100%;max-width:20em;box-sizing:border-box;}
+.vtd-data-table-search-label{flex:none;font-weight:600;}
 ` +
 /* The auto margin keeps the button trailing-aligned in the searchable={false} case, where it's the row's only child */
 `
