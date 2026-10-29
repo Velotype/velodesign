@@ -10,7 +10,7 @@ const PICTURE = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://w
 class LightboxGallery extends Component<EmptyAttrs> {
     override render() {
         return <div style={{marginTop: "20px", display: "flex", gap: "24px", alignItems: "center", flexWrap: "wrap"}}>
-            <Lightbox id="default-lightbox" src={PICTURE} alt="Mountains under a sun" closeLabel="Close">
+            <Lightbox id="default-lightbox" src={PICTURE} alt="Mountains under a sun" closeLabel="Close" zoomInLabel="Zoom in" zoomOutLabel="Zoom out">
                 <img src={PICTURE} alt="Mountains under a sun" style={{width: "180px", borderRadius: "8px", display: "block"}}/>
             </Lightbox>
             <Button type="secondary" onClick={() => openLightbox({src: PICTURE, alt: "Mountains under a sun", closeLabel: "Close"})}>Open from code</Button>

@@ -442,7 +442,7 @@ object that name refers to.
 Each object is documented on the pages of every component that reads it
 (`ComponentDoc.themeOptions`), using the same table as the attributes, with `CommonThemeOptions`
 listed first wherever something inherits from it - a Default column reading
-`CommonThemeOptions.closeSymbol` is only useful beside a table saying what that is. All 28 editable
+`CommonThemeOptions.closeSymbol` is only useful beside a table saying what that is. All 30 editable
 glyphs are listed under **Advanced: theme options** in the theme builder, shared ones first.
 
 ## Animation
@@ -637,6 +637,22 @@ it; an application with words sets it once for every table.
 put in that way is never mounted, so a `Popover` or `Popconfirm` in a cell never added its
 outside-click listener. The same goes for any component that re-fills its own DOM with content a
 consumer rendered.
+
+## `Lightbox` zooms by scrolling, and centres with auto margins
+
+Fitting a picture to the screen does nothing for one that already nearly fills it, so a click on the
+picture (or the zoom button) shows it at its own pixels - at least twice its fitted size - inside a
+stage that scrolls: the wheel and a touch swipe look around for free, and a mouse drag scrolls the
+stage by hand. The point clicked stays under the pointer. A press that moves past a few pixels is a
+drag, and the click that ends it does not zoom back out.
+
+⚠️ **A zoomed picture narrower than the screen in one direction is centred with `margin:auto` on a
+`flex:none` item, not with `place-items: safe center`.** Plain `center` puts an overflowing item's
+far side out of the scroll range - the scroll area starts at the item's left edge only if it is
+start-aligned - and `safe` was not honoured by the suite's Chrome, so the stage scrolled 250px of a
+900px picture's 500px overflow. Auto margins only absorb positive free space, so they centre when
+there is room and fall back to the start when there is not, everywhere. `flex:none` matters too: a
+flex item shrinks to its container by default, which undoes the zoom.
 
 ## `Card` is three regions, and they have to look like three regions
 
