@@ -17,7 +17,7 @@
   | `form/` | Button, Checkbox, Select, TextBox, the text form fields … |
   | `navigation/` | NavLink, Breadcrumbs, Navbar, Sidebar, TableOfContents, Menu, Steps, PageSelector |
   | `feedback/` | Alert, Toast, Tooltip, Spinner, Progress, Skeleton, Empty |
-  | `overlays/` | Modal, Drawer, Popover, Popconfirm, ContextMenu, Command |
+  | `overlays/` | Modal, Drawer, Lightbox, Popover, Popconfirm, ContextMenu, Command |
   | `data-display/` | Badge, Card, Table, DataTable, AsyncDataTable, CodeBlock, Calendar, EventCalendar, Tree, Resizable … |
   | `data-entry/` | DatePicker, Slider, Combobox, Upload, Rate, Form |
   | `charts/` | LineChart, AreaChart, BarChart, PieChart, Gauge, Sparkline |
@@ -442,7 +442,7 @@ object that name refers to.
 Each object is documented on the pages of every component that reads it
 (`ComponentDoc.themeOptions`), using the same table as the attributes, with `CommonThemeOptions`
 listed first wherever something inherits from it - a Default column reading
-`CommonThemeOptions.closeSymbol` is only useful beside a table saying what that is. All 26 editable
+`CommonThemeOptions.closeSymbol` is only useful beside a table saying what that is. All 28 editable
 glyphs are listed under **Advanced: theme options** in the theme builder, shared ones first.
 
 ## Animation

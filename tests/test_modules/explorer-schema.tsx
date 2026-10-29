@@ -43,6 +43,7 @@ import {
     NavLink,
     Pagination,
     Popconfirm,
+    Lightbox,
     Popover, type PopoverPlacement,
     Progress, type ProgressType,
     RadioButton,
@@ -86,6 +87,9 @@ import {
     Tree,
     Upload,
 } from "@velotype/velodesign"
+
+/** The Lightbox story's picture, drawn inline so the explorer needs no network */
+const LIGHTBOX_PICTURE = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600"><rect width="900" height="600" fill="#7c9cbf"/><circle cx="700" cy="150" r="80" fill="#f7d774"/><path d="M0 600 L250 300 L450 480 L620 330 L900 600 Z" fill="#3d5a73"/></svg>')
 
 /** A single editable control shown in the Explorer's Controls panel */
 export type ControlDef =
@@ -777,6 +781,16 @@ export const stories: ComponentStory[] = [
             trigger={<Button type="secondary">Click me</Button>}
             content={attrs.content as string}
             placement={attrs.placement as PopoverPlacement}/>,
+    },
+    {
+        name: "Lightbox", group: "Overlays",
+        defaultAttrs: {alt: "Mountains under a sun"},
+        controls: {
+            alt: {kind: "text", label: "alt"},
+        },
+        render: (attrs) => <Lightbox src={LIGHTBOX_PICTURE} alt={attrs.alt as string}>
+            <img src={LIGHTBOX_PICTURE} alt={attrs.alt as string} style={{width: "160px", display: "block", borderRadius: "8px"}}/>
+        </Lightbox>,
     },
     {
         name: "Popconfirm", group: "Overlays",

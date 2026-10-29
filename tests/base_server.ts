@@ -37,7 +37,7 @@ export async function startAppServer(server_port: number): Promise<Server<Server
             }
         }
     ))
-    const setOfModules = ['button','icon','page-selector','text-box','modal','text-form-field','radio-button','choice-cards','showcase','time-ago',
+    const setOfModules = ['button','icon','page-selector','text-box','modal','text-form-field','radio-button','choice-cards','lightbox','showcase','time-ago',
         'checkbox','toggle','textarea','select','select-menu','badge','card','alert','tooltip','spinner','tabs','divider',
         'nav-link','breadcrumbs','pagination','navbar','sidebar','menu',
         'toast','accordion','avatar',
