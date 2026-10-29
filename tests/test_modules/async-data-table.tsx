@@ -1,7 +1,7 @@
 import {replaceElementWithRoot, Component} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
-import { AsyncDataTable, Badge, setThemeOnSelector, Theme } from "../../src/index.ts"
+import { AsyncDataTable, Badge, Button, Popover, setThemeOnSelector, Theme } from "../../src/index.ts"
 import type { AsyncDataTableColumnType, AsyncDataTableQuery, AsyncDataTableResult } from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 
@@ -125,6 +125,17 @@ class AsyncDataTableGallery extends Component<EmptyAttrs> {
                     loadingLabel="Loading"
                     truncatedMessage="Showing the first page only"
                     debounceMs={80}/></div>
+            </div>
+            <div>
+                <h3>A popover in each row</h3>
+                <p>Rows arrive after the table is on the page; each row's popover still closes on a click outside it.</p>
+                <div id="popover-async-table"><AsyncDataTable<PersonRow>
+                    columns={[COLUMNS[0], {key: "more", header: "", render: r => <Popover trigger={<Button type="text">More</Button>} content={<span>{`About ${r.name}`}</span>}/>}]}
+                    load={makeLoader()}
+                    searchable={false}
+                    showColumnToggle={false}
+                    pageSize={3}
+                    loadingLabel="Loading"/></div>
             </div>
             <div>
                 <h3>A loader that rejects</h3>

@@ -1,6 +1,7 @@
 /** @jsxRuntime classic */
 /** @jsx h */
 import { h } from "../core/jsx.ts"
+import { replaceMountedChildren } from "../core/mounting.ts"
 import { Component, passthroughAttrsToElement } from "../core/velotype.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { Button } from "../form/button.tsx"
@@ -96,7 +97,7 @@ export type AsyncDataTableAttrsType<RowType> = {
     /** Placeholder for the search input */
     searchPlaceholder?: string
     /**
-     * Accessible name for the search input, which has no visible label. No default - the library
+     * Accessible name for the search input (its visible label, if any, is `DataTableThemeOptions.searchSymbol`). No default - the library
      * doesn't assume a language; without it the placeholder (if any) is all a screen reader gets.
      */
     searchLabel?: string
@@ -310,20 +311,20 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
         const colspan = Math.max(1, visibleColumns.length)
 
         if (this.#state === "error") {
-            this.#tbodyEl.replaceChildren(buildStatusRow(colspan,
+            replaceMountedChildren(this.#tbodyEl, buildStatusRow(colspan,
                 attrs.renderError ? attrs.renderError(this.#error) : String(this.#error)))
         } else if (this.#state === "loading" && this.#rows.length === 0) {
             // Only the first load shows a spinner in place of content; a reload with rows already
             // on screen keeps them and fades instead (the class toggle below).
-            this.#tbodyEl.replaceChildren(buildStatusRow(colspan,
+            replaceMountedChildren(this.#tbodyEl, buildStatusRow(colspan,
                 <span class="vtd-data-table-status"><Spinner label={attrs.loadingLabel}/></span>))
         } else if (this.#rows.length === 0) {
             const message = this.#renderedSearch
                 ? (attrs.noMatchMessage ?? attrs.emptyMessage ?? <DataTableThemeOptions.emptySymbol/>)
                 : (attrs.emptyMessage ?? <DataTableThemeOptions.emptySymbol/>)
-            this.#tbodyEl.replaceChildren(buildStatusRow(colspan, message))
+            replaceMountedChildren(this.#tbodyEl, buildStatusRow(colspan, message))
         } else {
-            this.#tbodyEl.replaceChildren(...buildBodyRows({
+            replaceMountedChildren(this.#tbodyEl, ...buildBodyRows({
                 rows: this.#rows,
                 columns: visibleColumns,
                 searchQuery: this.#renderedSearch,
@@ -391,7 +392,7 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
             </div>)
         }
 
-        this.#footerEl.replaceChildren(...children)
+        replaceMountedChildren(this.#footerEl, ...children)
     }
 
     constructor(attrs: AsyncDataTableAttrsType<RowType>, children: RenderableElements[]) {
@@ -400,13 +401,19 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
         this.#attrs = attrs
         this.#pageSize = attrs.pageSize ?? 25
 
+        // The theme's label for the box, left out altogether when it renders nothing (the default)
+        const searchSymbol = DataTableThemeOptions.searchSymbol({}, [])
+        const searchLabelEl = searchSymbol === null || searchSymbol === undefined || searchSymbol === ""
+            ? null
+            : <span class="vtd-data-table-search-label">{searchSymbol}</span>
         let searchInput: HTMLInputElement | undefined
         if (attrs.searchable ?? true) {
             searchInput = <TextBox
                 type="text"
                 class="vtd-data-table-search"
                 placeholder={attrs.searchPlaceholder}
-                ariaLabel={attrs.searchLabel ?? attrs.searchPlaceholder}
+                // A visible label names the box itself; the placeholder stands in only when there is none
+                ariaLabel={attrs.searchLabel ?? (searchLabelEl ? undefined : attrs.searchPlaceholder)}
                 onInput={(event: Event) => {
                     if (event.target instanceof HTMLInputElement) { this.#setSearch(event.target.value) }
                 }}/>
@@ -425,7 +432,7 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
         this.#root = <div class="vtd-data-table-wrapper">
             {searchInput || columnMenuEl
                 ? <div class="vtd-data-table-toolbar">
-                    {searchInput ? <div class="vtd-data-table-search-wrapper">{searchInput}</div> : null}
+                    {searchInput ? <label class="vtd-data-table-search-wrapper">{searchLabelEl}{searchInput}</label> : null}
                     {columnMenuEl ?? null}
                 </div>
                 : null}

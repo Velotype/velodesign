@@ -1,6 +1,7 @@
 /** @jsxRuntime classic */
 /** @jsx h */
 import { h } from "../core/jsx.ts"
+import { replaceMountedChildren } from "../core/mounting.ts"
 import { Component, getComponent, passthroughAttrsToElement } from "../core/velotype.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { Pagination } from "../navigation/pagination.tsx"
@@ -53,7 +54,7 @@ export type DataTableAttrsType<RowType> = {
     /** Placeholder for the search input */
     searchPlaceholder?: string
     /**
-     * Accessible name for the search input, which has no visible label. No default - the library
+     * Accessible name for the search input (its visible label, if any, is `DataTableThemeOptions.searchSymbol`). No default - the library
      * doesn't assume a language; without it the placeholder (if any) is all a screen reader gets.
      */
     searchLabel?: string
@@ -240,7 +241,7 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
             rowHrefSpa: attrs.rowHrefSpa,
             onRowSelect: attrs.onRowSelect
         })
-        this.#tbodyEl.replaceChildren(...(allRows.length == 0
+        replaceMountedChildren(this.#tbodyEl, ...(allRows.length == 0
             ? [buildStatusRow(visibleColumns.length, attrs.emptyMessage)]
             : bodyRows))
         this.#tbodyEl.classList.toggle("vtd-data-table-zebra", attrs.zebra)
@@ -265,7 +266,7 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
                 </div>)
             }
         }
-        this.#footerEl.replaceChildren(...footerChildren)
+        replaceMountedChildren(this.#footerEl, ...footerChildren)
     }
 
     /** Create a new `<DataTableInner/>` Component */
@@ -348,13 +349,19 @@ export class DataTable<RowType> extends Component<DataTableAttrsType<RowType>> {
             rowHrefSpa={attrs.rowHrefSpa}
             onRowSelect={attrs.onRowSelect}/>)
 
+        // The theme's label for the box, left out altogether when it renders nothing (the default)
+        const searchSymbol = DataTableThemeOptions.searchSymbol({}, [])
+        const searchLabelEl = searchSymbol === null || searchSymbol === undefined || searchSymbol === ""
+            ? null
+            : <span class="vtd-data-table-search-label">{searchSymbol}</span>
         let searchInput: HTMLInputElement | undefined
         if (attrs.searchable) {
             searchInput = <TextBox
                 type="text"
                 class="vtd-data-table-search"
                 placeholder={attrs.searchPlaceholder}
-                ariaLabel={attrs.searchLabel ?? attrs.searchPlaceholder}
+                // A visible label names the box itself; the placeholder stands in only when there is none
+                ariaLabel={attrs.searchLabel ?? (searchLabelEl ? undefined : attrs.searchPlaceholder)}
                 onInput={(event: Event) => {
                     if (event.target instanceof HTMLInputElement) { inner.setSearchQuery(event.target.value) }
                 }}/>
@@ -373,7 +380,7 @@ export class DataTable<RowType> extends Component<DataTableAttrsType<RowType>> {
         this.#root = <div class="vtd-data-table-wrapper">
             {searchInput || columnMenuEl
                 ? <div class="vtd-data-table-toolbar">
-                    {searchInput ? <div class="vtd-data-table-search-wrapper">{searchInput}</div> : null}
+                    {searchInput ? <label class="vtd-data-table-search-wrapper">{searchLabelEl}{searchInput}</label> : null}
                     {columnMenuEl ?? null}
                 </div>
                 : null}
