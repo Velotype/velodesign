@@ -20,6 +20,27 @@ const renderButton = function(btype: ButtonType) {
         }}>{btype} button (with loader)</Button>
     </div>
 }
+/** Buttons doing work that finishes at once: busy by default for a handler taking doneLoading, with the minimum busy time */
+const renderWorkButtons = function() {
+    const work = new RenderBasic<number>(0)
+    const unguarded = new RenderBasic<number>(0)
+    return <div vtwith={[work, unguarded]}>
+        <Button id="work-button" onClick={(_event: TargetedMouseEvent<HTMLButtonElement>, done?: () => void) => {
+            work.value += 1
+            done?.()
+        }}>work done {work} times</Button>
+        <Button id="failing-work-button" onClick={async (_event: TargetedMouseEvent<HTMLButtonElement>, done?: () => void) => {
+            await Promise.resolve()
+            if (Math.random() < 2) {throw new Error("the request failed")}
+            done?.()
+        }}>failing work</Button>
+        <Button id="unguarded-work-button" loadingOnClick={false} onClick={(_event: TargetedMouseEvent<HTMLButtonElement>, done?: () => void) => {
+            unguarded.value += 1
+            done?.()
+        }}>unguarded work done {unguarded} times</Button>
+    </div>
+}
+
 class ButtonGallery extends Component<EmptyAttrs> {
     override render() {
         return <div>
@@ -36,7 +57,7 @@ class ButtonGallery extends Component<EmptyAttrs> {
 class ButtonGalleryPage extends Component<EmptyAttrs> {
     override render() {
         return <div style={{display: "flex"}}>
-            <div id="showcase-theme-light" data-theme="light" style={{flexGrow: 1,minHeight: "100vh"}}><ButtonGallery/></div>
+            <div id="showcase-theme-light" data-theme="light" style={{flexGrow: 1,minHeight: "100vh"}}><ButtonGallery/><div style={{marginTop:"10px"}}>{renderWorkButtons()}</div></div>
             <div id="showcase-theme-dark" data-theme="dark" style={{flexGrow: 1}}><ButtonGallery/></div>
         </div>
     }

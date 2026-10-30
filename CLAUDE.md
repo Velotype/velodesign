@@ -220,6 +220,21 @@ construction.
 
 None of these three give you arbitrary attribute passthrough (no `aria-*`, no `data-*`) — a custom component only accepts exactly what its own `XAttrsType` declares. If you pass `aria-current` (or anything else) to `<Button>`, that's a type error unless `ButtonAttrsType` explicitly declares it. Native tags (`<div>`, `<a>`, `<li>`, ...) accept the full `HTMLAttributes`/ARIA set directly — this only bites you when wrapping a *custom* component.
 
+## A `Button` doing work guards itself
+
+A handler that takes `doneLoading` - `onClick={(event, done) => ...}` - is doing work, usually a
+request, so the button is busy from the click until `done()`: a spinner in place of its content,
+`aria-busy`/`aria-disabled`, and further clicks ignored. It stays busy for at least
+500ms (`minLoadingMs` per button) even when the work finishes sooner, so a
+double click on a quick response still lands on a busy button and the spinner doesn't flash. This
+is the default, not an opt-in: `loadingOnClick` defaulting to false let handlers written
+`(event, done)` go unguarded, and a triple click made three records. `loadingOnClick={false}` opts
+out; a handler that doesn't take `doneLoading` is never guarded. An async handler also finishes
+when its promise settles (`finally`, so its own error still surfaces): a request that throws
+before `doneLoading()` can't leave the button busy for good. The button stays focusable while
+busy (aria-disabled, not `disabled`), so a keyboard user keeps their place. Anything built on
+`Button` that does work (Modal's confirm) gets the same.
+
 ## `passthroughAttrsToElement`
 
 Every component's root element gets wrapped in `passthroughAttrsToElement<T>(<element/>, attrs)` — this is what actually applies `id`/`class`/`style` from the attrs onto the rendered DOM node. Always give it the **explicit generic type argument**, never `as T` on the result:
