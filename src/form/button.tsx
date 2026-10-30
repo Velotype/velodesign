@@ -18,6 +18,13 @@ export const ButtonThemeOptions: {
 })
 
 /**
+ * The shortest time, in ms, a button stays busy after a click that does work (`onClick` taking
+ * `doneLoading`), even when the work finishes sooner - a double click on a quick response still
+ * lands on a busy button, and the spinner doesn't flash. A button can set its own (`minLoadingMs`).
+ */
+const MIN_LOADING_MS = 500
+
+/**
  * Various types of `<Button/>`s
  */
 export type ButtonType = "primary" | "secondary" | "warning" | "danger" | "text"
@@ -29,10 +36,21 @@ export type ButtonAttrsType = {
     disabled?: boolean,
     /** What type of button is this? (set the color) */
     type?: ButtonType,
-    /** onClick event handler */
+    /**
+     * onClick event handler. A handler that takes `doneLoading` is doing work (a request): the
+     * button is busy from the click until it calls `doneLoading()` - a spinner in place of its
+     * content, and further clicks ignored - unless `loadingOnClick` is false. An async handler
+     * also finishes when its promise settles, so one that throws before `doneLoading()` doesn't
+     * leave the button busy
+     */
     onClick?: (event: TargetedMouseEvent<HTMLButtonElement>, doneLoading?: () => void) => void,
-    /** Should the button trigger a loading icon when clicked? */
+    /**
+     * Busy while `onClick` works: on by default for a handler that takes `doneLoading`, off for
+     * one that doesn't. Set it to force either
+     */
     loadingOnClick?: boolean
+    /** The shortest busy time after a click, in ms, even if the work finishes sooner (default 500) */
+    minLoadingMs?: number
     /**
      * Accessible name for the button. No default - the library doesn't assume a language.
      *
@@ -96,6 +114,7 @@ transition:color 0.25s ease-in-out, background-color 0.25s ease-in-out, border 0
 .vtd-button-text:active{background-color:var(--background-5);}
 
 .vtd-button:disabled{cursor:not-allowed;opacity:0.5;}
+.vtd-button[aria-busy="true"]{cursor:progress;}
 
 .vtd-button-spinner{
 position:absolute;
@@ -110,9 +129,12 @@ visibility:hidden;
 
     /** If the Button is in loading state */
     let isLoading = false
+    // A handler that takes doneLoading does work, so the button guards itself unless told not to
+    const loadingOnClick = attrs.loadingOnClick ?? (attrs.onClick !== undefined && attrs.onClick.length >= 2)
+    const minLoadingMs = attrs.minLoadingMs ?? MIN_LOADING_MS
 
     let spinnerElement: HTMLSpanElement | undefined
-    if (attrs.loadingOnClick) {
+    if (loadingOnClick) {
         spinnerElement = <span class="vtd-button-spinner"><ButtonThemeOptions.loadingSymbol/></span>
     }
     const childrenWrapper: HTMLSpanElement = <span>{children}</span>
@@ -122,24 +144,43 @@ visibility:hidden;
         aria-label={attrs.ariaLabel}
         disabled={attrs.disabled}
         onClick={(event: TargetedMouseEvent<HTMLButtonElement>) => {
-            if (attrs.loadingOnClick && isLoading) {
+            if (loadingOnClick && isLoading) {
                 // Protect the button from being clicked while still loading
                 return
             }
             if (attrs.onClick) {
-                if (attrs.loadingOnClick) {
+                if (loadingOnClick) {
                     isLoading = true
+                    const button = event.currentTarget
+                    // Busy, said to assistive tech too; still focusable, so a keyboard user keeps their place
+                    button.setAttribute("aria-busy", "true")
+                    button.setAttribute("aria-disabled", "true")
                     if (spinnerElement) {
                         spinnerElement.style.visibility = "visible"
                     }
                     childrenWrapper.style.visibility = "hidden"
-                    attrs.onClick(event, () => {
-                        isLoading = false
-                        if (attrs.loadingOnClick && spinnerElement) {
-                            spinnerElement.style.visibility = "hidden"
-                        }
-                        childrenWrapper.style.visibility = "visible"
-                    })
+                    const startedAt = Date.now()
+                    let finished = false
+                    const doneLoading = () => {
+                        // Called once; a second call (a handler's finally after its own) changes nothing
+                        if (finished) {return}
+                        finished = true
+                        setTimeout(() => {
+                            isLoading = false
+                            button.removeAttribute("aria-busy")
+                            button.removeAttribute("aria-disabled")
+                            if (spinnerElement) {
+                                spinnerElement.style.visibility = "hidden"
+                            }
+                            childrenWrapper.style.visibility = "visible"
+                        }, Math.max(0, startedAt + minLoadingMs - Date.now()))
+                    }
+                    // Declared void, so any handler fits; an async one returns its promise all the same
+                    const working: unknown = attrs.onClick(event, doneLoading)
+                    // An async handler is finished when it settles, however it ends - a request that
+                    // throws before its doneLoading() must not leave the button busy for good
+                    // (finally, not then: the handler's own error still surfaces as it would have)
+                    if (working instanceof Promise) {working.finally(doneLoading)}
                 } else {
                     attrs.onClick(event)
                 }

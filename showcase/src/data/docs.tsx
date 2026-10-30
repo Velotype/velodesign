@@ -824,8 +824,9 @@ const attrTables: Record<string, AttrDoc[]> = {
     Button: [
         {name: "type", type: '"primary" | "secondary" | "warning" | "danger" | "text"', defaultValue: "primary", description: "Sets the color."},
         {name: "disabled", type: "boolean", defaultValue: "false", description: "Disables the button."},
-        {name: "loadingOnClick", type: "boolean", defaultValue: "false", description: "Shows a spinner and blocks re-clicks until onClick calls doneLoading()."},
-        {name: "onClick", type: "(event, doneLoading?) => void", description: "Click handler."},
+        {name: "onClick", type: "(event, doneLoading?) => void", description: "Click handler. One that takes doneLoading is doing work: the button is busy - a spinner, aria-busy, further clicks ignored - until it calls doneLoading(), and for at least minLoadingMs."},
+        {name: "loadingOnClick", type: "boolean", defaultValue: "true when onClick takes doneLoading", description: "Busy while onClick works. Set false to opt out, or true to force it."},
+        {name: "minLoadingMs", type: "number", defaultValue: "500", description: "The shortest busy time after a click, even if the work finishes sooner - a double click on a quick response still lands on a busy button."},
     ],
     ButtonGroup: [
         {name: "orientation", type: '"horizontal" | "vertical"', defaultValue: "horizontal", description: "Direction to lay out the buttons."},

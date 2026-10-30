@@ -187,6 +187,26 @@ describe('basic component rendering', () => {
         }
     })
 
+    itWrap("a button doing work ignores clicks until it's done, and for at least its minimum busy time", "button", "#work-button", async (_selection: ElementHandle) => {
+        // Three quick clicks on work that finishes at once: one piece of work
+        await page.evaluate(() => { const b = document.querySelector<HTMLButtonElement>("#work-button")!; b.click(); b.click(); b.click() })
+        // Read as textContent: while busy the label sits hidden under the spinner
+        assertEquals(await page.evaluate(() => document.querySelector("#work-button")!.textContent), "work done 1 times")
+        assertEquals(await page.evaluate(() => document.querySelector("#work-button")!.getAttribute("aria-busy")), "true")
+        // After the minimum busy time it takes clicks again
+        await new Promise(r => setTimeout(r, 650))
+        assertEquals(await page.evaluate(() => document.querySelector("#work-button")!.getAttribute("aria-busy")), null)
+        await page.evaluate(() => document.querySelector<HTMLButtonElement>("#work-button")!.click())
+        assertEquals(await page.evaluate(() => document.querySelector("#work-button")!.textContent), "work done 2 times")
+        // An async handler that throws before done() still frees its button once it settles
+        await page.evaluate(() => { window.addEventListener("unhandledrejection", e => e.preventDefault()); document.querySelector<HTMLButtonElement>("#failing-work-button")!.click() })
+        await new Promise(r => setTimeout(r, 650))
+        assertEquals(await page.evaluate(() => document.querySelector("#failing-work-button")!.getAttribute("aria-busy")), null)
+        // loadingOnClick={false} opts out: every click counts
+        await page.evaluate(() => { const b = document.querySelector<HTMLButtonElement>("#unguarded-work-button")!; b.click(); b.click(); b.click() })
+        assertEquals(await page.evaluate(() => document.querySelector("#unguarded-work-button")!.textContent), "unguarded work done 3 times")
+    })
+
     it({name: "components still mount when storage access throws",
         ignore: selectedModules !== undefined && !selectedModules.has("button"),
         fn: async () => {
@@ -706,6 +726,9 @@ describe('basic component rendering', () => {
             return open
         }, {args: [id]})
         for (let round = 0; round < 3; round++) {
+            // Each round after the confirm buttons' minimum busy time (500ms, Button's minLoadingMs) - a
+            // confirm clicked again sooner is a repeat, and ignored
+            if (round > 0) {await new Promise(r => setTimeout(r, 600))}
             if (await openAfterConfirm("closing-modal")) {fail("ERROR: expected done() to close the modal")}
             if (!(await openAfterConfirm("keep-open-modal"))) {fail("ERROR: expected done({keepOpen: true}) to leave the modal open")}
             if (await openAfterConfirm("plain-modal")) {fail("ERROR: expected confirm with no handler to close the modal")}
