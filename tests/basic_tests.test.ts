@@ -199,7 +199,7 @@ describe('basic component rendering', () => {
         await page.evaluate(() => document.querySelector<HTMLButtonElement>("#work-button")!.click())
         assertEquals(await page.evaluate(() => document.querySelector("#work-button")!.textContent), "work done 2 times")
         // An async handler that throws before done() still frees its button once it settles
-        await page.evaluate(() => { window.addEventListener("unhandledrejection", e => e.preventDefault()); document.querySelector<HTMLButtonElement>("#failing-work-button")!.click() })
+        await page.evaluate(() => { globalThis.addEventListener("unhandledrejection", e => e.preventDefault()); document.querySelector<HTMLButtonElement>("#failing-work-button")!.click() })
         await new Promise(r => setTimeout(r, 650))
         assertEquals(await page.evaluate(() => document.querySelector("#failing-work-button")!.getAttribute("aria-busy")), null)
         // loadingOnClick={false} opts out: every click counts
