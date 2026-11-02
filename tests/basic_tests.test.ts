@@ -1691,6 +1691,34 @@ describe('basic component rendering', () => {
             enabledBubble: "none", enabledPointer: "auto", heard: 1})
     })
 
+    itWrap("Tooltip keeps its bubble in view: slid in from the page's edge, flipped below a clipping box's top", "tooltip", ".edge-left", async (_selection: ElementHandle) => {
+        await page.evaluate(`(() => {
+            const style = document.createElement('style')
+            style.textContent = '*,*::before,*::after{transition:none !important}'
+            document.head.append(style)
+        })()`)
+        // A pointer arriving: what the bubble is measured on (the CSS :hover only makes it visible)
+        const enter = (selector: string) => page.evaluate(`document.querySelector('#showcase-theme-light ${selector}').dispatchEvent(new MouseEvent('mouseenter'))`)
+        // Twice over, with the other one between: fitting again starts from the placement asked for
+        await enter(".edge-left")
+        await enter(".clip-left")
+        await enter(".edge-left")
+        const edge = await page.evaluate(`(() => {
+            const bubble = document.querySelector('#showcase-theme-light .edge-left .vtd-tooltip').getBoundingClientRect()
+            return {left: bubble.left >= 8 - 0.5, right: bubble.right <= innerWidth - 8 + 0.5, above: bubble.bottom <= document.querySelector('#showcase-theme-light .edge-left button').getBoundingClientRect().top}
+        })()`)
+        assertEquals(edge, {left: true, right: true, above: true})
+        await enter(".clip-left")
+        const clipped = await page.evaluate(`(() => {
+            const scope = document.querySelector('#showcase-theme-light')
+            const box = scope.querySelector('.clip-box').getBoundingClientRect()
+            const bubble = scope.querySelector('.clip-left .vtd-tooltip')
+            const rect = bubble.getBoundingClientRect()
+            return {flipped: bubble.classList.contains('vtd-tooltip-bottom'), inside: rect.left >= box.left + 8 - 0.5 && rect.right <= box.right - 8 + 0.5 && rect.top >= box.top}
+        })()`)
+        assertEquals(clipped, {flipped: true, inside: true})
+    })
+
     itWrap("Calendar marks a day with its label, and the mark doesn't make it pickable", "calendar", "#marked-calendar", async (_selection: ElementHandle) => {
         const result = await page.evaluate(() => {
             const cell = document.querySelector("#marked-calendar .vtd-calendar-day[data-date=\"2026-01-20\"]") as HTMLButtonElement
