@@ -4,6 +4,8 @@ import { h } from "../core/jsx.ts"
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
+import { keepPlaced, placeInView } from "../core/placement.ts"
+import type { PlaceInViewOptions } from "../core/placement.ts"
 
 /**
  * A single entry in a `<ContextMenu/>`
@@ -36,6 +38,10 @@ let areContextMenuStylesMounted = false
  * enabled item, Up/Down/Home/End move between items (skipping disabled ones, wrapping at the
  * ends), and Escape (or Tab) closes the menu and returns focus to wherever it was before the
  * menu opened.
+ *
+ * **The menu keeps itself in view** (`core/placement.ts`): it opens below and to the right of the
+ * cursor, above it when there's no room below, and slides left when it would run past the right
+ * edge of the window or of a box that clips it - placed again on a scroll or a resize while open.
  */
 export class ContextMenu extends Component<ContextMenuAttrsType> {
     /** The wrapper around `children` that listens for `contextmenu` */
@@ -46,10 +52,33 @@ export class ContextMenu extends Component<ContextMenuAttrsType> {
     #enabledItemEls: HTMLButtonElement[] = []
     /** Whatever had focus just before the menu opened, so closing can restore it */
     #previouslyFocusedEl: HTMLElement | null = null
+    /** Where the menu was opened, relative to `#wrapper` - what placing it again starts from */
+    #point = {x: 0, y: 0}
+    /** Stops placing the menu again as the page moves - set while it's open */
+    #stopPlacing: (() => void) | undefined
+
+    /**
+     * At the point it was opened: below it, or above when there's no room below, and slid in from
+     * the edges. It hangs from that point, which moves with the wrapper as the page scrolls.
+     */
+    #placing: PlaceInViewOptions = {
+        side: "bottom",
+        anchor: () => {
+            const wrapper = this.#wrapper.getBoundingClientRect()
+            const x = wrapper.left + this.#point.x
+            const y = wrapper.top + this.#point.y
+            return {left: x, right: x, top: y, bottom: y}
+        },
+        setSide: (side, size) => {
+            this.#menu.style.top = `${side === "bottom" ? this.#point.y : this.#point.y - size.height}px`
+        }
+    }
 
     /** Close the menu, optionally restoring focus to whatever had it before the menu opened */
     #close = (restoreFocus = false) => {
         this.#menu.classList.remove("vtd-context-menu-open")
+        this.#stopPlacing?.()
+        this.#stopPlacing = undefined
         if (restoreFocus) {
             this.#previouslyFocusedEl?.focus()
         }
@@ -60,9 +89,11 @@ export class ContextMenu extends Component<ContextMenuAttrsType> {
         event.preventDefault()
         this.#previouslyFocusedEl = document.activeElement instanceof HTMLElement ? document.activeElement : null
         const wrapperRect = this.#wrapper.getBoundingClientRect()
-        this.#menu.style.left = `${event.clientX - wrapperRect.left}px`
-        this.#menu.style.top = `${event.clientY - wrapperRect.top}px`
+        this.#point = {x: event.clientX - wrapperRect.left, y: event.clientY - wrapperRect.top}
         this.#menu.classList.add("vtd-context-menu-open")
+        this.#menu.style.left = `${this.#point.x}px`
+        placeInView(this.#menu, this.#placing)
+        this.#stopPlacing ??= keepPlaced(this.#menu, () => [[this.#menu, this.#placing]])
         this.#enabledItemEls[0]?.focus()
     }
 
@@ -110,6 +141,8 @@ export class ContextMenu extends Component<ContextMenuAttrsType> {
     override unmount() {
         this.#wrapper.removeEventListener("contextmenu", this.#handleContextMenu)
         document.removeEventListener("click", this.#handleDocumentClick)
+        this.#stopPlacing?.()
+        this.#stopPlacing = undefined
     }
 
     /** Create a new `<ContextMenu/>` Component */

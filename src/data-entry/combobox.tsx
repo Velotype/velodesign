@@ -6,6 +6,8 @@ import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs, TargetedEvent, TargetedInputEvent } from "../core/velotype.ts"
 import { highlightMatch, searchHighlightCss } from "../core/search-highlight.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
+import { keepPlaced, placeInView } from "../core/placement.ts"
+import type { PlaceInViewOptions } from "../core/placement.ts"
 
 /**
  * A single suggestion in a `<Combobox/>`
@@ -76,6 +78,11 @@ let areComboboxStylesMounted = false
  * Picking a suggestion (click or Enter) sets the input's value and dispatches real `input`/
  * `change` events on it, so `onInput`/`onChange` fire the same way whether the user typed or
  * picked a suggestion.
+ *
+ * **The list keeps itself in view** (`core/placement.ts`): below the input, or above it when
+ * there's no room below; shorter, scrolling, when there's room for all of it on neither side; slid
+ * in from a side edge. Placed on open, each time its suggestions change, and on a scroll or a
+ * resize while open.
  */
 export class Combobox extends Component<ComboboxAttrsType> {
     #attrs: ComboboxAttrsType
@@ -84,6 +91,14 @@ export class Combobox extends Component<ComboboxAttrsType> {
     #panelEl: HTMLUListElement
     #optionEls: HTMLLIElement[] = []
     #open = false
+    /** Stops placing the list again as the page moves - set while it's open */
+    #stopPlacing: (() => void) | undefined
+
+    #placing: PlaceInViewOptions = {side: "bottom", scrolls: true, setSide: side => { this.#panelEl.classList.toggle("vtd-combobox-panel-above", side === "top") }}
+
+    #place = () => {
+        placeInView(this.#panelEl, this.#placing)
+    }
     #highlightedIndex = 0
 
     #handleDocumentClick = (event: MouseEvent) => {
@@ -101,6 +116,8 @@ export class Combobox extends Component<ComboboxAttrsType> {
     }
     override unmount() {
         document.removeEventListener("click", this.#handleDocumentClick)
+        this.#stopPlacing?.()
+        this.#stopPlacing = undefined
     }
 
     /** Options matching the input's current value (all options if it's empty) */
@@ -118,6 +135,8 @@ export class Combobox extends Component<ComboboxAttrsType> {
         }
         this.#open = false
         this.#panelEl.classList.remove("vtd-combobox-panel-open")
+        this.#stopPlacing?.()
+        this.#stopPlacing = undefined
     }
 
     #openPanel() {
@@ -126,6 +145,8 @@ export class Combobox extends Component<ComboboxAttrsType> {
         }
         this.#open = true
         this.#panelEl.classList.add("vtd-combobox-panel-open")
+        this.#place()
+        this.#stopPlacing = keepPlaced(this.#panelEl, () => [[this.#panelEl, this.#placing]])
     }
 
     /** Moves the highlight to `index` by toggling a class on the already-built option elements,
@@ -155,6 +176,8 @@ export class Combobox extends Component<ComboboxAttrsType> {
                 return
             }
             this.#panelEl.replaceChildren(<li class="vtd-combobox-empty">{this.#attrs.noMatchMessage ?? <CommonThemeOptions.emptySymbol/>}</li>)
+            // A different list is a different size: placed again for it
+            if (this.#open) {this.#place()}
             return
         }
         const query = this.#inputEl.value.trim()
@@ -168,6 +191,7 @@ export class Combobox extends Component<ComboboxAttrsType> {
             {option.detail ? <span class="vtd-combobox-option-detail">{option.detail}</span> : null}
         </li>)
         this.#panelEl.replaceChildren(...this.#optionEls)
+        if (this.#open) {this.#place()}
     }
 
     #selectOption(option: ComboboxOptionType) {
@@ -272,6 +296,7 @@ box-shadow:0 2px 8px rgba(0,0,0,0.15);
 display:none;
 }
 .vtd-combobox-panel-open{display:block;}
+.vtd-combobox-panel.vtd-combobox-panel-above{top:auto;bottom:100%;margin-block-start:0;margin-block-end:0.25em;}
 .vtd-combobox-option{padding:0.5em 0.75em;border-radius:0.25rem;cursor:pointer;}
 .vtd-combobox-option-detail{display:block;font-size:0.85em;opacity:0.7;}
 ` +

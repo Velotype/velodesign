@@ -45,6 +45,12 @@ jobs:
       - name: Compiles as a dependency
         run: deno task check-jsx
 
+      # Nothing rewrites this source for older browsers (deno bundle has no target), so a feature one
+      # engine lacks ships broken for its readers. A deny-list of features that aren't Baseline widely
+      # available yet - CLAUDE.md, "Browser support".
+      - name: Only widely available web features
+        run: deno task check-baseline
+
       # A JSR version is immutable, so the time to find a packaging problem is now and not during
       # a publish.
       - name: Publish dry run
