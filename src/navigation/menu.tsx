@@ -7,6 +7,8 @@ import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/
 import { History } from "../core/history.ts"
 import { themeOptions } from "../core/theme-options.ts"
 import type { ThemeSymbol } from "../core/theme-options.ts"
+import { keepPlaced, placeInView } from "../core/placement.ts"
+import type { PlaceInViewOptions } from "../core/placement.ts"
 
 /**
  * A single entry in a `<Menu/>`
@@ -116,6 +118,11 @@ let areMenuStylesMounted = false
  * Built on native `<details>`/`<summary>` - the browser handles opening/closing and keyboard
  * toggling for free. Closes when an item is picked, when the trigger is toggled again, or
  * when the user clicks anywhere outside the menu.
+ *
+ * **Its lists keep themselves in view** (`core/placement.ts`): a menu at the right of a header, or
+ * at the bottom of a dialog, opens its list where it can be seen - above the trigger when there's
+ * no room below, slid in from the edge - and a submenu opens on the other side of its row when it
+ * would run off the end. Placed on open, and again on a scroll or a resize while open.
  */
 export class Menu extends Component<MenuAttrsType> {
     /** The underlying `<details/>` element */
@@ -162,6 +169,51 @@ export class Menu extends Component<MenuAttrsType> {
 
     /** Attrs captured at construction, read by `#handleDocumentClick` (see the `Command` doc note on why this can't just close over the constructor's `attrs` parameter) */
     #attrs: MenuAttrsType
+    /** The top-level list the trigger opens */
+    #listElement: HTMLUListElement
+    /** Stops placing the open lists again as the page moves - set while the menu is open */
+    #stopPlacing: (() => void) | undefined
+
+    /**
+     * The open lists, where they can be seen (`core/placement.ts`): the menu below its trigger, or
+     * above it when there's no room below; each open submenu beside its row, on the other side when
+     * its own has no room; each slid along its side to stay inside.
+     */
+    #listPlacing: PlaceInViewOptions = {side: "bottom", setSide: side => { this.#listElement.classList.toggle("vtd-menu-list-above", side === "top") }}
+    /** Each open submenu's placing, made when it opens - which side is the end of its line is read once, then */
+    #submenuPlacing = new WeakMap<Element, [HTMLElement, PlaceInViewOptions]>()
+
+    /** The menu's list and every open submenu - what `keepPlaced` places again, all read before any is written */
+    #openParts = (): [HTMLElement, PlaceInViewOptions][] => {
+        const parts: [HTMLElement, PlaceInViewOptions][] = [[this.#listElement, this.#listPlacing]]
+        for (const entry of this.#detailsElement.querySelectorAll(".vtd-menu-entry-open")) {
+            const part = this.#submenuPlacing.get(entry)
+            if (part) {parts.push(part)}
+        }
+        return parts
+    }
+
+    /** A submenu opens toward the end of the line - right, or left in a right-to-left page - and flips when that side has no room */
+    #placeSubmenu(entry: Element) {
+        const sublist = entry.querySelector<HTMLElement>(":scope > .vtd-menu-sublist")
+        if (!sublist) {return}
+        const natural = getComputedStyle(entry).direction === "rtl" ? "left" : "right"
+        const placing: PlaceInViewOptions = {side: natural, setSide: side => { sublist.classList.toggle("vtd-menu-sublist-flipped", side !== natural) }}
+        this.#submenuPlacing.set(entry, [sublist, placing])
+        placeInView(sublist, placing)
+    }
+
+    /** Opening places the lists and keeps them placed; closing stops that */
+    #handleToggle = () => {
+        this.#syncLiveChecks()
+        if (this.#detailsElement.open) {
+            placeInView(this.#listElement, this.#listPlacing)
+            this.#stopPlacing ??= keepPlaced(this.#listElement, this.#openParts)
+        } else {
+            this.#stopPlacing?.()
+            this.#stopPlacing = undefined
+        }
+    }
 
     #closeMenu = (restoreFocus = false) => {
         this.#detailsElement.removeAttribute("open")
@@ -263,6 +315,7 @@ export class Menu extends Component<MenuAttrsType> {
         this.#closeSubmenus(entry)
         entry.classList.add("vtd-menu-entry-open")
         entry.querySelector(".vtd-menu-item-parent")?.setAttribute("aria-expanded", "true")
+        this.#placeSubmenu(entry)
     }
 
     /** Mount this Component */
@@ -273,6 +326,8 @@ export class Menu extends Component<MenuAttrsType> {
     /** Unmount this Component */
     override unmount() {
         document.removeEventListener("click", this.#handleDocumentClick)
+        this.#stopPlacing?.()
+        this.#stopPlacing = undefined
     }
 
     /**
@@ -486,17 +541,25 @@ box-shadow:0 2px 8px rgba(0,0,0,0.15);
  */
 `
 .vtd-menu-entry-open > .vtd-menu-sublist{display:block;}
+` +
+/*
+ * Where placing finds no room below the trigger, or past the row's end (core/placement.ts)
+ */
+`
+.vtd-menu-list.vtd-menu-list-above{top:auto;bottom:100%;margin-block-start:0;margin-block-end:0.25em;}
+.vtd-menu-sublist.vtd-menu-sublist-flipped{inset-inline-start:auto;inset-inline-end:100%;}
 .vtd-menu-entry-open > .vtd-menu-item-parent{background-color:var(--background-2);}
 `, "vtd/Menu")
         }
 
         this.#summaryElement = <summary class="vtd-menu-trigger" aria-label={attrs.ariaLabel}>{attrs.trigger}</summary>
 
-        this.#detailsElement = <details class="vtd-menu" onToggle={this.#syncLiveChecks} onKeyDown={this.#handleKeyDown}>
+        this.#listElement = <ul class="vtd-menu-list" role="menu">
+            {this.#buildEntries(attrs.items)}
+        </ul>
+        this.#detailsElement = <details class="vtd-menu" onToggle={this.#handleToggle} onKeyDown={this.#handleKeyDown}>
             {this.#summaryElement}
-            <ul class="vtd-menu-list" role="menu">
-                {this.#buildEntries(attrs.items)}
-            </ul>
+            {this.#listElement}
         </details>
 
         passthroughAttrsToElement<HTMLDetailsElement>(this.#detailsElement, attrs)

@@ -21,7 +21,7 @@
   | `data-display/` | Badge, Card, Table, DataTable, AsyncDataTable, CodeBlock, Calendar, EventCalendar, Tree, Resizable … |
   | `data-entry/` | DatePicker, Slider, Combobox, Upload, Rate, Form |
   | `charts/` | LineChart, AreaChart, BarChart, PieChart, Gauge, Sparkline |
-  | `core/` | **Not a category.** Cross-cutting infrastructure imported by components in several categories, so it belongs to none of them: `utilities.ts`, `theme.ts`, `history.ts`, `strings.ts`, `license.ts`, `search-highlight.tsx`, `styles.ts`, `css-value.ts`, and the two barrels `velotype.ts` / `jsx.ts` - **every velotype import in the package goes through those two**, for reasons in *The bundle size is measured, not asserted* below. |
+  | `core/` | **Not a category.** Cross-cutting infrastructure imported by components in several categories, so it belongs to none of them: `utilities.ts`, `theme.ts`, `history.ts`, `strings.ts`, `license.ts`, `search-highlight.tsx`, `styles.ts`, `css-value.ts`, `placement.ts`, and the two barrels `velotype.ts` / `jsx.ts` - **every velotype import in the package goes through those two**, for reasons in *The bundle size is measured, not asserted* below. |
 
   Two placements are judgement calls rather than showcase facts: `PageSelector` and `Resizable`
   have no story at all, so they went to `navigation/` (client-side routing) and `data-display/`
@@ -1167,6 +1167,91 @@ safe.
 the way the panel will move, the same call `Checkbox`'s tick and `Select`'s arrow make. A word
 there would be an English default, which this package does not do.
 
+## Browser support: Baseline widely available
+
+**velodesign uses only web features that are [Baseline](https://web.dev/baseline) "widely
+available"** - in Chrome, Edge, Firefox and Safari for at least 30 months. It is a per-feature line
+that moves forward on its own, so there is no browser-version table to keep up. A consumer's
+readers are whoever they are: a phone's Safari is pinned to the last iOS that phone got, and a
+library can't know its readers have newer.
+
+**Nothing downlevels the source.** `deno bundle` has no target option, so the syntax (`?.()`,
+`??=`, `#private`), the CSS in every `mountStyles` string and the DOM calls ship exactly as written -
+verified on a built bundle. A transpile step isn't the answer either: rewriting private fields and
+optional chaining for older engines costs size and speed on every page, and the syntax in use
+(ES2020-2022) is long since widely available. The risk is newer CSS and DOM, not syntax.
+
+**A newer feature may be an enhancement, never a dependency.** The page has to work without it:
+`Popconfirm` uses the top layer where `showPopover` exists and `position:fixed` where it doesn't; a
+CSS declaration a browser doesn't know is dropped, so `text-wrap:pretty` is polish, while a layout
+built on anchor positioning would be broken. Say which in a JS comment - `// baseline-ok: <what
+happens without it>` - at the end of the line or on its own line directly above. **Never a CSS
+comment inside a stylesheet string**: that is part of the string, so it ships in every consumer's
+bundle, where a JS comment is dropped by the minifier. In a stylesheet, end the string before the
+line and put the comment between the parts, as `core/theme.ts`'s reset does for
+`interpolate-size` and `text-wrap:pretty`; the minifier joins the parts back into one string.
+
+**`deno task check-baseline` enforces it, in CI.** It is a deny-list (`scripts/check-baseline.ts`)
+of features that are tempting and not widely available yet - anchor positioning, `@scope`,
+`@starting-style`, view transitions, `requestIdleCallback`, the Set methods and the rest - not a
+full checker. Revise it now and then from MDN's Baseline data: an entry comes off once its feature
+is widely available, and a new tempting one goes on. Check MDN before using anything recent that
+isn't on it.
+
+## A floating part keeps itself in view
+
+Every part that floats beside something - `Tooltip`'s bubble, `Popover`, `Menu`'s list and its
+submenus, `ContextMenu`, the lists of `SelectMenu` and `Combobox`, `Popconfirm` - is placed by
+**`core/placement.ts`'s `placeInView`** when it shows. The component still says where the part
+goes (its own CSS, or coordinates by script, through a `setSide` callback); the module then flips
+it to the opposite side when its own has no room, shortens a list that has room on neither side
+(`scrolls`), wraps anything wider than all there is to see, and slides it along its side until it
+is inside. A part that stays open while the page can move (everything but `Tooltip`, which is
+open only while pointed at) also gets **`keepPlaced`**, which places it again on a resize or a
+scroll anywhere, at most once a frame, and is stopped on close and on unmount.
+
+**"Inside" is not the window.** It is the viewport cut down by every ancestor that clips the
+part's overflow, starting at the part's containing block and stopping at anything fixed to the
+viewport - a `Modal` or a scrolling panel hides a part past its edge as surely as the window
+does. A part in the top layer (`Popconfirm`) or `position:fixed` has the viewport to itself.
+
+**The slide is the `translate` property, not `transform`.** The two compose, so a component's
+own `transform` (`Tooltip` centres with one) needs no room made for it, and no stylesheet carries
+a custom property for the shift.
+
+**Placing again reads everything, then writes, once a frame - and writes nothing that hasn't
+changed.** `keepPlaced` runs on every frame of a scroll or a resize while a part is open, which is
+exactly when the page is already being laid out, so a read after a write - which makes the
+browser lay it out again there and then - would multiply the cost of a resize. So:
+
+- **The other side is worked out, never tried.** Where the part would sit on the opposite side
+  comes from where it sits now and the box it hangs from (`anchor`, by default its containing
+  block, which is the trigger's own box for every part here): the same gap, mirrored. The first
+  version swapped the class and measured, which cost two extra layouts per frame.
+- **`setSide` only writes.** A component that needs the part's height to put it above a point
+  (`ContextMenu`, `Popconfirm`) gets it as an argument, measured already - reading `offsetHeight`
+  there was a read in the middle of the writes.
+- **What clips the part is found once**, when it opens: the walk reads every ancestor's computed
+  style. Each frame reads only those ancestors' boxes.
+- **`keepPlaced` takes every open part at once** (a `Menu` and its open submenu), reads them all,
+  then writes them all.
+- **A value is written only when it differs from what the element has**, compared in the form the
+  browser reads it back in - `translate: 4px 0px` reads as `4px`, and writing the long form made
+  every still frame write it again.
+
+Only the first placing, on open, clears what a last one wrote and measures the part fresh - one
+layout on a click, two when it has to wrap - and so does a change of what's in it (`Combobox`'s
+suggestions). The test "keepPlaced reads before it writes, once a frame, and writes nothing when
+nothing moved" holds it to this: it records every layout read and every real change per frame,
+in order, with a popover flipped and slid on a page of 3,000 rows. Measured on 5,000 rows with the
+page's width changing every frame, like a window being dragged: a median of 0.1ms of a frame's
+16.7ms.
+
+This replaced CSS-only placing everywhere but `Popconfirm`, which had its own and missed the left
+edge: a `Tooltip` beside a button at the left of a page or a dialog had a centred bubble half off
+it, and a `Menu` at the right of a header opened its list past the edge. A new floating part uses
+the module rather than a rule per edge.
+
 ## `Menu` nests, and a divider belongs to the entry below it
 
 Two additions, each with a choice worth keeping:
@@ -1641,7 +1726,7 @@ nothing merges that they do not pass.
 
 | Workflow | Runs on | What it gates |
 |---|---|---|
-| `ci.yml` - *Typecheck, lint and publish dry run* | PR + push to main | `deno check` on the package, showcase and tests; `deno lint`; `deno publish --dry-run`; and that `showcase/src/data/bundle-size.ts` is current |
+| `ci.yml` - *Typecheck, lint and publish dry run* | PR + push to main | `deno check` on the package, showcase and tests; `deno lint`; `deno task check-jsx`; `deno task check-baseline` (only widely available web features); `deno publish --dry-run`; and that `showcase/src/data/bundle-size.ts` is current |
 | `ci.yml` - *Astral suite* | PR + push to main | `deno task test`, which bundles all 72 gallery modules and drives them |
 | `bundle-size.yml` | PR | Comments the gzip/raw size of the whole library against the base branch. Advisory - it reports, it does not block |
 | `auto-merge.yml` | PR | Turns on GitHub's auto-merge, so a PR merges itself once the required checks go green |

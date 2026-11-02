@@ -1719,6 +1719,144 @@ describe('basic component rendering', () => {
         assertEquals(clipped, {flipped: true, inside: true})
     })
 
+    // Floating parts keep themselves in view (core/placement.ts). Each test pins a component
+    // against an edge of the window - fixed, so where it sits doesn't depend on the gallery's
+    // layout - opens it, and reads where its part landed. `inView` allows the 8px edge margin.
+    const IN_VIEW = `(r => r.width > 0 && r.left >= 7.5 && r.right <= innerWidth - 7.5 && r.top >= 7.5 && r.bottom <= innerHeight - 7.5)`
+
+    itWrap("popover at the window's right edge opens its bubble in view", "popover", "#default-popover", async (_selection: ElementHandle) => {
+        const state = await page.evaluate(`(() => {
+            const wrapper = document.querySelector('#showcase-theme-light #default-popover')
+            wrapper.style.cssText += ';position:fixed;right:0;top:40px'
+            wrapper.querySelector('.vtd-popover-trigger').click()
+            const bubble = wrapper.querySelector('.vtd-popover-content')
+            return {open: bubble.classList.contains('vtd-popover-open'), inView: ${IN_VIEW}(bubble.getBoundingClientRect())}
+        })()`)
+        assertEquals(state, {open: true, inView: true})
+    })
+
+    itWrap("menu at the window's right edge opens its list and a submenu in view", "menu", "#nested-menu", async (_selection: ElementHandle) => {
+        const state = await page.evaluate(`(async () => {
+            const menu = document.querySelector('#showcase-theme-light #nested-menu')
+            menu.style.cssText += ';position:fixed;right:0;top:8px'
+            menu.open = true
+            // A details element says it opened on the next task
+            await new Promise(r => setTimeout(r, 50))
+            const list = menu.querySelector('.vtd-menu-list')
+            const parent = menu.querySelector('.vtd-menu-entry-parent')
+            parent.querySelector('.vtd-menu-item-parent').click()
+            const sublist = parent.querySelector(':scope > .vtd-menu-sublist')
+            return {list: ${IN_VIEW}(list.getBoundingClientRect()), flipped: sublist.classList.contains('vtd-menu-sublist-flipped'),
+                submenuRight: sublist.getBoundingClientRect().right <= innerWidth - 7.5}
+        })()`)
+        assertEquals(state, {list: true, flipped: true, submenuRight: true})
+    })
+
+    itWrap("context menu opened at the window's corner opens in view", "context-menu", "#default-context-menu", async (_selection: ElementHandle) => {
+        const state = await page.evaluate(`(() => {
+            const wrapper = document.querySelector('#showcase-theme-light #default-context-menu .vtd-context-menu-wrapper')
+            wrapper.dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, cancelable: true, clientX: innerWidth - 4, clientY: innerHeight - 4}))
+            const menu = wrapper.querySelector('.vtd-context-menu')
+            return {open: menu.classList.contains('vtd-context-menu-open'), inView: ${IN_VIEW}(menu.getBoundingClientRect())}
+        })()`)
+        assertEquals(state, {open: true, inView: true})
+    })
+
+    itWrap("select menu at the window's bottom opens its list above, in view", "select-menu", "#default-select-menu", async (_selection: ElementHandle) => {
+        const state = await page.evaluate(`(() => {
+            const root = document.querySelector('#showcase-theme-light #default-select-menu')
+            root.style.cssText += ';position:fixed;left:0;bottom:8px'
+            root.querySelector('.vtd-select-menu-trigger').click()
+            const panel = root.querySelector('.vtd-select-menu-panel')
+            return {above: panel.classList.contains('vtd-select-menu-panel-above'), inView: ${IN_VIEW}(panel.getBoundingClientRect())}
+        })()`)
+        assertEquals(state, {above: true, inView: true})
+    })
+
+    itWrap("combobox at the window's bottom opens its list above, in view", "combobox", "#default-combobox", async (_selection: ElementHandle) => {
+        const state = await page.evaluate(`(() => {
+            const box = document.querySelector('#showcase-theme-light #default-combobox')
+            box.style.cssText += ';position:fixed;left:0;bottom:8px'
+            box.querySelector('input').focus()
+            const panel = box.querySelector('.vtd-combobox-panel')
+            return {open: panel.classList.contains('vtd-combobox-panel-open'), above: panel.classList.contains('vtd-combobox-panel-above'), inView: ${IN_VIEW}(panel.getBoundingClientRect())}
+        })()`)
+        assertEquals(state, {open: true, above: true, inView: true})
+    })
+
+    // keepPlaced runs on every frame of a scroll or a resize while a part is open, so each frame
+    // has to be cheap: every read of layout first and every write after, so the browser lays out
+    // once (a read after a write forces a layout on the spot - "layout thrashing"), and no write
+    // at all when nothing moved. The page records each layout read and each real change, in order,
+    // per frame. `layouts` is how many times a frame's reads came after one of its writes.
+    itWrap("keepPlaced reads before it writes, once a frame, and writes nothing when nothing moved", "popover", "#default-popover", async (_selection: ElementHandle) => {
+        const result = await page.evaluate(`(async () => {
+            const frame = () => new Promise(r => requestAnimationFrame(() => r()))
+            const wrapper = document.querySelector('#showcase-theme-light #default-popover')
+            // At the bottom right: the bubble has to flip above and slide left, the case that does the most
+            wrapper.style.cssText += ';position:fixed;right:0;bottom:8px'
+            // Plenty of page to lay out, the way a real one has
+            const filler = document.createElement('div')
+            for (let i = 0; i < 3000; i++) {const d = document.createElement('div'); d.textContent = 'row ' + i; filler.append(d)}
+            document.body.append(filler)
+            wrapper.querySelector('.vtd-popover-trigger').click()
+            await frame()
+            const log = []
+            const read = (proto, name) => {
+                const f = proto[name]
+                proto[name] = function (...a) { log.push('R'); return f.apply(this, a) }
+            }
+            read(Element.prototype, 'getBoundingClientRect')
+            const gcs = globalThis.getComputedStyle
+            globalThis.getComputedStyle = function (...a) { log.push('R'); return gcs.apply(this, a) }
+            for (const name of ['offsetHeight', 'offsetWidth', 'scrollHeight', 'scrollWidth']) {
+                const d = Object.getOwnPropertyDescriptor(HTMLElement.prototype, name) ?? Object.getOwnPropertyDescriptor(Element.prototype, name)
+                Object.defineProperty(HTMLElement.prototype, name, {configurable: true, get() { log.push('R'); return d.get.call(this) }})
+            }
+            // A write counts only when it changes something
+            const sp = CSSStyleDeclaration.prototype.setProperty
+            CSSStyleDeclaration.prototype.setProperty = function (n, v, pr) { if (this.getPropertyValue(n) !== String(v)) {log.push('W')} return sp.call(this, n, v, pr) }
+            const rp = CSSStyleDeclaration.prototype.removeProperty
+            CSSStyleDeclaration.prototype.removeProperty = function (n) { if (this.getPropertyValue(n) !== '') {log.push('W')} return rp.call(this, n) }
+            for (const name of ['top', 'left']) {
+                const d = Object.getOwnPropertyDescriptor(CSSStyleDeclaration.prototype, name)
+                Object.defineProperty(CSSStyleDeclaration.prototype, name, {configurable: true, get() { return d.get.call(this) }, set(v) { if (d.get.call(this) !== v) {log.push('W')} d.set.call(this, v) }})
+            }
+            const add = DOMTokenList.prototype.add, remove = DOMTokenList.prototype.remove, toggle = DOMTokenList.prototype.toggle
+            DOMTokenList.prototype.add = function (...t) { if (t.some(x => !this.contains(x))) {log.push('W')} return add.apply(this, t) }
+            DOMTokenList.prototype.remove = function (...t) { if (t.some(x => this.contains(x))) {log.push('W')} return remove.apply(this, t) }
+            DOMTokenList.prototype.toggle = function (t, force) { if ((force ?? !this.contains(t)) !== this.contains(t)) {log.push('W')} return toggle.call(this, t, force) }
+            const cn = Object.getOwnPropertyDescriptor(Element.prototype, 'className')
+            Object.defineProperty(Element.prototype, 'className', {configurable: true, get() { return cn.get.call(this) }, set(v) { if (cn.get.call(this) !== v) {log.push('W')} cn.set.call(this, v) }})
+            /** One frame of keepPlaced, after a scroll - its reads and writes in order, and how long they took */
+            const oneFrame = async (move) => {
+                move()
+                log.length = 0
+                const start = performance.now()
+                document.dispatchEvent(new Event('scroll'))
+                await frame()
+                const ms = performance.now() - start
+                const pattern = log.join('')
+                return {pattern, layouts: (pattern.match(/W+R/g) ?? []).length, writes: (pattern.match(/W/g) ?? []).length, ms}
+            }
+            const still = []
+            for (let i = 0; i < 5; i++) {still.push(await oneFrame(() => {}))}
+            // Moving each frame, as a resize does
+            const moving = []
+            for (let i = 0; i < 5; i++) {moving.push(await oneFrame(() => { wrapper.style.bottom = (8 + i * 3) + 'px' }))}
+            const bubble = wrapper.querySelector('.vtd-popover-content').getBoundingClientRect()
+            return {
+                stillWrites: still.map(f => f.writes),
+                stillLayouts: still.map(f => f.layouts),
+                movingLayouts: moving.map(f => f.layouts),
+                inView: bubble.top >= 7.5 && bubble.right <= innerWidth - 7.5,
+                timing: JSON.stringify({still: still.map(f => f.pattern), moving: moving.map(f => f.pattern)})
+            }
+        })()`) as {stillWrites: number[], stillLayouts: number[], movingLayouts: number[], inView: boolean, timing: string}
+        const {timing: _timing, ...shape} = result
+        assertEquals(shape, {stillWrites: [0, 0, 0, 0, 0], stillLayouts: [0, 0, 0, 0, 0], movingLayouts: [0, 0, 0, 0, 0], inView: true})
+    })
+
     itWrap("Calendar marks a day with its label, and the mark doesn't make it pickable", "calendar", "#marked-calendar", async (_selection: ElementHandle) => {
         const result = await page.evaluate(() => {
             const cell = document.querySelector("#marked-calendar .vtd-calendar-day[data-date=\"2026-01-20\"]") as HTMLButtonElement

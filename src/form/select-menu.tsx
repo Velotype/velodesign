@@ -4,6 +4,8 @@ import { h } from "../core/jsx.ts"
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
+import { keepPlaced, placeInView } from "../core/placement.ts"
+import type { PlaceInViewOptions } from "../core/placement.ts"
 
 /**
  * Attrs type for `<SelectMenu/>` Component
@@ -51,6 +53,10 @@ let areSelectMenuStylesMounted = false
  * stateful `Component` in this package - pass a fresh `<SelectMenu options={...} value={...}/>`
  * (letting your own `refresh()` remount it) to show new data, rather than expecting an
  * already-mounted instance to pick up changed attrs on its own.
+ *
+ * **The list keeps itself in view** (`core/placement.ts`): below the trigger, or above it when
+ * there's no room below; shorter, scrolling, when there's room for all of it on neither side; slid
+ * in from a side edge. Placed on open, and again on a scroll or a resize while open.
  */
 export class SelectMenu<OptionType> extends Component<SelectMenuAttrsType<OptionType>> {
     #attrs: SelectMenuAttrsType<OptionType>
@@ -61,6 +67,14 @@ export class SelectMenu<OptionType> extends Component<SelectMenuAttrsType<Option
     #optionEls: HTMLLIElement[]
     #hiddenInput: HTMLInputElement | undefined
     #open = false
+    /** Stops placing the list again as the page moves - set while it's open */
+    #stopPlacing: (() => void) | undefined
+
+    #placing: PlaceInViewOptions = {side: "bottom", scrolls: true, setSide: side => { this.#panelEl.classList.toggle("vtd-select-menu-panel-above", side === "top") }}
+
+    #place = () => {
+        placeInView(this.#panelEl, this.#placing)
+    }
     #selectedValue: string | undefined
     #highlightedIndex = 0
 
@@ -80,6 +94,8 @@ export class SelectMenu<OptionType> extends Component<SelectMenuAttrsType<Option
     }
     override unmount() {
         document.removeEventListener("click", this.#handleDocumentClick)
+        this.#stopPlacing?.()
+        this.#stopPlacing = undefined
     }
 
     #isOptionDisabled(option: OptionType): boolean {
@@ -92,6 +108,8 @@ export class SelectMenu<OptionType> extends Component<SelectMenuAttrsType<Option
         }
         this.#open = false
         this.#panelEl.classList.remove("vtd-select-menu-panel-open")
+        this.#stopPlacing?.()
+        this.#stopPlacing = undefined
         this.#triggerEl.setAttribute("aria-expanded", "false")
     }
 
@@ -101,6 +119,8 @@ export class SelectMenu<OptionType> extends Component<SelectMenuAttrsType<Option
         }
         this.#open = true
         this.#panelEl.classList.add("vtd-select-menu-panel-open")
+        this.#place()
+        this.#stopPlacing = keepPlaced(this.#panelEl, () => [[this.#panelEl, this.#placing]])
         this.#triggerEl.setAttribute("aria-expanded", "true")
         const selectedIndex = this.#attrs.options.findIndex(option => this.#attrs.getValue(option) == this.#selectedValue)
         this.#setHighlighted(selectedIndex >= 0 ? selectedIndex : 0)
@@ -243,6 +263,7 @@ box-shadow:0 2px 8px rgba(0,0,0,0.15);
 display:none;
 }
 .vtd-select-menu-panel-open{display:block;}
+.vtd-select-menu-panel.vtd-select-menu-panel-above{top:auto;bottom:100%;margin-block-start:0;margin-block-end:0.25em;}
 .vtd-select-menu-option{padding:0.5em 0.75em;border-radius:0.25rem;cursor:pointer;}
 ` +
 /* The keyboard's position in the list - see Menu for why this is a tint and not a ring */

@@ -6,6 +6,7 @@ import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, StylePassthroughAttrs } from "../core/velotype.ts"
 import { Button } from "../form/button.tsx"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
+import { placeInView } from "../core/placement.ts"
 
 /**
  * Options to customize `<Popconfirm/>` Component Theme
@@ -51,7 +52,8 @@ let arePopconfirmStylesMounted = false
  * Delete in the last row of a `DataTable` that scrolls sideways opened its bubble out of sight,
  * below and to the right. Opening, it goes into the top layer (the `popover` attribute, where the
  * browser has it; `position:fixed` otherwise), takes the trigger's place in the viewport, flips
- * above it when there's no room below and shifts left when it would run off the right edge.
+ * above it when there's no room below and slides in from either side edge (`core/placement.ts`,
+ * shared with every floating part in the package).
  * Layout is read once, at that moment - never in a continuous handler. A scroll or a resize closes
  * it rather than leaving it where the trigger used to be.
  */
@@ -102,22 +104,15 @@ export class Popconfirm extends Component<PopconfirmAttrsType> {
         this.#place()
     }
 
-    /** Beside the trigger in the viewport: below it, or above when there's no room below; never off the right edge */
+    /** Beside the trigger in the viewport: below it, or above when there's no room below, and slid in from the side edges */
     #place() {
-        const margin = 8
         const gap = 6
         const trigger = this.#trigger.getBoundingClientRect()
-        const bubble = this.#bubble.getBoundingClientRect()
-        let top = trigger.bottom + gap
-        if (top + bubble.height > innerHeight - margin && trigger.top - gap - bubble.height >= margin) {
-            top = trigger.top - gap - bubble.height
-        }
-        let left = trigger.left
-        if (left + bubble.width > innerWidth - margin) {
-            left = Math.max(margin, Math.min(trigger.right, innerWidth - margin) - bubble.width)
-        }
-        this.#bubble.style.top = `${Math.round(top)}px`
-        this.#bubble.style.left = `${Math.round(left)}px`
+        const bubble = this.#bubble
+        placeInView(bubble, {side: "bottom", anchor: () => trigger, setSide: (side, size) => {
+            bubble.style.left = `${Math.round(trigger.left)}px`
+            bubble.style.top = `${Math.round(side === "bottom" ? trigger.bottom + gap : trigger.top - gap - size.height)}px`
+        }})
     }
 
     /** The trigger moved out from under the bubble - a scroll anywhere, or a resize */

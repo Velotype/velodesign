@@ -13,8 +13,8 @@
  * reasons that have nothing to do with the bundle.
  */
 export const bundleSize: {raw: number, gzip: number, ownRaw: number, ownGzip: number} = {
-    raw: 206756,
-    gzip: 52398,
-    ownRaw: 196096,
-    ownGzip: 48524
+    raw: 211067,
+    gzip: 53861,
+    ownRaw: 200402,
+    ownGzip: 49994
 }

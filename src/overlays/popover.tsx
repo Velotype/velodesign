@@ -4,6 +4,8 @@ import { h } from "../core/jsx.ts"
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
+import { keepPlaced, placeInView, sideClassSetter } from "../core/placement.ts"
+import type { PlaceInViewOptions } from "../core/placement.ts"
 
 /**
  * Placement of a `<Popover/>`'s bubble, relative to its trigger content
@@ -18,7 +20,10 @@ export type PopoverAttrsType = {
     trigger: RenderableElements
     /** Content shown inside the popover bubble */
     content: RenderableElements
-    /** Which side of the trigger to show the bubble on (default: `"bottom"`) */
+    /**
+     * Which side of the trigger to show the bubble on (default: `"bottom"`). Where that side has
+     * no room the bubble opens on the opposite one, and it slides along its side to stay in view.
+     */
     placement?: PopoverPlacement
     /** Closes the popover when the user clicks anywhere outside of it (default: `true`) */
     closeOnOutsideClick?: boolean
@@ -40,6 +45,11 @@ let arePopoverStylesMounted = false
  * `trigger` is explicitly meant to accept a real `Button`, open/close state is instead
  * tracked with a CSS class, toggled by an explicit click handler on the trigger and closed by
  * the same outside-click pattern `Menu`/`ContextMenu` use.
+ *
+ * **The bubble keeps itself in view** (`core/placement.ts`): placed when it opens, and again on a
+ * scroll or a resize while it's open, it flips to the opposite side of the trigger when its own
+ * has no room and slides along that side - so a trigger at the right edge of a page or a dialog
+ * doesn't open a bubble past it.
  */
 export class Popover extends Component<PopoverAttrsType> {
     /** Wraps the trigger and the bubble */
@@ -53,10 +63,19 @@ export class Popover extends Component<PopoverAttrsType> {
     #previouslyFocusedEl: HTMLElement | null = null
     /** Attrs captured at construction, read by `#handleDocumentClick` (see the `Command` doc note on why this can't just close over the constructor's `attrs` parameter) */
     #attrs: PopoverAttrsType
+    /** Stops placing the bubble again as the page moves - set while it's open */
+    #stopPlacing: (() => void) | undefined
+
+    /** Where the bubble can be seen, on the side asked for if it has room */
+    #placing(): PlaceInViewOptions {
+        return {side: this.#attrs.placement || "bottom", setSide: sideClassSetter(this.#bubble, "vtd-popover")}
+    }
 
     /** Close the popover */
     #close = (restoreFocus = false) => {
         this.#bubble.classList.remove("vtd-popover-open")
+        this.#stopPlacing?.()
+        this.#stopPlacing = undefined
         if (restoreFocus) {
             this.#previouslyFocusedEl?.focus()
         }
@@ -64,10 +83,15 @@ export class Popover extends Component<PopoverAttrsType> {
 
     /** Open/close the popover */
     #toggle = () => {
-        if (!this.#bubble.classList.contains("vtd-popover-open")) {
-            this.#previouslyFocusedEl = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        if (this.#bubble.classList.contains("vtd-popover-open")) {
+            this.#close()
+            return
         }
-        this.#bubble.classList.toggle("vtd-popover-open")
+        this.#previouslyFocusedEl = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        this.#bubble.classList.add("vtd-popover-open")
+        const placing = this.#placing()
+        placeInView(this.#bubble, placing)
+        this.#stopPlacing = keepPlaced(this.#bubble, () => [[this.#bubble, placing]])
     }
 
     /** Close the popover if it's open, outside-click closing is enabled, and the click landed outside of it */
@@ -101,6 +125,8 @@ export class Popover extends Component<PopoverAttrsType> {
     /** Unmount this Component */
     override unmount() {
         document.removeEventListener("click", this.#handleDocumentClick)
+        this.#stopPlacing?.()
+        this.#stopPlacing = undefined
     }
 
     /** Create a new `<Popover/>` Component */

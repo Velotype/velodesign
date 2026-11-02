@@ -321,12 +321,16 @@ export const Theme: {
             // -- https://www.joshwcomeau.com/snippets/html/interpolate-size/
             // -- https://piccalil.li/blog/a-more-modern-css-reset/
             mountStyles(`*{margin:0;padding:0;line-height:calc(1em + 4px);box-sizing:border-box;}
-html{-moz-text-size-adjust:none;-webkit-text-size-adjust:none;text-size-adjust:none;scroll-behavior:smooth;interpolate-size:allow-keywords;}
+` +
+// baseline-ok: interpolate-size - without it, a height animated to auto jumps instead
+`html{-moz-text-size-adjust:none;-webkit-text-size-adjust:none;text-size-adjust:none;scroll-behavior:smooth;interpolate-size:allow-keywords;}
 body{-webkit-font-smoothing:antialiased;min-width:250px}
 img,svg{display:inline-block;max-width:100%;}
 input,button,textarea,select{font:inherit;}
 p,h1,h2,h3{overflow-wrap:break-word;}
-p{text-wrap:pretty;}
+` +
+// baseline-ok: text-wrap:pretty - without it, paragraphs wrap the ordinary way
+`p{text-wrap:pretty;}
 h1,h2,h3{text-wrap:balance;}
 menu,ul,ol{list-style:none;}
 button{color:inherit;border:none;}
