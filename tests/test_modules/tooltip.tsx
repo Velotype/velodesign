@@ -7,12 +7,23 @@ import { TestModulePage } from "./module-page.tsx"
 
 const placements: TooltipPlacement[] = ["top", "bottom", "left", "right", "bottom-start", "bottom-end"]
 
+const LONG = "A long explanation that would run off the edge if it were centred on its trigger"
+
 class TooltipGallery extends Component<EmptyAttrs> {
     override render() {
-        return <div style={{marginTop:"40px", display: "flex", gap: "40px"}}>
+        return <div>
+            {/* At the very left, and at the top of a box that clips: each bubble keeps itself in view */}
+            <div class="edge-cases" style={{display: "flex", gap: "40px", alignItems: "flex-start"}}>
+                <Tooltip content={LONG} class="edge-left"><Button type="secondary">edge</Button></Tooltip>
+                <div class="clip-box" style={{overflow: "hidden", width: "220px", height: "120px", padding: "4px", border: "1px dashed var(--background-5)"}}>
+                    <Tooltip whenDisabled content={LONG} class="clip-left"><Button type="secondary" disabled>clipped</Button></Tooltip>
+                </div>
+            </div>
+            <div style={{marginTop:"40px", display: "flex", gap: "40px"}}>
             {placements.map(placement => <Tooltip content={`tooltip (${placement})`} placement={placement}><Button type="secondary">{placement}</Button></Tooltip>)}
             <Tooltip whenDisabled content="Shown only while the button is disabled" class="disabled-why"><Button type="primary" disabled>disabled</Button></Tooltip>
             <Tooltip whenDisabled content="Never shown - the button is enabled" class="enabled-why"><Button type="primary">enabled</Button></Tooltip>
+            </div>
         </div>
     }
 }
