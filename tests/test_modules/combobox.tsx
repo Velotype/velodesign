@@ -29,6 +29,7 @@ class ComboboxGallery extends Component<EmptyAttrs> {
             <div id="async-combobox">{asyncCombobox()}</div>
             {/* Suggestions as a shortcut: with none, the panel stays closed rather than saying so */}
             <div id="quiet-combobox"><Combobox placeholder="Type a name" hideWhenEmpty options={countryOptions}/></div>
+            <div id="capped-combobox"><Combobox placeholder="At most 10 characters" maxLength={10} options={countryOptions}/></div>
         </div>
     }
 }

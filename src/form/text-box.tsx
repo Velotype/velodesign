@@ -24,6 +24,8 @@ export type TextBoxAttrsType = {
     placeholder?: string
     /** If this field is required in a `<form/>` */
     required?: boolean
+    /** Maximum number of characters accepted */
+    maxLength?: number
     /** Callback for onInput event */
     onInput?: (event: TargetedInputEvent<HTMLInputElement>) => void
     /** Callback for onChange event */
@@ -109,6 +111,7 @@ line-height:1;
             autocomplete={autocomplete}
             placeholder={attrs.placeholder}
             aria-label={attrs.ariaLabel}
+            maxlength={attrs.maxLength}
             required={attrs.required}/>, attrs)
     }
     let inputType: "text" | "email" | "tel" = "text"
@@ -133,6 +136,7 @@ line-height:1;
         // A single space keeps that true without putting anything on screen.
         placeholder={attrs.clearable ? (attrs.placeholder ?? " ") : attrs.placeholder}
         aria-label={attrs.ariaLabel}
+        maxlength={attrs.maxLength}
         required={attrs.required}/>
     if (!attrs.clearable) {
         return passthroughAttrsToElement<HTMLInputElement>(input, attrs)
