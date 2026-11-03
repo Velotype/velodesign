@@ -1343,6 +1343,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "min", type: "number", description: "Lowest accepted value."},
         {name: "max", type: "number", description: "Highest accepted value."},
         {name: "step", type: "number", description: "How much the spinner buttons and arrow keys move the value by."},
+        {name: "holdToRange", type: "boolean", defaultValue: "true", description: "Keeps a typed value within min, max and a whole-number step: past max and fractions while typing, under min once committed. false leaves typed values as typed."},
         {name: "placeholder", type: "string", description: "Placeholder text."},
         {name: "disabled", type: "boolean", defaultValue: "false", description: "Disables the input."},
     ],

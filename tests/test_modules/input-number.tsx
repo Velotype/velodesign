@@ -10,6 +10,10 @@ class InputNumberGallery extends Component<EmptyAttrs> {
             <div id="default-input-number"><InputNumber value={5}/></div>
             <div><InputNumber value={5} min={0} max={10} step={1}/></div>
             <div><InputNumber value={5} disabled/></div>
+            <div id="ranged-input-number"><InputNumber value={10} min={5} max={50}
+                onInput={e => { e.currentTarget.dataset.seen = e.currentTarget.value }}/></div>
+            <div id="unheld-input-number"><InputNumber value={10} min={5} max={50} holdToRange={false}/></div>
+            <div id="half-step-input-number"><InputNumber value={1} min={0.5} max={100} step={0.5}/></div>
         </div>
     }
 }

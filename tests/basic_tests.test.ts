@@ -2525,6 +2525,38 @@ describe('basic component rendering', () => {
     })
 
 
+    // A number box's min and max only bound its steppers natively; InputNumber holds a typed value
+    // to them - max (and a whole step) while typing, min once committed, so "2" can become "20".
+    itWrap("InputNumber holds a typed value to its min, max and step", "input-number", "#ranged-input-number", async (_selection: ElementHandle) => {
+        const result = await page.evaluate(`(() => {
+            const type = (id, value, commit) => {
+                const input = document.querySelector('#showcase-theme-light #' + id + ' input')
+                input.value = value
+                input.dispatchEvent(new Event("input", {bubbles: true}))
+                if (commit) {input.dispatchEvent(new Event("change", {bubbles: true}))}
+                return input.value + "|" + (input.dataset.seen ?? "")
+            }
+            return {
+                pastMax: type("ranged-input-number", "999", false),
+                typingUnderMin: type("ranged-input-number", "2", false),
+                committedUnderMin: type("ranged-input-number", "2", true),
+                fraction: type("ranged-input-number", "7.5", false),
+                within: type("ranged-input-number", "20", true),
+                unheld: type("unheld-input-number", "999", true),
+                halfStep: type("half-step-input-number", "2.5", true),
+            }
+        })()`)
+        assertEquals(result, {
+            pastMax: "50|50",
+            typingUnderMin: "2|2",
+            committedUnderMin: "5|5",
+            fraction: "7|7",
+            within: "20|20",
+            unheld: "999|",
+            halfStep: "2.5|",
+        })
+    })
+
     /**
      * A no-match state must not be English, and must be overridable.
      *
