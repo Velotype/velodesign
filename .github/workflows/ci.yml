@@ -27,6 +27,12 @@ jobs:
       - name: Typecheck the package
         run: deno check src/index.ts
 
+      # The showcase's home page reads showcase/src/data/bundle-size.ts, which is measured rather
+      # than committed (any change to src/ would make a committed copy stale), so it is generated
+      # here first, exactly as the showcase's own bundle task does.
+      - name: Measure the bundle for the showcase
+        run: deno task size --write
+
       - name: Typecheck the showcase
         run: deno check src/main.tsx
         working-directory: showcase
@@ -55,27 +61,6 @@ jobs:
       # a publish.
       - name: Publish dry run
         run: deno publish --dry-run
-
-      # The showcase's home page reads this generated file, so a stale committed value would be a
-      # wrong number on the site for anyone who builds without the task. Only the raw figures are
-      # compared: gzip output is not byte-identical across machines (the same bundle measured 43497
-      # locally and 43496 on this runner), so asserting it would fail for reasons unrelated to the
-      # bundle. Both raw figures are checked rather than just the first - `ownRaw` is the one the
-      # home page actually shows, and checking only `raw` would let it go stale unnoticed.
-      - name: Bundle-size file is current
-        run: |
-          measured=$(deno task size --json | tail -1)
-          status=0
-          for field in raw ownRaw; do
-            committed=$(grep -oE "(^|[^a-zA-Z])$field: [0-9]+" showcase/src/data/bundle-size.ts | grep -oE '[0-9]+')
-            fresh=$(echo "$measured" | grep -oE "\"$field\":[0-9]+" | grep -oE '[0-9]+')
-            echo "committed $field=$committed  measured $field=$fresh"
-            if [ "$committed" != "$fresh" ]; then
-              echo "::error file=showcase/src/data/bundle-size.ts::Stale $field ($committed vs $fresh). Run 'deno task size --write' and commit the result."
-              status=1
-            fi
-          done
-          exit $status
 
   test:
     name: Astral suite
