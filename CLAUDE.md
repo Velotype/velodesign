@@ -1726,7 +1726,7 @@ nothing merges that they do not pass.
 
 | Workflow | Runs on | What it gates |
 |---|---|---|
-| `ci.yml` - *Typecheck, lint and publish dry run* | PR + push to main | `deno check` on the package, showcase and tests; `deno lint`; `deno task check-jsx`; `deno task check-baseline` (only widely available web features); `deno publish --dry-run`; and that `showcase/src/data/bundle-size.ts` is current |
+| `ci.yml` - *Typecheck, lint and publish dry run* | PR + push to main | `deno check` on the package, showcase and tests; `deno lint`; `deno task check-jsx`; `deno task check-baseline` (only widely available web features); `deno publish --dry-run` |
 | `ci.yml` - *Astral suite* | PR + push to main | `deno task test`, which bundles all 72 gallery modules and drives them |
 | `bundle-size.yml` | PR | Comments the gzip/raw size of the whole library against the base branch. Advisory - it reports, it does not block |
 | `auto-merge.yml` | PR | Turns on GitHub's auto-merge, so a PR merges itself once the required checks go green |
@@ -1749,10 +1749,13 @@ Three things worth knowing before you touch any of this:
 `scripts/bundle-size.ts` bundles `src/index.ts` minified for the browser and reports raw and gzip
 bytes. It is the single source for both places the number appears:
 
-- `deno task size --write` regenerates `showcase/src/data/bundle-size.ts`, and the showcase's own
+- `deno task size --write` writes `showcase/src/data/bundle-size.ts`, and the showcase's own
   `deno task bundle` runs it first, so the figure on the home page is measured from the source the
-  site was built from and cannot go stale. CI fails if the committed file disagrees with a fresh
-  measurement.
+  site was built from. **The file is generated, never committed** (it is in `.gitignore`): CI runs
+  `deno task size --write` before type-checking the showcase. A committed copy used to be checked
+  against a fresh measurement, which failed every pull request that changed a byte of `src/` until
+  someone re-ran the task and committed the number - a check on bookkeeping, not on the bundle.
+  Run `deno task size --write` once before `deno check`-ing the showcase in a fresh clone.
 - The pull-request comment measures both sides. **The base is measured with the base's own copy of
   the script**, not the branch's - otherwise a PR that changes how measuring works would report the
   difference as if it were a size change.
