@@ -59,7 +59,7 @@ import { DatePicker, type DatePickerAttrsType } from "./data-entry/date-picker.t
 import { DateTimePicker, type DateTimePickerAttrsType } from "./data-entry/date-time-picker.tsx"
 import { DateTimeRangePicker, type DateTimeRangePickerAttrsType, type DateTimeRangeType } from "./data-entry/date-time-range-picker.tsx"
 import { Slider, type SliderAttrsType } from "./data-entry/slider.tsx"
-import { InputNumber, type InputNumberAttrsType } from "./data-entry/input-number.tsx"
+import { holdNumberInputToRange, InputNumber, type InputNumberAttrsType } from "./data-entry/input-number.tsx"
 import { ColorPicker, type ColorPickerAttrsType } from "./data-entry/color-picker.tsx"
 import { Combobox, type ComboboxAttrsType, type ComboboxOptionType } from "./data-entry/combobox.tsx"
 import { Upload, type UploadAttrsType } from "./data-entry/upload.tsx"
@@ -311,6 +311,7 @@ export {
 
     InputNumber,
     type InputNumberAttrsType,
+    holdNumberInputToRange,
 
     ColorPicker,
     type ColorPickerAttrsType,

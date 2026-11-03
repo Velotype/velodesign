@@ -24,6 +24,15 @@ export type InputNumberAttrsType = {
     required?: boolean
     /** Is the input disabled? */
     disabled?: boolean
+    /**
+     * Keep a typed value within `min`, `max` and a whole-number `step` (default: `true`). A native
+     * number input's limits only bound its steppers - typed, any number stands. While typing, a
+     * value past `max` becomes `max` and a fraction in a box of whole steps its whole part; when
+     * the value is committed (`change`), one under `min` becomes `min` - not while typing, where
+     * "2" may be on its way to "20". Each correction is followed by an `input` event, so a value
+     * read in `onInput` is always the held one. `false` leaves typed values as typed.
+     */
+    holdToRange?: boolean
     /** Callback for onInput event */
     onInput?: (event: TargetedInputEvent<HTMLInputElement>) => void
     /** Callback for onChange event */
@@ -31,6 +40,24 @@ export type InputNumberAttrsType = {
 } & IdAttr & StylePassthroughAttrs
 
 let areInputNumberStylesMounted = false
+
+/**
+ * Hold an `<input type="number"/>`'s value to its own `min`, `max` and `step` - `max` and a
+ * whole-number step while typing, `min` too once `committed`. Returns whether it changed the value.
+ */
+export function holdNumberInputToRange(input: HTMLInputElement, committed: boolean): boolean {
+    const typed = input.value
+    if (typed === "") {return false}
+    let held = Number(typed)
+    if (!Number.isFinite(held)) {return false}
+    const step = input.step === "" || input.step === "any" ? (input.step === "any" ? undefined : 1) : Number(input.step)
+    if (step !== undefined && Number.isInteger(step) && !Number.isInteger(held)) {held = Math.trunc(held)}
+    if (input.max !== "" && held > Number(input.max)) {held = Number(input.max)}
+    if (committed && input.min !== "" && held < Number(input.min)) {held = Number(input.min)}
+    if (held === Number(typed)) {return false}
+    input.value = String(held)
+    return true
+}
 
 /**
  * A themed numeric input, wrapping a native `<input type="number"/>` (including its
@@ -53,6 +80,19 @@ width:8em;
 `, "vtd/InputNumber")
     }
 
+    const hold = attrs.holdToRange !== false
+    const onInput = (event: TargetedInputEvent<HTMLInputElement>) => {
+        if (hold) {holdNumberInputToRange(event.currentTarget, false)}
+        attrs.onInput?.(event)
+    }
+    const onChange = (event: TargetedEvent<HTMLInputElement, Event>) => {
+        // A committed value under `min` is raised to it; `input` tells whoever reads it there
+        if (hold && holdNumberInputToRange(event.currentTarget, true)) {
+            event.currentTarget.dispatchEvent(new Event("input", {bubbles: true}))
+        }
+        attrs.onChange?.(event)
+    }
+
     return passthroughAttrsToElement<HTMLInputElement>(<input
         type="number"
         class="vtd-input-number"
@@ -64,6 +104,6 @@ width:8em;
         placeholder={attrs.placeholder}
         disabled={attrs.disabled}
         required={attrs.required}
-        onInput={attrs.onInput}
-        onChange={attrs.onChange}/>, attrs)
+        onInput={onInput}
+        onChange={onChange}/>, attrs)
 }
