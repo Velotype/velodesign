@@ -41,6 +41,8 @@ export type ComboboxAttrsType = {
     noMatchMessage?: RenderableElements
     /** If this field is required in a `<form/>` */
     required?: boolean
+    /** Maximum number of characters accepted */
+    maxLength?: number
     /** Is the combobox disabled? */
     disabled?: boolean
     /**
@@ -321,6 +323,7 @@ ${searchHighlightCss}
             value={attrs.value}
             placeholder={attrs.placeholder}
             disabled={attrs.disabled}
+            maxlength={attrs.maxLength}
             required={attrs.required}
             autocomplete="off"
             role="combobox"

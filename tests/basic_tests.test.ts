@@ -2560,6 +2560,15 @@ describe('basic component rendering', () => {
     })
 
 
+    itWrap("a combobox with maxLength stops accepting characters at it", "combobox", "#capped-combobox", async (_selection: ElementHandle) => {
+        const input = await page.$("#showcase-theme-light #capped-combobox input.vtd-combobox")
+        if (!input) {fail("ERROR: the capped combobox is missing")}
+        await input!.click()
+        await page.keyboard.type("twelve chars")
+        const value = await page.evaluate(`document.querySelector("#showcase-theme-light #capped-combobox input.vtd-combobox").value`)
+        if (value != "twelve cha") {fail(`ERROR: typing past the limit left ${JSON.stringify(value)}`)}
+    })
+
     itWrap("hideWhenEmpty keeps the panel closed while nothing matches, and opens it when something does", "combobox", "#quiet-combobox", async (_selection: ElementHandle) => {
         const typed = (text: string) => page.evaluate(`(() => {
             const scope = document.querySelector("#showcase-theme-light #quiet-combobox")
@@ -3146,7 +3155,7 @@ describe('basic component rendering', () => {
         if (empty.clearShown) {fail("ERROR: the clear control is shown on an empty field")}
         // A plain TextBox must be untouched by this - it still renders a bare input
         if (empty.wrappers != 1) {fail(`ERROR: ${empty.wrappers} wrappers rendered, expected exactly the one clearable field`)}
-        if (empty.bareInputs != 5) {fail(`ERROR: ${empty.bareInputs} of the 5 plain text boxes are still bare inputs`)}
+        if (empty.bareInputs != 6) {fail(`ERROR: ${empty.bareInputs} of the 6 plain text boxes are still bare inputs`)}
 
         await page.evaluate(`(() => {
             const input = document.getElementById("showcase-theme-light").querySelector("#clearable-box input.vtd-text-box")
@@ -3165,6 +3174,28 @@ describe('basic component rendering', () => {
         if (cleared.reported != "(empty)") {
             fail(`ERROR: clearing did not fire onInput, last saw ${JSON.stringify(cleared.reported)}`)
         }
+    })
+
+    // A field the server caps should stop the typing at the cap, not let a person write a paragraph
+    // and then refuse the save
+    itWrap("a text box with maxLength stops accepting characters at it", "text-box", "#max-length-box", async (_selection: ElementHandle) => {
+        const limits = await page.evaluate(`(() => {
+            const scope = document.getElementById("showcase-theme-light")
+            return {
+                capped: scope.querySelector("#max-length-box input.vtd-text-box").maxLength,
+                // -1 is the DOM's "no limit": a TextBox without maxLength must not get one
+                uncapped: scope.querySelector("#clearable-box input.vtd-text-box").maxLength,
+            }
+        })()`) as {capped: number, uncapped: number}
+        if (limits.capped != 10) {fail(`ERROR: maxLength={10} rendered a limit of ${limits.capped}`)}
+        if (limits.uncapped != -1) {fail(`ERROR: a text box without maxLength has a limit of ${limits.uncapped}`)}
+
+        const input = await page.$("#showcase-theme-light #max-length-box input.vtd-text-box")
+        if (!input) {fail("ERROR: the capped text box is missing")}
+        await input!.click()
+        await page.keyboard.type("twelve chars")
+        const value = await page.evaluate(`document.querySelector("#showcase-theme-light #max-length-box input.vtd-text-box").value`)
+        if (value != "twelve cha") {fail(`ERROR: typing past the limit left ${JSON.stringify(value)}`)}
     })
 
 

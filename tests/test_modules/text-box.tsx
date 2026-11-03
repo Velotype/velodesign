@@ -14,6 +14,7 @@ class TextBoxGallery extends Component<EmptyAttrs> {
             <div>Type phone: <TextBox type="phone"/></div>
             <div>Type password: <TextBox type="password"/></div>
             <div>Type new-password: <TextBox type="new-password"/></div>
+            <div id="max-length-box">At most 10 characters: <TextBox type="text" maxLength={10}/></div>
             {/*
               * clearable wraps the input, so the root is a span and the input is inside it. The
               * control only appears once there is something to clear, and clearing fires the same
