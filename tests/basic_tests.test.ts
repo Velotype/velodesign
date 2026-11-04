@@ -1307,6 +1307,16 @@ describe('basic component rendering', () => {
         if (state.boxWidth > 1) {fail(`ERROR: the table must be visually hidden, its box is ${state.boxWidth}px wide`)}
     })
 
+    itWrap("a pie's hidden table bakes in no English, and takes its column names from attrs", "charts", "#donut-pie-chart", async (_selection: ElementHandle) => {
+        // getElementById: the gallery renders every chart twice, once per theme
+        const headers = await page.evaluate(() => ({
+            named: Array.from(document.getElementById("donut-pie-chart")!.querySelectorAll("thead th")).map(th => th.textContent),
+            unnamed: Array.from(document.getElementById("default-pie-chart")!.querySelectorAll("thead th")).map(th => th.textContent),
+        }))
+        assertEquals(headers.named, ["", "Headcount", "Of total"])
+        assertEquals(headers.unnamed, ["", "", ""])
+    })
+
     itWrap("charts do no DOM work for a hover that changes nothing", "charts", "#default-line-chart", async (_selection: ElementHandle) => {
         // `pointermove` fires up to ~120 times a second. The first cut rebuilt the tooltip's whole
         // subtree on every one: 60 moves inside a single column produced 580 mutation records and

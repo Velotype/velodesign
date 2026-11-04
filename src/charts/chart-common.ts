@@ -82,7 +82,7 @@ export type ChartSeriesType = {
 export type ChartPointType = {
     /** The category's label, shown on the axis and in the tooltip */
     label: string
-    /** Value per series `key`; a missing key is a gap rather than a zero */
+    /** Value per series `key`; a missing key is plotted as zero */
     values: Record<string, number | undefined>
 }
 

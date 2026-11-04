@@ -32,6 +32,13 @@ export type PieChartAttrsType = {
     centerSubLabel?: string
     /** Shows each slice's share of the total in the tooltip (default: `true`) */
     showPercent?: boolean
+    /**
+     * Header of the value column in the visually-hidden table a screen reader reads. No default -
+     * this package doesn't assume a language, so the column is unnamed unless this is set.
+     */
+    valueLabel?: string
+    /** Header of the share-of-total column in that table. No default, for the same reason */
+    shareLabel?: string
 } & ChartBaseAttrsType & IdAttr & StylePassthroughAttrs
 
 /**
@@ -59,7 +66,7 @@ export class PieChart extends ChartFrame<PieChartAttrsType> {
     protected override dataTable(): ChartDataTable | undefined {
         const total = this.#total()
         return {
-            columns: ["", "Value", "Share"],
+            columns: ["", this.chartAttrs.valueLabel ?? "", this.chartAttrs.shareLabel ?? ""],
             rows: this.chartAttrs.data.map(slice => [
                 slice.label,
                 this.format(Math.max(0, slice.value)),
