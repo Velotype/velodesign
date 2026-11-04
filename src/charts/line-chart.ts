@@ -155,7 +155,7 @@ export class LineChart extends ChartFrame<LineChartAttrsType> {
      */
     #attachHover(svg: SVGElement, box: PlotBox): void {
         const attrs = this.chartAttrs
-        const marker = svgEl("line", {class: "vtd-chart-gridline", y1: box.top, y2: box.top + box.height})
+        const marker = svgEl("line", {class: "vtd-chart-cursor", y1: box.top, y2: box.top + box.height})
         marker.setAttribute("visibility", "hidden")
         svg.appendChild(marker)
 

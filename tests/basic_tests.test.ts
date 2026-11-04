@@ -1188,6 +1188,17 @@ describe('basic component rendering', () => {
         if (!state.categories.includes("Jan")) {fail(`ERROR: expected category labels, got ${JSON.stringify(state.categories)}`)}
     })
 
+    itWrap("the line chart's hover cursor stands out from the grid", "charts", "#default-line-chart", async (_selection: ElementHandle) => {
+        const stroke = await page.evaluate(() => {
+            const root = document.getElementById("default-line-chart") as HTMLElement
+            const cursor = root.querySelector("line.vtd-chart-cursor")
+            const grid = root.querySelector("line.vtd-chart-gridline")
+            return {cursor: cursor ? getComputedStyle(cursor).stroke : null, grid: grid ? getComputedStyle(grid).stroke : null}
+        })
+        if (stroke.cursor === null) {fail("ERROR: expected the hover cursor to have its own class")}
+        if (stroke.cursor === stroke.grid) {fail(`ERROR: expected the hover cursor to differ from a grid line, both are ${stroke.grid}`)}
+    })
+
     itWrap("charts show a tooltip naming every series at the hovered category", "charts", "#default-line-chart", async (_selection: ElementHandle) => {
         // The hit target is one rect over the whole plot, so a pointer near a column is enough -
         // this is the interaction that decides whether a line chart is usable at all.
