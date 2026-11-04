@@ -919,7 +919,7 @@ component - the thing worth eyeballing is whether the charts look like *each oth
 These are non-obvious and have each caused a real bug in this package at least once:
 
 1. **`{condition && <jsx/>}` renders the literal text `"false"` (or `"0"`) if `condition` is falsy and not `undefined`.** `RenderableElements` includes `BasicTypes = string | bigint | number | boolean` as directly renderable, so a boolean/number `&&` short-circuit doesn't vanish the way it does in React — it prints. This bit `Breadcrumbs`'s separator (`index < items.length - 1 && <span/>` printed `"false"` after the last crumb). Safe pattern: only use `{x && <jsx/>}` when `x`'s type is `SomeType | undefined` (e.g. `attrs.header?: RenderableElements` — `undefined && X` short-circuits to `undefined`, which *is* silently skipped). For a genuine boolean condition, or anything that could be `0`/`""`, use a ternary with `null` for the false branch: `{condition ? <jsx/> : null}`.
-2. **No raw `<svg>`/`<path>` JSX tags.** `tsx-core.ts` explicitly documents this: the generic `<HTML tag="...">` escape hatch "does not support `<svg>` or `<math>`". For inline vector art, either register it through `icon.ts`'s `registerIcon`/`<I i="key"/>` (which builds the SVG manually via `document.createElementNS`), or use the exported `<SVG innerHTML="...">` component, or — often simplest — fake it with pure CSS (`border`/`clip-path`/`transform:rotate`), which is what `Checkbox`'s checkmark, `RadioButton`'s/`Toggle`'s dot, and `Select`'s chevron all do instead of touching SVG at all.
+2. **No raw `<svg>`/`<path>` JSX tags.** `tsx-core.ts` explicitly documents this: the generic `<HTML tag="...">` escape hatch "does not support `<svg>` or `<math>`". For inline vector art, either register it through `icon.ts`'s `registerIcon`/`<I i="key"/>` (which builds the SVG manually via `document.createElementNS`), or — often simplest — fake it with pure CSS (`border`/`clip-path`/`transform:rotate`), which is what `Checkbox`'s checkmark, `RadioButton`'s/`Toggle`'s dot, and `Select`'s chevron all do instead of touching SVG at all.
 3. **A custom component only forwards attrs its own `XAttrsType` declares** (see Attrs types above) — don't assume passing an arbitrary native attribute through a wrapped component will work; add it to the attrs type first, or drop down to the native tag directly if it's a one-off.
 4. **`refresh()` on a `Component` remounts its whole subtree** — see the `Component` class section above for the stale-`ElementHandle` implication when testing, and the section above that for why to avoid calling it at all on a component that accepts children.
 5. **`<ClassComponent/>` JSX evaluates to the rendered DOM element, not the component instance.** `Modal`'s `showModal()`/`close()` calling code (`const modal = <Modal .../>; modal.showModal()`) only works because `<dialog>` happens to have those exact method names *natively* - it's not evidence that JSX returns the instance. If you need to call a genuinely custom method later, use `getComponent<T>(<ClassComponent/>)` (from `@velotype/velotype`) to get the real instance, then embed *that* in your tree instead (`Component` instances are valid `RenderableElements` and get unwrapped correctly on insertion). This bit `tests/test_modules/explorer.tsx`: a naive `const preview = <StoryPreview/>; preview.setStoryAndProps(...)` threw `setStoryAndProps is not a function` at runtime, since `preview` was the `<div>` `StoryPreview` rendered, not the instance.
@@ -1197,6 +1197,16 @@ of features that are tempting and not widely available yet - anchor positioning,
 full checker. Revise it now and then from MDN's Baseline data: an entry comes off once its feature
 is widely available, and a new tempting one goes on. Check MDN before using anything recent that
 isn't on it.
+
+## No HTML strings
+
+Nothing in this package turns a string into DOM: no `innerHTML`, `outerHTML`, `insertAdjacentHTML`,
+`DOMParser` and the like, and none of velotype's `HTML`, `SVG` and `MATH` components, which set
+`innerHTML` from a string. Build nodes instead. A consumer's text can then never become markup, and
+the package works on a page with a strict Trusted Types policy.
+
+Two checks guard it. `deno task check-html-strings` refuses those APIs in CI, and every page in the
+Astral suite is served under `require-trusted-types-for 'script'`, so a test that reaches one throws.
 
 ## A floating part keeps itself in view
 
@@ -1726,7 +1736,7 @@ nothing merges that they do not pass.
 
 | Workflow | Runs on | What it gates |
 |---|---|---|
-| `ci.yml` - *Typecheck, lint and publish dry run* | PR + push to main | `deno check` on the package, showcase and tests; `deno lint`; `deno task check-jsx`; `deno task check-baseline` (only widely available web features); `deno publish --dry-run` |
+| `ci.yml` - *Typecheck, lint and publish dry run* | PR + push to main | `deno check` on the package, showcase and tests; `deno lint`; `deno task check-jsx`; `deno task check-baseline` (only widely available web features); `deno task check-html-strings` (no API that turns a string into DOM); `deno publish --dry-run` |
 | `ci.yml` - *Astral suite* | PR + push to main | `deno task test`, which bundles all 72 gallery modules and drives them |
 | `bundle-size.yml` | PR | Comments the gzip/raw size of the whole library against the base branch. Advisory - it reports, it does not block |
 | `auto-merge.yml` | PR | Turns on GitHub's auto-merge, so a PR merges itself once the required checks go green |

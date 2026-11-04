@@ -16,6 +16,35 @@ export type ServerContextMetadata = {
     st?: number
 }
 
+/** Every gallery module the server serves */
+export const setOfModules: string[] = ['button','icon','page-selector','text-box','modal','text-form-field','radio-button','choice-cards','lightbox','showcase','time-ago',
+    'checkbox','toggle','textarea','select','select-menu','badge','card','alert','tooltip','spinner','tabs','divider',
+    'nav-link','breadcrumbs','pagination','navbar','sidebar','menu',
+    'toast','accordion','avatar',
+    'progress','skeleton','tag','empty','collapse','statistic','list','timeline','aspect-ratio','scroll-area',
+    'date-picker','date-time-picker','date-time-range-picker','slider','input-number','color-picker','combobox','upload',
+    'drawer','popover','popconfirm','steps','rate',
+    'table','form','context-menu','resizable','carousel','calendar','calendar-range','event-calendar','tree','command','button-group','data-table','async-data-table','charts','typography','layout','code-block','table-of-contents','theme-options']
+
+/**
+ * A gallery page. Every page runs under a strict Trusted Types policy, so any test that reaches
+ * code assigning an HTML string sees it throw. Violations are also collected for the sweep in the
+ * suite, which catches one that the code swallows.
+ */
+function galleryPage(script: string): Response {
+    const response = new Response(`<!DOCTYPE html><html><body>
+<div id="main-page"></div>
+<script>
+window.cspViolations = []
+document.addEventListener("securitypolicyviolation", (e) => window.cspViolations.push(e.sample))
+</script>
+<script src="/build/${script}.js" type="module" ></script>
+</body></html>`,{status:200})
+    response.headers.set("content-type", "text/html; charset=utf-8")
+    response.headers.set("content-security-policy", "require-trusted-types-for 'script'")
+    return response
+}
+
 export async function startAppServer(server_port: number): Promise<Server<ServerContextMetadata>> {
     const router: Router<ServerContextMetadata> = new Router<ServerContextMetadata>({
         context_metadata_constructor: () => ({}),
@@ -37,32 +66,10 @@ export async function startAppServer(server_port: number): Promise<Server<Server
             }
         }
     ))
-    const setOfModules = ['button','icon','page-selector','text-box','modal','text-form-field','radio-button','choice-cards','lightbox','showcase','time-ago',
-        'checkbox','toggle','textarea','select','select-menu','badge','card','alert','tooltip','spinner','tabs','divider',
-        'nav-link','breadcrumbs','pagination','navbar','sidebar','menu',
-        'toast','accordion','avatar',
-        'progress','skeleton','tag','empty','collapse','statistic','list','timeline','aspect-ratio','scroll-area',
-        'date-picker','date-time-picker','date-time-range-picker','slider','input-number','color-picker','combobox','upload',
-        'drawer','popover','popconfirm','steps','rate',
-        'table','form','context-menu','resizable','carousel','calendar','calendar-range','event-calendar','tree','command','button-group','data-table','async-data-table','charts','typography','layout','code-block','table-of-contents','theme-options']
     setOfModules.forEach((module) => {
-        router.get(`/${module}`, function() {
-            const response = new Response(`<!DOCTYPE html><html><body>
-<div id="main-page"></div>
-<script src="/build/${module}.js" type="module" ></script>
-</body></html>`,{status:200})
-            response.headers.set("content-type", "text/html; charset=utf-8")
-            return response
-        })
+        router.get(`/${module}`, () => galleryPage(module))
     })
-    router.get('/', function() {
-        const response = new Response(`<!DOCTYPE html><html><body>
-<div id="main-page"></div>
-<script src="/build/explorer.js" type="module" ></script>
-</body></html>`,{status:200})
-        response.headers.set("content-type", "text/html; charset=utf-8")
-        return response
-    })
+    router.get('/', () => galleryPage('explorer'))
     await router.mountFiles("/build/", `${Deno.cwd()}/tests/build/`)
     const app = new Server<ServerContextMetadata>(router)
     const prom = new Promise<Server<ServerContextMetadata>>((resolve) => {
