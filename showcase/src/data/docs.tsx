@@ -582,7 +582,7 @@ const typeDefinitions: Record<string, TypeDoc> = {
         description: "One category on a chart's axis, with a value per series.",
         fields: [
             {name: "label", type: "string", required: true, description: "The category's name, drawn on the axis."},
-            {name: "values", type: "Record<string, number | undefined>", required: true, description: "One entry per series, keyed by that series' key. A missing or undefined value leaves a gap rather than plotting zero."},
+            {name: "values", type: "Record<string, number | undefined>", required: true, description: "One entry per series, keyed by that series' key. A missing or undefined value is plotted as zero."},
         ],
     },
     ChartSeriesType: {
@@ -1245,6 +1245,8 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "centerLabel", type: "string", description: "Content for the middle of a donut."},
         {name: "centerSubLabel", type: "string", description: "Smaller text under centerLabel."},
         {name: "showPercent", type: "boolean", defaultValue: "true", description: "Shows each slice's share in the tooltip."},
+        {name: "valueLabel", type: "string", description: "Header of the value column in the visually-hidden table a screen reader reads. No default, because the package does not assume a language."},
+        {name: "shareLabel", type: "string", description: "Header of the share-of-total column in that table. No default, for the same reason."},
     ],
     Gauge: [
         {name: "title", type: "string", description: "A heading shown above the drawing. Also becomes the accessible name when ariaLabel is not set, so a visible title and a spoken one cannot disagree. Rendered as a div, not a heading element - the chart cannot know what level it sits at."},
