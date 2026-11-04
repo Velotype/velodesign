@@ -257,6 +257,7 @@ export function mountChartStyles(): void {
 .vtd-sparkline{display:inline-block;vertical-align:middle;line-height:0;}
 .vtd-sparkline .vtd-chart-svg{width:auto;}
 .vtd-chart-gridline{stroke:var(--background-3);stroke-width:1;shape-rendering:crispedges;}
+.vtd-chart-cursor{stroke:var(--background-7);stroke-width:1;shape-rendering:crispedges;pointer-events:none;}
 .vtd-chart-axis{stroke:var(--background-5);stroke-width:1;shape-rendering:crispedges;}
 ` +
 /* em, not px: this is the only place in the package that would otherwise hardcode a text size,
