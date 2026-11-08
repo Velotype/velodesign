@@ -20,7 +20,6 @@
   | `overlays/` | Modal, Drawer, Lightbox, Popover, Popconfirm, ContextMenu, Command |
   | `data-display/` | Badge, Card, Table, DataTable, AsyncDataTable, CodeBlock, Calendar, EventCalendar, Tree, Resizable … |
   | `data-entry/` | DatePicker, Slider, Combobox, Upload, Rate, Form |
-  | `charts/` | LineChart, AreaChart, BarChart, PieChart, Gauge, Sparkline |
   | `core/` | **Not a category.** Cross-cutting infrastructure imported by components in several categories, so it belongs to none of them: `utilities.ts`, `theme.ts`, `history.ts`, `strings.ts`, `license.ts`, `search-highlight.tsx`, `styles.ts`, `css-value.ts`, `placement.ts`, and the two barrels `velotype.ts` / `jsx.ts` - **every velotype import in the package goes through those two**, for reasons in *The bundle size is measured, not asserted* below. |
 
   Two placements are judgement calls rather than showcase facts: `PageSelector` and `Resizable`
@@ -39,8 +38,8 @@
 - `tests/test_modules/<name>.tsx` — a manual "gallery" page per component (see Testing below).
   These stay flat: they are pages served by name, not components.
 - **Internal modules live beside the components they serve**, not in `core/`, when only one
-  category uses them: `data-display/data-table-view.tsx` is shared by the two tables, and
-  `charts/chart-common.ts` + `charts/chart-frame.ts` by the six charts. Neither is re-exported.
+  category uses them: `data-display/data-table-view.tsx` is shared by the two tables, and isn't
+  re-exported.
 - **A component lives in the file its own name predicts**, kebab-cased: `RadioButton` in
   `radio-button.tsx`, `DateTimeRangePicker` in `date-time-range-picker.tsx`. The gallery pages in
   `tests/test_modules/` use the same stems, which are also their URLs and their `bundle-<stem>`
@@ -48,12 +47,11 @@
 
   Two deliberate exceptions:
   - **A file named for its primary component may also hold that component's close variants** -
-    `overlays/modal.tsx` has `Modal` and `ButtonModal`, `charts/line-chart.ts` has `LineChart` and
-    `AreaChart`, `form/text-form-field.tsx` has `TextFormField` plus its non-editable and editable
+    `overlays/modal.tsx` has `Modal` and `ButtonModal`, `form/text-form-field.tsx` has `TextFormField` plus its non-editable and editable
     siblings. Splitting those would be three files to read to understand one idea.
   - **A module that isn't a component is named for what it does**, not for an export:
-    `core/strings.ts` holds `LocalizedString`/`S`/`T`, and `core/utilities.ts`, `core/theme.ts`,
-    `charts/chart-common.ts` and the rest follow the same rule.
+    `core/strings.ts` holds `LocalizedString`/`S`/`T`, and `core/utilities.ts`, `core/theme.ts`
+    and the rest follow the same rule.
 
   **A component's CSS class prefix is its own name, kebab-cased** - `RadioButton` emits
   `vtd-radio-button`, `TableOfContents` emits `vtd-table-of-contents`, and the `setStylesheet` key
@@ -159,12 +157,11 @@ Three questions, in order, for any handler:
    - **Text: `textNode.nodeValue = x`, not `element.textContent = x`.** Assigning `textContent`
      *replaces* the text node; `nodeValue` mutates it. A label that updates per interaction is the
      difference between zero node churn and one churn per event.
-   - **Appearance: toggle a class**, don't write inline styles per element. `BarChart` dims
-     non-hovered bars with one class on the `<svg>` plus one on the hovered `<rect>`, precisely so
-     a few hundred bars don't each take a style write on every pointer move.
+   - **Appearance: toggle a class**, don't write inline styles per element. Dimming every
+     item but the hovered one takes a class on their parent plus one on that item, so a few hundred
+     items don't each take a style write on every pointer move.
    - **Never read layout in a handler.** `offsetWidth`, `clientHeight`, `getBoundingClientRect`
-     force a synchronous reflow. Cache the value when you draw and read the cache. The charts'
-     `containerBounds()` exists only for this.
+     force a synchronous reflow. Cache the value when you draw and read the cache.
 
 **Verify it, don't assume it.** A `MutationObserver` over the component's root, counting
 `addedNodes`/`removedNodes` across a burst of events, tells you in seconds what review will not:
@@ -180,10 +177,10 @@ for (const record of observer.takeRecords()) { /* count */ }
 ```
 
 An interaction that changes nothing should produce **zero** records. `basic_tests.test.ts`'s
-"charts do no DOM work for a hover that changes nothing" is the worked example; copy its shape for
-any new component with a continuous handler.
+"choice cards pick one, report it, change no DOM, and keep a disabled card out" is the worked example;
+copy its shape for any new component with a continuous handler.
 
-The charts are where this rule was learned: `LineChart`'s tooltip rebuilt its whole subtree on
+This rule was learned on a line chart, back when charts lived here: its tooltip rebuilt its whole subtree on
 every `pointermove`, which measured 580 mutation records and 180 new nodes for 60 moves inside a
 single column - for a reading that never changed. It now measures zero.
 
@@ -269,7 +266,7 @@ beats a layered one whatever its specificity and whatever the source order. So:
   library wants and it previously depended on luck.
 - Inside the package, sub-layers order the pieces that genuinely stack:
   `velodesign.reset, velodesign.theme, velodesign.base, velodesign.component, velodesign.composite`.
-  `base` is the shared internal modules (`disclosure-view`, `typography-common`, `chart-common`);
+  `base` is the shared internal modules (`disclosure-view`, `typography-common`);
   `composite` is a component that styles *another* component's classes and must win - `Sidebar` over
   `Tree` and `Menu`, `CalendarRange` over `Calendar`, `ButtonGroup` over `Button`, the shared
   data-table view over `TextBox`.
@@ -427,7 +424,7 @@ export const ButtonThemeOptions: {loadingSymbol: ThemeSymbol} = themeOptions({},
 
 // 3. Wraps a shared symbol in the component's own chrome. The option is the *whole* visual, so a
 //    consumer replacing it isn't stuck inside a 2.5em span; CommonThemeOptions.emptySymbol changes
-//    only the glyph, here and in both tables and every chart at once.
+//    only the glyph, here and in both tables at once.
 export const EmptyThemeOptions: {emptySymbol: ThemeSymbol} = themeOptions({}, {
     emptySymbol: function(){return <span class="vtd-empty-icon" aria-hidden="true"><CommonThemeOptions.emptySymbol/></span>}
 })
@@ -516,7 +513,7 @@ closing a `<dialog>`, or detaching the node. **Where that lands in this package:
 ### Honour `prefers-reduced-motion`
 
 `@media (prefers-reduced-motion: reduce){ ... transition:none; }` beside the component's own rules -
-`charts/chart-common.ts` and `data-display/data-table-view.tsx` set the pattern, and
+`data-display/data-table-view.tsx` sets the pattern, and
 `disclosure-view.tsx` follows it. **Most animating components still do not**, which is a real gap
 worth closing as they are touched rather than in one sweep.
 
@@ -840,75 +837,12 @@ gone; the layouts that put a label beside a control (`TextFormField`, `TextEdita
 tables' page-size control) set a gap themselves. A `Select` fills its wrapper, so stretching the
 component stretches the box and the chevron stays inside it.
 
-## Charts
+## Charts live in velochart
 
-Six components - `LineChart`, `AreaChart`, `BarChart`, `PieChart`, `Gauge`, `Sparkline` - over two
-internal modules, `charts/chart-common.ts` (palette, scales, axes, legend, tooltip, one
-stylesheet) and `charts/chart-frame.ts` (the `ChartFrame` base class). Neither internal module is exported; `index.ts`
-exports the six components, their attrs types, and `ChartThemeOptions`.
-
-**The set comes from where Ant Design and shadcn/ui agree.** shadcn ships six (area, bar, line,
-pie, radar, radial) plus container/tooltip/legend primitives; Ant ships ~25 plus a "tiny" family.
-Their overlap, minus what this package already had, is what's here - `Gauge` is shadcn's radial and
-Ant's gauge, `Sparkline` is Ant's TinyLine/TinyArea/TinyColumn. **Radar is the deliberate omission**:
-both systems ship it, but it is the least reached-for of the six and it needs polar-axis machinery
-nothing else here would share. Add it when something actually needs it.
-
-**SVG is built imperatively, never in JSX** - velotype cannot emit `<svg>` at all (gotcha 2), and
-velotype's `<SVG innerHTML="...">` can't carry the per-element event handlers hover needs. So
-`charts/chart-common.ts`'s `svgEl()` wraps `createElementNS` exactly as `typography/icon.ts` does, and every chart
-draws through it.
-
-**Charts size themselves with a `ResizeObserver`, not a scaling `viewBox`.** Scaling one fixed
-viewBox is the cheap way to be responsive and it scales the *text* too - microscopic ticks in a
-sidebar, oversized ones on a dashboard, in a package whose whole point is consistent typography.
-`ChartFrame` redraws at the container's real pixel width instead; `draw()` is therefore called many
-times and must be idempotent. `Sparkline` is the exception and is deliberately fixed-size: it is a
-glyph that sits inside a table cell, so it has no observer, no axes, no legend and no tooltip.
-
-**Series colours come from `ChartThemeOptions.seriesColors`** - eight slots built from the theme's
-four hues at two lightness steps. Never add a hex literal to a chart: it will look right in one
-theme and wrong in the other, which is exactly what the never-hardcode-a-colour rule exists to stop.
-
-Details worth keeping if these are ever reworked, each of which looked fine until it didn't:
-
-- A **full-circle pie slice draws nothing** - an SVG arc whose start and end coincide is empty - so
-  `arcPath` splits a 360° sweep into two half arcs. A single-slice pie otherwise renders blank,
-  which reads as a data bug.
-- A **gauge's value arc is inset** when `bands` are set, so the bands stay visible as a rim. Drawn
-  full-thickness it covers them completely and `bands` looks like it does nothing. (It did.)
-- A **stacked area's lower edge is the previous series' line**, not the baseline; filling every band
-  to zero makes them hide each other.
-- The **line chart's hit target is one rect over the whole plot**, tracking the nearest category -
-  not a target per point. A 2px line is not a pointer target, and this is the single detail that
-  decides whether a line chart is usable.
-- **Tooltips show each series' own value, never its stacked running total.** "This contributed 12"
-  is the fact a reader wants; "the stack reached 40" is not.
-- **The tooltip is placed beside the whole cursor-to-marker span, never on it**, flipping left near
-  the right edge and going *above* when the container is too narrow for either side. Anchoring it on
-  a single point lets it land on the other end of that span, and a plain horizontal clamp in a
-  narrow container drops it straight onto the cursor.
-- **No chart sets an SVG `<title>`.** It contributes nothing - `aria-label` already wins the
-  accessible-name computation - and it makes browsers pop their own native tooltip on hover, slow
-  and unstyled and directly in the way of the chart's. This was in the first cut and had to come out.
-
-**Hover does no DOM work when nothing changed** - see "Interaction must only touch the DOM that
-actually changed" above, which this is the worked example of. Concretely: the tooltip pools its row
-elements and writes through `Text.nodeValue`, the marker line is rewritten only when the nearest
-category changes, and `containerBounds()` returns dimensions cached at draw time so the handler
-never forces a reflow.
-
-**Accessibility: a hidden data table, not just a label.** `role="img"` + `aria-label` is a weak
-ceiling - it gives a screen reader the chart's *name* and none of its numbers. So every chart with
-tabular values implements `dataTable()`, the frame renders it into a visually-hidden `<table>`
-(caption = `ariaLabel`, row headers per category), and the drawing itself becomes `aria-hidden`:
-the table *is* the content, and the SVG is decoration. Values go through the caller's `formatValue`,
-so what is read aloud matches the axis. `Gauge` returns `undefined` and keeps `role="img"` + a
-label, because one number against a range is exactly what a label already says and a one-row table
-would be more structure for less information.
-
-One gallery page covers the whole category (`tests/test_modules/charts.tsx`) rather than one per
-component - the thing worth eyeballing is whether the charts look like *each other*.
+`@velotype/velochart` is the chart library, and it is built on this package: its controls are velodesign's
+components. Charts were here once and were removed when velochart outgrew them. So this package is where
+a general component goes, velochart's or anyone's. When velochart needs a part that lacks something, the
+part gets it here, as a general feature with its own tests, as `Popover` got `align` and `close()`.
 
 ## Native-element wrapping, not reimplemented widgets
 
@@ -1603,8 +1537,8 @@ filtered list gets the same treatment rather than reinventing it. A filtered lis
 shorter makes the reader re-derive the match themselves.
 
 **A category name is a search term too, and it is the one a reader who does not yet know a
-component's name actually has.** Typing "chart" found nothing while every chart sat one level down
-inside a category called Charts. A category that matches keeps *all* of its components rather than
+component's name actually has.** Typing "form" found nothing while every form control sat one level down
+inside a category called Form. A category that matches keeps *all* of its components rather than
 the four whose names happen to contain the word - the match is the category itself - and the mark
 goes on the category label, which is what says why the entries under it are there. A check that
 demands a mark on every surviving entry is wrong for that reason and had to be relaxed to "marked,
@@ -1642,8 +1576,8 @@ end in `Children` (`confirmButtonChildren`, `columnToggleChildren`, …) stay in
 those shapes, rendered below the attribute table with *the same columns* - a field of
 `AccordionItemType` is the same kind of row as an attribute of `Accordion`, and a table that looked
 different would suggest otherwise, so both call `attrColumns()`. `typeDefinitions` holds each type
-once and `componentTypes` maps components to them, because the three cartesian charts all point at
-`ChartPointType` and a copy per component is how copies drift. Read the fields off the real
+once and `componentTypes` maps components to them, because a copy per component is how copies
+drift. Read the fields off the real
 `export type` rather than from memory - two of them are a shared base intersected with per-table
 additions and are easy to get wrong.
 

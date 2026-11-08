@@ -24,7 +24,7 @@ export const setOfModules: string[] = ['button','icon','page-selector','text-box
     'progress','skeleton','tag','empty','collapse','statistic','list','timeline','aspect-ratio','scroll-area',
     'date-picker','date-time-picker','date-time-range-picker','slider','input-number','color-picker','combobox','upload',
     'drawer','popover','popconfirm','steps','rate',
-    'table','form','context-menu','resizable','carousel','calendar','calendar-range','event-calendar','tree','command','button-group','data-table','async-data-table','charts','typography','layout','code-block','table-of-contents','theme-options']
+    'table','form','context-menu','resizable','carousel','calendar','calendar-range','event-calendar','tree','command','button-group','data-table','async-data-table','typography','layout','code-block','table-of-contents','theme-options']
 
 /**
  * A gallery page. Every page runs under a strict Trusted Types policy, so any test that reaches

@@ -27,6 +27,19 @@ export type PopoverAttrsType = {
     placement?: PopoverPlacement
     /** Closes the popover when the user clicks anywhere outside of it (default: `true`) */
     closeOnOutsideClick?: boolean
+    /**
+     * Which end of the trigger a bubble above or below it lines up with (default: `"start"`). `"end"`
+     * runs it leftward from the trigger's right edge, for a trigger at the right of a page or a panel.
+     * `"auto"` picks when it opens, running into the page from whichever half the trigger is in. The
+     * bubble still slides to stay in view, whichever this is.
+     */
+    align?: "start" | "end" | "auto"
+    /** Makes a bubble with room on neither side shorter, scrolling inside, rather than letting it cover its trigger (default: `false`) */
+    scrolls?: boolean
+    /** Called when it has opened and been placed, to move focus into it for instance */
+    onOpen?: () => void
+    /** Called when it has closed, however it was closed */
+    onClose?: () => void
 } & IdAttr & StylePassthroughAttrs
 
 let arePopoverStylesMounted = false
@@ -68,30 +81,60 @@ export class Popover extends Component<PopoverAttrsType> {
 
     /** Where the bubble can be seen, on the side asked for if it has room */
     #placing(): PlaceInViewOptions {
-        return {side: this.#attrs.placement || "bottom", setSide: sideClassSetter(this.#bubble, "vtd-popover")}
+        return {side: this.#attrs.placement || "bottom", setSide: sideClassSetter(this.#bubble, "vtd-popover"), scrolls: this.#attrs.scrolls}
     }
 
-    /** Close the popover */
-    #close = (restoreFocus = false) => {
+    /** Lines the bubble up with the end of the trigger it was asked for, working out `"auto"` from where the trigger is now */
+    #applyAlign(): void {
+        const align = this.#attrs.align ?? "start"
+        let end = align === "end"
+        if (align === "auto") {
+            const trigger = this.#wrapper.getBoundingClientRect()
+            end = trigger.left + trigger.width / 2 > document.documentElement.clientWidth / 2
+        }
+        this.#bubble.classList.toggle("vtd-popover-align-end", end)
+    }
+
+    /** Whether the popover is open */
+    isOpen(): boolean {
+        return this.#bubble.classList.contains("vtd-popover-open")
+    }
+
+    /** Opens the popover, as a click on its trigger does */
+    open(): void {
+        if (this.isOpen()) {
+            return
+        }
+        this.#previouslyFocusedEl = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        this.#applyAlign()
+        this.#bubble.classList.add("vtd-popover-open")
+        const placing = this.#placing()
+        placeInView(this.#bubble, placing)
+        this.#stopPlacing = keepPlaced(this.#bubble, () => [[this.#bubble, placing]])
+        this.#attrs.onOpen?.()
+    }
+
+    /** Closes the popover, for content that finishes what it opened for. `restoreFocus` returns focus to where it was before opening */
+    close(restoreFocus: boolean = false): void {
+        if (!this.isOpen()) {
+            return
+        }
         this.#bubble.classList.remove("vtd-popover-open")
         this.#stopPlacing?.()
         this.#stopPlacing = undefined
         if (restoreFocus) {
             this.#previouslyFocusedEl?.focus()
         }
+        this.#attrs.onClose?.()
     }
 
     /** Open/close the popover */
     #toggle = () => {
-        if (this.#bubble.classList.contains("vtd-popover-open")) {
-            this.#close()
-            return
+        if (this.isOpen()) {
+            this.close()
+        } else {
+            this.open()
         }
-        this.#previouslyFocusedEl = document.activeElement instanceof HTMLElement ? document.activeElement : null
-        this.#bubble.classList.add("vtd-popover-open")
-        const placing = this.#placing()
-        placeInView(this.#bubble, placing)
-        this.#stopPlacing = keepPlaced(this.#bubble, () => [[this.#bubble, placing]])
     }
 
     /** Close the popover if it's open, outside-click closing is enabled, and the click landed outside of it */
@@ -99,21 +142,21 @@ export class Popover extends Component<PopoverAttrsType> {
         if (this.#attrs.closeOnOutsideClick === false) {
             return
         }
-        if (!this.#bubble.classList.contains("vtd-popover-open")) {
+        if (!this.isOpen()) {
             return
         }
         if (event.target instanceof Node && this.#wrapper.contains(event.target)) {
             return
         }
-        this.#close()
+        this.close()
     }
 
     /** Escape closes the popover, from anywhere inside it (trigger or bubble content) - no
      * native behavior provides this since it's not built on `<dialog>`/`<details>` */
     #handleKeyDown = (event: KeyboardEvent) => {
-        if (event.key == "Escape" && this.#bubble.classList.contains("vtd-popover-open")) {
+        if (event.key == "Escape" && this.isOpen()) {
             event.preventDefault()
-            this.#close(true)
+            this.close(true)
         }
     }
 
@@ -155,6 +198,7 @@ box-shadow:0 2px 8px rgba(0,0,0,0.15);
 .vtd-popover-bottom{top:100%;left:0;margin-block-start:0.4em;}
 .vtd-popover-left{right:100%;top:0;margin-inline-end:0.4em;}
 .vtd-popover-right{left:100%;top:0;margin-inline-start:0.4em;}
+.vtd-popover-top.vtd-popover-align-end,.vtd-popover-bottom.vtd-popover-align-end{left:auto;right:0;}
 `, "vtd/Popover")
         }
 

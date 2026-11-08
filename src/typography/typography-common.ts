@@ -20,7 +20,7 @@ let areTypographyStylesMounted = false
 /**
  * Mounts the stylesheet the three typography components share, once.
  *
- * One key for the category, matching `DataTable`/`AsyncDataTable` and the charts: a heading and a
+ * One key for the category, matching `DataTable`/`AsyncDataTable`: a heading and a
  * paragraph that disagree about line height are worse than either being wrong on its own.
  */
 export function mountTypographyStyles(): void {

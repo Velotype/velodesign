@@ -58,7 +58,7 @@ Calendar, CalendarRange, Tree, TimeAgo, Resizable
 **Data Entry** - DatePicker, DateTimePicker, DateTimeRangePicker, Slider, InputNumber, ColorPicker,
 Combobox, Upload, Rate, Form, FormField
 
-**Charts** - LineChart, AreaChart, BarChart, PieChart, Gauge, Sparkline
+**Charts** are in [velochart](https://jsr.io/@velotype/velochart), built on this package.
 
 Every component's own file (`src/<name>.tsx`) documents its full prop type and any non-obvious
 design decisions inline. For a live, browsable reference with every component's variants, props,

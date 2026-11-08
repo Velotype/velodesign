@@ -31,8 +31,8 @@ function buildSidebarItems(filterText: string, openCategories: Set<string>): Sid
     const filtering = filterLower.length > 0
     return groupedDocs()
         // A category name is a search term like any other, and it is the one a reader who does not
-        // yet know a component's name actually has: typing "chart" found nothing at all while every
-        // chart sat one level down inside a category called Charts. A category that matches keeps
+        // yet know a component's name actually has: typing "form" found nothing at all while every
+        // form control sat one level down inside a category called Form. A category that matches keeps
         // all of its components rather than none - the match is the category itself.
         .map(bucket => ({
             group: bucket.group,

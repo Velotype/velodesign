@@ -96,7 +96,7 @@ export type CommonThemeOptionsType = {
     cancelSymbol: ThemeSymbol
     /** Accepts a pending action, or marks one already done - `Popconfirm`, an inline edit, a completed `Steps` step */
     confirmSymbol: ThemeSymbol
-    /** Stands in for content that isn't there - `Empty`, both tables, every chart */
+    /** Stands in for content that isn't there - `Empty` and both tables */
     emptySymbol: ThemeSymbol
     /** Marks items omitted from a sequence - `Breadcrumbs`' expander, `Pagination`'s gap */
     collapseSymbol: ThemeSymbol

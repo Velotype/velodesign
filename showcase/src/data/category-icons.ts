@@ -28,8 +28,6 @@ const categoryIcons: Record<string, string> = {
     "Overlays": "M2 3h20v2H2zM2 19h20v2H2zM2 5h2v14H2zM20 5h2v14h-2zM7 8h10v8H7z",
     // A table: header band, then four cells
     "Data Display": "M3 4h18v4H3zM3 9.5h8v4.5H3zM13 9.5h8v4.5h-8zM3 15.5h8V20H3zM13 15.5h8V20h-8z",
-    // Three ascending bars
-    "Charts": "M3 13h4.5v8H3zM9.75 7.5h4.5V21h-4.5zM16.5 3h4.5v18h-4.5z",
     // A pencil, nib at the lower left
     "Data Entry": "M3.5 20.5l1.2-4.4L15.9 4.9l3.2 3.2L7.9 19.3z",
     // Not a category: the magnifier that stands in for the search box on the collapsed rail

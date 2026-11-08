@@ -283,8 +283,8 @@ tab-size:4;
 .vtd-code-block code{font:inherit;background:none;padding:0;border-radius:0;}
 ` +
 /*
- * Token colours come from the theme's four hues, never a literal - the same rule the charts
- * follow. Each hue is taken at a step that keeps contrast against --background-1 in both themes,
+ * Token colours come from the theme's four hues, never a literal - the same rule every component
+ * follows. Each hue is taken at a step that keeps contrast against --background-1 in both themes,
  * since that ramp inverts between them.
  */
 `

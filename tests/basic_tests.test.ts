@@ -704,6 +704,105 @@ describe('basic component rendering', () => {
         if (stillOpen) {fail("ERROR: expected popover to close after an outside click")}
     })
 
+    itWrap("a popover can be opened and closed by its content or the page, and says when", "popover", "#driven-popover", async (_selection: ElementHandle) => {
+        const state = await page.evaluate(() => {
+            const g = globalThis as unknown as {driven: {open: () => void, close: (restoreFocus?: boolean) => void, isOpen: () => boolean}, heard: {opened: number, closed: number}}
+            const outside = document.createElement("button")
+            document.body.appendChild(outside)
+            outside.focus()
+            const result: Record<string, unknown> = {starts: g.driven.isOpen()}
+            g.driven.open()
+            result.opened = g.driven.isOpen()
+            result.focusInside = document.activeElement?.id === "driven-input"
+            g.driven.open()
+            result.heardOnce = g.heard.opened
+            g.driven.close(true)
+            result.closed = g.driven.isOpen()
+            result.focusBack = document.activeElement === outside
+            g.driven.close()
+            result.heardClosedOnce = g.heard.closed
+            // However it closes, it says so
+            g.driven.open()
+            document.body.click()
+            result.outsideHeard = g.heard.closed
+            g.driven.open()
+            document.getElementById("driven-input")!.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", bubbles: true}))
+            result.escapeHeard = g.heard.closed
+            outside.remove()
+            return result
+        })
+        assertEquals(state, {starts: false, opened: true, focusInside: true, heardOnce: 1, closed: false, focusBack: true, heardClosedOnce: 1, outsideHeard: 2, escapeHeard: 3})
+    })
+
+    itWrap("a popover's bubble lines up with the end of the trigger it was asked to, and auto runs into the page", "popover", "#align-end-popover", async (_selection: ElementHandle) => {
+        await page.setViewportSize({width: 1000, height: 600})
+        try {
+            const state = await page.evaluate(() => {
+                const measure = (id: string) => {
+                    const root = document.getElementById(id) as HTMLElement
+                    ;(root.querySelector(".vtd-popover-trigger") as HTMLElement).click()
+                    const bubble = root.querySelector(".vtd-popover-content")!.getBoundingClientRect()
+                    const trigger = root.getBoundingClientRect()
+                    document.body.click()
+                    return {left: bubble.left - trigger.left, right: bubble.right - trigger.right}
+                }
+                return {end: measure("align-end-popover"), autoRight: measure("auto-right-popover"), autoLeft: measure("auto-left-popover"), start: measure("default-popover")}
+            })
+            assertEquals(Math.abs(state.end.right) < 1, true)
+            assertEquals(state.end.left < 0, true)
+            assertEquals(Math.abs(state.start.left) < 1, true)
+            assertEquals(state.start.right > 0, true)
+            // Each runs into the page. Against the page's edge they keep their margin from it
+            assertEquals(state.autoRight.left < 0 && state.autoRight.right <= 0, true)
+            assertEquals(state.autoLeft.right > 0 && state.autoLeft.left >= 0, true)
+        } finally {
+            await page.setViewportSize({width: 400, height: 200})
+        }
+    })
+
+    itWrap("an open popover is placed again when what holds it changes size, with no resize of the window", "popover", "#holder-popover", async (_selection: ElementHandle) => {
+        await page.setViewportSize({width: 800, height: 600})
+        try {
+            const start = await page.evaluate(() => {
+                const root = document.getElementById("holder-popover") as HTMLElement
+                ;(root.querySelector(".vtd-popover-trigger") as HTMLElement).click()
+                const bubble = root.querySelector(".vtd-popover-content") as HTMLElement
+                return {slide: bubble.style.translate, right: bubble.getBoundingClientRect().right, page: document.documentElement.clientWidth}
+            })
+            // At the page's right edge it has slid in, to stay on the page
+            const sideways = (slide: string) => parseFloat(slide) || 0
+            assertEquals(sideways(start.slide) < 0, true)
+            assertEquals(start.right <= start.page, true)
+            await page.evaluate(() => {
+                (document.getElementById("holder-row") as HTMLElement).style.width = "50%"
+            })
+            await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 100)))
+            await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+            const after = await page.evaluate(() => (document.querySelector("#holder-popover .vtd-popover-content") as HTMLElement).style.translate)
+            // Its trigger is mid-page now, with room for all of it, so the slide has nothing left to do
+            assertEquals(sideways(after), 0)
+        } finally {
+            await page.setViewportSize({width: 400, height: 200})
+        }
+    })
+
+    itWrap("a popover asked to scrolls shortens to the room there is, and one not asked doesn't", "popover", "#scrolling-popover", async (_selection: ElementHandle) => {
+        await page.setViewportSize({width: 600, height: 400})
+        try {
+            const state = await page.evaluate(() => {
+                const root = document.getElementById("scrolling-popover") as HTMLElement
+                ;(root.querySelector(".vtd-popover-trigger") as HTMLElement).click()
+                const bubble = root.querySelector(".vtd-popover-content") as HTMLElement
+                const box = bubble.getBoundingClientRect()
+                return {bottom: box.bottom, height: innerHeight, shortened: bubble.style.maxHeight !== ""}
+            })
+            assertEquals(state.shortened, true)
+            assertEquals(state.bottom <= state.height, true)
+        } finally {
+            await page.setViewportSize({width: 400, height: 200})
+        }
+    })
+
     itWrap("popconfirm opens on trigger click and calls onConfirm when confirmed", "popconfirm", "#default-popconfirm", async (_selection: ElementHandle) => {
         const trigger = await page.$("#default-popconfirm .vtd-popconfirm-trigger")
         if (!trigger) {fail("ERROR: trigger not found")}
@@ -1166,243 +1265,6 @@ describe('basic component rendering', () => {
         if (!errored) {
             const text = await page.evaluate(() => (document.querySelector("#error-async-table tbody") as HTMLElement).innerText)
             fail(`ERROR: expected the rendered error state, got: ${JSON.stringify(text)}`)
-        }
-    })
-
-    itWrap("charts draw a line per series, with axis ticks and a legend", "charts", "#default-line-chart", async (_selection: ElementHandle) => {
-        const state = await page.evaluate(() => {
-            const root = document.getElementById("default-line-chart") as HTMLElement
-            return {
-                lines: root.querySelectorAll("path.vtd-chart-line").length,
-                legend: root.querySelectorAll(".vtd-chart-legend-item").length,
-                ticks: Array.from(root.querySelectorAll("text.vtd-chart-tick-y")).map(t => t.textContent),
-                categories: Array.from(root.querySelectorAll("text.vtd-chart-tick-x")).map(t => t.textContent)
-            }
-        })
-        if (state.lines != 2) {fail(`ERROR: expected one path per series, got ${state.lines}`)}
-        if (state.legend != 2) {fail(`ERROR: expected a legend entry per series, got ${state.legend}`)}
-        // niceTicks must produce round numbers through the caller's formatValue, not raw maxima
-        if (!state.ticks.includes("$0k") || !state.ticks.includes("$40k")) {
-            fail(`ERROR: expected rounded ticks spanning the data, got ${JSON.stringify(state.ticks)}`)
-        }
-        if (!state.categories.includes("Jan")) {fail(`ERROR: expected category labels, got ${JSON.stringify(state.categories)}`)}
-    })
-
-    itWrap("the line chart's hover cursor stands out from the grid", "charts", "#default-line-chart", async (_selection: ElementHandle) => {
-        const stroke = await page.evaluate(() => {
-            const root = document.getElementById("default-line-chart") as HTMLElement
-            const cursor = root.querySelector("line.vtd-chart-cursor")
-            const grid = root.querySelector("line.vtd-chart-gridline")
-            return {cursor: cursor ? getComputedStyle(cursor).stroke : null, grid: grid ? getComputedStyle(grid).stroke : null}
-        })
-        if (stroke.cursor === null) {fail("ERROR: expected the hover cursor to have its own class")}
-        if (stroke.cursor === stroke.grid) {fail(`ERROR: expected the hover cursor to differ from a grid line, both are ${stroke.grid}`)}
-    })
-
-    itWrap("charts show a tooltip naming every series at the hovered category", "charts", "#default-line-chart", async (_selection: ElementHandle) => {
-        // The hit target is one rect over the whole plot, so a pointer near a column is enough -
-        // this is the interaction that decides whether a line chart is usable at all.
-        await page.evaluate(() => {
-            const root = document.getElementById("default-line-chart") as HTMLElement
-            const hit = root.querySelector("rect.vtd-chart-hit") as SVGRectElement
-            const box = hit.getBoundingClientRect()
-            hit.dispatchEvent(new PointerEvent("pointermove", {
-                bubbles: true, clientX: box.left + box.width / 2, clientY: box.top + box.height / 2
-            }))
-        })
-        await new Promise(resolve => setTimeout(resolve, 150))
-        const tip = await page.evaluate(() => {
-            const root = document.getElementById("default-line-chart") as HTMLElement
-            const el = root.querySelector(".vtd-chart-tooltip") as HTMLElement
-            return {
-                visible: el.classList.contains("vtd-chart-tooltip-visible"),
-                rows: el.querySelectorAll(".vtd-chart-tooltip-row").length,
-                text: el.innerText.replace(/\s+/g, " ").trim()
-            }
-        })
-        if (!tip.visible) {fail("ERROR: expected the tooltip to appear on pointermove over the plot")}
-        if (tip.rows != 2) {fail(`ERROR: expected one tooltip row per series, got ${tip.rows}`)}
-        if (!tip.text.includes("Revenue") || !tip.text.includes("Costs")) {
-            fail(`ERROR: expected both series named in the tooltip, got ${JSON.stringify(tip.text)}`)
-        }
-    })
-
-    itWrap("charts stack bars rather than overlaying them", "charts", "#stacked-bar-chart", async (_selection: ElementHandle) => {
-        // A stacked bar's two segments must sit on top of each other and together reach the
-        // category total. Overlaid bars look plausible and are simply wrong, so check the geometry.
-        const first = await page.evaluate(() => {
-            const root = document.getElementById("stacked-bar-chart") as HTMLElement
-            const bars = Array.from(root.querySelectorAll("rect.vtd-chart-bar")) as SVGRectElement[]
-            const jan = bars.slice(0, 2).map(b => ({
-                x: Number(b.getAttribute("x")), y: Number(b.getAttribute("y")), h: Number(b.getAttribute("height"))
-            }))
-            return jan
-        })
-        if (first.length != 2) {fail(`ERROR: expected two segments in the first category, got ${first.length}`)}
-        if (first[0].x != first[1].x) {fail("ERROR: stacked segments must share an x, otherwise they are side by side")}
-        // The second segment sits directly on top of the first, within a rounding pixel
-        const gap = Math.abs((first[1].y + first[1].h) - first[0].y)
-        if (gap > 1.5) {fail(`ERROR: expected the segments to stack flush, gap was ${gap}`)}
-    })
-
-    itWrap("charts show an empty state instead of an axis when there is no data", "charts", "#empty-line-chart", async (_selection: ElementHandle) => {
-        const state = await page.evaluate(() => {
-            const root = document.getElementById("empty-line-chart") as HTMLElement
-            const empty = root.querySelector(".vtd-chart-empty") as HTMLElement
-            return {svgs: root.querySelectorAll("svg").length, emptyShown: !empty.hidden, text: empty.innerText.trim()}
-        })
-        if (state.svgs != 0) {fail("ERROR: expected no drawing at all for empty data")}
-        if (!state.emptyShown) {fail("ERROR: expected the empty state to be visible")}
-        if (state.text.length == 0) {fail("ERROR: expected the empty state to render its symbol")}
-    })
-
-    itWrap("charts render a donut's hole and centre label", "charts", "#donut-pie-chart", async (_selection: ElementHandle) => {
-        const state = await page.evaluate(() => {
-            const root = document.getElementById("donut-pie-chart") as HTMLElement
-            return {
-                slices: root.querySelectorAll("path.vtd-chart-arc").length,
-                text: Array.from(root.querySelectorAll("text")).map(t => t.textContent),
-                // A ring segment's path has two arcs; a filled wedge has one and starts at the centre
-                firstPath: (root.querySelector("path.vtd-chart-arc") as SVGPathElement).getAttribute("d") ?? ""
-            }
-        })
-        if (state.slices != 5) {fail(`ERROR: expected a path per slice, got ${state.slices}`)}
-        if (!state.text.includes("76")) {fail(`ERROR: expected the centre label, got ${JSON.stringify(state.text)}`)}
-        if ((state.firstPath.match(/A /g) ?? []).length < 2) {
-            fail("ERROR: expected a ring segment (two arcs) for a donut, not a filled wedge")
-        }
-    })
-
-    itWrap("charts place the tooltip clear of the point it describes", "charts", "#default-line-chart", async (_selection: ElementHandle) => {
-        // Regression: the tooltip's top-left used to be placed *at* the highest data point and
-        // centred on the hovered column, so it covered exactly what the reader was pointing at.
-        // It now sits beside the whole cursor-to-marker span and flips near the right edge.
-        for (const fraction of [0.1, 0.4, 0.6, 0.95]) {
-            const state = await page.evaluate(`(() => {
-                const root = document.getElementById("default-line-chart")
-                const hit = root.querySelector("rect.vtd-chart-hit")
-                const box = hit.getBoundingClientRect()
-                const cx = box.left + box.width * ${fraction}
-                const cy = box.top + box.height * 0.5
-                hit.dispatchEvent(new PointerEvent("pointermove", {bubbles: true, clientX: cx, clientY: cy}))
-                const tip = root.querySelector(".vtd-chart-tooltip").getBoundingClientRect()
-                const marker = root.querySelector("line[visibility=visible]")
-                const markerX = marker ? marker.getBoundingClientRect().left : null
-                const container = root.getBoundingClientRect()
-                return {
-                    coversCursor: cx >= tip.left && cx <= tip.right && cy >= tip.top && cy <= tip.bottom,
-                    coversMarker: markerX !== null && markerX >= tip.left && markerX <= tip.right,
-                    // Placed beside the cursor (rather than above/below it) when it shares the
-                    // cursor's vertical band - which is the case the marker check applies to.
-                    placedBeside: cy >= tip.top && cy <= tip.bottom,
-                    overflows: tip.left < container.left - 1 || tip.right > container.right + 1,
-                    visible: tip.width > 0
-                }
-            })()`) as {coversCursor: boolean, coversMarker: boolean, placedBeside: boolean, overflows: boolean, visible: boolean}
-            if (!state.visible) {fail(`ERROR: no tooltip at ${fraction * 100}% across the plot`)}
-            // The invariant that always holds, whatever the container width
-            if (state.coversCursor) {fail(`ERROR: tooltip sits under the cursor at ${fraction * 100}%`)}
-            if (state.overflows) {fail(`ERROR: tooltip escapes the chart container at ${fraction * 100}%`)}
-            // When there was room beside the cursor, it must also clear the marker line. In a
-            // container too narrow for that the tooltip goes above instead, and merely crosses the
-            // marker's x - the line stays visible either side of it, so this doesn't apply.
-            if (state.placedBeside && state.coversMarker) {
-                fail(`ERROR: tooltip placed beside the cursor still covers the marker line at ${fraction * 100}%`)
-            }
-        }
-    })
-
-    itWrap("charts expose their data as a hidden table, and never as an SVG title", "charts", "#default-line-chart", async (_selection: ElementHandle) => {
-        // Regression: the frame used to set an SVG <title> alongside aria-label. The title added
-        // nothing - aria-label already wins the accessible-name computation - and made browsers pop
-        // their own native tooltip on hover, competing with the chart's.
-        const titles = await page.evaluate(() => document.querySelectorAll(".vtd-chart svg title").length)
-        if (titles != 0) {fail(`ERROR: found ${titles} SVG <title> elements; they trigger the native hover tooltip`)}
-
-        const state = await page.evaluate(() => {
-            const root = document.getElementById("default-line-chart") as HTMLElement
-            const svg = root.querySelector("svg") as SVGSVGElement
-            const sr = root.querySelector(".vtd-chart-sr") as HTMLElement
-            const table = sr.querySelector("table") as HTMLTableElement
-            return {
-                svgHidden: svg.getAttribute("aria-hidden"),
-                caption: table?.querySelector("caption")?.textContent ?? null,
-                headers: Array.from(table?.querySelectorAll("thead th") ?? []).map(t => t.textContent),
-                rows: table?.querySelectorAll("tbody tr").length ?? 0,
-                firstRow: (table?.querySelector("tbody tr") as HTMLElement)?.innerText.replace(/\s+/g, " ").trim() ?? "",
-                // Hidden from sight, not from assistive tech
-                boxWidth: Math.round(sr.getBoundingClientRect().width)
-            }
-        })
-        if (state.svgHidden != "true") {fail("ERROR: expected the drawing to be aria-hidden once a data table carries the content")}
-        if (state.caption != "Revenue and costs by month") {fail(`ERROR: expected the ariaLabel as the table caption, got ${JSON.stringify(state.caption)}`)}
-        if (state.rows != 8) {fail(`ERROR: expected a row per category, got ${state.rows}`)}
-        if (!state.headers.includes("Revenue") || !state.headers.includes("Costs")) {
-            fail(`ERROR: expected a column per series, got ${JSON.stringify(state.headers)}`)
-        }
-        // Values must go through the caller's formatValue, so what is read aloud matches the axis
-        if (!state.firstRow.includes("$12k")) {fail(`ERROR: expected formatted values in the table, got ${JSON.stringify(state.firstRow)}`)}
-        if (state.boxWidth > 1) {fail(`ERROR: the table must be visually hidden, its box is ${state.boxWidth}px wide`)}
-    })
-
-    itWrap("a pie's hidden table bakes in no English, and takes its column names from attrs", "charts", "#donut-pie-chart", async (_selection: ElementHandle) => {
-        // getElementById: the gallery renders every chart twice, once per theme
-        const headers = await page.evaluate(() => ({
-            named: Array.from(document.getElementById("donut-pie-chart")!.querySelectorAll("thead th")).map(th => th.textContent),
-            unnamed: Array.from(document.getElementById("default-pie-chart")!.querySelectorAll("thead th")).map(th => th.textContent),
-        }))
-        assertEquals(headers.named, ["", "Headcount", "Of total"])
-        assertEquals(headers.unnamed, ["", "", ""])
-    })
-
-    itWrap("charts do no DOM work for a hover that changes nothing", "charts", "#default-line-chart", async (_selection: ElementHandle) => {
-        // `pointermove` fires up to ~120 times a second. The first cut rebuilt the tooltip's whole
-        // subtree on every one: 60 moves inside a single column produced 580 mutation records and
-        // 180 new nodes for a reading that never changed. Content is now reused in place, so a
-        // repeat hover must be completely inert, and a real category change must not create nodes
-        // either - only mutate the text already there.
-        const churn = await page.evaluate(() => {
-            const root = document.getElementById("default-line-chart") as HTMLElement
-            const hit = root.querySelector("rect.vtd-chart-hit") as SVGRectElement
-            const box = hit.getBoundingClientRect()
-            const move = (x: number) => hit.dispatchEvent(new PointerEvent("pointermove", {
-                bubbles: true, clientX: x, clientY: box.top + 40
-            }))
-            const fixedX = box.left + box.width * 0.5
-            move(fixedX) // warm up: the first hover legitimately builds the row pool
-
-            let added = 0, removed = 0
-            const observer = new MutationObserver(() => { /* drained synchronously below */ })
-            observer.observe(root, {childList: true, subtree: true, attributes: true, characterData: true})
-            // A MutationObserver's callback is an async microtask, so it never runs inside this
-            // synchronous block - the records have to be drained by hand. A first version of this
-            // test read counters the callback would only have filled in later, and so passed
-            // against the very implementation it was written to reject.
-            const drain = () => {
-                for (const record of observer.takeRecords()) {
-                    added += record.addedNodes.length
-                    removed += record.removedNodes.length
-                }
-            }
-
-            for (let i = 0; i < 40; i++) { move(fixedX) }
-            drain()
-            const idle = {added, removed}
-
-            added = 0; removed = 0
-            // Sweep the whole plot, genuinely changing category several times
-            for (let i = 0; i < 40; i++) { move(box.left + (box.width * i) / 40) }
-            drain()
-            const sweep = {added, removed}
-
-            observer.disconnect()
-            return {idle, sweep}
-        })
-        if (churn.idle.added != 0 || churn.idle.removed != 0) {
-            fail(`ERROR: 40 identical hovers churned the DOM: +${churn.idle.added}/-${churn.idle.removed} nodes`)
-        }
-        if (churn.sweep.added != 0 || churn.sweep.removed != 0) {
-            fail(`ERROR: sweeping the plot created nodes instead of updating text in place: +${churn.sweep.added}/-${churn.sweep.removed}`)
         }
     })
 

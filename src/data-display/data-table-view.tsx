@@ -60,7 +60,7 @@ export type SortDirection = "asc" | "desc"
 export const DataTableThemeOptions: {
     /** Content of the column-visibility button. `▥` - vertical bands, i.e. columns. Nothing else in the package draws this, so it stays local */
     columnsSymbol: ThemeSymbol
-    /** Shown in place of the rows when there are none. The whole visual, sizing included; set `CommonThemeOptions.emptySymbol` to change just the glyph, here and in `Empty` and every chart */
+    /** Shown in place of the rows when there are none. The whole visual, sizing included; set `CommonThemeOptions.emptySymbol` to change just the glyph, here and in `Empty` */
     emptySymbol: ThemeSymbol
     /**
      * A visible label before the search box - a word ("Search") or an icon. Empty by default: the
