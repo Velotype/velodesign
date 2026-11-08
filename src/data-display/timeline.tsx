@@ -15,8 +15,14 @@ export type TimelineItemType = {
     title: RenderableElements
     /** Optional smaller supporting text below the title */
     description?: RenderableElements
-    /** Color of this entry's dot marker (default: `"primary"`) */
+    /** Color of this entry's marker (default: `"primary"`) */
     type?: "primary" | "secondary" | "warning" | "danger" | "neutral"
+    /**
+     * An icon for this entry in place of its dot - what kind of entry it is (a call, a note, a
+     * change of stage), drawn in a pale circle of the entry's colour. A glyph from `Glyphs`, `<I/>`,
+     * or any small element sized in `em`
+     */
+    icon?: RenderableElements
 }
 
 /**
@@ -64,6 +70,23 @@ z-index:1;
 .vtd-timeline-dot-warning{background-color:var(--warning);}
 .vtd-timeline-dot-danger{background-color:var(--accent);}
 .vtd-timeline-dot-neutral{background-color:var(--background-6);}
+.vtd-timeline-item-with-icon .vtd-timeline-marker{width:1.6em;}
+.vtd-timeline-icon{
+width:1.6em;
+height:1.6em;
+border-radius:50%;
+display:flex;
+align-items:center;
+justify-content:center;
+z-index:1;
+}
+.vtd-timeline-icon-primary{background-color:var(--primary-2);color:var(--primary-7);}
+.vtd-timeline-icon-secondary{background-color:var(--secondary-2);color:var(--secondary-7);}
+.vtd-timeline-icon-warning{background-color:var(--warning-2);color:var(--warning-7);}
+.vtd-timeline-icon-danger{background-color:var(--accent-2);color:var(--accent-7);}
+.vtd-timeline-icon-neutral{background-color:var(--background-2);color:var(--background-7);}
+.vtd-timeline-item-with-icon:not(:last-child) .vtd-timeline-marker::after{top:1.7em;}
+.vtd-timeline-item-with-icon .vtd-timeline-body{padding-block-start:0.15em;}
 .vtd-timeline-item:not(:last-child) .vtd-timeline-marker::after{
 content:"";
 position:absolute;
@@ -79,8 +102,10 @@ background-color:var(--background-4);
     }
 
     return passthroughAttrsToElement<HTMLElement>(<ul class="vtd-timeline">
-        {attrs.items.map(item => <li class="vtd-timeline-item">
-            <span class="vtd-timeline-marker"><span class={`vtd-timeline-dot vtd-timeline-dot-${item.type||"primary"}`}/></span>
+        {attrs.items.map(item => <li class={`vtd-timeline-item${item.icon ? " vtd-timeline-item-with-icon" : ""}`}>
+            <span class="vtd-timeline-marker">{item.icon
+                ? <span class={`vtd-timeline-icon vtd-timeline-icon-${item.type||"primary"}`} aria-hidden="true">{item.icon}</span>
+                : <span class={`vtd-timeline-dot vtd-timeline-dot-${item.type||"primary"}`}/>}</span>
             <span class="vtd-timeline-body">
                 <div class="vtd-timeline-title">{item.title}</div>
                 {item.description && <div class="vtd-timeline-description">{item.description}</div>}

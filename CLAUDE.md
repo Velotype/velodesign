@@ -20,7 +20,7 @@
   | `overlays/` | Modal, Drawer, Lightbox, Popover, Popconfirm, ContextMenu, Command |
   | `data-display/` | Badge, Card, Table, DataTable, AsyncDataTable, CodeBlock, Calendar, EventCalendar, Tree, Resizable … |
   | `data-entry/` | DatePicker, Slider, Combobox, Upload, Rate, Form |
-  | `core/` | **Not a category.** Cross-cutting infrastructure imported by components in several categories, so it belongs to none of them: `utilities.ts`, `theme.ts`, `history.ts`, `strings.ts`, `license.ts`, `search-highlight.tsx`, `styles.ts`, `css-value.ts`, `placement.ts`, and the two barrels `velotype.ts` / `jsx.ts` - **every velotype import in the package goes through those two**, for reasons in *The bundle size is measured, not asserted* below. |
+  | `core/` | **Not a category.** Cross-cutting infrastructure imported by components in several categories, so it belongs to none of them: `utilities.ts`, `theme.ts`, `history.ts`, `strings.ts`, `license.ts`, `search-highlight.tsx`, `styles.ts`, `css-value.ts`, `placement.ts`, `glyphs.ts` (the package's drawn marks and the `Icon` drawing behind `<I/>`), and the two barrels `velotype.ts` / `jsx.ts` - **every velotype import in the package goes through those two**, for reasons in *The bundle size is measured, not asserted* below. |
 
   Two placements are judgement calls rather than showcase facts: `PageSelector` and `Resizable`
   have no story at all, so they went to `navigation/` (client-side routing) and `data-display/`
@@ -332,7 +332,7 @@ When adding a new component, ask which of these two it is before writing its roo
 
 velodesign doesn't assume an English-speaking (or any specific language) consumer. No component may default any visible text, placeholder, or accessible label to an English word or phrase — every such default is either an icon/glyph (language-agnostic by nature) or simply absent (`undefined`), always overridable by the consumer with whatever localized string they need. This was audited and enforced across the whole package in one pass; the two shapes that came up, and the fix for each:
 
-- **Visible text with a natural icon substitute** (a button's content, e.g. `Popconfirm`'s confirm/cancel buttons, `Modal`'s cancel button, `Pagination`'s prev/next buttons): default to a symbol via the `XThemeOptions` pattern below (`PopconfirmThemeOptions.confirmSymbol`/`.cancelSymbol` → `✓`/`✕`, `ModalThemeOptions.cancelSymbol` → `✕`, `PaginationThemeOptions.prevSymbol`/`.nextSymbol` → `‹`/`›`), with the attrs field (`cancelButtonChildren`, `prevButtonChildren`, ...) still there for a consumer who wants real text instead. Never `attrs.foo || "Cancel"` - `attrs.foo || <FooThemeOptions.fooSymbol/>`.
+- **Visible text with a natural icon substitute** (a button's content, e.g. `Popconfirm`'s confirm/cancel buttons, `Modal`'s cancel button, `Pagination`'s prev/next buttons): default to a symbol via the `XThemeOptions` pattern below (`PopconfirmThemeOptions.confirmSymbol`/`.cancelSymbol` → the drawn tick/cross, `ModalThemeOptions.cancelSymbol` → the cross, `PaginationThemeOptions.prevSymbol`/`.nextSymbol` → drawn chevrons - see *Glyphs, not text characters*), with the attrs field (`cancelButtonChildren`, `prevButtonChildren`, ...) still there for a consumer who wants real text instead. Never `attrs.foo || "Cancel"` - `attrs.foo || <FooThemeOptions.fooSymbol/>`.
 - **Placeholder text with no sensible icon substitute** (`Command`'s search placeholder, `DataTable`'s `searchPlaceholder`, `Empty`'s `title`): no default at all - the attr passes straight through (`placeholder={attrs.placeholder}`, no `|| "Search..."`). An empty native placeholder, or `Empty` showing just its `∅` icon with no title line, is the correct default appearance, not a bug to paper over with English text.
 - **ARIA-only labels** (`aria-label`s on icon-only buttons, nav landmarks, dynamically-generated per-item labels like `Rate`'s per-star label or `Carousel`'s per-dot label): these have no visual/iconographic substitute at all, since they're never rendered - so they become a plain optional attr (`label`, `dismissLabel`, `removeLabel`, `ariaLabel`, or a builder function like `getStarLabel`/`getDotLabel` for the per-item cases) with **no default value**, full stop. This is a deliberate accessibility trade-off: an unset accessible name for a consumer who never provides one, in exchange for never assuming a language. It matches how unstyled/headless component libraries (Radix, etc.) already handle this rather than trying to have it both ways.
 
@@ -420,7 +420,7 @@ Three shapes, and which one to reach for:
 export const AlertThemeOptions: {closeSymbol: ThemeSymbol} = themeOptions({closeSymbol: "closeSymbol"})
 
 // 2. Local only. No counterpart elsewhere in the package.
-export const ButtonThemeOptions: {loadingSymbol: ThemeSymbol} = themeOptions({}, {loadingSymbol: function(){return <Spinner size="1em"/>}})
+export const ButtonThemeOptions: {loadingSymbol: ThemeSymbol} = themeOptions({}, {loadingSymbol: function(){return <Spinner variant="dots" size="0.8em"/>}})
 
 // 3. Wraps a shared symbol in the component's own chrome. The option is the *whole* visual, so a
 //    consumer replacing it isn't stuck inside a 2.5em span; CommonThemeOptions.emptySymbol changes
@@ -456,6 +456,43 @@ Each object is documented on the pages of every component that reads it
 listed first wherever something inherits from it - a Default column reading
 `CommonThemeOptions.closeSymbol` is only useful beside a table saying what that is. All 30 editable
 glyphs are listed under **Advanced: theme options** in the theme builder, shared ones first.
+
+## Glyphs, not text characters
+
+Every small mark the package draws - close, confirm, previous/next, the collapsed-items dots, the
+select and disclosure chevrons, the submenu chevron, the checkbox's tick and dash, sort arrows, the
+columns button, the menu button, the sidebar's collapse arrow, the edit pencil, the rating star, the
+lightbox's zoom glass, the empty tray - is a drawn line glyph from
+`core/glyphs.ts`'s `Glyphs`, never a text character and never rotated borders. A character is drawn
+by whatever font the reader has, at that font's size, weight and position, so the same control
+looked different on every system; rotated borders can't have round ends or be centred by their ink.
+
+- **One drawing box, one style.** 24 units, round ends, round corners, `currentcolor`, built with
+  `createElementNS` (no HTML strings). `Glyphs` is exported, so a consumer can use the same marks
+  (`<I icon={Glyphs.tick}/>`). A solid mark is the same lines, filled (`Icon`'s `filled`): the
+  rating star keeps its round corners that way.
+- **`glyphElement(icon, scale)` sizes a glyph against the text.** A glyph's lines sit inside its box
+  with room around them, so one standing in for a character is drawn a little over `1em` (the cross
+  at 1.3, chevrons at about 1.15) to match the character's ink, with a negative margin so the line
+  doesn't grow. Only the scale is inline (`--vtd-icon-scale`); the height is the stylesheet's, so a
+  component can still resize a glyph with an ordinary rule - `Modal`, `Drawer` and `Lightbox` draw
+  the shared cross larger and lighter in their corner that way, and so keep following
+  `CommonThemeOptions.closeSymbol`.
+- **A mark alone in a small square is centred by its ink, not its box.** A tick's long arm carries
+  its weight, so a box-centred tick reads low - `Glyphs.tickCentred` is lifted for `Checkbox`, and
+  the box's sizes (1.25em, its tick 0.875em, `RadioButton`'s dot 0.625em) land on whole pixels at the
+  default 16px.
+- **A chevron when you stay put and what's shown changes; an arrow when something moves.** A select
+  or disclosure opening, a submenu, stepping a calendar month or a table page: chevron. Sorting (the
+  data moves), a sidebar sliding to its edge, a link that leaves the page: arrow.
+- **Waiting and working are different marks.** `Spinner`'s ring (`variant: "ring"`) is waiting -
+  something is on its way to you, shown where it will appear; content whose layout is known waits
+  better as a `Skeleton` of it. The dots (`variant: "dots"`) are working - what you asked for is being
+  done, shown in the control you pressed, which is why `Button`'s busy state is the dots. Work that
+  can be counted is a `Progress` with `working`: a light along the fill (still stripes with reduce
+  motion on, laid from the fill's left edge so they don't shift as it grows), the working dots before
+  the caller's words, and a finish marked once - a ring from the bar, the dots gathering into a pen
+  that draws the tick - before it settles. A `Progress` without `working` is a meter and only glides.
 
 ## Animation
 
@@ -514,7 +551,8 @@ closing a `<dialog>`, or detaching the node. **Where that lands in this package:
 
 `@media (prefers-reduced-motion: reduce){ ... transition:none; }` beside the component's own rules -
 `data-display/data-table-view.tsx` sets the pattern, and
-`disclosure-view.tsx` follows it. **Most animating components still do not**, which is a real gap
+`disclosure-view.tsx` follows it, and so do `Spinner`, `Skeleton`, `Progress` and `Menu`'s submenu
+chevron. **Many other animating components still do not**, which is a real gap
 worth closing as they are touched rather than in one sweep.
 
 A sequenced animation needs the JS side too, not just the CSS: with the transition zeroed, no
@@ -635,8 +673,8 @@ put it back** — that is the only evidence the test still tests anything.
 
 **Both tables follow the language-agnostic rule**, and the three pieces of text they used to bake
 in show all three shapes that rule distinguishes. The column-visibility button and the empty state
-had icon substitutes, so they became `DataTableThemeOptions.columnsSymbol` (`▥`) and `.emptySymbol`
-(`∅`). "Rows per page:" has no icon that means it, so `pageSizeLabel` simply has **no default** and
+had icon substitutes, so they became `DataTableThemeOptions.columnsSymbol` (a drawn table, `Glyphs.columns`) and `.emptySymbol`
+(an empty tray, `Glyphs.tray`). "Rows per page:" has no icon that means it, so `pageSizeLabel` simply has **no default** and
 renders no caption when unset - the same call `Empty`'s `title` makes. And an icon-only button has
 no accessible name, which is why `Button` gained an `ariaLabel` attr and both tables expose
 `columnToggleLabel`; setting it is on the consumer, with no default, like every other ARIA label
@@ -853,7 +891,7 @@ part gets it here, as a general feature with its own tests, as `Popover` got `al
 These are non-obvious and have each caused a real bug in this package at least once:
 
 1. **`{condition && <jsx/>}` renders the literal text `"false"` (or `"0"`) if `condition` is falsy and not `undefined`.** `RenderableElements` includes `BasicTypes = string | bigint | number | boolean` as directly renderable, so a boolean/number `&&` short-circuit doesn't vanish the way it does in React — it prints. This bit `Breadcrumbs`'s separator (`index < items.length - 1 && <span/>` printed `"false"` after the last crumb). Safe pattern: only use `{x && <jsx/>}` when `x`'s type is `SomeType | undefined` (e.g. `attrs.header?: RenderableElements` — `undefined && X` short-circuits to `undefined`, which *is* silently skipped). For a genuine boolean condition, or anything that could be `0`/`""`, use a ternary with `null` for the false branch: `{condition ? <jsx/> : null}`.
-2. **No raw `<svg>`/`<path>` JSX tags.** `tsx-core.ts` explicitly documents this: the generic `<HTML tag="...">` escape hatch "does not support `<svg>` or `<math>`". For inline vector art, either register it through `icon.ts`'s `registerIcon`/`<I i="key"/>` (which builds the SVG manually via `document.createElementNS`), or — often simplest — fake it with pure CSS (`border`/`clip-path`/`transform:rotate`), which is what `Checkbox`'s checkmark, `RadioButton`'s/`Toggle`'s dot, and `Select`'s chevron all do instead of touching SVG at all.
+2. **No raw `<svg>`/`<path>` JSX tags.** `tsx-core.ts` explicitly documents this: the generic `<HTML tag="...">` escape hatch "does not support `<svg>` or `<math>`". For inline vector art, either register it through `icon.ts`'s `registerIcon`/`<I i="key"/>` (which builds the SVG manually via `document.createElementNS`), or, for the package's own marks, `core/glyphs.ts`'s `glyphElement(Glyphs.x, scale)`, which builds the same way. A plain shape that isn't a mark - `RadioButton`'s/`Toggle`'s dot - is still just a styled element. Don't fake a mark (a tick, a chevron) with rotated borders: that is what `Checkbox`, `Select` and the disclosures used to do, and it can't be centred by its ink or drawn with round ends (see *Glyphs, not text characters*).
 3. **A custom component only forwards attrs its own `XAttrsType` declares** (see Attrs types above) — don't assume passing an arbitrary native attribute through a wrapped component will work; add it to the attrs type first, or drop down to the native tag directly if it's a one-off.
 4. **`refresh()` on a `Component` remounts its whole subtree** — see the `Component` class section above for the stale-`ElementHandle` implication when testing, and the section above that for why to avoid calling it at all on a component that accepts children.
 5. **`<ClassComponent/>` JSX evaluates to the rendered DOM element, not the component instance.** `Modal`'s `showModal()`/`close()` calling code (`const modal = <Modal .../>; modal.showModal()`) only works because `<dialog>` happens to have those exact method names *natively* - it's not evidence that JSX returns the instance. If you need to call a genuinely custom method later, use `getComponent<T>(<ClassComponent/>)` (from `@velotype/velotype`) to get the real instance, then embed *that* in your tree instead (`Component` instances are valid `RenderableElements` and get unwrapped correctly on insertion). This bit `tests/test_modules/explorer.tsx`: a naive `const preview = <StoryPreview/>; preview.setStoryAndProps(...)` threw `setStoryAndProps is not a function` at runtime, since `preview` was the `<div>` `StoryPreview` rendered, not the instance.
@@ -1097,8 +1135,8 @@ dropped it at first, and the reader's expansions stopped surviving a filter - ca
 not by review. Like `Tree`'s, it fires *after* the change, so reading `getOpenKeys()` inside it is
 safe.
 
-**The collapse control is an icon, not a word** - a double chevron drawn in CSS that flips to point
-the way the panel will move, the same call `Checkbox`'s tick and `Select`'s arrow make. A word
+**The collapse control is an icon, not a word** - an arrow into the panel's edge (`Glyphs.arrowToEdge`)
+that flips to point the way the panel will move: the panel moves, so an arrow, not a chevron. A word
 there would be an English default, which this package does not do.
 
 ## Browser support: Baseline widely available

@@ -2,6 +2,7 @@
 /** @jsx h */
 import { h } from "../core/jsx.ts"
 import {Component, getComponent, passthroughAttrsToElement} from "../core/velotype.ts"
+import { Glyphs, glyphElement } from "../core/glyphs.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, RenderObject, StylePassthroughAttrs } from "../core/velotype.ts"
 import { NavLink } from "./nav-link.tsx"
@@ -607,7 +608,7 @@ export class Sidebar extends Component<SidebarAttrsType> {
         }))
     }
 
-    /** The collapse control: a chevron drawn in CSS, which flips to point the other way */
+    /** The collapse control: an arrow into the panel's edge, which flips to point the other way */
     #buildCollapseControl(): RenderableElements {
         const button: HTMLButtonElement = <button
             type="button"
@@ -615,7 +616,7 @@ export class Sidebar extends Component<SidebarAttrsType> {
             aria-label={this.#attrs.collapseLabel}
             aria-expanded={this.#collapsed ? "false" : "true"}
             onClick={() => { this.setCollapsed(!this.#collapsed) }}>
-            <span class="vtd-sidebar-collapse-icon" aria-hidden="true"/>
+            <span class="vtd-sidebar-collapse-icon" aria-hidden="true">{glyphElement(Glyphs.arrowToEdge, 1.2)}</span>
         </button>
         return <div class="vtd-sidebar-collapse-row">{button}</div>
     }
@@ -958,29 +959,14 @@ color:inherit;
 .vtd-sidebar-collapse:hover{background-color:var(--background-2);}
 ` +
 /*
- * A double chevron drawn in CSS rather than a glyph or an icon font, the same call Checkbox's tick
- * and Select's arrow make. It points the way the panel will move, so it flips when collapsed.
+ * An arrow into the panel's edge (Glyphs.arrowToEdge): collapsing moves the panel, so an arrow, not
+ * a chevron. It points the way the panel will move, so it flips when collapsed.
  */
 `
 .vtd-sidebar-collapse-icon{
-display:inline-block;
-position:relative;
-width:1em;
-height:0.7em;
+display:inline-flex;
 transition:transform 0.18s ease-in-out;
 }
-.vtd-sidebar-collapse-icon::before,.vtd-sidebar-collapse-icon::after{
-content:"";
-position:absolute;
-top:0.1em;
-width:0.45em;
-height:0.45em;
-border:solid currentcolor;
-border-width:0.12em 0 0 0.12em;
-transform:rotate(-45deg);
-}
-.vtd-sidebar-collapse-icon::before{left:0.05em;}
-.vtd-sidebar-collapse-icon::after{left:0.42em;}
 .vtd-sidebar-collapsed .vtd-sidebar-collapse-icon{transform:rotate(180deg);}
 .vtd-sidebar-profile{flex-shrink:0;border-block-start:1px solid var(--background-4);padding:0.4em;}
 ` +

@@ -64,8 +64,9 @@ border-radius:1em;
 display:inline-flex;
 align-items:center;
 justify-content:center;
-height:1.5em;
-width:1.5em;
+height:1.25em;
+width:1.25em;
+box-sizing:border-box;
 margin-inline-end:1ex;
 flex-shrink:0;
 transition:background-color 0.2s ease-in, border-color 0.2s ease-in;
@@ -82,8 +83,8 @@ opacity:0;
 transform:scale(0.4);
 transition:opacity 0.15s ease-in, transform 0.15s cubic-bezier(0.34,1.56,0.64,1);
 border-radius:1em;
-width:0.65em;
-height:0.65em;
+width:0.625em;
+height:0.625em;
 background-color:var(--primary);
 }
 

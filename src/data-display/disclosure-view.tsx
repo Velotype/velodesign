@@ -2,6 +2,7 @@
 /** @jsx h */
 import { h } from "../core/jsx.ts"
 import {} from "../core/velotype.ts"
+import { Glyphs, glyphElement } from "../core/glyphs.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { RenderableElements } from "../core/velotype.ts"
 
@@ -97,15 +98,12 @@ transition:border-color 0.2s ease-out;
 .vtd-disclosure-header:hover{background-color:var(--background-1);}
 .vtd-disclosure-chevron{
 margin-inline-start:auto;
-width:0.6em;
-height:0.6em;
-border:solid var(--text);
-border-width:0 0.12em 0.12em 0;
-transform:rotate(45deg);
+display:flex;
+color:var(--text);
 transition:transform 0.15s ease-in-out;
 flex-shrink:0;
 }
-.vtd-disclosure[open]:not(.vtd-disclosure-closing) .vtd-disclosure-chevron{transform:rotate(-135deg);}
+.vtd-disclosure[open]:not(.vtd-disclosure-closing) .vtd-disclosure-chevron{transform:rotate(180deg);}
 ` +
 /* The open state, signalled on the header itself: a divider plus a faint fill behind it */
 `
@@ -201,7 +199,7 @@ export function buildDisclosureSection(options: {
     const content = buildDisclosureContent(options.content)
     const summary: HTMLElement = <summary class="vtd-disclosure-header">
         {options.header}
-        <span class="vtd-disclosure-chevron"/>
+        <span class="vtd-disclosure-chevron" aria-hidden="true">{glyphElement(Glyphs.chevronDown, 1.15)}</span>
     </summary>
     const details: HTMLDetailsElement = <details
         class={`vtd-disclosure ${options.rootClass}`}

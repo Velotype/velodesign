@@ -86,7 +86,7 @@ export type AsyncDataTableAttrsType<RowType> = {
     resizableColumns?: boolean
     /** Shows the column-visibility customizer button (default: `true`) */
     showColumnToggle?: boolean
-    /** Content of the column-visibility button (default: `DataTableThemeOptions.columnsSymbol` - the `▥` glyph, not English text) */
+    /** Content of the column-visibility button (default: `DataTableThemeOptions.columnsSymbol` - `Glyphs.columns`, not English text) */
     columnToggleChildren?: RenderableElements
     /** Accessible name for the column-visibility button. No default - the library doesn't assume a language. Set this whenever `columnToggleChildren` is a symbol rather than words, or the button has no name at all */
     columnToggleLabel?: string
@@ -105,7 +105,7 @@ export type AsyncDataTableAttrsType<RowType> = {
     debounceMs?: number
     /**
      * Shown when the loader returns no rows and the search box is empty - "there is nothing here"
-     * (default: `DataTableThemeOptions.emptySymbol` - the `∅` glyph, not English text).
+     * (default: `DataTableThemeOptions.emptySymbol` - an empty tray, `Glyphs.tray`, not English text).
      *
      * Distinct from `noMatchMessage` on purpose: an empty collection and a search that matched
      * nothing are different facts, and telling a user "no results" when they have not searched for

@@ -2,6 +2,7 @@
 /** @jsx h */
 import { h } from "../core/jsx.ts"
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
+import { Glyphs, glyphElement } from "../core/glyphs.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { animateClosed, buildDisclosureContent, flushDisclosureLayout, mountDisclosureStyles } from "./disclosure-view.tsx"
@@ -162,21 +163,11 @@ margin-inline-end:0.25em;
 border-radius:0.25rem;
 }
 .vtd-tree-chevron:hover{background-color:var(--background-3);}
-.vtd-tree-chevron::before{
-content:"";
-display:block;
-width:0.5em;
-height:0.5em;
-margin-inline-start:-0.15em;
-border:solid var(--text);
-border-width:0 0.1em 0.1em 0;
-transform:rotate(-45deg);
-transition:transform 0.15s ease-in-out;
-}
+.vtd-tree-chevron .vtd-icon{color:var(--text);transition:transform 0.15s ease-in-out;}
 ` +
 /* Matches the chevron elsewhere: it turns back the moment a close starts, not when it finishes */
 `
-.vtd-tree-node[open]:not(.vtd-disclosure-closing) > .vtd-tree-label .vtd-tree-chevron::before{transform:rotate(45deg);}
+.vtd-tree-node[open]:not(.vtd-disclosure-closing) > .vtd-tree-label .vtd-tree-chevron .vtd-icon{transform:rotate(90deg);}
 ` +
 /* Lines a leaf's content up with a branch's label, past where that branch's chevron sits */
 `
@@ -193,7 +184,7 @@ transition:transform 0.15s ease-in-out;
 .vtd-tree-label-main{flex-grow:1;min-width:0;}
 .vtd-tree-leading,.vtd-tree-trailing{display:inline-flex;align-items:center;flex-shrink:0;}
 @media (prefers-reduced-motion: reduce){
-.vtd-tree-chevron::before{transition:none;}
+.vtd-tree-chevron .vtd-icon{transition:none;}
 }
 `, "vtd/Tree")
         }
@@ -254,7 +245,7 @@ transition:transform 0.15s ease-in-out;
             // is announced with it - a second focusable thing here would be one more tab stop per
             // row saying nothing new
             const summary: HTMLElement = <summary class="vtd-tree-label">
-                <span class="vtd-tree-chevron" aria-hidden="true"/>
+                <span class="vtd-tree-chevron" aria-hidden="true">{glyphElement(Glyphs.chevronRight, 1.1)}</span>
                 {labelInner}
             </summary>
             const details: HTMLDetailsElement = <details class="vtd-tree-node" open={node.defaultOpen}>

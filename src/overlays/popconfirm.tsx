@@ -26,7 +26,7 @@ export type PopconfirmAttrsType = {
     title: RenderableElements
     /** Confirm button content (default: `PopconfirmThemeOptions.confirmSymbol` - a plain checkmark, not English text, so the library doesn't assume a language) */
     confirmButtonChildren?: RenderableElements
-    /** Cancel button content (default: `PopconfirmThemeOptions.cancelSymbol` - a plain "x", not English text, so the library doesn't assume a language) */
+    /** Cancel button content (default: `PopconfirmThemeOptions.cancelSymbol` - a drawn cross, not English text, so the library doesn't assume a language) */
     cancelButtonChildren?: RenderableElements
     /** Called when the confirm button is clicked, just before the bubble closes */
     onConfirm: () => void

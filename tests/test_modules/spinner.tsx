@@ -11,6 +11,9 @@ class SpinnerGallery extends Component<EmptyAttrs> {
             <Spinner size="1.5em"/>
             <Spinner size="2.5em"/>
             <span style={{color: "var(--accent)"}}><Spinner/> (inherits surrounding color)</span>
+            <Spinner id="dots-spinner" variant="dots"/>
+            <Spinner variant="dots" size="1.5em"/>
+            <span style={{color: "var(--accent)"}}><Spinner variant="dots"/> (working)</span>
         </div>
     }
 }

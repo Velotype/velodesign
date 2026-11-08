@@ -3,6 +3,7 @@
 import { h } from "../core/jsx.ts"
 import {passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
+import { Glyphs, glyphElement } from "../core/glyphs.ts"
 import type { IdAttr, RenderableElements, FunctionComponent, StylePassthroughAttrs } from "../core/velotype.ts"
 
 /**
@@ -28,9 +29,9 @@ export type RateAttrsType = {
     onChange?: (event: Event) => void
     /**
      * Builds the accessible label for one star, given its value and the total `count`
-     * (e.g. `(value, count) => `${value} of ${count} stars``). No default - the library
-     * doesn't assume a language; without this, each star's accessible name falls back to its
-     * "★" label content, which doesn't convey position.
+     * (e.g. `(value, count) => `${value} of ${count} stars``). No worded default - the library
+     * doesn't assume a language; without this, each star is named by its number alone, in the
+     * reader's own digits.
      */
     getStarLabel?: (starValue: number, count: number) => string
 } & IdAttr & StylePassthroughAttrs
@@ -54,6 +55,7 @@ flex-direction:row-reverse;
 }
 .vtd-rate-input{position:absolute;opacity:0;height:0;width:0;margin:0;}
 .vtd-rate-star{
+display:inline-flex;
 cursor:pointer;
 font-size:1.5em;
 line-height:1;
@@ -96,7 +98,7 @@ transition:color 0.1s ease-in;
             checked={attrs.value == starValue}
             disabled={attrs.disabled}
             onChange={attrs.onChange}/>)
-        inputsAndLabels.push(<label class="vtd-rate-star" for={inputId} aria-label={attrs.getStarLabel?.(starValue, count)}>★</label>)
+        inputsAndLabels.push(<label class="vtd-rate-star" for={inputId} aria-label={attrs.getStarLabel?.(starValue, count) ?? starValue.toLocaleString()}>{glyphElement(Glyphs.star, 1.1)}</label>)
     }
 
     return passthroughAttrsToElement<HTMLSpanElement>(<span class={`vtd-rate vtd-rate-${attrs.type||"warning"}${attrs.disabled?" vtd-rate-disabled":""}`} role="radiogroup">

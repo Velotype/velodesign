@@ -1,55 +1,34 @@
 import {passthroughAttrsToElement} from "../core/velotype.ts"
-import { mountStyles } from "../core/styles.ts"
 import type { FunctionComponent, IdAttr, StylePassthroughAttrs } from "../core/velotype.ts"
-import { createElementNSHelper, setAttributeHelper, svgNamespace } from "../core/utilities.ts"
+import { Icon, iconElement, mountIconStyles } from "../core/glyphs.ts"
 
-/**
- * An Icon 
- */
-export class Icon {
-    /** width of the icon in px */
-    w: number
-    /** height of the icon in px */
-    h: number
-    /**
-     * SVG path to draw the icon
-     * 
-     * Reference: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/d
-     */
-    d: string
-    /** Create a new Icon */
-    constructor(w: number, h: number, d: string) {
-        this.w = w
-        this.h = h
-        this.d = d
-    }
-}
+export { Icon }
 
 /** Map of registered icons */
 const icons = new Map<string, Icon>()
 
 /** Attrs type for `<I/>` Component */
-export type IAttrsType = {
-    /** The key used to lookup the Icon */
+export type IAttrsType = ({
+    /** The key used to lookup a registered Icon */
     i: string
+    icon?: never
+} | {
+    /** The Icon to draw, such as one of `Glyphs` */
+    icon: Icon
+    i?: never
+}) & {
+    /** Accessible name. Without one the icon is decoration, hidden from assistive tech - no default, the library doesn't assume a language */
+    label?: string
 } & IdAttr & StylePassthroughAttrs
 /**
  * I for Icon
  *
- * This Component renders an icon.
+ * This Component renders an icon: a registered one by key (`i`), or one given directly (`icon`).
  */
 export const I: FunctionComponent<IAttrsType> = function(attrs: IAttrsType): SVGSVGElement | null {
-    const icon = icons.get(attrs.i)
+    const icon = attrs.icon ?? icons.get(attrs.i!)
     if (icon) {
-        const svg = createElementNSHelper("svg") as SVGSVGElement
-        setAttributeHelper(svg,"xmlns",svgNamespace)
-        setAttributeHelper(svg,"class", "vtd-icon")
-        setAttributeHelper(svg,"role", "img")
-        setAttributeHelper(svg,"viewBox",`0 0 ${icon.w} ${icon.h}`)
-        const path = createElementNSHelper("path") as SVGPathElement
-        setAttributeHelper(path,"fill", "currentcolor")
-        setAttributeHelper(path,"d", icon.d)
-        svg.appendChild(path)
+        const svg = iconElement(icon, attrs.label)
         // `passthroughAttrsToElement`'s generic is declared `<T extends HTMLElement>`, and
         // unlike `HTMLDetailsElement` (used the same way by `Menu`/`Accordion`/`Collapse`/
         // `Tree`), `SVGSVGElement` genuinely doesn't structurally satisfy that - it descends
@@ -61,16 +40,12 @@ export const I: FunctionComponent<IAttrsType> = function(attrs: IAttrsType): SVG
     return null
 }
 
-let iconStylesheetSet: boolean = false
 /**
  * Register an icon
- * 
+ *
  * Can later use `<I i={key}/>` to render this icon into an SVG Element
  */
 export function registerIcon(key: string, icon: Icon) {
-    if (!iconStylesheetSet) {
-        mountStyles('.vtd-icon{height:1em;vertical-align:middle;}','Velodesign Icon')
-        iconStylesheetSet = true
-    }
+    mountIconStyles()
     icons.set(key, icon)
 }

@@ -2,6 +2,7 @@
 /** @jsx h */
 import { h } from "../core/jsx.ts"
 import {passthroughAttrsToElement} from "../core/velotype.ts"
+import { Glyphs, glyphElement } from "../core/glyphs.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { CSSPropertyValue } from "../core/css-value.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
@@ -79,7 +80,7 @@ export function Table<RowType>(attrs: TableAttrsType<RowType>, _children: Render
 .vtd-table th{font-weight:bold;color:var(--text);white-space:nowrap;}
 .vtd-table th[aria-sort]{cursor:pointer;user-select:none;}
 .vtd-table th[aria-sort]:hover{background-color:var(--background-1);}
-.vtd-table-sort-indicator{margin-inline-start:0.3em;opacity:0.6;}
+.vtd-table-sort-indicator{margin-inline-start:0.3em;opacity:0.7;}
 .vtd-table tbody tr:hover{background-color:var(--background-1);}
 .vtd-table-align-center{text-align:center;}
 .vtd-table-align-end{text-align:end;}
@@ -110,7 +111,8 @@ export function Table<RowType>(attrs: TableAttrsType<RowType>, _children: Render
                     class={column.align ? `vtd-table-align-${column.align}` : ""}
                     onClick={column.onSortClick}>
                     {column.header}
-                    {column.sortDirection ? <span class="vtd-table-sort-indicator" aria-hidden="true">{column.sortDirection == "asc" ? "▲" : "▼"}</span> : null}
+                    {/* Sorting moves the data, so an arrow (up: ascending), not a chevron */}
+                    {column.sortDirection ? <span class="vtd-table-sort-indicator" aria-hidden="true">{glyphElement(column.sortDirection == "asc" ? Glyphs.arrowUp : Glyphs.arrowDown, 1)}</span> : null}
                 </th>)}
             </tr>
         </thead>

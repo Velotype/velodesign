@@ -1,7 +1,7 @@
 import {replaceElementWithRoot, Component} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
-import { addLicense, I, Icon, registerIcon, setThemeOnSelector, Theme } from "../../src/index.ts"
+import { addLicense, Glyphs, I, Icon, registerIcon, setThemeOnSelector, Theme } from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 
 addLicense("font-awesome",`// Icon font SVG paths provided by Font Awesome
@@ -19,6 +19,10 @@ class IconGallery extends Component<EmptyAttrs> {
             <div>Example icon with theme variable color: <I i="gear" style={{color: "var(--primary)"}}/></div>
             <div>Example big icon: <I i="gear" style={{height: "2em"}}/></div>
             <div>Example small icon: <I i="gear" style={{height: "0.75em"}}/></div>
+            <div id="glyphs" style={{display: "flex", flexWrap: "wrap", gap: "14px", marginTop: "12px", fontSize: "28px"}}>
+                {Object.entries(Glyphs).map(([name, icon]) => <span title={name} data-glyph={name}><I icon={icon}/></span>)}
+            </div>
+            <div>A glyph with a name: <I icon={Glyphs.tick} label="Done" id="labelled-glyph"/></div>
         </div>
     }
 }

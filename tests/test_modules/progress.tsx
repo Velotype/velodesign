@@ -1,7 +1,7 @@
-import {replaceElementWithRoot, Component} from "@velotype/velotype"
+import {replaceElementWithRoot, Component, getComponent} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
-import { Progress, setThemeOnSelector, Theme } from "../../src/index.ts"
+import { Button, Progress, setThemeOnSelector, Theme } from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 
 class ProgressGallery extends Component<EmptyAttrs> {
@@ -12,7 +12,25 @@ class ProgressGallery extends Component<EmptyAttrs> {
             <div><Progress value={100} type="secondary" showLabel/></div>
             <div><Progress value={55} type="warning" showLabel/></div>
             <div><Progress value={20} type="danger" showLabel/></div>
+            <div id="working-progress">{this.#task}</div>
+            <div><Progress value={10} max={10} working status="Sent 10"/></div>
+            <div><Button type="secondary" id="working-progress-run" onClick={() => this.#run()}>Run</Button></div>
         </div>
+    }
+
+    /** A task that counts up to its end, so the finish can be watched */
+    #task = getComponent<Progress>(<Progress value={0} max={200} working status="0 of 200"/>)
+    #timer: number | undefined
+    #run() {
+        clearTimeout(this.#timer)
+        let n = 0
+        this.#task.setValue(0, "0 of 200")
+        const step = () => {
+            n = Math.min(200, n + 4 + Math.floor(Math.random() * 14))
+            this.#task.setValue(n, n < 200 ? `${n} of 200` : "Sent 200")
+            if (n < 200) {this.#timer = setTimeout(step, 350 + Math.random() * 650)}
+        }
+        this.#timer = setTimeout(step, 300)
     }
 }
 

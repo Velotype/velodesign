@@ -29,9 +29,9 @@ export type PaginationAttrsType = {
     onPageChange: (page: number) => void
     /** How many page numbers to show on each side of the current page (default: `2`) */
     siblingCount?: number
-    /** Previous-page button content (default: `PaginationThemeOptions.prevSymbol` - a plain "‹", not English text, so the library doesn't assume a language) */
+    /** Previous-page button content (default: `PaginationThemeOptions.prevSymbol` - a drawn chevron, not English text, so the library doesn't assume a language) */
     prevButtonChildren?: RenderableElements
-    /** Next-page button content (default: `PaginationThemeOptions.nextSymbol` - a plain "›", not English text, so the library doesn't assume a language) */
+    /** Next-page button content (default: `PaginationThemeOptions.nextSymbol` - a drawn chevron, not English text, so the library doesn't assume a language) */
     nextButtonChildren?: RenderableElements
     /** Accessible label for the navigation landmark. No default - the library doesn't assume a language; set this (e.g. to "Pagination") to give screen reader users a description */
     ariaLabel?: string

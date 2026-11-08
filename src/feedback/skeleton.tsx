@@ -28,17 +28,29 @@ export type SkeletonAttrsType = {
 let areSkeletonStylesMounted = false
 
 /**
- * An animated placeholder shown in place of content that hasn't loaded yet
+ * An animated placeholder shown in place of content that hasn't loaded yet.
+ *
+ * One band of light sweeps across every block on the page together: the gradient is fixed to the
+ * viewport, so each block shows its own slice of the same band, and because the band leans, it
+ * reaches each row a moment after the row above - the order the content will arrive in. With the
+ * reader's reduce-motion setting on, the blocks are still.
  */
 export const Skeleton: FunctionComponent<SkeletonAttrsType> = function(attrs: SkeletonAttrsType, _children: RenderableElements[]): HTMLElement {
     if (!areSkeletonStylesMounted) {
         areSkeletonStylesMounted = true
         mountStyles(`
-@keyframes vtd-skeleton-pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+@keyframes vtd-skeleton-sweep{from{background-position:-150vw 0;}to{background-position:50vw 0;}}
 .vtd-skeleton{
 display:block;
 background-color:var(--background-3);
-animation:vtd-skeleton-pulse 1.5s ease-in-out infinite;
+background-image:linear-gradient(100deg, transparent 40%, color-mix(in srgb, var(--background-1) 70%, transparent) 50%, transparent 60%);
+background-size:200vw 100%;
+background-repeat:no-repeat;
+background-attachment:fixed;
+animation:vtd-skeleton-sweep 1.6s linear infinite;
+}
+@media (prefers-reduced-motion: reduce){
+.vtd-skeleton{animation:none;background-image:none;}
 }
 .vtd-skeleton-text{width:100%;box-sizing:border-box;height:1em;border-radius:0.25rem;margin-block-end:0.5em;}
 .vtd-skeleton-text:last-child{margin-block-end:0;width:70%;}

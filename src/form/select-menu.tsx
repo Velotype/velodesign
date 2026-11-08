@@ -3,6 +3,7 @@
 import { h } from "../core/jsx.ts"
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
+import { Glyphs, glyphElement } from "../core/glyphs.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { keepPlaced, placeInView } from "../core/placement.ts"
 import type { PlaceInViewOptions } from "../core/placement.ts"
@@ -236,12 +237,8 @@ cursor:pointer;
 .vtd-select-menu-placeholder{opacity:0.6;}
 .vtd-select-menu-chevron{
 flex-shrink:0;
-width:0.6em;
-height:0.6em;
-border:solid var(--text);
-border-width:0 0.12em 0.12em 0;
-transform:rotate(45deg);
-margin-block-start:-0.3em;
+display:flex;
+color:var(--text);
 }
 .vtd-select-menu-panel{
 position:absolute;
@@ -302,7 +299,7 @@ display:none;
             onClick={() => { this.#open ? this.#closePanel() : this.#openPanel() }}
             onKeyDown={this.#handleTriggerKeyDown}>
             {this.#valueEl}
-            <span class="vtd-select-menu-chevron" aria-hidden="true"/>
+            <span class="vtd-select-menu-chevron" aria-hidden="true">{glyphElement(Glyphs.chevronDown, 1.15)}</span>
         </button>
 
         this.#hiddenInput = attrs.name ? <input type="hidden" name={attrs.name} value={this.#selectedValue ?? ""}/> : undefined

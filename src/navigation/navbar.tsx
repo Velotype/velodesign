@@ -2,6 +2,7 @@
 /** @jsx h */
 import { h } from "../core/jsx.ts"
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
+import { Glyphs, glyphElement } from "../core/glyphs.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, IdAttr, RenderableElements, RenderObject, StylePassthroughAttrs } from "../core/velotype.ts"
 import type { SidebarNavState } from "./sidebar.tsx"
@@ -82,7 +83,7 @@ export class Navbar extends Component<NavbarAttrsType> {
                 aria-expanded="false"
                 class="vtd-navbar-menu vtd-navbar-menu-collapsed"
                 onClick={() => { const s = nav.get(); nav.set({...s, open: !s.open}) }}>
-                <span class="vtd-navbar-menu-icon" aria-hidden="true"/>
+                <span class="vtd-navbar-menu-icon" aria-hidden="true">{glyphElement(Glyphs.menu, 1.25)}</span>
             </button>
         }
 
@@ -211,23 +212,7 @@ transition:opacity 0.18s ease-in-out, max-width 0.18s ease-in-out, min-width 0.1
 @media (prefers-reduced-motion: reduce){
 .vtd-navbar-menu,.vtd-navbar-menu-collapsed{transition:none;}
 }
-.vtd-navbar-menu-icon{
-position:relative;
-display:block;
-width:1.1em;
-height:2px;
-background-color:currentcolor;
-}
-.vtd-navbar-menu-icon::before,.vtd-navbar-menu-icon::after{
-content:"";
-position:absolute;
-left:0;
-width:100%;
-height:2px;
-background-color:currentcolor;
-}
-.vtd-navbar-menu-icon::before{top:-0.35em;}
-.vtd-navbar-menu-icon::after{top:0.35em;}
+.vtd-navbar-menu-icon{display:flex;}
 `, "vtd/Navbar")
     }
 }

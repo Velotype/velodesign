@@ -436,11 +436,12 @@ describe('basic component rendering', () => {
     })
 
     itWrap("pagination doesn't duplicate a page number when totalPages is small", "pagination", "#two-pages-pagination", async (_selection: ElementHandle) => {
-        const twoPageLabels = await page.evaluate(() => Array.from(document.getElementById("two-pages-pagination")!.querySelectorAll(".vtd-pagination button")).map(b => b.textContent))
-        if (JSON.stringify(twoPageLabels) != JSON.stringify(["‹", "1", "2", "›"])) {fail(`ERROR: expected exactly one "2" button with totalPages=2, got: ${JSON.stringify(twoPageLabels)}`)}
+        // Previous and next are drawn glyphs (CommonThemeOptions.prevSymbol/nextSymbol), so they read as "glyph"
+        const twoPageLabels = await page.evaluate(() => Array.from(document.getElementById("two-pages-pagination")!.querySelectorAll(".vtd-pagination button")).map(b => b.textContent || (b.querySelector(".vtd-icon") ? "glyph" : "")))
+        if (JSON.stringify(twoPageLabels) != JSON.stringify(["glyph", "1", "2", "glyph"])) {fail(`ERROR: expected exactly one "2" button with totalPages=2, got: ${JSON.stringify(twoPageLabels)}`)}
 
-        const onePageLabels = await page.evaluate(() => Array.from(document.getElementById("one-page-pagination")!.querySelectorAll(".vtd-pagination button")).map(b => b.textContent))
-        if (JSON.stringify(onePageLabels) != JSON.stringify(["‹", "1", "›"])) {fail(`ERROR: expected no page-2 button at all with totalPages=1, got: ${JSON.stringify(onePageLabels)}`)}
+        const onePageLabels = await page.evaluate(() => Array.from(document.getElementById("one-page-pagination")!.querySelectorAll(".vtd-pagination button")).map(b => b.textContent || (b.querySelector(".vtd-icon") ? "glyph" : "")))
+        if (JSON.stringify(onePageLabels) != JSON.stringify(["glyph", "1", "glyph"])) {fail(`ERROR: expected no page-2 button at all with totalPages=1, got: ${JSON.stringify(onePageLabels)}`)}
     })
 
     itWrap("menu opens on trigger click and closes after picking an item", "menu", "#actions-menu", async (selection: ElementHandle) => {
@@ -507,7 +508,9 @@ describe('basic component rendering', () => {
 
         const toast = await page.waitForSelector(".vtd-toast")
         if (!toast) {fail("ERROR: toast did not appear after clicking trigger")}
-        assertEquals(await toast.innerText(), "Gone in a flash\n\u2715")
+        // The message, then the dismiss button's drawn cross (CommonThemeOptions.closeSymbol)
+        assertEquals((await toast.innerText()).trim(), "Gone in a flash")
+        assert(await page.$(".vtd-toast .vtd-toast-dismiss .vtd-icon"), "ERROR: the toast's dismiss button shows no cross")
 
         await new Promise(resolve => setTimeout(resolve, 800))
         const stillThere = await page.$(".vtd-toast")
@@ -2384,7 +2387,14 @@ describe('basic component rendering', () => {
     itWrap("one shared symbol reaches every component that means the same thing by it", "theme-options", "#symbols-close", async (_selection: ElementHandle) => {
         const read = () => page.evaluate(() => {
             const scope = document.getElementById("showcase-theme-light") as HTMLElement
-            const text = (selector: string) => (scope.querySelector(selector) as HTMLElement | null)?.innerText.trim() ?? "(missing)"
+            // A drawn glyph reads as "glyph:" and its path, so the defaults are told apart as well as text overrides
+            const text = (selector: string) => {
+                const el = scope.querySelector(selector) as HTMLElement | null
+                if (!el) {return "(missing)"}
+                const words = el.innerText.trim()
+                const path = el.querySelector(".vtd-icon path")
+                return words || (path ? `glyph:${path.getAttribute("d")}` : "")
+            }
             return {
                 alertDismiss: text("#symbols-close .vtd-alert-dismiss"),
                 tagRemove: text("#symbols-close .vtd-tag-remove"),
@@ -2396,10 +2406,12 @@ describe('basic component rendering', () => {
         }) as Promise<Record<string, string>>
 
         const before = await read()
-        if (before.alertDismiss != "\u2715" || before.tagRemove != "\u2715") {
+        // The package defaults: Glyphs.cross, .chevronLeft, .tick and .dots
+        const cross = "glyph:M7.5 7.5l9 9M16.5 7.5l-9 9"
+        if (before.alertDismiss != cross || before.tagRemove != cross) {
             fail(`ERROR: the close glyph did not start at the package default: ${JSON.stringify(before)}`)
         }
-        if (before.pagerPrev != "\u2039" || before.stepsDone != "\u2713" || before.crumbsCollapse != "\u2026") {
+        if (before.pagerPrev != "glyph:M15 6l-6 6 6 6" || before.stepsDone != "glyph:M5 12.5l4.5 4.5L19 7.5" || before.crumbsCollapse != "glyph:M6 12h0M12 12h0M18 12h0") {
             fail(`ERROR: a shared glyph did not start at its package default: ${JSON.stringify(before)}`)
         }
 
@@ -2484,14 +2496,17 @@ describe('basic component rendering', () => {
             input.value = "zzzznothingmatchesthis"
             input.dispatchEvent(new Event("input", {bubbles: true}))
             const empty = scope.querySelector(".vtd-combobox-empty")
-            return empty ? empty.innerText.trim() : "(no empty node rendered)"
+            if (!empty) {return "(no empty node rendered)"}
+            const path = empty.querySelector(".vtd-icon path")
+            return empty.innerText.trim() || (path ? "glyph:" + path.getAttribute("d") : "")
         })()`) as Promise<string>
 
         const fallback = await noMatchIn("default-combobox")
-        if (/[A-Za-z]/.test(fallback)) {
+        // A drawn glyph reads as "glyph:" and its path; only words can be language-specific
+        if (!fallback.startsWith("glyph:") && /[A-Za-z]/.test(fallback)) {
             fail(`ERROR: the default no-match state renders language-specific text: ${JSON.stringify(fallback)}`)
         }
-        if (fallback != "\u2205") {
+        if (!fallback.startsWith("glyph:M4 13.5l2.4-6.3")) {
             fail(`ERROR: expected the shared empty symbol for an unset noMatchMessage, got ${JSON.stringify(fallback)}`)
         }
 
