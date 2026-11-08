@@ -37,7 +37,7 @@ property palette every component reads from.
 
 ## Components
 
-**Typography** - Heading, Text, Paragraph, Icon (`I`, `registerIcon`)
+**Typography** - Heading, Text, Paragraph, Icon (`I`, `registerIcon`), `Glyphs`
 
 **Layout** - Stack, Grid
 
