@@ -103,8 +103,8 @@ export class Progress extends Component<ProgressAttrsType> {
             mountStyles(`
 .vtd-progress-wrapper{width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:0.4em;}
 .vtd-progress-row{display:flex;align-items:center;gap:0.75em;}
-.vtd-progress{flex-grow:1;height:0.6em;border-radius:999px;background-color:var(--background-3);overflow:hidden;}
-.vtd-progress-fill{height:100%;width:0;border-radius:999px;position:relative;overflow:hidden;transition:width 0.6s cubic-bezier(0.25,0.8,0.35,1);}
+.vtd-progress{display:block;flex-grow:1;height:0.6em;border-radius:999px;background-color:var(--background-3);overflow:hidden;}
+.vtd-progress-fill{display:block;height:100%;width:0;border-radius:999px;position:relative;overflow:hidden;transition:width 0.6s cubic-bezier(0.25,0.8,0.35,1);}
 .vtd-progress-primary .vtd-progress-fill{background-color:var(--primary);}
 .vtd-progress-secondary .vtd-progress-fill{background-color:var(--secondary);}
 .vtd-progress-warning .vtd-progress-fill{background-color:var(--warning);}
