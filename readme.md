@@ -87,15 +87,14 @@ a real gate - count the `... ok (` lines if you want a number.
 
 ### Changes go through a pull request
 
-`main` is protected: no direct pushes, no force-pushes. Since there is no second developer, the
-required checks *are* the review - a pull request merges itself once they pass and sits open until
-they do.
+`main` is protected: no direct pushes, no force-pushes. A pull request can be merged once the
+required checks pass, and a person merges it.
 
 ```sh
 git switch -c my-change
 # ...
 git push -u origin my-change
-gh pr create --fill          # auto-merge arms itself; CI decides
+gh pr create --fill          # merged by hand once CI is green
 ```
 
 Each pull request also gets a comment reporting what it does to the library's bundle size, measured
