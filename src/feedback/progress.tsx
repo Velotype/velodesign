@@ -93,7 +93,7 @@ export class Progress extends Component<ProgressAttrsType> {
     #percent: HTMLElement | undefined
     #status: HTMLElement | undefined
     #max: number
-    #finishTimer: number | undefined
+    #finishTimer: ReturnType<typeof setTimeout> | undefined
 
     /** Create a new `<Progress/>` Component */
     constructor(attrs: ProgressAttrsType, children: RenderableElements[]) {
