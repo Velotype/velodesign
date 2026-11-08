@@ -1728,7 +1728,7 @@ Running the bundler: `tests/bundle.ts` builds the gallery modules, and `deno tas
 
 ⚠️ **Bundling runs a small pool, not one per core.** Memory is the limit, not CPU: eight concurrent `deno bundle` processes took a four-core machine down with memory pressure. Half the cores, and `VTD_BUNDLE_JOBS` overrides it. Parallelism is not where the win is anyway - it was 26s at two jobs against 35s serially, while skipping what is current costs nothing at all.
 
-## Changes reach `main` through a pull request, and CI is the reviewer
+## Changes reach `main` through a pull request
 
 `main` is protected: no direct pushes, no force-pushes, no deletion. Every change goes through a
 pull request, and because there is no second developer, **the required checks are the review** -
