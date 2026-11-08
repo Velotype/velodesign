@@ -1,8 +1,8 @@
 import {passthroughAttrsToElement} from "../core/velotype.ts"
 import type { FunctionComponent, IdAttr, StylePassthroughAttrs } from "../core/velotype.ts"
-import { Icon, iconElement, mountIconStyles } from "../core/glyphs.ts"
+import { Icon, iconElement, mountIconStyles, type IconLayer } from "../core/glyphs.ts"
 
-export { Icon }
+export { Icon, type IconLayer }
 
 /** Map of registered icons */
 const icons = new Map<string, Icon>()

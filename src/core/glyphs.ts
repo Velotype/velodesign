@@ -16,6 +16,10 @@ import { createElementNSHelper, setAttributeHelper, svgNamespace } from "./utili
  * a round dot as wide as the line, so a glyph with dots is still one path. With a `strokeWidth`
  * and `filled`, the lines are drawn and the shape inside them filled too: a solid shape with
  * round corners (`Glyphs.star`).
+ *
+ * A mark that needs a second line width, or a filled part beside lines, adds `layers`: more paths,
+ * each drawn over the ones before it with its own `strokeWidth` and `filled`. A magnifier's glint,
+ * thinner than its lens, is one: `new Icon(24, 24, lens, 2, false, [{d: glint, strokeWidth: 1.2}])`.
  */
 export class Icon {
     /** width of the icon's drawing box */
@@ -32,14 +36,43 @@ export class Icon {
     strokeWidth?: number
     /** With `strokeWidth`, also fills the shape inside the lines, which round its corners */
     filled?: boolean
+    /** More paths, drawn in order over `d`, each with its own line width or fill */
+    layers?: IconLayer[]
     /** Create a new Icon */
-    constructor(w: number, h: number, d: string, strokeWidth?: number, filled?: boolean) {
+    constructor(w: number, h: number, d: string, strokeWidth?: number, filled?: boolean, layers?: IconLayer[]) {
         this.w = w
         this.h = h
         this.d = d
         this.strokeWidth = strokeWidth
         this.filled = filled
+        this.layers = layers
     }
+}
+
+/** One more path in an `Icon`, drawn over the paths before it */
+export type IconLayer = {
+    /** SVG path to draw, in the icon's drawing box */
+    d: string
+    /** Draws the path as lines this wide instead of filling it */
+    strokeWidth?: number
+    /** With `strokeWidth`, also fills the shape inside the lines */
+    filled?: boolean
+}
+
+/** A `<path>` for one of an icon's paths: filled, or lines with round ends and corners */
+function pathElement(d: string, strokeWidth: number | undefined, filled: boolean | undefined): SVGPathElement {
+    const path = createElementNSHelper("path") as SVGPathElement
+    if (strokeWidth) {
+        setAttributeHelper(path,"fill", filled ? "currentcolor" : "none")
+        setAttributeHelper(path,"stroke", "currentcolor")
+        setAttributeHelper(path,"stroke-width", String(strokeWidth))
+        setAttributeHelper(path,"stroke-linecap", "round")
+        setAttributeHelper(path,"stroke-linejoin", "round")
+    } else {
+        setAttributeHelper(path,"fill", "currentcolor")
+    }
+    setAttributeHelper(path,"d", d)
+    return path
 }
 
 let iconStylesheetSet: boolean = false
@@ -68,18 +101,12 @@ export function iconElement(icon: Icon, label?: string): SVGSVGElement {
     } else {
         setAttributeHelper(svg,"aria-hidden", "true")
     }
-    const path = createElementNSHelper("path") as SVGPathElement
-    if (icon.strokeWidth) {
-        setAttributeHelper(path,"fill", icon.filled ? "currentcolor" : "none")
-        setAttributeHelper(path,"stroke", "currentcolor")
-        setAttributeHelper(path,"stroke-width", String(icon.strokeWidth))
-        setAttributeHelper(path,"stroke-linecap", "round")
-        setAttributeHelper(path,"stroke-linejoin", "round")
-    } else {
-        setAttributeHelper(path,"fill", "currentcolor")
+    svg.appendChild(pathElement(icon.d, icon.strokeWidth, icon.filled))
+    if (icon.layers) {
+        for (const layer of icon.layers) {
+            svg.appendChild(pathElement(layer.d, layer.strokeWidth, layer.filled))
+        }
     }
-    setAttributeHelper(path,"d", icon.d)
-    svg.appendChild(path)
     return svg
 }
 
