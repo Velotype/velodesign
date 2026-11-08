@@ -470,7 +470,9 @@ looked different on every system; rotated borders can't have round ends or be ce
 - **One drawing box, one style.** 24 units, round ends, round corners, `currentcolor`, built with
   `createElementNS` (no HTML strings). `Glyphs` is exported, so a consumer can use the same marks
   (`<I icon={Glyphs.tick}/>`). A solid mark is the same lines, filled (`Icon`'s `filled`): the
-  rating star keeps its round corners that way.
+  rating star keeps its round corners that way. A mark that needs a second line width - a
+  magnifier's glint, thinner than its lens - adds `layers`: more paths drawn over the first, each
+  with its own `strokeWidth` and `filled`.
 - **`glyphElement(icon, scale)` sizes a glyph against the text.** A glyph's lines sit inside its box
   with room around them, so one standing in for a character is drawn a little over `1em` (the cross
   at 1.3, chevrons at about 1.15) to match the character's ink, with a negative margin so the line
@@ -1598,7 +1600,7 @@ the sidebar - that would discard the reader's expansions and their search for a 
 purely presentational.
 
 **Every category has an icon, drawn in `showcase/src/data/category-icons.ts`.** They are single
-paths in a 24x24 box because that is all `Icon` carries, and solid silhouettes because a shape with
+paths in a 24x24 box, drawn before `Icon` could carry lines or `layers`, and solid silhouettes because a shape with
 a hole needs its inner subpath wound the opposite way to punch through under `nonzero` - easy to
 get subtly wrong, and it renders as a filled blob when it is. On the rail the icon *is* the row, so
 it is not decoration.

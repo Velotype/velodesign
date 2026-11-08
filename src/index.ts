@@ -2,7 +2,7 @@ import {Button, ButtonThemeOptions} from "./form/button.tsx"
 import type {ButtonAttrsType, ButtonType} from "./form/button.tsx"
 import { ButtonGroup } from "./form/button-group.tsx"
 import type { ButtonGroupAttrsType } from "./form/button-group.tsx"
-import { Icon, I, registerIcon } from "./typography/icon.ts"
+import { Icon, I, registerIcon, type IconLayer } from "./typography/icon.ts"
 import { Glyphs } from "./core/glyphs.ts"
 import { highlightMatch, searchHighlightCss } from "./core/search-highlight.tsx"
 import type {IAttrsType} from "./typography/icon.ts"
@@ -114,6 +114,7 @@ export {
     type ToggleAttrsType,
 
     Icon,
+    type IconLayer,
     I,
     Glyphs,
     type IAttrsType,

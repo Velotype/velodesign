@@ -1269,7 +1269,7 @@ const attrTables: Record<string, AttrDoc[]> = {
     ],
     Icon: [
         {name: "i", type: "string", description: "The key of a registered icon. Give this or icon."},
-        {name: "icon", type: "Icon", description: "The icon to draw directly - one of Glyphs, the package's own line drawings, or a new Icon(w, h, d, strokeWidth?). Give this or i."},
+        {name: "icon", type: "Icon", description: "The icon to draw directly - one of Glyphs, the package's own line drawings, or a new Icon(w, h, d, strokeWidth?, filled?, layers?), where layers are more paths drawn over the first, each with its own strokeWidth and filled. Give this or i."},
         {name: "label", type: "string", description: "Accessible name. Without one the icon is decoration, hidden from assistive tech."},
     ],
 }

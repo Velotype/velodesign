@@ -179,6 +179,28 @@ describe('basic component rendering', () => {
         }
     }
 
+    itWrap("an icon in layers draws each path over the last, with its own line width", "icon", "#layered-icon", async (_selection: ElementHandle) => {
+        const paths = await page.evaluate(() => Array.from(document.querySelectorAll("#showcase-theme-light #layered-icon path")).map(p => ({
+            d: p.getAttribute("d"),
+            fill: p.getAttribute("fill"),
+            stroke: p.getAttribute("stroke"),
+            width: p.getAttribute("stroke-width"),
+            cap: p.getAttribute("stroke-linecap"),
+        })))
+        if (paths.length != 2) {fail(`ERROR: expected the lens and its glint as two paths, got ${paths.length}`)}
+        assertEquals(paths[0].width, "2")
+        assertEquals(paths[1].width, "1.2")
+        assertEquals(paths[1].d, "M7.6 9.4a3.2 3.2 0 0 1 1.9-1.9")
+        for (const path of paths) {
+            if (path.fill != "none" || path.stroke != "currentcolor" || path.cap != "round") {
+                fail(`ERROR: expected each layer drawn as round-ended lines in the text colour, got ${JSON.stringify(path)}`)
+            }
+        }
+        // An icon without layers stays one path
+        const tickPaths = await page.evaluate(() => document.querySelectorAll("#showcase-theme-light #labelled-glyph path").length)
+        assertEquals(tickPaths, 1)
+    })
+
     itWrap("render default button", "button", "#default-button", async (selection: ElementHandle) => {
         assertEquals(await selection.innerText(),"default button")
     })
