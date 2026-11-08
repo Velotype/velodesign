@@ -21,7 +21,8 @@
  * The slide is the `translate` property, which composes with any `transform` a component's own CSS
  * gives the part, so no stylesheet has to make room for it.
  *
- * **Placing again is cheap, because `keepPlaced` runs it on every frame of a scroll or a resize.**
+ * **Placing again is cheap, because `keepPlaced` runs it on every frame of a scroll or a resize, of
+ * the window or of anything holding the part.**
  * Each frame reads all the layout it needs first and writes after, so the browser lays the page out
  * once (a read after a write forces a layout there and then), and it writes nothing that hasn't
  * changed - a still page costs a few reads and no writes. The other side is never tried out: where
@@ -298,16 +299,16 @@ export function sideClassSetter(element: HTMLElement, prefix: string): (side: Pl
 }
 
 /**
- * Keeps open floating parts placed while what's around them moves: places them again on a resize,
- * or a scroll anywhere except inside `root` (a list scrolled through doesn't move), at most once a
- * frame. `parts` says which parts are open now - a menu and whichever submenu is - and every one of
+ * Keeps open floating parts placed while what's around them moves: places them again on a resize
+ * of the window or of anything holding `root` (a sidebar collapsing changes no window size, and moves
+ * what is beside it), or a scroll anywhere except inside `root` (a list scrolled through doesn't
+ * move), at most once a frame. `parts` says which parts are open now - a menu and whichever submenu is - and every one of
  * them is read before any is written, so a frame lays the page out once however many there are.
  * Returns what stops it: call that when they close, and on unmount.
  */
 export function keepPlaced(root: HTMLElement, parts: () => [HTMLElement, PlaceInViewOptions][]): () => void {
     let frame = 0
-    const schedule = (event: Event) => {
-        if (event.target instanceof Node && root.contains(event.target)) {return}
+    const placeSoon = () => {
         if (frame) {return}
         frame = requestAnimationFrame(() => {
             frame = 0
@@ -316,12 +317,23 @@ export function keepPlaced(root: HTMLElement, parts: () => [HTMLElement, PlaceIn
             for (const write of writes) {write?.()}
         })
     }
+    const schedule = (event: Event) => {
+        if (event.target instanceof Node && root.contains(event.target)) {return}
+        placeSoon()
+    }
+    // Everything holding it, since a change of size anywhere up the tree can move it. Found once, when
+    // it opens, and a change costs one frame like any other, so a still page pays for nothing
+    const observer = new ResizeObserver(placeSoon)
+    for (let holder = root.parentElement; holder; holder = holder.parentElement) {
+        observer.observe(holder)
+    }
     globalThis.addEventListener("resize", schedule)
     // Capture: a scroll in any scrolling ancestor, not only the page's
     document.addEventListener("scroll", schedule, {capture: true, passive: true})
     return () => {
         cancelAnimationFrame(frame)
         frame = 0
+        observer.disconnect()
         globalThis.removeEventListener("resize", schedule)
         document.removeEventListener("scroll", schedule, {capture: true})
     }

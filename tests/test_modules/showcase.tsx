@@ -1,7 +1,7 @@
 import {replaceElementWithRoot, Component, getComponent} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
-import { Accordion, Alert, Lightbox, AreaChart, AsyncDataTable, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, Calendar, Card, EventCalendar, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu, DataTable, DatePicker, Gauge, Grid, Heading, LineChart, Paragraph, PieChart, Sparkline, Stack, Text, Divider, Drawer, Empty, Form, FormField, InputNumber, List, Menu, Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, Resizable, ScrollArea, Select, SelectMenu, showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, Tabs, Tag, TextBox, Theme, Timeline, Toggle, Tooltip, Tree, Upload} from "../../src/index.ts"
+import { Accordion, Alert, Lightbox, AsyncDataTable, Avatar, Badge, Breadcrumbs, Button, ButtonGroup, Calendar, Card, EventCalendar, Carousel, Checkbox, Collapse, ColorPicker, Combobox, Command, ContextMenu, DataTable, DatePicker, Grid, Heading, Paragraph, Stack, Text, Divider, Drawer, Empty, Form, FormField, InputNumber, List, Menu, Navbar, NavLink, Pagination, Popconfirm, Popover, Progress, RadioButton, Rate, Resizable, ScrollArea, Select, SelectMenu, showToast, Sidebar, Skeleton, Slider, Spinner, Statistic, Steps, Table, Tabs, Tag, TextBox, Theme, Timeline, Toggle, Tooltip, Tree, Upload} from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 import { setThemeOnSelector } from "../../src/core/theme.ts"
 
@@ -223,40 +223,6 @@ class ShowcaseSide extends Component<EmptyAttrs> {
             <div style={{marginTop:"10px", maxWidth:"420px"}}><Grid minColumnWidth="8em" gap="sm">
                 <Card>One</Card><Card>Two</Card><Card>Three</Card>
             </Grid></div>
-            <hr style={{marginTop:"10px"}}/>
-            Example LineChart:
-            <div style={{marginTop:"10px", maxWidth:"420px"}}><LineChart
-                height={140}
-                ariaLabel="Example trend"
-                data={[
-                    {label:"Jan",values:{a:12,b:8}},{label:"Feb",values:{a:19,b:11}},
-                    {label:"Mar",values:{a:15,b:10}},{label:"Apr",values:{a:27,b:15}},
-                ]}
-                series={[{key:"a",label:"Revenue"},{key:"b",label:"Costs"}]}/></div>
-            <hr style={{marginTop:"10px"}}/>
-            Example AreaChart:
-            <div style={{marginTop:"10px", maxWidth:"420px"}}><AreaChart
-                height={140}
-                ariaLabel="Example area"
-                data={[
-                    {label:"Jan",values:{a:12}},{label:"Feb",values:{a:19}},
-                    {label:"Mar",values:{a:15}},{label:"Apr",values:{a:27}},
-                ]}
-                series={[{key:"a",label:"Revenue"}]}/></div>
-            <hr style={{marginTop:"10px"}}/>
-            Example PieChart:
-            <div style={{marginTop:"10px", maxWidth:"260px"}}><PieChart
-                height={160}
-                donut={0.6}
-                centerLabel="61"
-                ariaLabel="Example share"
-                data={[{label:"Platform",value:24},{label:"Growth",value:18},{label:"Infra",value:12},{label:"Design",value:7}]}/></div>
-            <hr style={{marginTop:"10px"}}/>
-            Example Gauge:
-            <div style={{marginTop:"10px", maxWidth:"200px"}}><Gauge
-                value={72} height={140} subLabel="of quota" formatValue={(n: number) => `${n}%`} ariaLabel="72 percent of quota"/></div>
-            <hr style={{marginTop:"10px"}}/>
-            Example Sparkline: <Sparkline values={[4,9,6,12,8,15,11,19]}/>
             <hr style={{marginTop:"10px"}}/>
             Example Form:
             <div style={{marginTop:"10px", maxWidth:"320px"}}><Form><FormField label="Name" required><TextBox type="text"/></FormField></Form></div>

@@ -14,7 +14,7 @@ export const EmptyThemeOptions: {
      * Shown above the title. Replace it with a real illustration to give empty states a house
      * style - this is the whole visual, `vtd-empty-icon` sizing and all, not just the glyph, so an
      * illustration isn't stuck inside a 2.5em span. To change only the glyph, and change it here
-     * and in both tables and every chart at once, set `CommonThemeOptions.emptySymbol` instead.
+     * and in both tables at once, set `CommonThemeOptions.emptySymbol` instead.
      */
     emptySymbol: ThemeSymbol
 } = themeOptions({}, {

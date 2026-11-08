@@ -274,8 +274,7 @@ background-size:16px 16px;
                 <Heading level={2} id="theme-options">Theme options</Heading>
                 <Paragraph type="muted">
                     Exported, mutable objects holding the small pieces of content this component
-                    falls back to - the glyphs it uses instead of English words, and the palette the
-                    charts draw from. A field is read when a component is built, not resolved from
+                    falls back to - the glyphs it uses instead of English words. A field is read when a component is built, not resolved from
                     CSS, so assign to it while your app is starting up, before the first velodesign
                     component exists: velodesign never watches these and will not re-render anything
                     when one changes. The matching attrs (shown above) still override a single

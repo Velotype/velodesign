@@ -1,5 +1,5 @@
 import {
-    AlertThemeOptions, BreadcrumbsThemeOptions, ButtonThemeOptions, ChartThemeOptions, MenuThemeOptions,
+    AlertThemeOptions, BreadcrumbsThemeOptions, ButtonThemeOptions, MenuThemeOptions,
     CommonThemeOptions, DataTableThemeOptions, DrawerThemeOptions, EmptyThemeOptions, LightboxThemeOptions,
     ModalThemeOptions, PaginationThemeOptions, PopconfirmThemeOptions, resetThemeOptions,
     TagThemeOptions, TextFormFieldThemeOptions, ToastThemeOptions,
@@ -52,7 +52,6 @@ const owners: Record<string, Record<string, ThemeSymbol>> = {
     PopconfirmThemeOptions: PopconfirmThemeOptions as unknown as Record<string, ThemeSymbol>,
     TextFormFieldThemeOptions: TextFormFieldThemeOptions as unknown as Record<string, ThemeSymbol>,
     DataTableThemeOptions: DataTableThemeOptions as unknown as Record<string, ThemeSymbol>,
-    ChartThemeOptions: ChartThemeOptions as unknown as Record<string, ThemeSymbol>,
 }
 
 /**
@@ -73,9 +72,6 @@ export const commonSymbolOptions: SymbolOption[] = [
  * The per-component symbols. Anything marked `inherits` shows the shared value until it is
  * given one of its own; the rest are glyphs only one component draws.
  *
- * `ChartThemeOptions.seriesColors` is deliberately absent: it is an array of colours rather than a
- * piece of content, and a text box is the wrong control for it. It is documented on the chart
- * pages all the same.
  */
 export const componentSymbolOptions: SymbolOption[] = [
     {owner: "ButtonThemeOptions", field: "loadingSymbol", fallback: "a Spinner component"},
@@ -101,7 +97,6 @@ export const componentSymbolOptions: SymbolOption[] = [
     {owner: "DataTableThemeOptions", field: "columnsSymbol", fallback: "▥"},
     {owner: "DataTableThemeOptions", field: "emptySymbol", fallback: "the shared empty symbol, in a sized span"},
     {owner: "DataTableThemeOptions", field: "searchSymbol", fallback: "nothing - no label"},
-    {owner: "ChartThemeOptions", field: "emptySymbol", inherits: true, fallback: "∅"},
 ]
 
 /** Every editable symbol, shared ones first */

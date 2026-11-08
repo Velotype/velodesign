@@ -67,12 +67,6 @@ import {
     Paragraph,
     Stack,
     Grid,
-    LineChart,
-    AreaChart,
-    BarChart,
-    PieChart,
-    Gauge,
-    Sparkline,
     Tabs,
     Tag, type TagType,
     TextBox, type TextBoxType,
@@ -135,19 +129,6 @@ const comboboxCountryOptions = [
 ].map(name => ({value: name}))
 const commandLastPicked = new RenderBasic<string>("none")
 
-const chartMonths = [
-    {label: "Jan", values: {revenue: 12, costs: 8}},
-    {label: "Feb", values: {revenue: 19, costs: 11}},
-    {label: "Mar", values: {revenue: 15, costs: 10}},
-    {label: "Apr", values: {revenue: 27, costs: 15}},
-    {label: "May", values: {revenue: 24, costs: 14}},
-    {label: "Jun", values: {revenue: 31, costs: 17}},
-]
-const chartSeries = [{key: "revenue", label: "Revenue"}, {key: "costs", label: "Costs"}]
-const chartShare = [
-    {label: "Platform", value: 24}, {label: "Growth", value: 18},
-    {label: "Infra", value: 12}, {label: "Design", value: 7},
-]
 
 export const stories: ComponentStory[] = [
     // --- Form ---
@@ -977,88 +958,6 @@ export const stories: ComponentStory[] = [
                 const start = (query.page - 1) * query.pageSize
                 return new Promise(resolve => setTimeout(() => resolve({rows: rows.slice(start, start + query.pageSize), total: rows.length}), 200))
             }}/>,
-    },
-    {
-        name: "LineChart", group: "Charts",
-        defaultAttrs: {stacked: false, area: false, showDots: true},
-        controls: {
-            stacked: {kind: "boolean", label: "stacked"},
-            area: {kind: "boolean", label: "area"},
-            showDots: {kind: "boolean", label: "showDots"},
-        },
-        render: (attrs) => <LineChart
-            data={chartMonths} series={chartSeries} height={220}
-            ariaLabel="Revenue and costs by month"
-            formatValue={(n: number) => `$${n}k`}
-            stacked={attrs.stacked as boolean}
-            area={attrs.area as boolean}
-            showDots={attrs.showDots as boolean}/>,
-    },
-    {
-        name: "AreaChart", group: "Charts",
-        defaultAttrs: {stacked: true},
-        controls: {stacked: {kind: "boolean", label: "stacked"}},
-        render: (attrs) => <AreaChart
-            data={chartMonths} series={chartSeries} height={220}
-            ariaLabel="Revenue and costs by month"
-            formatValue={(n: number) => `$${n}k`}
-            stacked={attrs.stacked as boolean}/>,
-    },
-    {
-        name: "BarChart", group: "Charts",
-        defaultAttrs: {stacked: false, horizontal: false},
-        controls: {
-            stacked: {kind: "boolean", label: "stacked"},
-            horizontal: {kind: "boolean", label: "horizontal"},
-        },
-        render: (attrs) => <BarChart
-            data={chartMonths} series={chartSeries} height={220}
-            ariaLabel="Revenue and costs by month"
-            formatValue={(n: number) => `$${n}k`}
-            stacked={attrs.stacked as boolean}
-            horizontal={attrs.horizontal as boolean}/>,
-    },
-    {
-        name: "PieChart", group: "Charts",
-        defaultAttrs: {donut: 0, showPercent: true},
-        controls: {
-            donut: {kind: "number", label: "donut"},
-            showPercent: {kind: "boolean", label: "showPercent"},
-        },
-        render: (attrs) => <PieChart
-            data={chartShare} height={240}
-            ariaLabel="Headcount share by department"
-            donut={attrs.donut as number}
-            showPercent={attrs.showPercent as boolean}/>,
-    },
-    {
-        name: "Gauge", group: "Charts",
-        defaultAttrs: {value: 72, sweep: 240, showRange: true},
-        controls: {
-            value: {kind: "number", label: "value"},
-            sweep: {kind: "number", label: "sweep"},
-            showRange: {kind: "boolean", label: "showRange"},
-        },
-        render: (attrs) => <Gauge
-            height={200} subLabel="of quota"
-            formatValue={(n: number) => `${n}%`}
-            ariaLabel="Percent of quota"
-            value={attrs.value as number}
-            sweep={attrs.sweep as number}
-            showRange={attrs.showRange as boolean}/>,
-    },
-    {
-        name: "Sparkline", group: "Charts",
-        defaultAttrs: {variant: "line", showLast: true},
-        controls: {
-            variant: {kind: "select", label: "variant", options: ["line", "area", "bar"]},
-            showLast: {kind: "boolean", label: "showLast"},
-        },
-        render: (attrs) => <Sparkline
-            values={[4, 9, 6, 12, 8, 15, 11, 19, 14, 22]}
-            width={200} height={44}
-            variant={attrs.variant as "line" | "area" | "bar"}
-            showLast={attrs.showLast as boolean}/>,
     },
     {
         name: "Heading", group: "Typography",

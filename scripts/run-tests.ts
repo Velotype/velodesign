@@ -39,7 +39,7 @@ function isCrossCutting(path: string): boolean {
     return path.startsWith("src/core/")
         || path === "src/index.ts"
         || path.startsWith("tests/basic_tests")
-        || /src\/.*\/(data-table-view|disclosure-view|chart-common|chart-frame|typography-common|spacing)\.tsx?$/.test(path)
+        || /src\/.*\/(data-table-view|disclosure-view|typography-common|spacing)\.tsx?$/.test(path)
 }
 
 /**
@@ -62,7 +62,7 @@ function modulesForChange(path: string, known: Set<string>): string[] | undefine
         return [stem]
     }
     // A component with no gallery page of its own is covered by its category's page
-    const byCategory: Record<string, string> = {charts: "charts", typography: "typography", layout: "layout"}
+    const byCategory: Record<string, string> = {typography: "typography", layout: "layout"}
     const fallback = category ? byCategory[category] : undefined
     return fallback && known.has(fallback) ? [fallback] : undefined
 }

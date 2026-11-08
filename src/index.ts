@@ -89,12 +89,6 @@ import { Stack, type StackAttrsType } from "./layout/stack.tsx"
 import { Grid, type GridAttrsType } from "./layout/grid.tsx"
 import type { GapSize, AlignItems, JustifyContent } from "./layout/spacing.ts"
 import type { CSSPropertyValue } from "./core/css-value.ts"
-import { LineChart, AreaChart, type LineChartAttrsType, type AreaChartAttrsType } from "./charts/line-chart.ts"
-import { BarChart, type BarChartAttrsType } from "./charts/bar-chart.ts"
-import { PieChart, type PieChartAttrsType, type PieSliceType } from "./charts/pie-chart.ts"
-import { Gauge, type GaugeAttrsType, type GaugeBandType } from "./charts/gauge.ts"
-import { Sparkline, type SparklineAttrsType, type SparklineVariant } from "./charts/sparkline.ts"
-import { ChartThemeOptions, type ChartBaseAttrsType, type ChartPointType, type ChartSeriesType } from "./charts/chart-common.ts"
 
 export {
     Button,
@@ -374,26 +368,6 @@ export {
     type CSSPropertyValue,
     type AlignItems,
     type JustifyContent,
-
-    LineChart,
-    type LineChartAttrsType,
-    AreaChart,
-    type AreaChartAttrsType,
-    BarChart,
-    type BarChartAttrsType,
-    PieChart,
-    type PieChartAttrsType,
-    type PieSliceType,
-    Gauge,
-    type GaugeAttrsType,
-    type GaugeBandType,
-    Sparkline,
-    type SparklineAttrsType,
-    type SparklineVariant,
-    ChartThemeOptions,
-    type ChartBaseAttrsType,
-    type ChartPointType,
-    type ChartSeriesType,
 
     Form,
     type FormAttrsType,

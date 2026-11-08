@@ -7,7 +7,7 @@ import { setStylesheet } from "./velotype.ts"
  * - `theme` - the generated palette. Below components so a component may set a colour directly,
  *   above the reset because the reset is not about colour at all.
  * - `base` - the shared internal modules several components are built out of
- *   (`disclosure-view`, `typography-common`, `chart-common`). A component that builds on one of
+ *   (`disclosure-view`, `typography-common`). A component that builds on one of
  *   these must be able to override it without reaching for specificity.
  * - `component` - a component's own rules. Where nearly everything lives.
  * - `composite` - a component that styles *another* component's classes, which it must win:
