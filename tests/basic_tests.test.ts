@@ -2020,6 +2020,20 @@ describe('basic component rendering', () => {
         }
     })
 
+    // The fill is a span, and an inline span ignores width: without display:block the bar showed only
+    // its track at every value. Transitions never advance here, so they are switched off to measure.
+    itWrap("a progress bar's fill is as wide as its value", "progress", "#default-progress", async (_selection: ElementHandle) => {
+        const ratio = await page.evaluate(() => {
+            const style = document.createElement("style")
+            style.textContent = "*,*::before,*::after{transition:none !important}"
+            document.head.append(style)
+            const track = document.querySelector("#showcase-theme-light #default-progress .vtd-progress") as HTMLElement
+            const fill = track.querySelector(".vtd-progress-fill") as HTMLElement
+            return fill.getBoundingClientRect().width / track.getBoundingClientRect().width
+        })
+        if (Math.abs(ratio - 0.4) > 0.02) {fail(`ERROR: a progress of 40 filled ${Math.round(ratio * 100)}% of its track`)}
+    })
+
     itWrap("an open disclosure stops clipping once it has opened, and clips again as it closes", "collapse", "#default-collapse", async (_selection: ElementHandle) => {
         // Function form, which awaits the promise; each wait is short of Astral's deadline
         const state = await page.evaluate(async () => {
