@@ -1728,7 +1728,7 @@ Running the bundler: `tests/bundle.ts` builds the gallery modules, and `deno tas
 
 ⚠️ **Bundling runs a small pool, not one per core.** Memory is the limit, not CPU: eight concurrent `deno bundle` processes took a four-core machine down with memory pressure. Half the cores, and `VTD_BUNDLE_JOBS` overrides it. Parallelism is not where the win is anyway - it was 26s at two jobs against 35s serially, while skipping what is current costs nothing at all.
 
-## Changes reach `main` through a pull request, and CI is the reviewer
+## Changes reach `main` through a pull request
 
 `main` is protected: no direct pushes, no force-pushes, no deletion. Every change goes through a
 pull request, and because there is no second developer, **the required checks are the review** -
@@ -1739,7 +1739,6 @@ nothing merges that they do not pass.
 | `ci.yml` - *Typecheck, lint and publish dry run* | PR + push to main | `deno check` on the package, showcase and tests; `deno lint`; `deno task check-jsx`; `deno task check-baseline` (only widely available web features); `deno task check-html-strings` (no API that turns a string into DOM); `deno publish --dry-run` |
 | `ci.yml` - *Astral suite* | PR + push to main | `deno task test`, which bundles all 72 gallery modules and drives them |
 | `bundle-size.yml` | PR | Comments the gzip/raw size of the whole library against the base branch. Advisory - it reports, it does not block |
-| `auto-merge.yml` | PR | Turns on GitHub's auto-merge, so a PR merges itself once the required checks go green |
 | `publish.yml` | Manual | `deno publish --dry-run`, then `npx jsr publish` |
 
 Three things worth knowing before you touch any of this:
@@ -1748,9 +1747,8 @@ Three things worth knowing before you touch any of this:
   that, `Server.serve()` called `Deno.exit(0)` from its shutdown handler and killed the runner
   before it could print, so every run read `0 passed | 0 failed` whatever happened. `serve()` takes
   `exitProcessOnClose` now and defaults to leaving the process alone.
-- **Auto-merge does not bypass anything.** It queues the merge and GitHub holds it until every
-  required check passes; a red check leaves the PR open. It only arms for a non-draft PR from a
-  branch in this repository opened by the repository owner, so a fork's PR still waits for a human.
+- **A pull request waits for a person to merge it.** The required checks must pass first; nothing
+  merges on its own.
 - **`deno lint` excludes `jsx-key`** in `deno.json`, because velotype's JSX has no `key` prop and
   the rule fires on all 72 list renders. Everything else must be clean; that is why it can gate.
 
