@@ -1673,7 +1673,7 @@ nothing merges that they do not pass.
 | `ci.yml` - *Typecheck, lint and publish dry run* | PR + push to main | `deno check` on the package, showcase and tests; `deno lint`; `deno task check-jsx`; `deno task check-baseline` (only widely available web features); `deno task check-html-strings` (no API that turns a string into DOM); `deno publish --dry-run` |
 | `ci.yml` - *Astral suite* | PR + push to main | `deno task test`, which bundles all 72 gallery modules and drives them |
 | `bundle-size.yml` | PR | Comments the gzip/raw size of the whole library against the base branch. Advisory - it reports, it does not block |
-| `publish.yml` | Manual | `deno publish --dry-run`, then `npx jsr publish` |
+| `publish.yml` | Manual | `deno publish --dry-run`, then `deno publish` with the same deno |
 
 Three things worth knowing before you touch any of this:
 
