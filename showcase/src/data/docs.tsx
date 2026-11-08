@@ -460,7 +460,8 @@ const typeDefinitions: Record<string, TypeDoc> = {
             {name: "key", type: "string", required: true, description: "Unique key identifying this event."},
             {name: "title", type: "RenderableElements", required: true, description: "The event's primary text."},
             {name: "description", type: "RenderableElements", description: "Supporting text below the title."},
-            {name: "type", type: '"primary" | "secondary" | "warning" | "danger" | "neutral"', defaultValue: "neutral", description: "Colour of the event's dot."},
+            {name: "type", type: '"primary" | "secondary" | "warning" | "danger" | "neutral"', defaultValue: "neutral", description: "Colour of the event's marker."},
+            {name: "icon", type: "RenderableElements", description: "An icon in place of the dot, saying what kind of event it is (a call, a note), in a pale circle of the event's colour - a glyph from Glyphs, an <I/>, or any small element sized in em."},
         ],
     },
     TreeNodeType: {
@@ -618,20 +619,20 @@ const themeOptionDefinitions: Record<string, TypeDoc> = {
         name: "CommonThemeOptions",
         description: "The symbols more than one component means the same thing by. Every per-component field below that names one of these falls back to it live, so assigning here reaches each component that has not been given an override of its own.",
         fields: [
-            {name: "closeSymbol", type: "ThemeSymbol", defaultValue: "✕", description: "Dismisses or removes the thing it sits on. Read by Alert, Toast, Tag, Modal and Drawer."},
-            {name: "cancelSymbol", type: "ThemeSymbol", defaultValue: "a multiplication sign", description: "Rejects a pending action. Read by Modal's footer, Popconfirm, and an in-progress inline edit."},
-            {name: "confirmSymbol", type: "ThemeSymbol", defaultValue: "a check mark", description: "Accepts a pending action, or marks one already done. Read by Popconfirm, an inline edit, and a completed Steps step."},
+            {name: "closeSymbol", type: "ThemeSymbol", defaultValue: "a drawn cross (Glyphs.cross)", description: "Dismisses or removes the thing it sits on. Read by Alert, Toast, Tag, Modal and Drawer."},
+            {name: "cancelSymbol", type: "ThemeSymbol", defaultValue: "a drawn cross (Glyphs.cross)", description: "Rejects a pending action. Read by Modal's footer, Popconfirm, and an in-progress inline edit."},
+            {name: "confirmSymbol", type: "ThemeSymbol", defaultValue: "a drawn tick (Glyphs.tick)", description: "Accepts a pending action, or marks one already done. Read by Popconfirm, an inline edit, and a completed Steps step."},
             {name: "emptySymbol", type: "ThemeSymbol", defaultValue: "the U+2205 glyph", description: "Stands in for content that isn't there. Read by Empty and both tables."},
-            {name: "collapseSymbol", type: "ThemeSymbol", defaultValue: "the U+2026 ellipsis", description: "Marks items omitted from a sequence. Read by Breadcrumbs' expander and Pagination's gap."},
-            {name: "prevSymbol", type: "ThemeSymbol", defaultValue: "a single-guillemet left", description: "Steps one back through a sequence. Read by Pagination, both calendars, Carousel and AsyncDataTable's pager."},
-            {name: "nextSymbol", type: "ThemeSymbol", defaultValue: "a single-guillemet right", description: "Steps one forward through a sequence. Read by the same five."},
+            {name: "collapseSymbol", type: "ThemeSymbol", defaultValue: "three drawn dots (Glyphs.dots)", description: "Marks items omitted from a sequence. Read by Breadcrumbs' expander and Pagination's gap."},
+            {name: "prevSymbol", type: "ThemeSymbol", defaultValue: "a drawn chevron (Glyphs.chevronLeft)", description: "Steps one back through a sequence. Read by Pagination, both calendars, Carousel and AsyncDataTable's pager."},
+            {name: "nextSymbol", type: "ThemeSymbol", defaultValue: "a drawn chevron (Glyphs.chevronRight)", description: "Steps one forward through a sequence. Read by the same five."},
         ],
     },
     ButtonThemeOptions: {
         name: "ButtonThemeOptions",
         description: "What a Button shows while it is loading.",
         fields: [
-            {name: "loadingSymbol", type: "ThemeSymbol", defaultValue: "a Spinner sized 1em", description: "Shown in place of the button's content once onClick starts loading, until it calls doneLoading(). Nothing else in the package draws a loading indicator, so this one stays local."},
+            {name: "loadingSymbol", type: "ThemeSymbol", defaultValue: "the working dots (Spinner variant=\"dots\")", description: "Shown in place of the button's content once onClick starts loading, until it calls doneLoading(). Nothing else in the package draws a loading indicator, so this one stays local."},
         ],
     },
     AlertThemeOptions: {
@@ -690,8 +691,8 @@ const themeOptionDefinitions: Record<string, TypeDoc> = {
         description: "The Lightbox's zoom and close controls.",
         fields: [
             {name: "closeSymbol", type: "ThemeSymbol", defaultValue: "CommonThemeOptions.closeSymbol", description: "Content of the corner close button."},
-            {name: "zoomInSymbol", type: "ThemeSymbol", defaultValue: "+", description: "Content of the zoom button while the picture fits the screen. Only the lightbox draws this, so it stays local."},
-            {name: "zoomOutSymbol", type: "ThemeSymbol", defaultValue: "−", description: "Content of the zoom button while the picture is zoomed in."},
+            {name: "zoomInSymbol", type: "ThemeSymbol", defaultValue: "Glyphs.zoomIn, a magnifying glass with a plus", description: "Content of the zoom button while the picture fits the screen. Only the lightbox draws this, so it stays local."},
+            {name: "zoomOutSymbol", type: "ThemeSymbol", defaultValue: "Glyphs.zoomOut, the glass with a minus", description: "Content of the zoom button while the picture is zoomed in."},
         ],
     },
     DrawerThemeOptions: {
@@ -943,7 +944,8 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "placement", type: '"top" | "bottom" | "left" | "right"', defaultValue: "top", description: "Side of the trigger to show the bubble on."},
     ],
     Spinner: [
-        {name: "size", type: 'CSSPropertyValue<"width">', defaultValue: '"1em"', description: "CSS size."},
+        {name: "variant", type: '"ring" | "dots"', defaultValue: '"ring"', description: "Waiting or working. The ring says something is on its way to you - shown where it will appear. The dots say what you asked for is being done - shown in the control that started it, which is what Button's busy state uses."},
+        {name: "size", type: 'CSSPropertyValue<"width">', defaultValue: '"1em"', description: "CSS size: the ring's width and height; for the dots, the row's height, and it is twice as wide."},
         {name: "label", type: "string", description: "Accessible label announced by screen readers."},
     ],
     Progress: [
@@ -951,6 +953,8 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "max", type: "number", defaultValue: "100", description: "Maximum value."},
         {name: "type", type: '"primary" | "secondary" | "warning" | "danger"', description: "Sets the color."},
         {name: "showLabel", type: "boolean", defaultValue: "false", description: "Shows a \"{percent}%\" label next to the bar."},
+        {name: "working", type: "boolean", defaultValue: "false", description: "The bar counts work being done (a send, an import) rather than how full something is. While short of max: a light passing along the fill (still stripes with reduce motion on) and the working dots before status. On reaching max it marks the finish once - a ring spreads from the bar and the dots become a tick - then settles. Leave it off for a meter, which only glides to each new value. Update it with setValue(value, status)."},
+        {name: "status", type: "RenderableElements", description: "Words beside the working dots, saying what is happening - shown only with working. No default: the library doesn't assume a language."},
     ],
     Skeleton: [
         {name: "variant", type: '"text" | "circular" | "rectangular"', defaultValue: "text", description: "Placeholder shape."},
@@ -959,7 +963,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "lines", type: "number", defaultValue: "1", description: "Number of lines for the text variant."},
     ],
     Empty: [
-        {name: "title", type: "RenderableElements", description: "Main message. Only the ∅ icon shows unless you set one."},
+        {name: "title", type: "RenderableElements", description: "Main message. Only the empty-tray icon shows unless you set one."},
         {name: "description", type: "RenderableElements", description: "Smaller supporting text."},
     ],
     Modal: [
@@ -1087,10 +1091,10 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "showPageSizeControl", type: "boolean", defaultValue: "false", description: "Shows a control letting the user change how many rows are displayed per page."},
         {name: "resizableColumns", type: "boolean", defaultValue: "true", description: "Whether columns can be resized by dragging, unless overridden per-column via resizable."},
         {name: "showColumnToggle", type: "boolean", defaultValue: "true", description: "Shows the column-visibility customizer button."},
-        {name: "columnToggleChildren", type: "RenderableElements", defaultValue: "DataTableThemeOptions.columnsSymbol, the ▥ glyph", description: "Content of that button. Pass your own word for it, or override the theme option once for your whole app. The library never defaults visible text to a language."},
+        {name: "columnToggleChildren", type: "RenderableElements", defaultValue: "DataTableThemeOptions.columnsSymbol, a drawn table (Glyphs.columns)", description: "Content of that button. Pass your own word for it, or override the theme option once for your whole app. The library never defaults visible text to a language."},
         {name: "columnToggleLabel", type: "string", description: "Accessible name for the column-visibility button. Set it whenever the button's content is a symbol rather than words, or it has no name at all."},
         {name: "pageSizeLabel", type: "RenderableElements", description: "Caption beside the page-size control. Nothing iconographic means \"rows per page\", so the library renders no caption rather than assuming English."},
-        {name: "emptyMessage", type: "RenderableElements", defaultValue: "DataTableThemeOptions.emptySymbol, the ∅ glyph", description: "Shown in place of the rows when nothing matches."},
+        {name: "emptyMessage", type: "RenderableElements", defaultValue: "DataTableThemeOptions.emptySymbol, an empty tray", description: "Shown in place of the rows when nothing matches."},
         {name: "searchable", type: "boolean", defaultValue: "false", description: "Shows a search box filtering rows via each column's filterValue. Any column whose render() returns plain text highlights its matched characters automatically."},
         {name: "searchPlaceholder", type: "string", description: "Placeholder for the search input."},
         {name: "zebra", type: "boolean", defaultValue: "false", description: "Alternate row background colors for readability."},
@@ -1107,8 +1111,8 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "searchable", type: "boolean", defaultValue: "true", description: "Shows the search box."},
         {name: "searchPlaceholder", type: "string", description: "Placeholder for the search input."},
         {name: "debounceMs", type: "number", defaultValue: "200", description: "How long to wait after the last keystroke before calling load."},
-        {name: "emptyMessage", type: "RenderableElements", defaultValue: "DataTableThemeOptions.emptySymbol, the ∅ glyph", description: "Shown when the loader returns nothing and the search box is empty - \"there is nothing here\"."},
-        {name: "columnToggleChildren", type: "RenderableElements", defaultValue: "DataTableThemeOptions.columnsSymbol, the ▥ glyph", description: "Content of the column-visibility button."},
+        {name: "emptyMessage", type: "RenderableElements", defaultValue: "DataTableThemeOptions.emptySymbol, an empty tray", description: "Shown when the loader returns nothing and the search box is empty - \"there is nothing here\"."},
+        {name: "columnToggleChildren", type: "RenderableElements", defaultValue: "DataTableThemeOptions.columnsSymbol, a drawn table (Glyphs.columns)", description: "Content of the column-visibility button."},
         {name: "columnToggleLabel", type: "string", description: "Accessible name for the column-visibility button. Set it whenever the button's content is a symbol rather than words, or it has no name at all."},
         {name: "pageSizeLabel", type: "RenderableElements", description: "Caption beside the page-size control. Nothing iconographic means \"rows per page\", so the library renders no caption rather than assuming English."},
         {name: "noMatchMessage", type: "RenderableElements", defaultValue: "same as emptyMessage", description: "Shown when a non-empty search returns nothing. Kept separate from emptyMessage because an empty collection and a search that matched nothing are different facts."},
@@ -1254,7 +1258,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "count", type: "number", defaultValue: "5", description: "Number of stars."},
         {name: "type", type: '"primary" | "secondary" | "warning" | "danger"', defaultValue: "warning", description: "Sets the filled-star color."},
         {name: "disabled", type: "boolean", defaultValue: "false", description: "Disables the control."},
-        {name: "getStarLabel", type: "(value, count) => string", description: "Builds one star's accessible label."},
+        {name: "getStarLabel", type: "(value, count) => string", description: "Builds one star's accessible label. Without it, each star is named by its number alone."},
         {name: "onChange", type: "(event) => void", description: "Change handler."},
     ],
     Form: [
@@ -1264,7 +1268,9 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "required", type: "boolean", defaultValue: "false", description: "Shows a required marker next to the label (FormField)."},
     ],
     Icon: [
-        {name: "i", type: "string", required: true, description: "The key of a registered icon."},
+        {name: "i", type: "string", description: "The key of a registered icon. Give this or icon."},
+        {name: "icon", type: "Icon", description: "The icon to draw directly - one of Glyphs, the package's own line drawings, or a new Icon(w, h, d, strokeWidth?). Give this or i."},
+        {name: "label", type: "string", description: "Accessible name. Without one the icon is decoration, hidden from assistive tech."},
     ],
 }
 

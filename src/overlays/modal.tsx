@@ -39,7 +39,7 @@ export type ModalAttrsType = {
     title: RenderableElements
     /** Confirm button content (usually a string) */
     confirmButtonChildren: RenderableElements
-    /** Cancel button content (default: `ModalThemeOptions.cancelSymbol` - a plain "x", not English text, so the library doesn't assume a language) */
+    /** Cancel button content (default: `ModalThemeOptions.cancelSymbol` - a drawn cross, not English text, so the library doesn't assume a language) */
     cancelButtonChildren?: RenderableElements
     /**
      * Show the footer's cancel button (default: `true`).
@@ -74,6 +74,8 @@ margin:0.5em 0;
 .vtd-modal-inner{
 padding:0.5em;
 }
+.vtd-modal-close .vtd-icon{height:1.6em;margin-block:-0.3em;}
+.vtd-modal-close .vtd-icon path{stroke-width:1.6;}
 `, "vtd/Modal")
     }
 
@@ -123,7 +125,7 @@ padding:0.5em;
         this.#dialog = <dialog class="vtd-modal" closedby="any">
             <div style={{display: "flex", alignItems: "center"}}>
                 <span style={{marginRight: "auto"}}>{attrs.title}</span>
-                <Button type="secondary" onClick={()=>{
+                <Button type="secondary" class="vtd-modal-close" onClick={()=>{
                     this.#dialog.close()
                 }}><ModalThemeOptions.closeSymbol/></Button>
             </div>

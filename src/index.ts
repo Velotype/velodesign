@@ -3,6 +3,7 @@ import type {ButtonAttrsType, ButtonType} from "./form/button.tsx"
 import { ButtonGroup } from "./form/button-group.tsx"
 import type { ButtonGroupAttrsType } from "./form/button-group.tsx"
 import { Icon, I, registerIcon } from "./typography/icon.ts"
+import { Glyphs } from "./core/glyphs.ts"
 import { highlightMatch, searchHighlightCss } from "./core/search-highlight.tsx"
 import type {IAttrsType} from "./typography/icon.ts"
 import { licenses, addLicense } from "./core/license.ts"
@@ -32,7 +33,7 @@ import { Card, type CardAttrsType } from "./data-display/card.tsx"
 import { CodeBlock, type CodeBlockAttrsType, type CodeLanguage } from "./data-display/code-block.tsx"
 import { Alert, AlertThemeOptions, type AlertAttrsType, type AlertType } from "./feedback/alert.tsx"
 import { Tooltip, type TooltipAttrsType, type TooltipPlacement } from "./feedback/tooltip.tsx"
-import { Spinner, type SpinnerAttrsType } from "./feedback/spinner.tsx"
+import { Spinner, type SpinnerAttrsType, type SpinnerVariant } from "./feedback/spinner.tsx"
 import { Tabs, type TabsAttrsType, type TabType } from "./data-display/tabs.tsx"
 import { Divider, type DividerAttrsType } from "./data-display/divider.tsx"
 import { NavLink, type NavLinkAttrsType } from "./navigation/nav-link.tsx"
@@ -114,6 +115,7 @@ export {
 
     Icon,
     I,
+    Glyphs,
     type IAttrsType,
     registerIcon,
     highlightMatch,
@@ -202,6 +204,7 @@ export {
 
     Spinner,
     type SpinnerAttrsType,
+    type SpinnerVariant,
 
     Tabs,
     type TabsAttrsType,

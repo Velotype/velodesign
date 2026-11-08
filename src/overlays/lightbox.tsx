@@ -5,6 +5,7 @@ import { passthroughAttrsToElement } from "../core/velotype.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
+import { Glyphs, glyphElement } from "../core/glyphs.ts"
 
 /**
  * Options to customize the `<Lightbox/>` Theme
@@ -12,13 +13,13 @@ import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 export const LightboxThemeOptions: {
     /** Content of the corner close button. Defaults to `CommonThemeOptions.closeSymbol` */
     closeSymbol: ThemeSymbol
-    /** Content of the zoom button while the picture fits the screen. `+` - only the lightbox draws this, so it stays local */
+    /** Content of the zoom button while the picture fits the screen: `Glyphs.zoomIn`, a magnifying glass with a plus. Only the lightbox draws this, so it stays local */
     zoomInSymbol: ThemeSymbol
-    /** Content of the zoom button while the picture is zoomed in. `−` */
+    /** Content of the zoom button while the picture is zoomed in: `Glyphs.zoomOut`, the glass with a minus */
     zoomOutSymbol: ThemeSymbol
 } = themeOptions({closeSymbol: "closeSymbol"}, {
-    zoomInSymbol: function() {return "+"},
-    zoomOutSymbol: function() {return "−"}
+    zoomInSymbol: function() {return glyphElement(Glyphs.zoomIn, 1)},
+    zoomOutSymbol: function() {return glyphElement(Glyphs.zoomOut, 1)}
 })
 
 /**
@@ -103,6 +104,8 @@ font-size:1.1rem;
 cursor:pointer;
 }
 .vtd-lightbox-control:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+.vtd-lightbox-close .vtd-icon,.vtd-lightbox-zoom .vtd-icon{height:1.6em;margin-block:-0.3em;}
+.vtd-lightbox-close .vtd-icon path,.vtd-lightbox-zoom .vtd-icon path{stroke-width:1.6;}
 `, "vtd/Lightbox")
 }
 

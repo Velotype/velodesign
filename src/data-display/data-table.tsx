@@ -41,13 +41,13 @@ export type DataTableAttrsType<RowType> = {
     resizableColumns?: boolean
     /** Shows the column-visibility customizer button (default: `true`) */
     showColumnToggle?: boolean
-    /** Content of the column-visibility button (default: `DataTableThemeOptions.columnsSymbol` - the `▥` glyph, not English text) */
+    /** Content of the column-visibility button (default: `DataTableThemeOptions.columnsSymbol` - `Glyphs.columns`, not English text) */
     columnToggleChildren?: RenderableElements
     /** Accessible name for the column-visibility button. No default - the library doesn't assume a language. Set this whenever `columnToggleChildren` is a symbol rather than words, or the button has no name at all */
     columnToggleLabel?: string
     /** Label beside the page-size control. **No default** - there is no icon that means "rows per page", and this package never falls back to English, so an unset label renders the control with no caption */
     pageSizeLabel?: RenderableElements
-    /** Shown in place of the rows when nothing matches (default: `DataTableThemeOptions.emptySymbol` - the `∅` glyph, not English text) */
+    /** Shown in place of the rows when nothing matches (default: `DataTableThemeOptions.emptySymbol` - an empty tray, `Glyphs.tray`, not English text) */
     emptyMessage?: RenderableElements
     /** Shows a search box that filters rows using each column's `filterValue` (default: `false`) */
     searchable?: boolean

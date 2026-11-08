@@ -11,10 +11,14 @@ import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
  * Options to customize `<Button/>` Component Theme
  */
 export const ButtonThemeOptions: {
-    /** Shown in place of the button's content while `onClick` is loading. No counterpart elsewhere in the package, so it stays local */
+    /**
+     * Shown in place of the button's content while `onClick` is loading: the working dots
+     * (`Spinner`'s `"dots"`), since a pressed button is always doing what was asked - the ring
+     * means waiting for something to arrive. No counterpart elsewhere in the package, so it stays local
+     */
     loadingSymbol: ThemeSymbol
 } = themeOptions({}, {
-    loadingSymbol: function(){return <Spinner size="1em"/>}
+    loadingSymbol: function(){return <Spinner variant="dots" size="0.8em"/>}
 })
 
 /**

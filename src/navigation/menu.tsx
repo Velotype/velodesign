@@ -2,6 +2,7 @@
 /** @jsx h */
 import { h } from "../core/jsx.ts"
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
+import { Glyphs, glyphElement } from "../core/glyphs.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { History } from "../core/history.ts"
@@ -348,7 +349,7 @@ export class Menu extends Component<MenuAttrsType> {
                     aria-haspopup="menu"
                     aria-expanded="false"
                     class={`vtd-menu-item vtd-menu-item-parent${item.disabled ? " vtd-menu-item-disabled" : ""}`}
-                >{item.label}</div>
+                >{item.label}<span class="vtd-menu-submenu-arrow" aria-hidden="true">{glyphElement(Glyphs.chevronRight, 1.1)}</span></div>
                 const entry: HTMLElement = <li class={`vtd-menu-entry vtd-menu-entry-parent${divided}`} role="none">
                     {parentRow}
                     <ul class="vtd-menu-sublist" role="menu">{this.#buildEntries(item.children)}</ul>
@@ -508,18 +509,15 @@ border-block-start:1px solid var(--background-4);
 `
 .vtd-menu-item-parent{cursor:pointer;display:flex;align-items:center;gap:0.5em;}
 ` +
-/* A caret drawn in CSS, for the same reason the rest of the package does: no icon-font dependency */
+/* The submenu's chevron (a chevron: opening a submenu leaves you where you are). It stays muted
+   until its row is the one in play - hovered, focused or open - so a list of parents reads as
+   labels first, and the chevron says which one is about to open */
 `
-.vtd-menu-item-parent::after{
-content:"";
-margin-inline-start:auto;
-width:0.4em;
-height:0.4em;
-border:solid currentcolor;
-border-width:0.1em 0.1em 0 0;
-transform:rotate(45deg);
-flex-shrink:0;
-}
+.vtd-menu-submenu-arrow{margin-inline-start:auto;display:flex;flex-shrink:0;color:var(--background-7);transition:color 0.15s ease-in-out;}
+.vtd-menu-item-parent:hover .vtd-menu-submenu-arrow,
+.vtd-menu-item-parent:focus-visible .vtd-menu-submenu-arrow,
+.vtd-menu-entry-open > .vtd-menu-item-parent .vtd-menu-submenu-arrow{color:currentcolor;}
+@media (prefers-reduced-motion: reduce){.vtd-menu-submenu-arrow{transition:none;}}
 .vtd-menu-sublist{
 display:none;
 position:absolute;

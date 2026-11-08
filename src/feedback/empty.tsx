@@ -25,7 +25,7 @@ export const EmptyThemeOptions: {
  * Attrs type for `<Empty/>` Component
  */
 export type EmptyAttrsType = {
-    /** Main message. No default - `EmptyThemeOptions.emptySymbol` (the ∅ symbol) is the only default visual, so the library doesn't assume a language */
+    /** Main message. No default - `EmptyThemeOptions.emptySymbol` (an empty tray, `Glyphs.tray`) is the only default visual, so the library doesn't assume a language */
     title?: RenderableElements
     /** Optional smaller supporting text below the title */
     description?: RenderableElements

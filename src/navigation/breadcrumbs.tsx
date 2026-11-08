@@ -59,7 +59,7 @@ export type BreadcrumbsAttrsType = {
      * 3 leave no room for both ends and an expander, and are treated as 3.
      */
     maxItems?: number
-    /** Content of the expander that reveals the collapsed crumbs (default: `BreadcrumbsThemeOptions.collapseSymbol` - a plain "…", not English text) */
+    /** Content of the expander that reveals the collapsed crumbs (default: `BreadcrumbsThemeOptions.collapseSymbol` - three drawn dots, not English text) */
     expandButtonChildren?: RenderableElements
     /**
      * Accessible name for that expander, e.g. "Show the rest of the trail".

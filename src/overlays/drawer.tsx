@@ -91,6 +91,8 @@ backdrop-filter: blur(2px);
 @keyframes vtd-drawer-in-bottom{from{transform:translateY(100%);}to{transform:translateY(0);}}
 .vtd-drawer-separator{margin:0.5em 0;}
 .vtd-drawer-inner{padding:0.5em;}
+.vtd-drawer-close .vtd-icon{height:1.6em;margin-block:-0.3em;}
+.vtd-drawer-close .vtd-icon path{stroke-width:1.6;}
 `, "vtd/Drawer")
     }
 
@@ -114,7 +116,7 @@ backdrop-filter: blur(2px);
         this.#dialog = <dialog class={`vtd-drawer vtd-drawer-position-${placement} vtd-drawer-enter-${enterFrom}`} closedby="any">
             <div style={{display: "flex", alignItems: "center"}}>
                 <span style={{marginRight: "auto"}}>{attrs.title}</span>
-                <Button type="secondary" onClick={()=>{
+                <Button type="secondary" class="vtd-drawer-close" onClick={()=>{
                     this.#dialog.close()
                 }}><DrawerThemeOptions.closeSymbol/></Button>
             </div>

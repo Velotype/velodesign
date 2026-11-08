@@ -7,6 +7,7 @@ import { type RenderBasic, Component, type RenderableElements, type ChildrenAttr
 import { Button } from "./button.tsx"
 import { TextBox, type TextBoxType } from "./text-box.tsx"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
+import { Glyphs, glyphElement } from "../core/glyphs.ts"
 
 /**
  * Options to customize `<TextFormField/>` Component Theme
@@ -16,10 +17,10 @@ export const TextFormFieldThemeOptions: {
     confirmSymbol: ThemeSymbol
     /** Cancels an inline edit. Defaults to `CommonThemeOptions.cancelSymbol` */
     cancelSymbol: ThemeSymbol
-    /** Starts an inline edit. No counterpart elsewhere in the package, so it stays local */
+    /** Starts an inline edit: `Glyphs.pencil`. No counterpart elsewhere in the package, so it stays local */
     editSymbol: ThemeSymbol
 } = themeOptions({confirmSymbol: "confirmSymbol", cancelSymbol: "cancelSymbol"}, {
-    editSymbol: function(){return "✎"}
+    editSymbol: function(){return glyphElement(Glyphs.pencil, 1.2)}
 })
 
 /**

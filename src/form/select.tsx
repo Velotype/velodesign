@@ -3,6 +3,7 @@
 import { h } from "../core/jsx.ts"
 import {type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs, type TargetedEvent} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
+import { Glyphs, glyphElement } from "../core/glyphs.ts"
 
 /**
  * A single option in a `<Select/>`
@@ -72,12 +73,10 @@ cursor:pointer;
 .vtd-select-chevron{
 position:absolute;
 top:50%;
-right:0.75em;
-width:0.6em;
-height:0.6em;
-border:solid var(--text);
-border-width:0 0.12em 0.12em 0;
-transform:translateY(-70%) rotate(45deg);
+right:0.6em;
+transform:translateY(-50%);
+display:flex;
+color:var(--text);
 pointer-events:none;
 }
 `, "vtd/Select")
@@ -95,6 +94,6 @@ pointer-events:none;
             {attrs.placeholder && <option value="" disabled={attrs.placeholderDisabled} selected={!attrs.value}>{attrs.placeholder}</option>}
             {attrs.options.map(option => <option value={option.value} disabled={option.disabled} selected={option.value == attrs.value}>{option.label}</option>)}
         </select>
-        <span class="vtd-select-chevron"/>
+        <span class="vtd-select-chevron" aria-hidden="true">{glyphElement(Glyphs.chevronDown, 1.15)}</span>
     </span>, attrs)
 }

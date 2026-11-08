@@ -1,4 +1,5 @@
 import type { EmptyAttrs, FunctionComponent } from "./velotype.ts"
+import { Glyphs, glyphElement } from "./glyphs.ts"
 
 /**
  * A piece of overridable theme content - a component taking no attrs, rendered as
@@ -120,16 +121,18 @@ export type CommonThemeOptionsType = {
  */
 export const CommonThemeOptions: CommonThemeOptionsType = themeOptions<CommonThemeOptionsType>({}, {
     // Close and cancel share a glyph on purpose - they read the same in almost every interface, and
-    // they stay separate options so a consumer who wants to tell them apart can. This was the one
-    // symbol in the set that was not a glyph at all: a lowercase Latin "x", which seven components
-    // drew as their close control.
-    closeSymbol: function(){return "✕"},
-    cancelSymbol: function(){return "✕"},
-    confirmSymbol: function(){return "✓"},
-    emptySymbol: function(){return "∅"},
-    collapseSymbol: function(){return "…"},
-    prevSymbol: function(){return "‹"},
-    nextSymbol: function(){return "›"}
+    // they stay separate options so a consumer who wants to tell them apart can. Every symbol is a
+    // drawn glyph (`Glyphs`), not a text character: a character is drawn by
+    // whatever font the reader has, at that font's size and weight, so the same control looked
+    // different on every system. Each is scaled to match the ink of the character it replaced.
+    closeSymbol: function(){return glyphElement(Glyphs.cross, 1.3)},
+    cancelSymbol: function(){return glyphElement(Glyphs.cross, 1.3)},
+    confirmSymbol: function(){return glyphElement(Glyphs.tick, 1.25)},
+    emptySymbol: function(){return glyphElement(Glyphs.tray, 1)},
+    collapseSymbol: function(){return glyphElement(Glyphs.dots, 1.15)},
+    // Stepping through a sequence leaves you where you are, so a chevron, not an arrow (`Glyphs`)
+    prevSymbol: function(){return glyphElement(Glyphs.chevronLeft, 1.15)},
+    nextSymbol: function(){return glyphElement(Glyphs.chevronRight, 1.15)}
 })
 
 /**

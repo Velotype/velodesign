@@ -2,6 +2,7 @@
 /** @jsx h */
 import { h } from "../core/jsx.ts"
 import {} from "../core/velotype.ts"
+import { Glyphs, glyphElement } from "../core/glyphs.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { RenderableElements } from "../core/velotype.ts"
 import { Button } from "../form/button.tsx"
@@ -58,7 +59,7 @@ export type SortDirection = "asc" | "desc"
  * nobody can read: it is a plain optional attr on each component, exactly like `Empty`'s `title`.
  */
 export const DataTableThemeOptions: {
-    /** Content of the column-visibility button. `▥` - vertical bands, i.e. columns. Nothing else in the package draws this, so it stays local */
+    /** Content of the column-visibility button: `Glyphs.columns`, a small table with a header row. Nothing else in the package draws this, so it stays local */
     columnsSymbol: ThemeSymbol
     /** Shown in place of the rows when there are none. The whole visual, sizing included; set `CommonThemeOptions.emptySymbol` to change just the glyph, here and in `Empty` */
     emptySymbol: ThemeSymbol
@@ -69,7 +70,7 @@ export const DataTableThemeOptions: {
      */
     searchSymbol: ThemeSymbol
 } = themeOptions({}, {
-    columnsSymbol: function() {return <span aria-hidden="true">▥</span>},
+    columnsSymbol: function() {return glyphElement(Glyphs.columns, 1.2)},
     emptySymbol: function() {return <span class="vtd-data-table-empty-icon" aria-hidden="true"><CommonThemeOptions.emptySymbol/></span>},
     searchSymbol: function() {return null}
 })
@@ -149,7 +150,7 @@ font-weight:inherit;
 padding:0;
 }
 .vtd-data-table-header-content{display:inline-flex;align-items:center;}
-.vtd-data-table-sort-indicator{margin-inline-start:0.3em;opacity:0.6;}
+.vtd-data-table-sort-indicator{margin-inline-start:0.3em;opacity:0.7;}
 .vtd-data-table-table tbody tr{position:relative;}
 .vtd-data-table-hoverable tr:hover{background-color:var(--background-1);}
 .vtd-data-table-zebra tr:nth-child(even){background-color:var(--background-1);}
@@ -244,7 +245,8 @@ export function buildHeaderCells<RowType>(options: DataTableHeaderOptions<RowTyp
         // at all. An unsortable column just renders the same content as a plain `<span>`.
         const headerContent = <span class="vtd-data-table-header-content">
             {column.header}
-            {sortDirection ? <span class="vtd-data-table-sort-indicator" aria-hidden="true">{sortDirection == "asc" ? "▲" : "▼"}</span> : null}
+            {/* Sorting moves the data, so an arrow (up: ascending), not a chevron */}
+            {sortDirection ? <span class="vtd-data-table-sort-indicator" aria-hidden="true">{glyphElement(sortDirection == "asc" ? Glyphs.arrowUp : Glyphs.arrowDown, 1)}</span> : null}
         </span>
         const thElement: HTMLTableCellElement = <th
             class={`${column.align ? `vtd-data-table-align-${column.align}` : ""}${sortable ? " vtd-data-table-sortable" : ""}`}

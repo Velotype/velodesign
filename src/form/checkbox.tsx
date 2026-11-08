@@ -2,6 +2,7 @@
 /** @jsx h */
 import { h } from "../core/jsx.ts"
 import {type ChildrenAttr, type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs} from "../core/velotype.ts"
+import { Glyphs, glyphElement } from "../core/glyphs.ts"
 import { mountStyles } from "../core/styles.ts"
 
 /**
@@ -66,8 +67,9 @@ border-radius:0.3em;
 display:inline-flex;
 align-items:center;
 justify-content:center;
-height:1.5em;
-width:1.5em;
+height:1.25em;
+width:1.25em;
+box-sizing:border-box;
 margin-inline-end:1ex;
 flex-shrink:0;
 transition:background-color 0.2s ease-in, border-color 0.2s ease-in;
@@ -79,30 +81,16 @@ background-color:var(--background-1);border:1px solid var(--background-5);
 .vtd-checkbox-disabled:hover{background-color:var(--background-2);border:1px solid var(--background-5);}
 .vtd-checkbox-disabled:active{background-color:var(--background-2);}
 
-.vtd-checkbox-check{
+.vtd-checkbox-check,.vtd-checkbox-dash{
 position:absolute;
-top:50%;
-left:50%;
+inset:0;
+display:flex;
+align-items:center;
+justify-content:center;
 visibility:hidden;
 opacity:0;
 transition:opacity 0.2s ease-in;
-width:0.3em;
-height:0.6em;
-border:solid var(--text);
-border-width:0 0.15em 0.15em 0;
-transform:translate(-50%,-65%) rotate(45deg);
-}
-.vtd-checkbox-dash{
-position:absolute;
-top:50%;
-left:50%;
-visibility:hidden;
-opacity:0;
-transition:opacity 0.2s ease-in;
-width:0.7em;
-height:0.15em;
-background-color:var(--text);
-transform:translate(-50%,-50%);
+color:var(--text);
 }
 
 .vtd-checkbox-input:checked ~ .vtd-checkbox .vtd-checkbox-check,
@@ -135,8 +123,8 @@ border-color:var(--primary-5);
             value={attrs.value}
             onChange={attrs.onChange}/>
         <span class={`vtd-checkbox${attrs.disabled?" vtd-checkbox-disabled":""}`}>
-            <span class="vtd-checkbox-check"/>
-            <span class="vtd-checkbox-dash"/>
+            <span class="vtd-checkbox-check">{glyphElement(Glyphs.tickCentred, 0.875)}</span>
+            <span class="vtd-checkbox-dash">{glyphElement(Glyphs.dash, 0.875)}</span>
         </span>
         {children}
     </label>, attrs)
