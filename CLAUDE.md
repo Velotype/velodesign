@@ -1165,12 +1165,12 @@ bundle, where a JS comment is dropped by the minifier. In a stylesheet, end the 
 line and put the comment between the parts, as `core/theme.ts`'s reset does for
 `interpolate-size` and `text-wrap:pretty`; the minifier joins the parts back into one string.
 
-**`deno task check-baseline` enforces it, in CI.** It is a deny-list (`scripts/check-baseline.ts`)
+**`deno task check-baseline` enforces it, in CI.** It runs `jsr:@velotype/velobaseline`, pinned
+to a version, over `src/` and `showcase/src/`: one deny-list, shared by every Velotype repository,
 of features that are tempting and not widely available yet - anchor positioning, `@scope`,
 `@starting-style`, view transitions, `requestIdleCallback`, the Set methods and the rest - not a
-full checker. Revise it now and then from MDN's Baseline data: an entry comes off once its feature
-is widely available, and a new tempting one goes on. Check MDN before using anything recent that
-isn't on it.
+full checker. The list is revised in that package from MDN's Baseline data, and moving to a new
+version here is a change of its own. Check MDN before using anything recent that isn't on it.
 
 ## No HTML strings
 
