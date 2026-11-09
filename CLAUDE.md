@@ -1599,11 +1599,18 @@ The toggle flips one class and persists to `localStorage`. It deliberately does 
 the sidebar - that would discard the reader's expansions and their search for a change that is
 purely presentational.
 
-**Every category has an icon, drawn in `showcase/src/data/category-icons.ts`.** They are single
-paths in a 24x24 box, drawn before `Icon` could carry lines or `layers`, and solid silhouettes because a shape with
-a hole needs its inner subpath wound the opposite way to punch through under `nonzero` - easy to
-get subtly wrong, and it renders as a filled blob when it is. On the rail the icon *is* the row, so
+**Every category has an icon, drawn in `showcase/src/data/category-icons.ts`.** They are line
+drawings in the glyph style, a 24-unit box, round ends and a 2-unit line, so a shape with a hole is
+just a second line rather than a subpath wound the other way. On the rail the icon *is* the row, so
 it is not decoration.
+
+**Every icon is reviewed before it is used, and none comes from an icon set.** The showcase and the
+gallery pages draw their own: the category icons, the search magnifier, the arrows on links that
+leave the page (`Glyphs.arrowRight`/`arrowLeft`, never a `→` in the text), and the icons the
+examples register (`tests/test_modules/example-icons.ts`: settings, reports, people). An example
+that shows an icon registers one of those rather than drawing a text character as one.
+`example-icons.ts` imports the package by name, like `explorer-schema.tsx`, because the showcase
+reaches it through the schema and a relative path would bundle a second copy of the library.
 
 **A component page documents `children` in its own section, never as a row in the attributes
 table.** Children are passed by nesting content inside the tags; listing them beside real named

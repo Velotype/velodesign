@@ -1,7 +1,7 @@
 import { Component, setStylesheet } from "@velotype/velotype"
 import type { RenderableElements } from "@velotype/velotype"
 
-import { Breadcrumbs, Heading, Link, Paragraph, Stack } from "@velotype/velodesign"
+import { Breadcrumbs, Glyphs, Heading, I, Link, Paragraph, Stack } from "@velotype/velodesign"
 import { groupSlug, type ComponentDoc } from "../data/docs.tsx"
 
 export type CategoryPageAttrsType = {
@@ -64,7 +64,7 @@ background-size:16px 16px;
                     return <div>
                         <Stack justify="between" align="center" class="vtd-showcase-category-entry-header">
                             <Heading level={2}>{doc.name}</Heading>
-                            <Link spa to={`/components/${doc.slug}`} class="vtd-showcase-category-entry-link">View details →</Link>
+                            <Link spa to={`/components/${doc.slug}`} class="vtd-showcase-category-entry-link">View details <I icon={Glyphs.arrowRight}/></Link>
                         </Stack>
                         <Paragraph type="muted">{doc.description}</Paragraph>
                         <div class="vtd-showcase-example-preview">{preview}</div>

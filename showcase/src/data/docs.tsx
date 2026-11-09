@@ -878,7 +878,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "ariaLabel", type: "string", description: "Accessible label for the nav landmark."},
         {name: "spa", type: "boolean", defaultValue: "false", description: "Makes every crumb a client-side route change via History.changeLocation rather than a page reload. Set true inside an SPA; leave false on a multi-page site, where a crumb should be a real navigation."},
         {name: "maxItems", type: "number", description: "The most crumbs to show before the middle of the trail collapses behind an expander. A longer trail renders as the first crumb, the expander, and the last maxItems - 2 crumbs, so the root and the current page always survive. Unset, every crumb shows. Values below 3 are treated as 3."},
-        {name: "expandButtonChildren", type: "RenderableElements", defaultValue: "BreadcrumbsThemeOptions.collapseSymbol", description: "Content of the expander that reveals the collapsed crumbs. The default is a plain … glyph, not English text."},
+        {name: "expandButtonChildren", type: "RenderableElements", defaultValue: "BreadcrumbsThemeOptions.collapseSymbol", description: "Content of the expander that reveals the collapsed crumbs. The default is the drawn three dots (Glyphs.dots), not English text."},
         {name: "expandLabel", type: "string", description: "Accessible name for the expander. Worth setting: its content is a glyph, so the control is otherwise unnamed."},
     ],
     Pagination: [
@@ -886,8 +886,8 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "totalPages", type: "number", required: true, description: "Total number of pages."},
         {name: "onPageChange", type: "(page) => void", required: true, description: "Called with the newly selected page."},
         {name: "siblingCount", type: "number", defaultValue: "2", description: "Pages shown on each side of the current page."},
-        {name: "prevButtonChildren", type: "RenderableElements", defaultValue: "PaginationThemeOptions.prevSymbol", description: "Content of the previous-page button. The default is a plain ‹ glyph, not English text."},
-        {name: "nextButtonChildren", type: "RenderableElements", defaultValue: "PaginationThemeOptions.nextSymbol", description: "Content of the next-page button. The default is a plain › glyph, not English text."},
+        {name: "prevButtonChildren", type: "RenderableElements", defaultValue: "PaginationThemeOptions.prevSymbol", description: "Content of the previous-page button. The default is a drawn chevron (Glyphs.chevronLeft), not English text."},
+        {name: "nextButtonChildren", type: "RenderableElements", defaultValue: "PaginationThemeOptions.nextSymbol", description: "Content of the next-page button. The default is a drawn chevron (Glyphs.chevronRight), not English text."},
         {name: "ariaLabel", type: "string", description: "Accessible label for the nav landmark."},
     ],
     Navbar: [
@@ -999,8 +999,8 @@ const attrTables: Record<string, AttrDoc[]> = {
     Popconfirm: [
         {name: "title", type: "RenderableElements", required: true, description: "Confirmation message."},
         {name: "onConfirm", type: "() => void", required: true, description: "Called when confirmed."},
-        {name: "confirmButtonChildren", type: "RenderableElements", defaultValue: "PopconfirmThemeOptions.confirmSymbol", description: "Content of the confirm button. The default is a plain ✓ glyph, not English text."},
-        {name: "cancelButtonChildren", type: "RenderableElements", defaultValue: "PopconfirmThemeOptions.cancelSymbol", description: "Content of the cancel button. The default is a plain ✕ glyph, not English text."},
+        {name: "confirmButtonChildren", type: "RenderableElements", defaultValue: "PopconfirmThemeOptions.confirmSymbol", description: "Content of the confirm button. The default is a drawn tick (Glyphs.tick), not English text."},
+        {name: "cancelButtonChildren", type: "RenderableElements", defaultValue: "PopconfirmThemeOptions.cancelSymbol", description: "Content of the cancel button. The default is a drawn cross (Glyphs.cross), not English text."},
         {name: "closeOnOutsideClick", type: "boolean", defaultValue: "true", description: "Closes the bubble on an outside click."},
     ],
     ContextMenu: [
@@ -1601,12 +1601,12 @@ renderOption={option => <span style={{display: "flex", alignItems: "center", gap
             collapseLabel="Collapse or expand the sidebar"
             defaultWidth={210}
             items={[
-                {key: "reports", label: "Reports", icon: "▤", defaultOpen: true, trailing: <Badge type="neutral">2</Badge>, children: [
+                {key: "reports", label: "Reports", icon: <I i="reports"/>, defaultOpen: true, trailing: <Badge type="neutral">2</Badge>, children: [
                     {label: "Daily", to: "/daily"},
                     {label: "Weekly", to: "/weekly"},
                 ]},
-                {key: "people", label: "People", icon: "◔", children: [{label: "Members", to: "/members"}]},
-                {key: "settings", label: "Settings", icon: "◧", to: "/settings"},
+                {key: "people", label: "People", icon: <I i="people"/>, children: [{label: "Members", to: "/members"}]},
+                {key: "settings", label: "Settings", icon: <I i="settings"/>, to: "/settings"},
             ]}
             profile={{
                 avatar: <Avatar initials="VD" size="1.9em"/>,
@@ -1628,6 +1628,7 @@ renderOption={option => <span style={{display: "flex", alignItems: "center", gap
             {label: "Daily", to: "/daily"},
             {label: "Weekly", to: "/weekly"}
         ]},
+        {key: "people", label: "People", icon: <I i="people"/>, children: [{label: "Members", to: "/members"}]},
         {key: "settings", label: "Settings", icon: <I i="settings"/>, to: "/settings"}
     ]}
     profile={{
@@ -2342,7 +2343,7 @@ load={async (query) => {
 
     // --- Utility ---
     Icon: [
-        {label: "Default", node: () => <I i="gear" style={{height: "2em"}}/>, code: `<I i="gear" style={{height: "2em"}}/>`},
+        {label: "Default", node: () => <I i="settings" style={{height: "2em"}}/>, code: `<I i="settings" style={{height: "2em"}}/>`},
     ],
 }
 
