@@ -1,7 +1,7 @@
 import { Component, setStylesheet } from "@velotype/velotype"
 import type { RenderableElements } from "@velotype/velotype"
 
-import { Badge, Breadcrumbs, CodeBlock, Heading, Link, Paragraph, Stack, Table, TableOfContents, Text } from "@velotype/velodesign"
+import { Badge, Breadcrumbs, CodeBlock, Glyphs, Heading, I, Link, Paragraph, Stack, Table, TableOfContents, Text } from "@velotype/velodesign"
 import type { TableColumnType } from "@velotype/velodesign"
 import type { TableOfContentsItemType } from "@velotype/velodesign"
 import { componentDocs, type ComponentDoc, type AttrDoc, type MethodDoc, type TypeDoc } from "../data/docs.tsx"
@@ -302,8 +302,8 @@ background-size:16px 16px;
             </div> : null}
 
             <Stack justify="between" class="vtd-showcase-page-nav">
-                {prev ? <Link spa to={`/components/${prev.slug}`}>← {prev.name}</Link> : <span/>}
-                {next ? <Link spa to={`/components/${next.slug}`}>{next.name} →</Link> : <span/>}
+                {prev ? <Link spa to={`/components/${prev.slug}`}><I icon={Glyphs.arrowLeft}/> {prev.name}</Link> : <span/>}
+                {next ? <Link spa to={`/components/${next.slug}`}>{next.name} <I icon={Glyphs.arrowRight}/></Link> : <span/>}
             </Stack>
             </div>
 

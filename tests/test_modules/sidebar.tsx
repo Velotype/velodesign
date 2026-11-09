@@ -1,7 +1,10 @@
 import {replaceElementWithRoot, Component} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
-import { Avatar, Badge, setThemeOnSelector, Sidebar, Theme } from "../../src/index.ts"
+import { Avatar, Badge, I, setThemeOnSelector, Sidebar, Theme } from "../../src/index.ts"
+import { registerExampleIcons } from "./example-icons.ts"
+
+registerExampleIcons()
 import { TestModulePage } from "./module-page.tsx"
 
 class SidebarGallery extends Component<EmptyAttrs> {
@@ -30,18 +33,18 @@ class SidebarGallery extends Component<EmptyAttrs> {
                     header="Workspace"
                     defaultWidth={230}
                     items={[
-                        {key: "reports", label: "Reports", icon: "▤", defaultOpen: true, trailing: <Badge type="neutral">3</Badge>, children: [
+                        {key: "reports", label: "Reports", icon: <I i="reports"/>, defaultOpen: true, trailing: <Badge type="neutral">3</Badge>, children: [
                             // Links to this very page, so the gallery always has one active entry -
                             // which is what makes the active-group marker visible here at all
                             {label: "Overview", to: "/sidebar"},
                             {label: "Daily", to: "/sidebar/daily"},
                             {label: "Weekly", to: "/sidebar/weekly"}
                         ]},
-                        {key: "people", label: "People", icon: "◔", children: [
+                        {key: "people", label: "People", icon: <I i="people"/>, children: [
                             {label: "Members", to: "/sidebar/members"},
                             {label: "Invites", to: "/sidebar/invites"}
                         ]},
-                        {key: "settings", label: "Settings", icon: "◧", to: "/sidebar/settings"}
+                        {key: "settings", label: "Settings", icon: <I i="settings"/>, to: "/sidebar/settings"}
                     ]}
                     profile={{
                         avatar: <Avatar initials="VD" size="1.9em"/>,
