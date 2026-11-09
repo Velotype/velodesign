@@ -1604,7 +1604,7 @@ drawings in the glyph style, a 24-unit box, round ends and a 2-unit line, so a s
 just a second line rather than a subpath wound the other way. On the rail the icon *is* the row, so
 it is not decoration.
 
-**Every icon is reviewed before it is used, and none comes from an icon set.** The showcase and the
+**Every icon is reviewed before it is used, and none comes from an icon set.** Paths from an icon set such as Font Awesome may not be used here at all, not even in a test page or an example: every drawing is our own. The showcase and the
 gallery pages draw their own: the category icons, the search magnifier, the arrows on links that
 leave the page (`Glyphs.arrowRight`/`arrowLeft`, never a `→` in the text), and the icons the
 examples register (`tests/test_modules/example-icons.ts`: settings, reports, people). An example
