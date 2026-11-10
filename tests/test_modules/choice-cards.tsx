@@ -26,6 +26,17 @@ class ChoiceCardsGallery extends Component<{prefix: string}> {
                 ]}/>
             </div>
             <div style={{marginTop: "10px"}}>
+                <ChoiceCards id={`${p}-tray`} name={`${p}-stay`} label="Do parents stay?" tray options={[
+                    {value: "", title: "Don't say", description: "The invitation doesn't mention it."},
+                    {value: "stay", title: "Parents stay", description: "Grown-ups are welcome to stay."},
+                ]}/>
+            </div>
+            <div style={{marginTop: "10px"}}>
+                <ChoiceCards id={`${p}-hidden`} name={`${p}-replies`} label="How can guests reply?" labelHidden options={[
+                    {value: "maybe", title: "Going, Maybe or Can't go"}, {value: "firm", title: "Going or Can't go"},
+                ]}/>
+            </div>
+            <div style={{marginTop: "10px"}}>
                 <ChoiceCards name={`${p}-size`} label="Three, titles only" minCardWidth="6em" options={[
                     {value: "s", title: "Small"}, {value: "m", title: "Medium"}, {value: "l", title: "Large"},
                 ]}/>

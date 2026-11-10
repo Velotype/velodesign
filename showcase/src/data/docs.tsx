@@ -780,6 +780,8 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "name", type: "string", required: true, description: "Name of the radio group - each card is a native radio input in it."},
         {name: "options", type: "ChoiceCardsOptionType[]", required: true, description: "The cards, in order."},
         {name: "label", type: "RenderableElements", description: "The group's caption, rendered as its <legend>."},
+        {name: "labelHidden", type: "boolean", defaultValue: "false", description: "Keep the caption for screen readers but don't show it - for a group whose heading already asks the question."},
+        {name: "tray", type: "boolean", defaultValue: "false", description: "Set the caption and its cards together on a tinted panel, so they read as one question - for a card or form that asks more than one."},
         {name: "value", type: "string", description: "Value of the picked card, if any."},
         {name: "minCardWidth", type: "CSS length", defaultValue: "12em", description: "Narrowest a card gets before the row wraps; above it the cards share the width."},
         {name: "onChange", type: "(value, event) => void", description: "Called with the picked card's value."},
@@ -1397,6 +1399,13 @@ const examplesByName: Record<string, ExampleDoc[]> = {
         ]}/>, code: `<ChoiceCards name="who" label="Who can reply?" value="list" onChange={value => save(value)} options={[
     {value: "list", title: "Only my guests", description: "Each gets their own link by email."},
     {value: "anyone", title: "Anyone with the link", description: "Share it anywhere - a group chat, a QR code."},
+]}/>`},
+        {label: "On a tray, for one of several questions", node: () => <ChoiceCards name="doc-choice-tray" label="Do parents stay?" tray options={[
+            {value: "", title: "Don't say", description: "The invitation doesn't mention it."},
+            {value: "stay", title: "Parents stay", description: "Grown-ups are welcome to stay."},
+        ]}/>, code: `<ChoiceCards name="stay" label="Do parents stay?" tray options={[
+    {value: "", title: "Don't say", description: "The invitation doesn't mention it."},
+    {value: "stay", title: "Parents stay", description: "Grown-ups are welcome to stay."},
 ]}/>`},
         {label: "A disabled card says why", node: () => <ChoiceCards name="doc-choice-disabled" value="monthly" options={[
             {value: "monthly", title: "Monthly", description: "Billed each month."},

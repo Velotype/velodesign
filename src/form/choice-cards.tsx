@@ -30,6 +30,10 @@ export type ChoiceCardsAttrsType = {
     name: string
     /** The group's caption, rendered as its `<legend>` */
     label?: RenderableElements
+    /** Keep the caption for screen readers but don't show it - for a group whose heading already asks the question */
+    labelHidden?: boolean
+    /** Set the caption and its cards together on a tinted panel, so they read as one question - for a card or form that asks more than one */
+    tray?: boolean
     /** Value of the picked card, if any */
     value?: string
     /** The cards, in order */
@@ -52,6 +56,10 @@ let areChoiceCardsStylesMounted = false
  * nothing is rebuilt.
  *
  * `<ChoiceCards name="who" label="Who can reply?" value="list" options={[...]} onChange={v => ...}/>`
+ *
+ * Where a heading right above already asks the question, `labelHidden` keeps the caption for screen
+ * readers only. Where one card or form asks several questions, `tray` sets each caption and its
+ * cards on a tinted panel, so a caption reads as its cards' question rather than as a field label.
  */
 export const ChoiceCards: FunctionComponent<ChoiceCardsAttrsType> = function(attrs: ChoiceCardsAttrsType): HTMLFieldSetElement {
     if (!areChoiceCardsStylesMounted) {
@@ -59,6 +67,10 @@ export const ChoiceCards: FunctionComponent<ChoiceCardsAttrsType> = function(att
         mountStyles(`
 .vtd-choice-cards{border:0;padding:0;margin:0;min-width:0;width:100%;box-sizing:border-box;}
 .vtd-choice-cards-legend{padding:0;margin-bottom:0.5em;font-weight:600;}
+.vtd-choice-cards-legend-hidden{position:absolute;width:1px;height:1px;margin:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
+.vtd-choice-cards-tray{padding:0.8em 0.9em 0.9em;border:1px solid var(--background-4);border-radius:1em;background-color:var(--background-1);}
+.vtd-choice-cards-tray > .vtd-choice-cards-legend:not(.vtd-choice-cards-legend-hidden){float:left;width:100%;margin-bottom:0.6em;font-weight:700;}
+.vtd-choice-cards-tray > .vtd-choice-cards-row{clear:both;}
 .vtd-choice-cards-row{display:grid;gap:0.6em;}
 .vtd-choice-cards-row > .vtd-tooltip-wrapper{display:block;}
 .vtd-choice-cards-card{
@@ -97,8 +109,9 @@ transition:border-color 0.15s ease-in, background-color 0.15s ease-in;
         // A disabled card says why, on hover or tap (Tooltip whenDisabled shows only while it is)
         return option.disabledHint === undefined ? card : <Tooltip whenDisabled content={option.disabledHint}>{card}</Tooltip>
     })
-    return passthroughAttrsToElement<HTMLFieldSetElement>(<fieldset class="vtd-choice-cards">
-        {attrs.label === undefined ? null : <legend class="vtd-choice-cards-legend">{attrs.label}</legend>}
+    // A tray's legend floats, so it sits inside the panel's padding instead of on its edge
+    return passthroughAttrsToElement<HTMLFieldSetElement>(<fieldset class={attrs.tray ? "vtd-choice-cards vtd-choice-cards-tray" : "vtd-choice-cards"}>
+        {attrs.label === undefined ? null : <legend class={attrs.labelHidden ? "vtd-choice-cards-legend vtd-choice-cards-legend-hidden" : "vtd-choice-cards-legend"}>{attrs.label}</legend>}
         <div class="vtd-choice-cards-row" style={{gridTemplateColumns: `repeat(auto-fit, minmax(min(${attrs.minCardWidth ?? "12em"}, 100%), 1fr))`}}>{cards}</div>
     </fieldset>, attrs)
 }
