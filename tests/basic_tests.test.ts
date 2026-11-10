@@ -339,6 +339,31 @@ describe('basic component rendering', () => {
         assertEquals(result.hint, true)
     })
 
+    itWrap("choice cards set a caption on a tray, or keep it for screen readers only", "choice-cards", "#light-tray", async (_selection: ElementHandle) => {
+        const result = await page.evaluate(() => {
+            const tray = document.querySelector("#light-tray") as HTMLElement
+            const hidden = document.querySelector("#light-hidden") as HTMLElement
+            const trayLegend = tray.querySelector("legend") as HTMLElement
+            const hiddenLegend = hidden.querySelector("legend") as HTMLElement
+            const firstCard = tray.querySelector(".vtd-choice-cards-card") as HTMLElement
+            return {
+                trayed: tray.classList.contains("vtd-choice-cards-tray"),
+                trayBackground: getComputedStyle(tray).backgroundColor,
+                legendInside: trayLegend.getBoundingClientRect().top > tray.getBoundingClientRect().top
+                    && trayLegend.getBoundingClientRect().bottom <= firstCard.getBoundingClientRect().top,
+                hiddenText: hiddenLegend.textContent,
+                hiddenWidth: hiddenLegend.getBoundingClientRect().width,
+                hiddenTrayed: hidden.classList.contains("vtd-choice-cards-tray"),
+            }
+        })
+        assertEquals(result.trayed, true)
+        assertEquals(result.trayBackground === "rgba(0, 0, 0, 0)", false)
+        assertEquals(result.legendInside, true)
+        assertEquals(result.hiddenText, "How can guests reply?")
+        assertEquals(result.hiddenWidth <= 1, true)
+        assertEquals(result.hiddenTrayed, false)
+    })
+
     itWrap("toggle click toggles change count", "toggle", "#clickable-toggle", async (selection: ElementHandle) => {
         assertEquals(await selection.innerText(), "clickable toggle (changed 0 times)")
         await selection.click()
