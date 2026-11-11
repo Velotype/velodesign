@@ -19,6 +19,17 @@ export type ComboboxOptionType = {
     label?: string
     /** A second, quieter line under the label - an address under a place's name, say */
     detail?: string
+    /**
+     * Before the label - an avatar's initials, a small icon - so what kind of thing each option is
+     * shows at a glance
+     */
+    leading?: RenderableElements
+    /**
+     * The heading this option sits under. Options with the same group are shown together, under a
+     * heading of that name, the groups in the order they first appear; screen readers hear each
+     * as a group of that name. Options without one come first, under no heading.
+     */
+    group?: string
 }
 
 /**
@@ -81,6 +92,10 @@ let areComboboxStylesMounted = false
  * `change` events on it, so `onInput`/`onChange` fire the same way whether the user typed or
  * picked a suggestion.
  *
+ * **The list is as wide as its suggestions need**, from the input's width (or 14em) up to 26em
+ * and never past the window's edges - a name and an address on one line read better than either
+ * squeezed into the width of a narrow field. Past that, a long word wraps rather than overflows.
+ *
  * **The list keeps itself in view** (`core/placement.ts`): below the input, or above it when
  * there's no room below; shorter, scrolling, when there's room for all of it on neither side; slid
  * in from a side edge. Placed on open, each time its suggestions change, and on a scroll or a
@@ -102,6 +117,8 @@ export class Combobox extends Component<ComboboxAttrsType> {
         placeInView(this.#panelEl, this.#placing)
     }
     #highlightedIndex = 0
+    /** Tells one combobox's group headings from another's, for `aria-labelledby` */
+    static #groupIds = 0
 
     #handleDocumentClick = (event: MouseEvent) => {
         if (!this.#open) {
@@ -129,6 +146,18 @@ export class Combobox extends Component<ComboboxAttrsType> {
             return this.#attrs.options
         }
         return this.#attrs.options.filter(option => (option.label || option.value).toLowerCase().includes(query))
+    }
+
+    /**
+     * The options as listed, top to bottom - grouped ones together under their group, in the order
+     * the groups first appear - which is the order the arrow keys move through
+     */
+    #shownOptions(): ComboboxOptionType[] {
+        const options = this.#filteredOptions()
+        if (!options.some(option => option.group)) {return options}
+        const groups: (string | undefined)[] = [undefined]
+        for (const option of options) {if (!groups.includes(option.group)) {groups.push(option.group)}}
+        return groups.flatMap(group => options.filter(option => option.group === group))
     }
 
     #closePanel() {
@@ -167,7 +196,7 @@ export class Combobox extends Component<ComboboxAttrsType> {
 
     /** Rebuilds the visible suggestion list to match the input's current value and highlight */
     #renderOptions() {
-        const options = this.#filteredOptions()
+        const options = this.#shownOptions()
         if (this.#highlightedIndex >= options.length) {
             this.#highlightedIndex = Math.max(0, options.length - 1)
         }
@@ -189,10 +218,32 @@ export class Combobox extends Component<ComboboxAttrsType> {
             class={`vtd-combobox-option${index == this.#highlightedIndex ? " vtd-combobox-option-highlighted" : ""}`}
             onClick={() => this.#selectOption(option)}
             onPointerEnter={() => this.#setHighlighted(index)}>
-            {query && this.#attrs.filter !== false ? highlightMatch(option.label || option.value, query) : (option.label || option.value)}
-            {option.detail ? <span class="vtd-combobox-option-detail">{option.detail}</span> : null}
+            {option.leading ? <span class="vtd-combobox-option-leading">{option.leading}</span> : null}
+            <span class="vtd-combobox-option-text">
+                {query && this.#attrs.filter !== false ? highlightMatch(option.label || option.value, query) : (option.label || option.value)}
+                {option.detail ? <span class="vtd-combobox-option-detail">{option.detail}</span> : null}
+            </span>
         </li>)
-        this.#panelEl.replaceChildren(...this.#optionEls)
+        // Grouped options sit in a role="group" list named by their heading; the rest stand alone
+        const items: HTMLElement[] = []
+        let at = 0
+        while (at < options.length) {
+            const group = options[at].group
+            let end = at
+            while (end < options.length && options[end].group === group) {end++}
+            const els = this.#optionEls.slice(at, end)
+            if (group === undefined) {
+                items.push(...els)
+            } else {
+                const id = `vtd-combobox-group-${++Combobox.#groupIds}`
+                items.push(<li role="presentation" class="vtd-combobox-group">
+                    <div class="vtd-combobox-group-label" id={id}>{group}</div>
+                    <ul role="group" aria-labelledby={id}>{els}</ul>
+                </li>)
+            }
+            at = end
+        }
+        this.#panelEl.replaceChildren(...items)
         if (this.#open) {this.#place()}
     }
 
@@ -231,7 +282,7 @@ export class Combobox extends Component<ComboboxAttrsType> {
                 this.#renderOptions()
                 return
             }
-            const options = this.#filteredOptions()
+            const options = this.#shownOptions()
             this.#setHighlighted(Math.min(this.#highlightedIndex + 1, options.length - 1))
         } else if (event.key == "ArrowUp") {
             event.preventDefault()
@@ -245,7 +296,7 @@ export class Combobox extends Component<ComboboxAttrsType> {
             if (!this.#open) {
                 return
             }
-            const option = this.#filteredOptions()[this.#highlightedIndex]
+            const option = this.#shownOptions()[this.#highlightedIndex]
             if (option) {
                 event.preventDefault()
                 this.#selectOption(option)
@@ -284,6 +335,8 @@ top:100%;
 left:0;
 z-index:1000;
 min-width:max(100%, 14em);
+width:max-content;
+max-width:min(26em, calc(100vw - 1rem));
 box-sizing:border-box;
 margin:0;
 margin-block-start:0.25em;
@@ -299,8 +352,13 @@ display:none;
 }
 .vtd-combobox-panel-open{display:block;}
 .vtd-combobox-panel.vtd-combobox-panel-above{top:auto;bottom:100%;margin-block-start:0;margin-block-end:0.25em;}
-.vtd-combobox-option{padding:0.5em 0.75em;border-radius:0.25rem;cursor:pointer;}
+.vtd-combobox-option{display:flex;align-items:center;gap:0.65em;padding:0.5em 0.75em;border-radius:0.25rem;cursor:pointer;}
+.vtd-combobox-option-leading{flex:none;display:inline-flex;}
+.vtd-combobox-option-text{min-width:0;overflow-wrap:anywhere;}
 .vtd-combobox-option-detail{display:block;font-size:0.85em;opacity:0.7;}
+.vtd-combobox-group ul{list-style:none;margin:0;padding:0;}
+.vtd-combobox-group + .vtd-combobox-group, .vtd-combobox-option + .vtd-combobox-group{border-top:1px solid var(--background-3);margin-top:0.25em;padding-top:0.25em;}
+.vtd-combobox-group-label{padding:0.4em 0.75em 0.2em;font-size:0.78em;font-weight:600;opacity:0.7;}
 ` +
 /* The keyboard's position in the list - see Menu for why this is a tint and not a ring */
 `

@@ -37,6 +37,12 @@ export const Card: FunctionComponent<CardAttrsType> = function(attrs: CardAttrsT
  * relationship a hover has to a resting row, which is small on purpose. A header that announced
  * itself with a real colour would make every card on a page compete with its own content.
  */
+/*
+ * Nothing in a card is clipped to it: a combobox's or a menu's list opened inside one has to be
+ * able to reach past its edge, and clipped it squeezed into whatever room the card had left. The
+ * header and footer round their own corners to the card's instead (`inherit`, so a card given
+ * another radius still matches).
+ */
 `
 .vtd-card{
 width:100%;
@@ -44,12 +50,13 @@ box-sizing:border-box;
 border-radius:0.5rem;
 border:1px solid var(--background-4);
 background-color:var(--background-1);
-overflow:hidden;
 }
 .vtd-card-header{
 padding:0.75em 1em;
 background-color:var(--background-2);
 border-block-end:1px solid var(--background-4);
+border-start-start-radius:inherit;
+border-start-end-radius:inherit;
 font-weight:bold;
 }
 .vtd-card-body{
@@ -70,6 +77,8 @@ gap:0.5em;
 padding:0.75em 1em;
 background-color:var(--background-2);
 border-block-start:1px solid var(--background-4);
+border-end-start-radius:inherit;
+border-end-end-radius:inherit;
 }
 `, "vtd/Card")
     }

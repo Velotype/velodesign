@@ -1,7 +1,7 @@
 import {replaceElementWithRoot, Component, getComponent} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
-import { Combobox, setThemeOnSelector, Theme } from "../../src/index.ts"
+import { Avatar, Combobox, setThemeOnSelector, Theme } from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 
 const countryOptions = [
@@ -29,6 +29,8 @@ class ComboboxGallery extends Component<EmptyAttrs> {
             <div id="async-combobox">{asyncCombobox()}</div>
             {/* Suggestions as a shortcut: with none, the panel stays closed rather than saying so */}
             <div id="quiet-combobox"><Combobox placeholder="Type a name" hideWhenEmpty options={countryOptions}/></div>
+            {/* People and groups from an address book, each kind under its heading, in a narrow field */}
+            <div id="grouped-combobox" style={{width: "12em"}}>{groupedCombobox()}</div>
             <div id="capped-combobox"><Combobox placeholder="At most 10 characters" maxLength={10} options={countryOptions}/></div>
         </div>
     }
@@ -43,6 +45,19 @@ function asyncCombobox(): HTMLElement {
             {value: "place-2", label: "Maple Park", detail: "200 Maple Ave"}
         ]), 50)}
         onSelectOption={option => { (globalThis as unknown as {picked: string}).picked = option.value }}/>
+    ref.box = getComponent<Combobox>(el)
+    return el
+}
+
+/** Suggestions of two kinds, given people first: shown groups first, as they first appear, each under its heading */
+function groupedCombobox(): HTMLElement {
+    const ref: {box?: Combobox} = {}
+    const el: HTMLElement = <Combobox placeholder="Name" filter={false} hideWhenEmpty options={[]}
+        onInput={() => setTimeout(() => ref.box?.setOptions([
+            {value: "rose@example.com", label: "Grandma Rose", detail: "rose.whitfield-montgomery@example.com", group: "People", leading: <Avatar initials="GR" size="2em"/>},
+            {value: "group:1", label: "Room 12 families", detail: "Group · 24 people", group: "Groups", leading: <Avatar initials="R1" size="2em"/>},
+            {value: "sam@example.com", label: "Sam", detail: "sam@example.com", group: "People", leading: <Avatar initials="S" size="2em"/>}
+        ]), 50)}/>
     ref.box = getComponent<Combobox>(el)
     return el
 }
