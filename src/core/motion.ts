@@ -39,8 +39,12 @@ const SLIDE_ID = "vtd-slide-in"
 
 /** How a push ends - `pushView`'s */
 export type PushViewOptions = {
-    /** How far what arrives starts from its place, in terms of its own box (default `100%`) */
-    distance?: string
+    /**
+     * How far what arrives starts from its place, in terms of its own box (default `100%`) - or, for
+     * pieces that travel different ways, a function giving each its own: an event calendar's grid
+     * day and its list row are both on the page, one of them hidden by a container query
+     */
+    distance?: string | ((element: Element) => string)
     /** What becomes of `leaving` once it has gone (default: it's removed) - a carousel hides its slide again */
     settle?: (leaving: HTMLElement) => void
 }
@@ -76,8 +80,11 @@ export function pushView(frame: HTMLElement, leaving: HTMLElement, arriving: Ite
     frame.style.overflow = "hidden"
     const timing = {duration: MOTION_MS, easing: MOTION_EASE}
     const distance = options.distance ?? "100%"
-    const start = from < 0 ? `translateX(calc(-1 * ${distance}))` : `translateX(${distance})`
-    const moves = [...arriving].map(element => element.animate([{transform: start}, {transform: "none"}], {...timing, id: PUSH_ID}))
+    const moves = [...arriving].map(element => {
+        const by = typeof distance === "function" ? distance(element) : distance
+        const start = from < 0 ? `translateX(calc(-1 * ${by}))` : `translateX(${by})`
+        return element.animate([{transform: start}, {transform: "none"}], {...timing, id: PUSH_ID})
+    })
     const out = leaving.animate([{transform: "none"}, {transform: `translateX(${-from * 100}%)`}], timing)
     let done = false
     const finish = () => {

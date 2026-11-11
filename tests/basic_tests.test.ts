@@ -2040,7 +2040,8 @@ describe('basic component rendering', () => {
 
     itWrap("EventCalendar with weeks shows today's week first and pages ahead", "event-calendar", "#weeks-event-calendar", async (_selection: ElementHandle) => {
         const read = `(() => {
-            const scope = document.querySelector('#showcase-theme-light #weeks-event-calendar')
+            // The month on screen - the one leaving stays beside it while it goes, which in this suite is for good
+            const scope = document.querySelector('#showcase-theme-light #weeks-event-calendar .vtd-event-calendar-month:not(.vtd-event-calendar-leaving)')
             return {days: scope.querySelectorAll('.vtd-event-calendar-day').length,
                 outside: scope.querySelectorAll('.vtd-event-calendar-day-outside').length,
                 todayFirstRow: [...scope.querySelectorAll('.vtd-event-calendar-day')].findIndex(c => c.classList.contains('vtd-event-calendar-day-today')) < 7,
@@ -2094,10 +2095,33 @@ describe('basic component rendering', () => {
             header.querySelectorAll('button')[1].click()
             const headerNodes = observer.takeRecords().reduce((n, r) => n + r.addedNodes.length + r.removedNodes.length, 0)
             return {headerNodes, same: scope.querySelector('.vtd-event-calendar-title').firstChild === text, title: text.nodeValue,
-                events: scope.querySelectorAll('.vtd-event-calendar-grid .vtd-event-calendar-event').length, month: globalThis.__month}
+                events: scope.querySelectorAll('.vtd-event-calendar-month:not(.vtd-event-calendar-leaving) .vtd-event-calendar-grid .vtd-event-calendar-event').length, month: globalThis.__month}
         })()`)
         assertEquals(moved, {headerNodes: 0, same: true, title: new Date(2026, 1, 1).toLocaleDateString(undefined, {month: "long", year: "numeric"}),
             events: 0, month: new Date(2026, 1, 1).toDateString()})
+    })
+
+    // Like Calendar's: every new day is pushed in, in the grid and in the list, with one month leaving
+    // beside it, and the weekday row stays - on each of three steps.
+    itWrap("EventCalendar pushes each new month in, grid and list alike", "event-calendar", "#default-event-calendar", async (_selection: ElementHandle) => {
+        const steps = await page.evaluate(`(() => {
+            const scope = document.querySelector('#showcase-theme-light #default-event-calendar')
+            const next = scope.querySelectorAll('.vtd-event-calendar-header button')[1]
+            const out = []
+            for (let i = 0; i < 3; i++) {
+                next.click()
+                const month = scope.querySelector('.vtd-event-calendar-month:not(.vtd-event-calendar-leaving)')
+                const pushed = el => el.getAnimations().some(a => a.id === 'vtd-push-in')
+                out.push({
+                    days: [...month.querySelectorAll('.vtd-event-calendar-day')].every(pushed),
+                    rows: [...month.querySelectorAll('.vtd-event-calendar-list-day, .vtd-event-calendar-empty')].every(pushed),
+                    weekdaysStay: ![...month.querySelectorAll('.vtd-event-calendar-weekday')].some(pushed),
+                    leaving: scope.querySelectorAll('.vtd-event-calendar-leaving').length
+                })
+            }
+            return out
+        })()`)
+        assertEquals(steps, [1, 2, 3].map(() => ({days: true, rows: true, weekdaysStay: true, leaving: 1})))
     })
 
     itWrap("EventCalendar's list shows only the days with events, and a narrow auto calendar picks it", "event-calendar", "#list-event-calendar", async (_selection: ElementHandle) => {

@@ -7,6 +7,7 @@ import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/
 import { Button } from "../form/button.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
 import { monthSpanTitle } from "./calendar.tsx"
+import { pushView, slideIn } from "../core/motion.ts"
 
 /** The colour an event is drawn in - a palette name, like `Badge`'s `type` */
 export type EventCalendarEventColorType = "primary" | "secondary" | "warning" | "danger" | "neutral"
@@ -95,6 +96,9 @@ function isoDay(date: Date): string {
  *
  * **Changing month rebuilds only the month.** The header is built once; the prev/next buttons
  * write the title's text node and replace `#monthEl`'s children. Unfolding a day is one class.
+ * The new month pushes the old one along as `Calendar`'s does (`core/motion.ts`'s `pushView`): in
+ * the grid the days travel one row's width and the weekday row stays put, in the list each day's
+ * row travels its own width - both layouts are on the page, so each piece is told its own.
  * Weekday names and the title come from `Intl`, in the reader's locale, so nothing here is English.
  */
 export class EventCalendar extends Component<EventCalendarAttrsType> {
@@ -105,7 +109,10 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
 
     #root: HTMLDivElement
     #titleText: Text = document.createTextNode("")
+    #titleEl: HTMLSpanElement = <span class="vtd-event-calendar-title" aria-live="polite">{this.#titleText}</span>
     #monthEl: HTMLDivElement = <div class="vtd-event-calendar-month"/>
+    /** Holds the month, and the month leaving it while a step slides (`pushView`) */
+    #frameEl: HTMLDivElement = <div class="vtd-event-calendar-frame">{this.#monthEl}</div>
 
     /** Create a new `<EventCalendar/>` Component */
     constructor(attrs: EventCalendarAttrsType, children: RenderableElements[]) {
@@ -120,6 +127,8 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
 .vtd-event-calendar{width:100%;box-sizing:border-box;container-type:inline-size;}
 .vtd-event-calendar-header{display:flex;align-items:center;gap:0.5em;margin-block-end:0.5em;}
 .vtd-event-calendar-title{font-weight:bold;font-size:1.1em;flex:1;text-align:center;}
+.vtd-event-calendar-frame{position:relative;}
+.vtd-event-calendar-leaving .vtd-event-calendar-weekday{visibility:hidden;}
 .vtd-event-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--background-4);border-left:1px solid var(--background-4);}
 .vtd-event-calendar-weekday{font-size:0.8em;opacity:0.7;padding:0.3em 0.4em;text-align:start;border-right:1px solid var(--background-4);border-bottom:1px solid var(--background-4);}
 .vtd-event-calendar-day{min-height:6.5em;padding:0.25em;box-sizing:border-box;border-right:1px solid var(--background-4);border-bottom:1px solid var(--background-4);min-width:0;}
@@ -167,10 +176,10 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
         this.#root = passthroughAttrsToElement<HTMLDivElement>(<div class={`vtd-event-calendar vtd-event-calendar-layout-${attrs.layout ?? "auto"}`}>
             <div class="vtd-event-calendar-header">
                 <Button type="text" ariaLabel={attrs.prevLabel} onClick={() => this.#changeView(-1)}><CommonThemeOptions.prevSymbol/></Button>
-                <span class="vtd-event-calendar-title" aria-live="polite">{this.#titleText}</span>
+                {this.#titleEl}
                 <Button type="text" ariaLabel={attrs.nextLabel} onClick={() => this.#changeView(1)}><CommonThemeOptions.nextSymbol/></Button>
             </div>
-            {this.#monthEl}
+            {this.#frameEl}
         </div>, attrs)
 
         this.#renderMonth()
@@ -216,8 +225,8 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
         </li>
     }
 
-    /** Rebuilds the title and both layouts for `#viewDate` - the only DOM a month change touches */
-    #renderMonth() {
+    /** Rebuilds the title and both layouts for `#viewDate` - the only DOM a month change touches - pushing the new month in from `slide`'s side when it stepped */
+    #renderMonth(slide?: -1 | 1) {
         const year = this.#viewDate.getFullYear()
         const month = this.#viewDate.getMonth()
         const weekStart = this.#weekStart()
@@ -276,8 +285,21 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
             </li>)}
         </ol>
 
+        // The month on screen moves into a stand-in that slides away as the new one slides in
+        let leaving: HTMLDivElement | undefined
+        if (slide) {
+            const stand: HTMLDivElement = <div class="vtd-event-calendar-month vtd-event-calendar-leaving"/>
+            stand.append(...this.#monthEl.childNodes)
+            leaving = stand
+        }
         this.#monthEl.replaceChildren(grid, list,
             listed.length === 0 ? <div class="vtd-event-calendar-empty">{this.#attrs.emptyMessage ? this.#attrs.emptyMessage() : <CommonThemeOptions.emptySymbol/>}</div> : "")
+        if (slide && leaving) {
+            // A grid day is one seventh of a row, so it starts a row away; a list row or the empty note, its own width
+            pushView(this.#frameEl, leaving, this.#monthEl.querySelectorAll(".vtd-event-calendar-day, .vtd-event-calendar-list-day, .vtd-event-calendar-empty"), slide,
+                {distance: element => element.classList.contains("vtd-event-calendar-day") ? "700%" : "100%"})
+            slideIn([this.#titleEl], slide)
+        }
     }
 
     /** Replaces the events, redrawing the month on screen */
@@ -290,8 +312,9 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
     setMonth(date: Date): void {
         const next = this.#viewStartFor(date)
         if (next.getTime() === this.#viewDate.getTime()) {return}
+        const slide = next > this.#viewDate ? 1 : -1
         this.#viewDate = next
-        this.#renderMonth()
+        this.#renderMonth(slide)
     }
 
     /** The first day of the month on screen - or with `weeks`, the first day on screen */
