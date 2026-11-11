@@ -4,6 +4,7 @@ import { h } from "../core/jsx.ts"
 import {type ChildrenAttr, type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs} from "../core/velotype.ts"
 import { Glyphs, glyphElement } from "../core/glyphs.ts"
 import { mountStyles } from "../core/styles.ts"
+import { MOTION } from "../core/motion.ts"
 
 /**
  * Attrs type for `<Checkbox/>` Component
@@ -72,7 +73,7 @@ width:1.25em;
 box-sizing:border-box;
 margin-inline-end:1ex;
 flex-shrink:0;
-transition:background-color 0.2s ease-in, border-color 0.2s ease-in;
+transition:background-color ${MOTION}, border-color ${MOTION};
 background-color:var(--background-1);border:1px solid var(--background-5);
 }
 
@@ -89,7 +90,7 @@ align-items:center;
 justify-content:center;
 visibility:hidden;
 opacity:0;
-transition:opacity 0.2s ease-in;
+transition:opacity ${MOTION};
 color:var(--text);
 }
 

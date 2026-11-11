@@ -11,6 +11,7 @@ import { CommonThemeOptions } from "../core/theme-options.ts"
 import type { MenuItemType } from "./menu.tsx"
 import { Tree } from "../data-display/tree.tsx"
 import type { TreeNodeType } from "../data-display/tree.tsx"
+import { MOTION, MOTION_MS } from "../core/motion.ts"
 
 /**
  * A single entry in a `<Sidebar/>`
@@ -351,7 +352,7 @@ export class Sidebar extends Component<SidebarAttrsType> {
      *
      * The panel is invisible at both ends of a mode switch - a closed overlay surface on one side,
      * a column panel on the other - but the CSS that makes it invisible is transitioned, so on the
-     * way into overlay mode it fades out over 180ms. `position` flips to `fixed` in the first frame
+     * way into overlay mode it fades out over 300ms. `position` flips to `fixed` in the first frame
      * of that fade, at full opacity, and the panel is seen jumping from under the header to the top
      * of the viewport before it disappears. Measured: `top:55 w:250` to `top:0 w:390` at opacity
      * 1.00, which is exactly the jump this component has now produced twice.
@@ -702,7 +703,7 @@ export class Sidebar extends Component<SidebarAttrsType> {
 box-sizing:border-box;
 flex-shrink:0;
 width:var(--vtd-sidebar-width,250px);
-transition:width 0.18s ease-in-out;
+transition:width ${MOTION};
 }
 .vtd-sidebar-collapsed{width:var(--vtd-sidebar-rail-width,${railWidthPx}px);}
 ` +
@@ -732,7 +733,7 @@ flex-direction:column;
 box-sizing:border-box;
 background-color:var(--background);
 border-inline-end:1px solid var(--background-4);
-transition:width 0.18s ease-in-out, box-shadow 0.18s ease-in-out;
+transition:width ${MOTION}, box-shadow ${MOTION};
 }
 ` +
 /* max-height rather than display:none so the list slides up in step with the width rather than
@@ -744,7 +745,7 @@ border-block-end:1px solid var(--background-4);
 flex-shrink:0;
 overflow:hidden;
 max-height:14em;
-transition:max-height 0.18s ease-in-out, padding 0.18s ease-in-out;
+transition:max-height ${MOTION}, padding ${MOTION};
 }
 .vtd-sidebar-body{overflow-y:auto;overflow-x:hidden;flex-grow:1;padding:0.4em 0.35em;}
 .vtd-sidebar-footer{
@@ -753,7 +754,7 @@ overflow:hidden;
 max-height:14em;
 padding:0.5em;
 border-block-start:1px solid var(--background-4);
-transition:max-height 0.18s ease-in-out, padding 0.18s ease-in-out;
+transition:max-height ${MOTION}, padding ${MOTION};
 }
 ` +
 /*
@@ -779,7 +780,7 @@ min-width:0;
 padding:0.45em 0.55em;
 border-radius:0.25rem;
 box-sizing:border-box;
-transition:gap 0.18s ease-in-out;
+transition:gap ${MOTION};
 }
 .vtd-sidebar-link{color:inherit;text-decoration:none;}
 ` +
@@ -810,7 +811,7 @@ transition:gap 0.18s ease-in-out;
 align-self:stretch;
 height:auto;
 margin-inline-start:0.2em;
-transition:width 0.18s ease-in-out, margin 0.18s ease-in-out, opacity 0.18s ease-in-out;
+transition:width ${MOTION}, margin ${MOTION}, opacity ${MOTION};
 }
 .vtd-sidebar .vtd-tree-children{padding-inline-start:0.9em;}
 ` +
@@ -819,7 +820,7 @@ transition:width 0.18s ease-in-out, margin 0.18s ease-in-out, opacity 0.18s ease
 `
 .vtd-sidebar .vtd-tree > li > .vtd-tree-leaf{
 padding-inline-start:1.7em;
-transition:padding-inline-start 0.18s ease-in-out;
+transition:padding-inline-start ${MOTION};
 }
 ` +
 /*
@@ -852,7 +853,7 @@ align-items:center;
  *
  * The previous approach took each label out of flow the instant the class landed
  * (position:absolute + clip-path). It measured correctly and looked wrong: the text vanished in a
- * single frame while the panel spent the next 180ms sliding, and the same jump ran backwards on
+ * single frame while the panel spent the next 300ms sliding, and the same jump ran backwards on
  * the way out. That is what the reader sees as the labels popping.
  *
  * white-space:nowrap is what makes it safe to leave a label in flow at 56px at all. A label that
@@ -873,7 +874,7 @@ min-width:0;
 flex-shrink:1;
 overflow:hidden;
 max-width:100%;
-transition:opacity 0.18s ease-in-out;
+transition:opacity ${MOTION};
 }
 .vtd-sidebar-label{flex-grow:1;white-space:nowrap;text-overflow:ellipsis;}
 ` +
@@ -939,7 +940,7 @@ touch-action:none;
 .vtd-sidebar-resizing{user-select:none;}
 ` +
 /* The root *is* .vtd-sidebar, so this has to be a compound rather than a descendant selector.
-   Written as a descendant it silently matched nothing and the sidebar's own width trailed 180ms
+   Written as a descendant it silently matched nothing and the sidebar's own width trailed 300ms
    behind the pointer for the whole drag. */
 `
 .vtd-sidebar.vtd-sidebar-resizing,.vtd-sidebar-resizing .vtd-sidebar-panel{transition:none;}
@@ -965,7 +966,7 @@ color:inherit;
 `
 .vtd-sidebar-collapse-icon{
 display:inline-flex;
-transition:transform 0.18s ease-in-out;
+transition:transform ${MOTION};
 }
 .vtd-sidebar-collapsed .vtd-sidebar-collapse-icon{transform:rotate(180deg);}
 .vtd-sidebar-profile{flex-shrink:0;border-block-start:1px solid var(--background-4);padding:0.4em;}
@@ -999,7 +1000,7 @@ align-items:center;
 justify-content:center;
 gap:0.55em;
 min-width:0;
-transition:gap 0.18s ease-in-out;
+transition:gap ${MOTION};
 }
 .vtd-sidebar-profile-avatar{flex-shrink:0;display:inline-flex;}
 ` +
@@ -1016,13 +1017,13 @@ transition:gap 0.18s ease-in-out;
  * grid track its open/close transition already drives. display:none took them out in a single
  * frame - and it had to, because under visibility they keep their height and the rail grows a
  * blank stretch where a group's entries were (measured, one 236px gap among rows 49px apart).
- * Collapsing the track has neither problem: no height, and it gets there over 200ms.
+ * Collapsing the track has neither problem: no height, and it gets there over 300ms.
  */
 `
 ${rail} .vtd-disclosure-content{
 grid-template-rows:minmax(0,0fr);
 visibility:hidden;
-transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0.2s;
+transition:grid-template-rows ${MOTION}, visibility 0s linear ${MOTION_MS}ms;
 }
 ` +
 /* Everything that is only text on the rail fades out in place. It keeps its box (a zero-width one,
@@ -1031,7 +1032,7 @@ transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0.2s;
  * The cap lands at the *end* of the fade, not across it, and the delay is the whole of what keeps
  * the icons still.
  *
- * Shrinking the cap over the same 180ms as the panel looks like the obvious thing and is not: the
+ * Shrinking the cap over the same 300ms as the panel looks like the obvious thing and is not: the
  * two run on independent curves, so the text gave up room faster than the row lost it, free space
  * appeared in the middle of the transition, and justify-content:center chased it. Measured, the
  * account avatar went 13 -> 29 -> 14: a 16px round trip to end up a pixel from where it started.
@@ -1048,14 +1049,14 @@ ${rail} .vtd-sidebar-trailing,
 ${rail} .vtd-sidebar-profile-text{
 opacity:0;
 max-width:0;
-transition:opacity 0.18s ease-in-out, max-width 0s linear 0.18s;
+transition:opacity ${MOTION}, max-width 0s linear ${MOTION_MS}ms;
 }
 ${rail} .vtd-sidebar-row{gap:0;}
 ${rail} .vtd-sidebar-profile-trigger{gap:0;}
 ${rail} .vtd-tree-chevron{width:0;margin:0;opacity:0;}
 ${rail} .vtd-tree > li > .vtd-tree-leaf{padding-inline-start:0;}
 ` +
-/* With nothing to show at 56px the header folds away over the same 180ms the width takes, so the
+/* With nothing to show at 56px the header folds away over the same 300ms the width takes, so the
    icons below it move with the panel instead of snapping up the moment it is clicked */
 `
 ${rail} .vtd-sidebar-header:not(.vtd-sidebar-header-swaps){
@@ -1081,7 +1082,7 @@ border-block-start-color:transparent;
  */
 `
 .vtd-sidebar-header-swaps{position:relative;}
-.vtd-sidebar-header-full{transition:opacity 0.18s ease-in-out, visibility 0s linear 0s;}
+.vtd-sidebar-header-full{transition:opacity ${MOTION}, visibility 0s linear 0s;}
 .vtd-sidebar-header-rail{
 position:absolute;
 inset:0;
@@ -1090,17 +1091,17 @@ align-items:center;
 justify-content:center;
 opacity:0;
 visibility:hidden;
-transition:opacity 0.18s ease-in-out, visibility 0s linear 0.18s;
+transition:opacity ${MOTION}, visibility 0s linear ${MOTION_MS}ms;
 }
 ${rail} .vtd-sidebar-header-full{
 opacity:0;
 visibility:hidden;
-transition:opacity 0.18s ease-in-out, visibility 0s linear 0.18s;
+transition:opacity ${MOTION}, visibility 0s linear ${MOTION_MS}ms;
 }
 ${rail} .vtd-sidebar-header-rail{
 opacity:1;
 visibility:visible;
-transition:opacity 0.18s ease-in-out, visibility 0s linear 0s;
+transition:opacity ${MOTION}, visibility 0s linear 0s;
 }
 ` +
 /* Collapsed, the panel matches the rail; any of the float triggers brings the full panel back out
@@ -1151,14 +1152,14 @@ opacity:0;
 visibility:hidden;
 ` +
 /*
- * pointer-events, not just visibility. The scrim fades over 0.18s, and for the whole of that fade a
+ * pointer-events, not just visibility. The scrim fades over 0.3s, and for the whole of that fade a
  * visibility-only scrim still swallows clicks - so tapping the menu control to close and reopen
  * lands on the scrim instead and nothing happens. pointer-events flips on the class rather than on
  * the transition, so the moment it is closing it stops intercepting.
  */
 `
 pointer-events:none;
-transition:opacity 0.18s ease-in-out, visibility 0s linear 0.18s;
+transition:opacity ${MOTION}, visibility 0s linear ${MOTION_MS}ms;
 }
 ` +
 /*
@@ -1202,13 +1203,13 @@ border-radius:0;
 opacity:0;
 visibility:hidden;
 transform:scale(0.98);
-transition:opacity 0.18s ease-in-out, transform 0.18s ease-in-out, visibility 0s linear 0.18s;
+transition:opacity ${MOTION}, transform ${MOTION}, visibility 0s linear ${MOTION_MS}ms;
 }
 .vtd-sidebar-overlay-open .vtd-sidebar-panel{
 opacity:1;
 visibility:visible;
 transform:scale(1);
-transition:opacity 0.18s ease-in-out, transform 0.18s ease-in-out, visibility 0s linear 0s;
+transition:opacity ${MOTION}, transform ${MOTION}, visibility 0s linear 0s;
 box-shadow:0 0 2em rgba(0,0,0,0.35);
 }
 ` +
@@ -1266,7 +1267,7 @@ cursor:pointer;
 opacity:1;
 visibility:visible;
 pointer-events:auto;
-transition:opacity 0.18s ease-in-out, visibility 0s linear 0s;
+transition:opacity ${MOTION}, visibility 0s linear 0s;
 }
 ` +
 /*

@@ -5,6 +5,7 @@ import {type ChildrenAttr, Component, type RenderableElements} from "../core/vel
 import { mountStyles } from "../core/styles.ts"
 import { Button } from "../form/button.tsx"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
+import { animateDialog, MOTION } from "../core/motion.ts"
 
 /**
  * Options to customize `<Drawer/>` Component Theme
@@ -81,14 +82,32 @@ backdrop-filter: blur(2px);
 .vtd-drawer-position-right{inset-inline-end:0;inset-inline-start:auto;inset-block:0;height:100vh;width:min(24em,90vw);}
 .vtd-drawer-position-top{inset-block-start:0;inset-block-end:auto;inset-inline:0;width:100vw;max-height:80vh;}
 .vtd-drawer-position-bottom{inset-block-end:0;inset-block-start:auto;inset-inline:0;width:100vw;max-height:80vh;}
-.vtd-drawer-enter-left{animation:vtd-drawer-in-left 0.2s ease-out;}
-.vtd-drawer-enter-right{animation:vtd-drawer-in-right 0.2s ease-out;}
-.vtd-drawer-enter-top{animation:vtd-drawer-in-top 0.2s ease-out;}
-.vtd-drawer-enter-bottom{animation:vtd-drawer-in-bottom 0.2s ease-out;}
+.vtd-drawer-enter-left[open]{animation:vtd-drawer-in-left ${MOTION};}
+.vtd-drawer-enter-right[open]{animation:vtd-drawer-in-right ${MOTION};}
+.vtd-drawer-enter-top[open]{animation:vtd-drawer-in-top ${MOTION};}
+.vtd-drawer-enter-bottom[open]{animation:vtd-drawer-in-bottom ${MOTION};}
+` +
+/* It leaves the way it came, and the backdrop fades in and out with it */
+`
+.vtd-drawer-enter-left.vtd-drawer-closing{animation:vtd-drawer-out-left ${MOTION} forwards;}
+.vtd-drawer-enter-right.vtd-drawer-closing{animation:vtd-drawer-out-right ${MOTION} forwards;}
+.vtd-drawer-enter-top.vtd-drawer-closing{animation:vtd-drawer-out-top ${MOTION} forwards;}
+.vtd-drawer-enter-bottom.vtd-drawer-closing{animation:vtd-drawer-out-bottom ${MOTION} forwards;}
+.vtd-drawer[open]::backdrop{animation:vtd-drawer-backdrop-in ${MOTION};}
+.vtd-drawer.vtd-drawer-closing::backdrop{animation:vtd-drawer-backdrop-out ${MOTION} forwards;}
 @keyframes vtd-drawer-in-left{from{transform:translateX(-100%);}to{transform:translateX(0);}}
 @keyframes vtd-drawer-in-right{from{transform:translateX(100%);}to{transform:translateX(0);}}
 @keyframes vtd-drawer-in-top{from{transform:translateY(-100%);}to{transform:translateY(0);}}
 @keyframes vtd-drawer-in-bottom{from{transform:translateY(100%);}to{transform:translateY(0);}}
+@keyframes vtd-drawer-out-left{from{transform:translateX(0);}to{transform:translateX(-100%);}}
+@keyframes vtd-drawer-out-right{from{transform:translateX(0);}to{transform:translateX(100%);}}
+@keyframes vtd-drawer-out-top{from{transform:translateY(0);}to{transform:translateY(-100%);}}
+@keyframes vtd-drawer-out-bottom{from{transform:translateY(0);}to{transform:translateY(100%);}}
+@keyframes vtd-drawer-backdrop-in{from{opacity:0;}to{opacity:1;}}
+@keyframes vtd-drawer-backdrop-out{from{opacity:1;}to{opacity:0;}}
+@media (prefers-reduced-motion: reduce){
+.vtd-drawer,.vtd-drawer::backdrop,.vtd-drawer.vtd-drawer-closing,.vtd-drawer.vtd-drawer-closing::backdrop{animation:none;}
+}
 .vtd-drawer-separator{margin:0.5em 0;}
 .vtd-drawer-inner{padding:0.5em;}
 .vtd-drawer-close .vtd-icon{height:1.6em;margin-block:-0.3em;}
@@ -99,13 +118,16 @@ backdrop-filter: blur(2px);
     /** The underlying `<dialog/>` element */
     #dialog: HTMLDialogElement
 
+    /** Opens and closes the dialog with its motion */
+    #motion: {close: () => void, showModal: () => void}
+
     /** Close the Drawer */
     close() {
-        this.#dialog.close()
+        this.#motion.close()
     }
     /** Show the Drawer */
     showModal() {
-        this.#dialog.showModal()
+        this.#motion.showModal()
     }
 
     /** Create a new `<Drawer/>` Component */
@@ -117,12 +139,13 @@ backdrop-filter: blur(2px);
             <div style={{display: "flex", alignItems: "center"}}>
                 <span style={{marginRight: "auto"}}>{attrs.title}</span>
                 <Button type="secondary" class="vtd-drawer-close" onClick={()=>{
-                    this.#dialog.close()
+                    this.close()
                 }}><DrawerThemeOptions.closeSymbol/></Button>
             </div>
             <hr class="vtd-drawer-separator"/>
             <div class="vtd-drawer-inner">{children}</div>
         </dialog>
+        this.#motion = animateDialog(this.#dialog, "vtd-drawer-closing")
     }
 
     /** Render this Component */

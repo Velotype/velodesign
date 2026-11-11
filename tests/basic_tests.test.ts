@@ -559,7 +559,8 @@ describe('basic component rendering', () => {
         assertEquals((await toast.innerText()).trim(), "Gone in a flash")
         assert(await page.$(".vtd-toast .vtd-toast-dismiss .vtd-icon"), "ERROR: the toast's dismiss button shows no cross")
 
-        await new Promise(resolve => setTimeout(resolve, 800))
+        // Its 500ms, then the 300ms it takes to fade out
+        await new Promise(resolve => setTimeout(resolve, 1100))
         const stillThere = await page.$(".vtd-toast")
         if (stillThere) {fail("ERROR: expected toast to have auto-dismissed after its duration elapsed")}
     })
@@ -632,13 +633,16 @@ describe('basic component rendering', () => {
         const openedDrawer = await page.waitForSelector(".vtd-drawer[open]")
         if (!openedDrawer) {fail("ERROR: drawer did not open after clicking trigger")}
 
-        const closed = await page.evaluate(() => {
-            const dialog = document.querySelector(".vtd-drawer") as HTMLDialogElement | null
-            const closeButton = dialog?.querySelector("button") as HTMLElement | undefined
-            closeButton?.click()
-            return !dialog?.open
+        // It slides out first, still open, and closes when the slide ends
+        const closing = await page.evaluate(async () => {
+            const dialog = document.querySelector(".vtd-drawer") as HTMLDialogElement
+            ;(dialog.querySelector("button") as HTMLElement).click()
+            const during = {open: dialog.open, sliding: dialog.classList.contains("vtd-drawer-closing")}
+            await new Promise(resolve => setTimeout(resolve, 500))
+            return {during, after: {open: dialog.open, sliding: dialog.classList.contains("vtd-drawer-closing")}}
         })
-        if (!closed) {fail("ERROR: expected drawer to close after clicking its close button")}
+        if (!closing.during.open || !closing.during.sliding) {fail(`ERROR: expected the drawer to slide out before closing: ${JSON.stringify(closing.during)}`)}
+        if (closing.after.open || closing.after.sliding) {fail(`ERROR: expected drawer to close after clicking its close button: ${JSON.stringify(closing.after)}`)}
     })
 
     itWrap("drawer placement and enterFrom apply independently", "drawer", "#open-bottom-drawer-btn", async (selection: ElementHandle) => {
@@ -897,7 +901,8 @@ describe('basic component rendering', () => {
             dialog.showModal()
             const buttons = dialog.querySelectorAll("button")
             ;(buttons[buttons.length - 1] as HTMLElement).click()
-            const open = dialog.open
+            // Closing is a fade first: a modal on its way out counts as closed
+            const open = dialog.open && !dialog.classList.contains("vtd-modal-closing")
             dialog.close()
             return open
         }, {args: [id]})
@@ -909,6 +914,26 @@ describe('basic component rendering', () => {
             if (!(await openAfterConfirm("keep-open-modal"))) {fail("ERROR: expected done({keepOpen: true}) to leave the modal open")}
             if (await openAfterConfirm("plain-modal")) {fail("ERROR: expected confirm with no handler to close the modal")}
         }
+    })
+
+    itWrap("a modal fades out on Escape before it closes, with nothing inside it laid out again", "modal", "#plain-modal", async (_selection: ElementHandle) => {
+        await page.evaluate(() => (document.querySelector("#plain-modal dialog") as HTMLDialogElement).showModal())
+        const settled = await page.evaluate(async () => {
+            await new Promise(r => setTimeout(r, 400))
+            const dialog = document.querySelector("#plain-modal dialog") as HTMLDialogElement
+            return [dialog.offsetWidth, dialog.offsetHeight]
+        })
+        await page.keyboard.press("Escape")
+        const states = await page.evaluate(async () => {
+            const dialog = document.querySelector("#plain-modal dialog") as HTMLDialogElement
+            // offsetWidth and offsetHeight are the laid-out box, which a transform doesn't change
+            const during = {open: dialog.open, fading: dialog.classList.contains("vtd-modal-closing"), size: [dialog.offsetWidth, dialog.offsetHeight]}
+            await new Promise(r => setTimeout(r, 500))
+            return {during, after: {open: dialog.open, fading: dialog.classList.contains("vtd-modal-closing")}}
+        })
+        if (!states.during.open || !states.during.fading) {fail(`ERROR: expected Escape to fade the modal out first: ${JSON.stringify(states.during)}`)}
+        assertEquals(states.during.size, settled, "ERROR: the modal's layout changed while it faded")
+        if (states.after.open || states.after.fading) {fail(`ERROR: expected the modal closed once it had faded: ${JSON.stringify(states.after)}`)}
     })
 
     itWrap("modal leaves its footer cancel button out when showCancelButton is false", "modal", "#no-cancel-modal", async (_selection: ElementHandle) => {
@@ -2031,7 +2056,7 @@ describe('basic component rendering', () => {
             }
         }
         // The shared open animation is the property that had actually drifted
-        if (!collapse.transition.includes("grid-template-rows") || !collapse.transition.includes("0.2s")) {
+        if (!collapse.transition.includes("grid-template-rows") || !collapse.transition.includes("0.3s")) {
             fail(`ERROR: the shared animated open is missing: ${collapse.transition}`)
         }
 
@@ -2092,11 +2117,11 @@ describe('basic component rendering', () => {
             for (let i = 0; i < 3; i++) {
                 ;(details.querySelector("summary") as HTMLElement).click()
                 out[`opening${i}`] = read()
-                await wait(400)
+                await wait(500)
                 out[`open${i}`] = read()
                 ;(details.querySelector("summary") as HTMLElement).click()
                 out[`closing${i}`] = read()
-                await wait(400)
+                await wait(500)
             }
             return out
         })

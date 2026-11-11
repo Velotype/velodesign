@@ -3,6 +3,7 @@
 import { h } from "../core/jsx.ts"
 import {type ChildrenAttr, type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
+import { MOTION } from "../core/motion.ts"
 
 /**
  * Attrs type for `<Toggle/>` Component
@@ -58,7 +59,7 @@ height:1.4em;
 width:2.6em;
 margin-inline-end:1ex;
 border-radius:1em;
-transition:background-color 0.2s ease-in, border 0.3s ease-in;
+transition:background-color ${MOTION}, border ${MOTION};
 background-color:var(--background-1);
 border:1px solid var(--background-5);
 flex-shrink:0;
@@ -73,7 +74,7 @@ width:1em;
 border-radius:1em;
 background-color:var(--background-9);
 transform:translateY(-50%);
-transition:left 0.2s ease-in, background-color 0.2s ease-in;
+transition:left ${MOTION}, background-color ${MOTION};
 }
 
 .vtd-toggle-input:checked ~ .vtd-toggle-track{

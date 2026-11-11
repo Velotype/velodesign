@@ -6,6 +6,7 @@ import { Glyphs, glyphElement } from "../core/glyphs.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { animateClosed, buildDisclosureContent, flushDisclosureLayout, mountDisclosureStyles } from "./disclosure-view.tsx"
+import { MOTION } from "../core/motion.ts"
 
 /**
  * A single node in a `<Tree/>`
@@ -163,7 +164,7 @@ margin-inline-end:0.25em;
 border-radius:0.25rem;
 }
 .vtd-tree-chevron:hover{background-color:var(--background-3);}
-.vtd-tree-chevron .vtd-icon{color:var(--text);transition:transform 0.15s ease-in-out;}
+.vtd-tree-chevron .vtd-icon{color:var(--text);transition:transform ${MOTION};}
 ` +
 /* Matches the chevron elsewhere: it turns back the moment a close starts, not when it finishes */
 `

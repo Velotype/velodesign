@@ -6,6 +6,7 @@ import { Glyphs, glyphElement } from "../core/glyphs.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, IdAttr, RenderableElements, RenderObject, StylePassthroughAttrs } from "../core/velotype.ts"
 import type { SidebarNavState } from "./sidebar.tsx"
+import { MOTION, MOTION_MS } from "../core/motion.ts"
 
 /**
  * Attrs type for `<Navbar/>` Component
@@ -169,7 +170,7 @@ color:inherit;
 /*
  * The control shrinks and fades rather than being un-rendered, which is the same thing `Sidebar`'s
  * rail does to its labels and for the same reason: `display:none` cannot be transitioned, so it
- * pops in and out in the frame the breakpoint is crossed while the sidebar beside it spends 180ms
+ * pops in and out in the frame the breakpoint is crossed while the sidebar beside it spends 300ms
  * animating.
  *
  * ⚠️ `hidden` is no use here at all, and not only because it cannot animate. The attribute works
@@ -188,7 +189,7 @@ color:inherit;
 overflow:hidden;
 opacity:1;
 max-width:3em;
-transition:opacity 0.18s ease-in-out, max-width 0.18s ease-in-out, min-width 0.18s ease-in-out, margin-inline-end 0.18s ease-in-out, padding 0.18s ease-in-out, visibility 0s linear 0s;
+transition:opacity ${MOTION}, max-width ${MOTION}, min-width ${MOTION}, margin-inline-end ${MOTION}, padding ${MOTION}, visibility 0s linear 0s;
 }
 .vtd-navbar-menu-collapsed{
 opacity:0;
@@ -207,7 +208,7 @@ padding-inline:0;
 border-inline-width:0;
 margin-inline-end:-1em;
 visibility:hidden;
-transition:opacity 0.18s ease-in-out, max-width 0.18s ease-in-out, min-width 0.18s ease-in-out, margin-inline-end 0.18s ease-in-out, padding 0.18s ease-in-out, visibility 0s linear 0.18s;
+transition:opacity ${MOTION}, max-width ${MOTION}, min-width ${MOTION}, margin-inline-end ${MOTION}, padding ${MOTION}, visibility 0s linear ${MOTION_MS}ms;
 }
 @media (prefers-reduced-motion: reduce){
 .vtd-navbar-menu,.vtd-navbar-menu-collapsed{transition:none;}
