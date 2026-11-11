@@ -5,6 +5,7 @@ import {type ChildrenAttr, Component, type RenderableElements, type FunctionComp
 import { mountStyles } from "../core/styles.ts"
 import { Button, type ButtonType } from "../form/button.tsx"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
+import { animateDialog, MOTION } from "../core/motion.ts"
 
 /**
  * Options to customize `<Modal/>` Component Theme
@@ -68,6 +69,21 @@ border:none;
 background:rgba(75,75,75,0.6);
 backdrop-filter: blur(2px);
 }
+` +
+/* A modal grows in and fades, from a little smaller. A transform only changes how the finished
+   box is drawn - nothing inside it is laid out again, so no line rewraps while it moves. */
+`
+.vtd-modal[open]{animation:vtd-modal-in ${MOTION};}
+.vtd-modal[open]::backdrop{animation:vtd-modal-backdrop-in ${MOTION};}
+.vtd-modal.vtd-modal-closing{animation:vtd-modal-out ${MOTION} forwards;}
+.vtd-modal.vtd-modal-closing::backdrop{animation:vtd-modal-backdrop-out ${MOTION} forwards;}
+@keyframes vtd-modal-in{from{opacity:0;transform:scale(0.94);}to{opacity:1;transform:scale(1);}}
+@keyframes vtd-modal-out{from{opacity:1;transform:scale(1);}to{opacity:0;transform:scale(0.94);}}
+@keyframes vtd-modal-backdrop-in{from{opacity:0;}to{opacity:1;}}
+@keyframes vtd-modal-backdrop-out{from{opacity:1;}to{opacity:0;}}
+@media (prefers-reduced-motion: reduce){
+.vtd-modal,.vtd-modal::backdrop,.vtd-modal.vtd-modal-closing,.vtd-modal.vtd-modal-closing::backdrop{animation:none;}
+}
 .vtd-modal-separator{
 margin:0.5em 0;
 }
@@ -82,16 +98,19 @@ padding:0.5em;
     /** The underlying `<dialog/>` element */
     #dialog: HTMLDialogElement
 
+    /** Opens and closes the dialog with its motion */
+    #motion: {close: () => void, showModal: () => void}
+
     /** A handle for the confirm button element (used for managing disabled state) */
     #confirmButton: HTMLElement
 
     /** Close the Modal */
     close() {
-        this.#dialog.close()
+        this.#motion.close()
     }
     /** Show the Modal */
     showModal() {
-        this.#dialog.showModal()
+        this.#motion.showModal()
     }
 
     /** Toggles the `disabled` attribute on the `confirmButton` */
@@ -115,10 +134,10 @@ padding:0.5em;
                 if (attrs.confirmButtonOnClick && doneLoading) {
                     attrs.confirmButtonOnClick((options) => {
                         doneLoading()
-                        if (!options?.keepOpen) {this.#dialog.close()}
+                        if (!options?.keepOpen) {this.close()}
                     })
                 } else {
-                    this.#dialog.close()
+                    this.close()
                 }
             }}>{attrs.confirmButtonChildren}
         </Button>
@@ -126,7 +145,7 @@ padding:0.5em;
             <div style={{display: "flex", alignItems: "center"}}>
                 <span style={{marginRight: "auto"}}>{attrs.title}</span>
                 <Button type="secondary" class="vtd-modal-close" onClick={()=>{
-                    this.#dialog.close()
+                    this.close()
                 }}><ModalThemeOptions.closeSymbol/></Button>
             </div>
             <hr class="vtd-modal-separator"/>
@@ -134,11 +153,12 @@ padding:0.5em;
             <hr class="vtd-modal-separator"/>
             <div style={{display: "flex", alignItems: "center", justifyContent: "end"}}>
                 {attrs.showCancelButton === false ? null : <Button type="text" onClick={()=>{
-                    this.#dialog.close()
+                    this.close()
                 }}>{attrs.cancelButtonChildren || <ModalThemeOptions.cancelSymbol/>}</Button>}
                 {this.#confirmButton}
             </div>
         </dialog>
+        this.#motion = animateDialog(this.#dialog, "vtd-modal-closing")
     }
 
     /** Render this Component */

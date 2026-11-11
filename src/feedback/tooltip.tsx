@@ -6,6 +6,7 @@ import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { placeInView } from "../core/placement.ts"
 import type { PlacementSide } from "../core/placement.ts"
+import { MOTION } from "../core/motion.ts"
 
 /**
  * Placement of a `<Tooltip/>`'s bubble, relative to its trigger content
@@ -70,7 +71,7 @@ z-index:1;
 visibility:hidden;
 opacity:0;
 pointer-events:none;
-transition:opacity 0.15s ease-in, visibility 0.15s;
+transition:opacity ${MOTION}, visibility ${MOTION};
 padding:0.4em 0.7em;
 border-radius:0.25rem;
 background-color:var(--background-9);

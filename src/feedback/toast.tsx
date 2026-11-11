@@ -4,6 +4,7 @@ import { h } from "../core/jsx.ts"
 import type { RenderableElements } from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
+import { MOTION, playExit } from "../core/motion.ts"
 
 /**
  * Options to customize `<Toast/>` Theme
@@ -56,12 +57,18 @@ border-radius:0.25rem;
 border:1px solid var(--background-5);
 background-color:var(--background-1);
 box-shadow:0 2px 8px rgba(0,0,0,0.25);
-animation:vtd-toast-in 0.15s ease-out;
+animation:vtd-toast-in ${MOTION};
 }
+.vtd-toast.vtd-toast-leaving{animation:vtd-toast-out ${MOTION} forwards;}
 @keyframes vtd-toast-in{
 from{opacity:0;transform:translateY(0.5em);}
 to{opacity:1;transform:translateY(0);}
 }
+@keyframes vtd-toast-out{
+from{opacity:1;transform:translateY(0);}
+to{opacity:0;transform:translateY(0.5em);}
+}
+@media (prefers-reduced-motion: reduce){.vtd-toast,.vtd-toast.vtd-toast-leaving{animation:none;}}
 .vtd-toast-info{background-color:var(--primary-2);border-color:var(--primary-6);}
 .vtd-toast-success{background-color:var(--secondary-2);border-color:var(--secondary-6);}
 .vtd-toast-warning{background-color:var(--warning-2);border-color:var(--warning-6);}
@@ -132,14 +139,14 @@ export function showToast(message: RenderableElements, options?: ToastOptions): 
     const toastElement: HTMLDivElement = <div class={`vtd-toast vtd-toast-${type}`} role="status">
         <div class="vtd-toast-body">{message}</div>
         <button type="button" class="vtd-toast-dismiss" aria-label={options?.dismissLabel} onClick={() => {
-            toastElement.remove()
+            leave()
         }}><ToastThemeOptions.closeSymbol/></button>
     </div>
+    // It fades as it goes, rather than vanishing
+    const leave = () => playExit(toastElement, "vtd-toast-leaving", () => toastElement.remove())
     container.appendChild(toastElement)
 
     if (duration > 0) {
-        globalThis.setTimeout(() => {
-            toastElement.remove()
-        }, duration)
+        globalThis.setTimeout(leave, duration)
     }
 }

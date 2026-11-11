@@ -5,6 +5,7 @@ import {} from "../core/velotype.ts"
 import { Glyphs, glyphElement } from "../core/glyphs.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { RenderableElements } from "../core/velotype.ts"
+import { MOTION, MOTION_MS } from "../core/motion.ts"
 
 /**
  * Shared internals for `Collapse` and `Accordion`.
@@ -31,8 +32,8 @@ export type DisclosureSection = {
     content: HTMLDivElement
 }
 
-/** How long the open/close transition runs - must match the stylesheet below */
-const TRANSITION_MS = 300
+/** How long the open/close transition runs - the library's one motion, which the stylesheet below uses */
+const TRANSITION_MS = MOTION_MS
 
 let areDisclosureStylesMounted = false
 
@@ -91,7 +92,7 @@ user-select:none;
  */
 `
 border-block-end:1px solid transparent;
-transition:border-color 0.3s ease-in-out;
+transition:border-color ${MOTION};
 }
 .vtd-disclosure-header::-webkit-details-marker{display:none;}
 .vtd-disclosure-header::marker{display:none;content:"";}
@@ -100,7 +101,7 @@ transition:border-color 0.3s ease-in-out;
 margin-inline-start:auto;
 display:flex;
 color:var(--text);
-transition:transform 0.3s ease-in-out;
+transition:transform ${MOTION};
 flex-shrink:0;
 }
 .vtd-disclosure[open]:not(.vtd-disclosure-closing) .vtd-disclosure-chevron{transform:rotate(180deg);}
@@ -120,7 +121,7 @@ display:grid;
 content-visibility:visible;
 grid-template-rows:minmax(0,0fr);
 visibility:hidden;
-transition:grid-template-rows 0.3s ease-in-out, visibility 0s linear 0.3s;
+transition:grid-template-rows ${MOTION}, visibility 0s linear ${MOTION_MS}ms;
 }
 ` +
 /*
@@ -132,7 +133,7 @@ transition:grid-template-rows 0.3s ease-in-out, visibility 0s linear 0.3s;
 details[open]:not(.vtd-disclosure-closing) > .vtd-disclosure-content{
 grid-template-rows:minmax(0,1fr);
 visibility:visible;
-transition:grid-template-rows 0.3s ease-in-out, visibility 0s linear 0s;
+transition:grid-template-rows ${MOTION}, visibility 0s linear 0s;
 }
 ` +
 /* Mechanical, and required by the trick above - see mountDisclosureStyles */

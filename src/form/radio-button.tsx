@@ -3,6 +3,7 @@
 import { h } from "../core/jsx.ts"
 import {type ChildrenAttr, type FunctionComponent, type IdAttr, passthroughAttrsToElement, type RenderableElements, type StylePassthroughAttrs} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
+import { MOTION } from "../core/motion.ts"
 
 /**
  * Attrs type for `<RadioButton/>` Component
@@ -69,7 +70,7 @@ width:1.25em;
 box-sizing:border-box;
 margin-inline-end:1ex;
 flex-shrink:0;
-transition:background-color 0.2s ease-in, border-color 0.2s ease-in;
+transition:background-color ${MOTION}, border-color ${MOTION};
 background-color:var(--background-1);border:1px solid var(--background-5);
 }
 
@@ -81,7 +82,7 @@ background-color:var(--background-1);border:1px solid var(--background-5);
 .vtd-radio-button-check{
 opacity:0;
 transform:scale(0.4);
-transition:opacity 0.15s ease-in, transform 0.15s cubic-bezier(0.34,1.56,0.64,1);
+transition:opacity ${MOTION}, transform ${MOTION};
 border-radius:1em;
 width:0.625em;
 height:0.625em;
