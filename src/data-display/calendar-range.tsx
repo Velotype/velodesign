@@ -6,6 +6,7 @@ import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { Button } from "../form/button.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
+import { pushView, slideIn } from "../core/motion.ts"
 
 /** A (possibly incomplete) date range, as picked by `<CalendarRange/>` */
 export type DateRangeType = {
@@ -77,6 +78,8 @@ export class CalendarRange extends Component<CalendarRangeAttrsType> {
     #root: HTMLDivElement
     #titleEl: HTMLSpanElement = <span class="vtd-calendar-title"/>
     #gridEl: HTMLDivElement = <div class="vtd-calendar-grid" role="grid"/>
+    /** Holds the grid, and the month leaving it while a step slides (`pushView`) */
+    #frameEl: HTMLDivElement = <div class="vtd-calendar-frame">{this.#gridEl}</div>
 
     /** Create a new `<CalendarRange/>` Component */
     constructor(attrs: CalendarRangeAttrsType, children: RenderableElements[]) {
@@ -95,6 +98,8 @@ export class CalendarRange extends Component<CalendarRangeAttrsType> {
 .vtd-calendar-header{display:flex;align-items:center;justify-content:space-between;margin-block-end:0.5em;}
 .vtd-calendar-title{font-weight:bold;}
 .vtd-calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0.15em;text-align:center;}
+.vtd-calendar-frame{position:relative;}
+.vtd-calendar-leaving .vtd-calendar-weekday{visibility:hidden;}
 .vtd-calendar-weekdays{display:contents;}
 .vtd-calendar-weekday{font-size:0.8em;opacity:0.6;padding-block:0.3em;}
 .vtd-calendar-week{display:contents;}
@@ -141,7 +146,7 @@ cursor:pointer;
                 {this.#titleEl}
                 <Button type="text" onClick={() => this.#changeMonth(1)}><CommonThemeOptions.nextSymbol/></Button>
             </div>
-            {this.#gridEl}
+            {this.#frameEl}
         </div>, attrs)
 
         this.#renderGrid()
@@ -154,18 +159,33 @@ cursor:pointer;
         this.#viewDate = new Date(this.#viewDate.getFullYear(), this.#viewDate.getMonth() + delta, 1)
         const daysInNewMonth = new Date(this.#viewDate.getFullYear(), this.#viewDate.getMonth() + 1, 0).getDate()
         this.#focusedDate = new Date(this.#viewDate.getFullYear(), this.#viewDate.getMonth(), Math.min(day, daysInNewMonth))
-        this.#renderGrid()
+        this.#renderGrid(delta > 0 ? 1 : -1)
     }
 
-    /** Moves the roving tabindex/focus to `date`, changing the displayed month first (and
-     * rebuilding the grid) if `date` falls outside it - see `Calendar#moveFocusTo` for why */
+    /** Moves the roving tabindex/focus to `date`: within the month just the tabindex, past it a new
+     * month, rebuilt and slid in - see `Calendar#moveFocusTo` */
     #moveFocusTo(date: Date) {
+        const was = this.#focusedDate
         this.#focusedDate = date
         const monthChanged = date.getFullYear() != this.#viewDate.getFullYear() || date.getMonth() != this.#viewDate.getMonth()
-        if (monthChanged) {
-            this.#viewDate = new Date(date.getFullYear(), date.getMonth(), 1)
+        if (!monthChanged) {
+            // Within the month only the tabindex moves - two attributes, the grid left as it is
+            const cells = this.#gridEl.querySelectorAll<HTMLButtonElement>(".vtd-calendar-day")
+            const gridStart = new Date(this.#viewDate.getFullYear(), this.#viewDate.getMonth(), 1 - this.#viewDate.getDay())
+            const index = (d: Date) => Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - gridStart.getTime()) / 86400000)
+            const from = cells[index(was)]
+            const to = cells[index(date)]
+            if (to) {
+                if (from && from !== to) {from.tabIndex = -1}
+                to.tabIndex = 0
+                to.focus()
+                return
+            }
         }
-        this.#renderGrid()
+        const start = new Date(date.getFullYear(), date.getMonth(), 1)
+        const slide = start > this.#viewDate ? 1 : -1
+        this.#viewDate = start
+        this.#renderGrid(slide)
         this.#gridEl.querySelector<HTMLButtonElement>(".vtd-calendar-day[tabindex=\"0\"]")?.focus()
     }
 
@@ -216,7 +236,8 @@ cursor:pointer;
     }
 
     /** Rebuilds the title and the grid's day cells to match `#viewDate`/`#focusedDate`/`#range` */
-    #renderGrid() {
+    /** Rebuilds the title and the grid to match the view - pushing the new month in from `slide`'s side when it stepped, as `Calendar` does */
+    #renderGrid(slide?: -1 | 1) {
         const year = this.#viewDate.getFullYear()
         const month = this.#viewDate.getMonth()
         const firstOfMonth = new Date(year, month, 1)
@@ -230,6 +251,13 @@ cursor:pointer;
         const days = Array.from({length: 42}, (_, i) => new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i))
         const weeks = Array.from({length: 6}, (_, i) => days.slice(i * 7, i * 7 + 7))
 
+        // The month on screen moves into a stand-in that slides away as the new one slides in
+        let leaving: HTMLDivElement | undefined
+        if (slide) {
+            const stand: HTMLDivElement = <div class="vtd-calendar-grid vtd-calendar-leaving"/>
+            stand.append(...this.#gridEl.childNodes)
+            leaving = stand
+        }
         this.#gridEl.replaceChildren(
             <div class="vtd-calendar-weekdays" role="row">
                 {weekdayLabels.map(label => <span class="vtd-calendar-weekday" role="columnheader">{label}</span>)}
@@ -260,6 +288,11 @@ cursor:pointer;
                 })}
             </div>),
         )
+        if (slide && leaving) {
+            // A row is seven cells and six 0.15em gaps, so a day starts one row's width away
+            pushView(this.#frameEl, leaving, this.#gridEl.querySelectorAll(".vtd-calendar-day"), slide, "calc(700% + 0.9em)")
+            slideIn([this.#titleEl], slide)
+        }
     }
 
     /** Render this Component */
