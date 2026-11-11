@@ -7,6 +7,7 @@ import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/
 import { Button } from "../form/button.tsx"
 import { Tooltip } from "../feedback/tooltip.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
+import { pushView, slideIn } from "../core/motion.ts"
 
 /**
  * Attrs type for `<Calendar/>` Component
@@ -141,6 +142,11 @@ export function monthSpanTitle(first: Date, last: Date): string {
  * the month ("Nov" over the 1), as does the first day on screen, and the title names the months
  * the page spans.
  *
+ * **Stepping pushes the month along like a carousel** (`core/motion.ts`'s `pushView`): the old
+ * month's days slide all the way out one side as the new month's come in from the other, clipped to
+ * the grid, while the title makes a short slide and the weekday row and the buttons stay put. A move
+ * within the month only moves the roving tabindex, so nothing slides.
+ *
  * Unlike almost every other stateful `Component` in this package (see the "Avoid refresh()"
  * section of CLAUDE.md), `#header`/`#gridEl` are built once and updated via `#renderGrid()`
  * rather than `this.refresh()`-ing the whole component on every navigation - not for the usual
@@ -160,6 +166,8 @@ export class Calendar extends Component<CalendarAttrsType> {
     #root: HTMLDivElement
     #titleEl: HTMLSpanElement = <span class="vtd-calendar-title"/>
     #gridEl: HTMLDivElement = <div class="vtd-calendar-grid" role="grid"/>
+    /** Holds the grid, and the month leaving it while a step slides (`pushView`) */
+    #frameEl: HTMLDivElement = <div class="vtd-calendar-frame">{this.#gridEl}</div>
     #prevButton: HTMLButtonElement
     #nextButton: HTMLButtonElement
 
@@ -180,6 +188,8 @@ export class Calendar extends Component<CalendarAttrsType> {
 .vtd-calendar-header{display:flex;align-items:center;justify-content:space-between;margin-block-end:0.5em;}
 .vtd-calendar-title{font-weight:bold;}
 .vtd-calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0.15em;text-align:center;}
+.vtd-calendar-frame{position:relative;}
+.vtd-calendar-leaving .vtd-calendar-weekday{visibility:hidden;}
 .vtd-calendar-weekdays{display:contents;}
 .vtd-calendar-weekday{font-size:0.8em;opacity:0.6;padding-block:0.3em;}
 .vtd-calendar-week{display:contents;}
@@ -240,7 +250,7 @@ cursor:pointer;
                 {this.#titleEl}
                 {attrs.nextDisabledHint ? <Tooltip whenDisabled placement="bottom-end" content={attrs.nextDisabledHint}>{this.#nextButton}</Tooltip> : this.#nextButton}
             </div>
-            {this.#gridEl}
+            {this.#frameEl}
         </div>, attrs)
 
         this.#renderGrid()
@@ -283,7 +293,7 @@ cursor:pointer;
             const days = delta * this.#pageDays()
             this.#viewDate = addDays(this.#viewDate, days)
             this.#focusedDate = addDays(this.#focusedDate, days)
-            this.#renderGrid()
+            this.#renderGrid(delta > 0 ? 1 : -1)
             return
         }
         this.#changeMonth(delta)
@@ -296,18 +306,34 @@ cursor:pointer;
         this.#viewDate = new Date(this.#viewDate.getFullYear(), this.#viewDate.getMonth() + delta, 1)
         const daysInNewMonth = new Date(this.#viewDate.getFullYear(), this.#viewDate.getMonth() + 1, 0).getDate()
         this.#focusedDate = new Date(this.#viewDate.getFullYear(), this.#viewDate.getMonth(), Math.min(day, daysInNewMonth))
-        this.#renderGrid()
+        this.#renderGrid(delta > 0 ? 1 : -1)
     }
 
-    /** Moves the roving tabindex/focus to `date`, changing the displayed month first (and
-     * rebuilding the grid) if `date` falls outside it - the currently-focused button is always
-     * about to be replaced in that case, so focus must be re-applied to its replacement after */
+    /**
+     * Moves the roving tabindex/focus to `date`. Within the screen that is the tabindex leaving one
+     * day for another - two attributes, the grid left as it is. Past the screen, the month (or page)
+     * changes first and the grid is rebuilt, sliding in from that side, so focus is put on the new
+     * button for `date` after.
+     */
     #moveFocusTo(date: Date) {
+        const was = this.#focusedDate
         this.#focusedDate = date
-        if (!this.#isInView(date)) {
-            this.#viewDate = this.#viewStartFor(date)
+        if (this.#isInView(date)) {
+            const cells = this.#gridEl.querySelectorAll<HTMLButtonElement>(".vtd-calendar-day")
+            const start = this.#gridStart()
+            const from = cells[daysBetween(start, was)]
+            const to = cells[daysBetween(start, date)]
+            if (to) {
+                if (from && from !== to) {from.tabIndex = -1}
+                to.tabIndex = 0
+                to.focus()
+                return
+            }
         }
-        this.#renderGrid()
+        const start = this.#viewStartFor(date)
+        const slide = start > this.#viewDate ? 1 : -1
+        this.#viewDate = start
+        this.#renderGrid(slide)
         this.#gridEl.querySelector<HTMLButtonElement>(".vtd-calendar-day[tabindex=\"0\"]")?.focus()
     }
 
@@ -342,8 +368,8 @@ cursor:pointer;
         }
     }
 
-    /** Rebuilds the title and the grid's day cells to match `#viewDate`/`#focusedDate` */
-    #renderGrid() {
+    /** Rebuilds the title and the grid's day cells to match `#viewDate`/`#focusedDate` - pushing the new screen in from `slide`'s side when it stepped */
+    #renderGrid(slide?: -1 | 1) {
         const attrs = this.#attrs
         const month = this.#viewDate.getMonth()
         const gridStart = this.#gridStart()
@@ -362,6 +388,13 @@ cursor:pointer;
         this.#prevButton.disabled = attrs.min !== undefined && startOfDay(shownFirst) <= startOfDay(attrs.min)
         this.#nextButton.disabled = attrs.max !== undefined && startOfDay(shownLast) >= startOfDay(attrs.max)
 
+        // The month on screen moves into a stand-in that slides away as the new one slides in
+        let leaving: HTMLDivElement | undefined
+        if (slide) {
+            const stand: HTMLDivElement = <div class="vtd-calendar-grid vtd-calendar-leaving"/>
+            stand.append(...this.#gridEl.childNodes)
+            leaving = stand
+        }
         this.#gridEl.replaceChildren(
             <div class="vtd-calendar-weekdays" role="row">
                 {weekdayLabels.map(label => <span class="vtd-calendar-weekday" role="columnheader">{label}</span>)}
@@ -401,6 +434,11 @@ cursor:pointer;
                 })}
             </div>),
         )
+        if (slide && leaving) {
+            // A row is seven cells and six 0.15em gaps, so a day starts one row's width away
+            pushView(this.#frameEl, leaving, this.#gridEl.querySelectorAll(".vtd-calendar-day"), slide, "calc(700% + 0.9em)")
+            slideIn([this.#titleEl], slide)
+        }
     }
 
     /** Moves the selection to `day`, whose cell is `cell` - two class toggles, not a rebuilt grid */

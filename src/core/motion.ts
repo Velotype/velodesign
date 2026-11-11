@@ -18,6 +18,61 @@ export function motionReduced(): boolean {
     return globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false
 }
 
+/**
+ * Slides what just replaced a view in from the side it came from, fading up - a calendar's next
+ * month arrives from the right, its last from the left. A transform and opacity only, so nothing is
+ * laid out again while it moves. An element already sliding (a title that stays while its text
+ * changes, under a quick second click) starts again from the new side. Nothing with reduced motion.
+ */
+export function slideIn(elements: Iterable<Element>, from: -1 | 1): void {
+    if (motionReduced()) {return}
+    const keyframes = [{opacity: 0, transform: `translateX(${from * 0.75}em)`}, {opacity: 1, transform: "none"}]
+    for (const element of elements) {
+        for (const running of element.getAnimations()) {
+            if (running.id === SLIDE_ID) {running.cancel()}
+        }
+        element.animate(keyframes, {id: SLIDE_ID, duration: MOTION_MS, easing: MOTION_EASE})
+    }
+}
+
+const SLIDE_ID = "vtd-slide-in"
+
+/**
+ * A carousel's push: what was on screen (`leaving`) slides all the way out one side while what
+ * replaced it (`arriving`) slides in from the other, clipped to `frame` - a calendar's next month
+ * pushes the last one off to the left. `leaving` is the old content itself, moved out of the way
+ * rather than copied: it's laid over the new content, inert and hidden from assistive technology,
+ * and removed once it's gone. `distance` is how far `arriving` starts from its place, in terms of
+ * its own box - a calendar's day starts one row's width away, seven cells and six gaps, so nothing
+ * is measured. The frame clips only while something moves, so a focus ring at its edge is never
+ * cut off at rest. A push while another is still moving finishes that one at once. With reduced
+ * motion, the old content simply goes.
+ */
+export function pushView(frame: HTMLElement, leaving: HTMLElement, arriving: Iterable<Element>, from: -1 | 1, distance: string = "100%"): void {
+    for (const earlier of frame.querySelectorAll(":scope > [data-vtd-leaving]")) {earlier.remove()}
+    if (motionReduced()) {
+        frame.style.overflow = ""
+        return
+    }
+    leaving.setAttribute("data-vtd-leaving", "")
+    leaving.setAttribute("aria-hidden", "true")
+    leaving.inert = true
+    leaving.style.cssText = "position:absolute;inset:0;pointer-events:none;"
+    frame.append(leaving)
+    frame.style.overflow = "hidden"
+    const timing = {duration: MOTION_MS, easing: MOTION_EASE}
+    leaving.animate([{transform: "none"}, {transform: `translateX(${-from * 100}%)`}], timing).finished.then(() => {
+        leaving.remove()
+        if (!frame.querySelector(":scope > [data-vtd-leaving]")) {frame.style.overflow = ""}
+    }, () => {})
+    const start = from < 0 ? `translateX(calc(-1 * ${distance}))` : `translateX(${distance})`
+    for (const element of arriving) {
+        element.animate([{transform: start}, {transform: "none"}], {...timing, id: PUSH_ID})
+    }
+}
+
+const PUSH_ID = "vtd-push-in"
+
 /** The exits under way, so a re-open can stop one before it finishes */
 const exits = new WeakMap<Element, ReturnType<typeof setTimeout>>()
 

@@ -1645,6 +1645,73 @@ describe('basic component rendering', () => {
         assertEquals(disabled, 31 - 11)
     })
 
+    // Within the month a key moves only the roving tabindex: two attributes, no rebuilt grid. Past it
+    // the month is rebuilt, every new day is pushed in and the old month leaves beside it - on each
+    // of three steps, not just the first.
+    itWrap("Calendar moves focus within a month without rebuilding, and slides a new month in", "calendar", "#default-calendar", async (_selection: ElementHandle) => {
+        const result = await page.evaluate(`(() => {
+            const grid = document.querySelector('#showcase-theme-light #default-calendar .vtd-calendar-grid')
+            grid.querySelector('.vtd-calendar-day[tabindex="0"]').focus()
+            const key = (k) => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', {key: k, bubbles: true}))
+            const observer = new MutationObserver(() => {})
+            observer.observe(grid, {childList: true, subtree: true, attributes: true, characterData: true})
+            const rounds = []
+            for (let i = 0; i < 3; i++) {
+                key('ArrowRight')
+                key('ArrowLeft')
+                const records = observer.takeRecords()
+                rounds.push({
+                    nodes: records.reduce((n, r) => n + r.addedNodes.length + r.removedNodes.length, 0),
+                    attributes: [...new Set(records.map(r => r.attributeName))],
+                    stops: grid.querySelectorAll('[tabindex="0"]').length,
+                    focused: document.activeElement.getAttribute('tabindex')
+                })
+            }
+            const sliding = []
+            for (let i = 0; i < 3; i++) {
+                key('PageDown')
+                const cells = [...grid.querySelectorAll('.vtd-calendar-day')]
+                sliding.push(cells.filter(c => c.getAnimations().some(a => a.id === 'vtd-push-in')).length === cells.length && grid.parentElement.querySelectorAll(':scope > [data-vtd-leaving]').length === 1)
+            }
+            observer.disconnect()
+            return {rounds, sliding}
+        })()`) as {rounds: unknown[], sliding: boolean[]}
+        for (const round of result.rounds) {assertEquals(round, {nodes: 0, attributes: ["tabindex"], stops: 1, focused: "0"})}
+        assertEquals(result.sliding, [true, true, true])
+    })
+
+    itWrap("CalendarRange moves focus within a month without rebuilding, and slides a new month in", "calendar-range", "#default-calendar-range", async (_selection: ElementHandle) => {
+        const result = await page.evaluate(`(() => {
+            const grid = document.querySelector('#showcase-theme-light #default-calendar-range .vtd-calendar-grid')
+            grid.querySelector('.vtd-calendar-day[tabindex="0"]').focus()
+            const key = (k) => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', {key: k, bubbles: true}))
+            const observer = new MutationObserver(() => {})
+            observer.observe(grid, {childList: true, subtree: true, attributes: true, characterData: true})
+            const rounds = []
+            for (let i = 0; i < 3; i++) {
+                key('ArrowRight')
+                key('ArrowLeft')
+                const records = observer.takeRecords()
+                rounds.push({
+                    nodes: records.reduce((n, r) => n + r.addedNodes.length + r.removedNodes.length, 0),
+                    attributes: [...new Set(records.map(r => r.attributeName))],
+                    stops: grid.querySelectorAll('[tabindex="0"]').length,
+                    focused: document.activeElement.getAttribute('tabindex')
+                })
+            }
+            const sliding = []
+            for (let i = 0; i < 3; i++) {
+                key('PageDown')
+                const cells = [...grid.querySelectorAll('.vtd-calendar-day')]
+                sliding.push(cells.filter(c => c.getAnimations().some(a => a.id === 'vtd-push-in')).length === cells.length && grid.parentElement.querySelectorAll(':scope > [data-vtd-leaving]').length === 1)
+            }
+            observer.disconnect()
+            return {rounds, sliding}
+        })()`) as {rounds: unknown[], sliding: boolean[]}
+        for (const round of result.rounds) {assertEquals(round, {nodes: 0, attributes: ["tabindex"], stops: 1, focused: "0"})}
+        assertEquals(result.sliding, [true, true, true])
+    })
+
     itWrap("Tooltip whenDisabled explains a disabled control, and only while it is disabled", "tooltip", ".disabled-why", async (_selection: ElementHandle) => {
         // Transitions never advance in this suite, so they are switched off to read the end state
         const state = await page.evaluate(`(() => {
