@@ -491,6 +491,9 @@ const typeDefinitions: Record<string, TypeDoc> = {
         fields: [
             {name: "value", type: "string", required: true, description: "The value written into the input when chosen."},
             {name: "label", type: "string", defaultValue: "the value", description: "Text shown in the list, when it should differ from the value."},
+            {name: "detail", type: "string", description: "A second, quieter line under the label - an address under a name, say."},
+            {name: "leading", type: "RenderableElements", description: "Before the label - an avatar's initials, a small icon - so the kind of thing each option is shows at a glance."},
+            {name: "group", type: "string", description: "The heading the option sits under. Options with the same group are listed together, the groups in the order they first appear, and screen readers hear each as a group of that name. Options without one come first."},
         ],
     },
     SelectOptionType: {

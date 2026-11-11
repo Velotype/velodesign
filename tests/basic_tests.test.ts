@@ -2610,6 +2610,52 @@ describe('basic component rendering', () => {
      * as given - a server's matches needn't contain the typed text - each with its second line,
      * and picking one hands the option itself to `onSelectOption`.
      */
+    /**
+     * Suggestions of more than one kind - an address book's people and groups - each under a
+     * heading, so a reader can tell them apart, in a list as wide as the suggestions need rather
+     * than as narrow as the field: squeezed to the field, a name and an address wrapped into a
+     * jumble. Groups follow the order they first appear, and the arrow keys walk the list as shown.
+     */
+    itWrap("grouped suggestions sit under their headings, wider than a narrow field, and the keys follow them", "combobox", "#grouped-combobox", async (_selection: ElementHandle) => {
+        await page.evaluate(`(() => {
+            const input = document.querySelector("#showcase-theme-light #grouped-combobox input.vtd-combobox")
+            input.focus()
+            input.value = "ro"
+            input.dispatchEvent(new Event("input", {bubbles: true}))
+        })()`)
+        // The pretend server answers after a moment, later under a loaded test run: wait for it, up to 3s
+        for (let tries = 0; tries < 60 && !await page.evaluate(`!!document.querySelector("#showcase-theme-light #grouped-combobox .vtd-combobox-option")`); tries++) {
+            await new Promise(resolve => setTimeout(resolve, 50))
+        }
+        const shown = await page.evaluate(`(() => {
+            const scope = document.querySelector("#showcase-theme-light #grouped-combobox")
+            const panel = scope.querySelector(".vtd-combobox-panel")
+            const groups = [...panel.querySelectorAll("ul[role=group]")].map(g => ({
+                heading: document.getElementById(g.getAttribute("aria-labelledby")).innerText.trim(),
+                options: [...g.querySelectorAll("[role=option]")].map(o => o.querySelector(".vtd-combobox-option-text").firstChild.textContent.trim()),
+                avatars: g.querySelectorAll(".vtd-combobox-option-leading").length
+            }))
+            const box = panel.getBoundingClientRect()
+            return {groups, panelWidth: box.width, inputWidth: scope.querySelector("input").getBoundingClientRect().width, right: box.right, viewport: window.innerWidth}
+        })()`) as {groups: {heading: string, options: string[], avatars: number}[], panelWidth: number, inputWidth: number, right: number, viewport: number}
+        const expected = [{heading: "People", options: ["Grandma Rose", "Sam"], avatars: 2}, {heading: "Groups", options: ["Room 12 families"], avatars: 1}]
+        if (JSON.stringify(shown.groups) != JSON.stringify(expected)) {
+            fail(`ERROR: grouped suggestions weren't under their headings in order: ${JSON.stringify(shown.groups)}`)
+        }
+        if (!(shown.panelWidth > shown.inputWidth + 20) || shown.right > shown.viewport) {
+            fail(`ERROR: the list should be wider than the narrow field and stay in the window: ${JSON.stringify(shown)}`)
+        }
+        // Down twice from the first: Sam, then the group - the order shown, not the order given
+        const highlighted = await page.evaluate(`(() => {
+            const input = document.querySelector("#showcase-theme-light #grouped-combobox input.vtd-combobox")
+            for (let i = 0; i < 2; i++) {input.dispatchEvent(new KeyboardEvent("keydown", {key: "ArrowDown", bubbles: true}))}
+            return document.querySelector("#showcase-theme-light #grouped-combobox .vtd-combobox-option-highlighted .vtd-combobox-option-text").firstChild.textContent.trim()
+        })()`)
+        if (highlighted != "Room 12 families") {
+            fail(`ERROR: the arrow keys didn't follow the list as shown: ${highlighted}`)
+        }
+    })
+
     itWrap("a combobox shows fetched suggestions as given and reports the pick", "combobox", "#async-combobox", async (_selection: ElementHandle) => {
         await page.evaluate(`(() => {
             const input = document.querySelector("#showcase-theme-light #async-combobox input.vtd-combobox")
@@ -2617,7 +2663,10 @@ describe('basic component rendering', () => {
             input.value = "pizza"
             input.dispatchEvent(new Event("input", {bubbles: true}))
         })()`)
-        await new Promise(resolve => setTimeout(resolve, 150))
+        // The pretend server answers after a moment, later under a loaded test run: wait for it, up to 3s
+        for (let tries = 0; tries < 60 && !await page.evaluate(`!!document.querySelector("#showcase-theme-light #async-combobox .vtd-combobox-option")`); tries++) {
+            await new Promise(resolve => setTimeout(resolve, 50))
+        }
         const shown = await page.evaluate(`[...document.querySelectorAll("#showcase-theme-light #async-combobox .vtd-combobox-option")].map(li => li.innerText.replace(/\\s+/g, " ").trim())`) as string[]
         if (JSON.stringify(shown) != JSON.stringify(["Rosie's 41 Main St", "Maple Park 200 Maple Ave"])) {
             fail(`ERROR: fetched suggestions weren't shown as given: ${JSON.stringify(shown)}`)
