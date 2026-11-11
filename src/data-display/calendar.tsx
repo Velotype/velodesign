@@ -436,7 +436,7 @@ cursor:pointer;
         )
         if (slide && leaving) {
             // A row is seven cells and six 0.15em gaps, so a day starts one row's width away
-            pushView(this.#frameEl, leaving, this.#gridEl.querySelectorAll(".vtd-calendar-day"), slide, "calc(700% + 0.9em)")
+            pushView(this.#frameEl, leaving, this.#gridEl.querySelectorAll(".vtd-calendar-day"), slide, {distance: "calc(700% + 0.9em)"})
             slideIn([this.#titleEl], slide)
         }
     }

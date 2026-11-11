@@ -37,38 +37,64 @@ export function slideIn(elements: Iterable<Element>, from: -1 | 1): void {
 
 const SLIDE_ID = "vtd-slide-in"
 
+/** How a push ends - `pushView`'s */
+export type PushViewOptions = {
+    /** How far what arrives starts from its place, in terms of its own box (default `100%`) */
+    distance?: string
+    /** What becomes of `leaving` once it has gone (default: it's removed) - a carousel hides its slide again */
+    settle?: (leaving: HTMLElement) => void
+}
+
+/** The push still moving in each frame, so the next one can finish it first */
+const pushes = new WeakMap<HTMLElement, () => void>()
+
 /**
  * A carousel's push: what was on screen (`leaving`) slides all the way out one side while what
  * replaced it (`arriving`) slides in from the other, clipped to `frame` - a calendar's next month
- * pushes the last one off to the left. `leaving` is the old content itself, moved out of the way
- * rather than copied: it's laid over the new content, inert and hidden from assistive technology,
- * and removed once it's gone. `distance` is how far `arriving` starts from its place, in terms of
- * its own box - a calendar's day starts one row's width away, seven cells and six gaps, so nothing
- * is measured. The frame clips only while something moves, so a focus ring at its edge is never
- * cut off at rest. A push while another is still moving finishes that one at once. With reduced
- * motion, the old content simply goes.
+ * pushes the last one off to the left. `leaving` is the old content itself, never a copy: laid
+ * over the new content, inert and hidden from assistive technology, and once it has gone, settled
+ * (removed, or hidden again by a carousel whose slides stay mounted). Something that isn't in
+ * `frame` yet is put there; something that is stays where it is in the document, so its place in
+ * the tab order doesn't change. `distance` is how far `arriving` starts, in terms of its own box -
+ * a calendar's day starts one row's width away, seven cells and six gaps, so nothing is measured.
+ * The frame clips only while something moves, so a focus ring at its edge is never cut off at
+ * rest. A push while another is still moving finishes that one first, there and then - a quick
+ * step back must not hide the slide that's just returning. With reduced motion, it settles at once.
  */
-export function pushView(frame: HTMLElement, leaving: HTMLElement, arriving: Iterable<Element>, from: -1 | 1, distance: string = "100%"): void {
-    for (const earlier of frame.querySelectorAll(":scope > [data-vtd-leaving]")) {earlier.remove()}
+export function pushView(frame: HTMLElement, leaving: HTMLElement, arriving: Iterable<Element>, from: -1 | 1, options: PushViewOptions = {}): void {
+    pushes.get(frame)?.()
+    const settle = options.settle ?? (element => element.remove())
     if (motionReduced()) {
-        frame.style.overflow = ""
+        settle(leaving)
         return
     }
     leaving.setAttribute("data-vtd-leaving", "")
     leaving.setAttribute("aria-hidden", "true")
     leaving.inert = true
     leaving.style.cssText = "position:absolute;inset:0;pointer-events:none;"
-    frame.append(leaving)
+    if (leaving.parentElement !== frame) {frame.append(leaving)}
     frame.style.overflow = "hidden"
     const timing = {duration: MOTION_MS, easing: MOTION_EASE}
-    leaving.animate([{transform: "none"}, {transform: `translateX(${-from * 100}%)`}], timing).finished.then(() => {
-        leaving.remove()
-        if (!frame.querySelector(":scope > [data-vtd-leaving]")) {frame.style.overflow = ""}
-    }, () => {})
+    const distance = options.distance ?? "100%"
     const start = from < 0 ? `translateX(calc(-1 * ${distance}))` : `translateX(${distance})`
-    for (const element of arriving) {
-        element.animate([{transform: start}, {transform: "none"}], {...timing, id: PUSH_ID})
+    const moves = [...arriving].map(element => element.animate([{transform: start}, {transform: "none"}], {...timing, id: PUSH_ID}))
+    const out = leaving.animate([{transform: "none"}, {transform: `translateX(${-from * 100}%)`}], timing)
+    let done = false
+    const finish = () => {
+        if (done) {return}
+        done = true
+        pushes.delete(frame)
+        out.cancel()
+        for (const move of moves) {move.cancel()}
+        leaving.removeAttribute("data-vtd-leaving")
+        leaving.removeAttribute("aria-hidden")
+        leaving.inert = false
+        leaving.style.cssText = ""
+        frame.style.overflow = ""
+        settle(leaving)
     }
+    pushes.set(frame, finish)
+    out.finished.then(finish, () => {})
 }
 
 const PUSH_ID = "vtd-push-in"
