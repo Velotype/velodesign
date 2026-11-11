@@ -2359,9 +2359,13 @@ load={async (query) => {
     ],
 }
 
-/** Converts a PascalCase story name to a kebab-case URL slug, e.g. "ContextMenu" -> "context-menu" */
+/**
+ * Converts a story name to a kebab-case URL slug of letters, digits and hyphens - "ContextMenu" ->
+ * "context-menu", "Calendar (several days)" -> "calendar-several-days" - so the address a link
+ * builds is the one the router reads back, with nothing for the browser to percent-encode.
+ */
 function slugify(name: string): string {
-    return name.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase()
+    return name.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
 }
 
 /** Every documented component, in the same order as the Explorer's `stories` */
