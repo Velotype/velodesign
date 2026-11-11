@@ -1016,13 +1016,13 @@ transition:gap 0.18s ease-in-out;
  * grid track its open/close transition already drives. display:none took them out in a single
  * frame - and it had to, because under visibility they keep their height and the rail grows a
  * blank stretch where a group's entries were (measured, one 236px gap among rows 49px apart).
- * Collapsing the track has neither problem: no height, and it gets there over 200ms.
+ * Collapsing the track has neither problem: no height, and it gets there over 300ms.
  */
 `
 ${rail} .vtd-disclosure-content{
 grid-template-rows:minmax(0,0fr);
 visibility:hidden;
-transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0.2s;
+transition:grid-template-rows 0.3s ease-in-out, visibility 0s linear 0.3s;
 }
 ` +
 /* Everything that is only text on the rail fades out in place. It keeps its box (a zero-width one,

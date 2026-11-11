@@ -2031,7 +2031,7 @@ describe('basic component rendering', () => {
             }
         }
         // The shared open animation is the property that had actually drifted
-        if (!collapse.transition.includes("grid-template-rows") || !collapse.transition.includes("0.2s")) {
+        if (!collapse.transition.includes("grid-template-rows") || !collapse.transition.includes("0.3s")) {
             fail(`ERROR: the shared animated open is missing: ${collapse.transition}`)
         }
 
@@ -2092,11 +2092,11 @@ describe('basic component rendering', () => {
             for (let i = 0; i < 3; i++) {
                 ;(details.querySelector("summary") as HTMLElement).click()
                 out[`opening${i}`] = read()
-                await wait(400)
+                await wait(500)
                 out[`open${i}`] = read()
                 ;(details.querySelector("summary") as HTMLElement).click()
                 out[`closing${i}`] = read()
-                await wait(400)
+                await wait(500)
             }
             return out
         })

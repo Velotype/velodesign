@@ -163,7 +163,7 @@ margin-inline-end:0.25em;
 border-radius:0.25rem;
 }
 .vtd-tree-chevron:hover{background-color:var(--background-3);}
-.vtd-tree-chevron .vtd-icon{color:var(--text);transition:transform 0.15s ease-in-out;}
+.vtd-tree-chevron .vtd-icon{color:var(--text);transition:transform 0.3s ease-in-out;}
 ` +
 /* Matches the chevron elsewhere: it turns back the moment a close starts, not when it finishes */
 `

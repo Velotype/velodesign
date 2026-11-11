@@ -32,7 +32,7 @@ export type DisclosureSection = {
 }
 
 /** How long the open/close transition runs - must match the stylesheet below */
-const TRANSITION_MS = 200
+const TRANSITION_MS = 300
 
 let areDisclosureStylesMounted = false
 
@@ -91,7 +91,7 @@ user-select:none;
  */
 `
 border-block-end:1px solid transparent;
-transition:border-color 0.2s ease-out;
+transition:border-color 0.3s ease-in-out;
 }
 .vtd-disclosure-header::-webkit-details-marker{display:none;}
 .vtd-disclosure-header::marker{display:none;content:"";}
@@ -100,7 +100,7 @@ transition:border-color 0.2s ease-out;
 margin-inline-start:auto;
 display:flex;
 color:var(--text);
-transition:transform 0.15s ease-in-out;
+transition:transform 0.3s ease-in-out;
 flex-shrink:0;
 }
 .vtd-disclosure[open]:not(.vtd-disclosure-closing) .vtd-disclosure-chevron{transform:rotate(180deg);}
@@ -120,7 +120,7 @@ display:grid;
 content-visibility:visible;
 grid-template-rows:minmax(0,0fr);
 visibility:hidden;
-transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0.2s;
+transition:grid-template-rows 0.3s ease-in-out, visibility 0s linear 0.3s;
 }
 ` +
 /*
@@ -132,7 +132,7 @@ transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0.2s;
 details[open]:not(.vtd-disclosure-closing) > .vtd-disclosure-content{
 grid-template-rows:minmax(0,1fr);
 visibility:visible;
-transition:grid-template-rows 0.2s ease-out, visibility 0s linear 0s;
+transition:grid-template-rows 0.3s ease-in-out, visibility 0s linear 0s;
 }
 ` +
 /* Mechanical, and required by the trick above - see mountDisclosureStyles */
