@@ -6,6 +6,7 @@ import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { Button } from "../form/button.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
+import { pushView } from "../core/motion.ts"
 
 /**
  * Attrs type for `<Carousel/>` Component
@@ -51,6 +52,12 @@ let areCarouselStylesMounted = false
  * calls `this.refresh()`. `slides` is consumer-supplied and can be arbitrary components with
  * their own state; a `refresh()`-based rebuild on every slide change would tear all of that
  * down and reconstruct it from scratch, losing whatever state an off-screen slide held.
+ *
+ * **Moving to a slide pushes it in** (`core/motion.ts`'s `pushView`): the slide on screen slides
+ * all the way out one side as the next comes in from the other - forward from the right, back from
+ * the left, whichever way a dot or Home/End jumps, and forward from the right when the last slide
+ * wraps to the first. The slide leaving stays rendered while it goes and is hidden again after, so
+ * the current one is `vtd-carousel-slide-active` - read that, not `hidden`, for which is showing.
  */
 export class Carousel extends Component<CarouselAttrsType> {
     #attrs: CarouselAttrsType
@@ -61,6 +68,8 @@ export class Carousel extends Component<CarouselAttrsType> {
     /** Dot indicator buttons, in order (empty if `showDots` is off or there's only one slide) */
     #dotEls: HTMLButtonElement[] = []
     #root: HTMLDivElement
+    /** Holds the slides, and is what a slide leaving is clipped to (`pushView`) */
+    #trackEl: HTMLDivElement
 
     /** Whether the autoplay timer is still running - flips to `false` for good the first time
      * the user picks a slide themselves (see `#stopAutoplay`) */
@@ -74,17 +83,30 @@ export class Carousel extends Component<CarouselAttrsType> {
      * entry of its own */
     #hasAutoAdvancedOnce = false
 
-    /** Move to `index`, wrapping around, toggling visibility/classes directly on the already-built elements */
+    /**
+     * Move to `index`, wrapping around, toggling visibility/classes directly on the already-built
+     * elements, and pushing the new slide in from the side `index` lies on - before the wrap, so
+     * next from the last slide comes in from the right like any other next
+     */
     #goTo(index: number, total: number) {
         const nextIndex = ((index % total) + total) % total
         if (nextIndex == this.#currentIndex) {
             return
         }
-        this.#slideEls[this.#currentIndex]?.setAttribute("hidden", "")
+        const from = index > this.#currentIndex ? 1 : -1
+        const leaving = this.#slideEls[this.#currentIndex]
+        const arriving = this.#slideEls[nextIndex]
         this.#dotEls[this.#currentIndex]?.classList.remove("vtd-carousel-dot-active")
+        leaving?.classList.remove("vtd-carousel-slide-active")
         this.#currentIndex = nextIndex
-        this.#slideEls[this.#currentIndex]?.removeAttribute("hidden")
         this.#dotEls[this.#currentIndex]?.classList.add("vtd-carousel-dot-active")
+        if (!leaving || !arriving) {return}
+        arriving.removeAttribute("hidden")
+        arriving.classList.add("vtd-carousel-slide-active")
+        pushView(this.#trackEl, leaving, [arriving], from, {
+            // A quick step back can bring the slide leaving straight back, so it's hidden only if it still isn't showing
+            settle: element => { if (!element.classList.contains("vtd-carousel-slide-active")) {element.setAttribute("hidden", "")} }
+        })
     }
 
     /**
@@ -228,7 +250,7 @@ background-color:var(--background-4);
         }
 
         const total = attrs.slides.length
-        this.#slideEls = attrs.slides.map((slide, index) => <div class="vtd-carousel-slide" hidden={index != this.#currentIndex}>{slide}</div>)
+        this.#slideEls = attrs.slides.map((slide, index) => <div class={index == this.#currentIndex ? "vtd-carousel-slide vtd-carousel-slide-active" : "vtd-carousel-slide"} hidden={index != this.#currentIndex}>{slide}</div>)
 
         const dotsEl = (attrs.showDots ?? true) && total > 1 ? <div class="vtd-carousel-dots">
             {attrs.slides.map((_slide, index) => {
@@ -242,12 +264,13 @@ background-color:var(--background-4);
             })}
         </div> : null
 
+        this.#trackEl = <div class="vtd-carousel-track">
+            {this.#slideEls}
+            {total > 1 ? <Button class="vtd-carousel-nav vtd-carousel-nav-prev" type="secondary" onClick={() => this.#handleUserGoTo(this.#currentIndex - 1, total)}><CommonThemeOptions.prevSymbol/></Button> : null}
+            {total > 1 ? <Button class="vtd-carousel-nav vtd-carousel-nav-next" type="secondary" onClick={() => this.#handleUserGoTo(this.#currentIndex + 1, total)}><CommonThemeOptions.nextSymbol/></Button> : null}
+        </div>
         this.#root = <div class="vtd-carousel" onKeyDown={this.#handleKeyDown}>
-            <div class="vtd-carousel-track">
-                {this.#slideEls}
-                {total > 1 ? <Button class="vtd-carousel-nav vtd-carousel-nav-prev" type="secondary" onClick={() => this.#handleUserGoTo(this.#currentIndex - 1, total)}><CommonThemeOptions.prevSymbol/></Button> : null}
-                {total > 1 ? <Button class="vtd-carousel-nav vtd-carousel-nav-next" type="secondary" onClick={() => this.#handleUserGoTo(this.#currentIndex + 1, total)}><CommonThemeOptions.nextSymbol/></Button> : null}
-            </div>
+            {this.#trackEl}
             {dotsEl}
         </div>
 

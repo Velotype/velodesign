@@ -956,7 +956,7 @@ describe('basic component rendering', () => {
     })
 
     itWrap("carousel advances to the next slide on the next-arrow click", "carousel", "#default-carousel", async (_selection: ElementHandle) => {
-        const slideText = () => page.evaluate(() => document.querySelector("#default-carousel .vtd-carousel-slide:not([hidden])")?.textContent)
+        const slideText = () => page.evaluate(() => document.querySelector("#default-carousel .vtd-carousel-slide-active")?.textContent)
         const clickNext = () => page.evaluate(() => (document.querySelector("#default-carousel .vtd-carousel-nav-next") as HTMLElement | null)?.click())
 
         const before = await slideText()
@@ -983,8 +983,13 @@ describe('basic component rendering', () => {
             const dots = document.querySelectorAll("#default-carousel .vtd-carousel-dot")
             ;(dots[0] as HTMLElement)?.click()
         })
-        const hiddenWhileOffScreen = await page.evaluate(() => document.getElementById("slide-4-input")?.closest(".vtd-carousel-slide")?.hasAttribute("hidden"))
-        if (!hiddenWhileOffScreen) {fail("ERROR: expected the off-screen slide to be hidden, not removed")}
+        // Still in the document and no longer the current slide. Whether it's hidden yet depends on
+        // its push having finished, which a transition in this suite never does.
+        const offScreen = await page.evaluate(() => {
+            const slide = document.getElementById("slide-4-input")?.closest(".vtd-carousel-slide")
+            return !!slide?.isConnected && !slide.classList.contains("vtd-carousel-slide-active")
+        })
+        if (!offScreen) {fail("ERROR: expected the off-screen slide to be kept, not removed, and not marked current")}
         await page.evaluate(() => {
             const dots = document.querySelectorAll("#default-carousel .vtd-carousel-dot")
             ;(dots[3] as HTMLElement)?.click()
@@ -992,6 +997,40 @@ describe('basic component rendering', () => {
 
         const valueAfterNavigatingBack = await page.evaluate(() => (document.getElementById("slide-4-input") as HTMLInputElement)?.value)
         if (valueAfterNavigatingBack != "typed value") {fail(`ERROR: expected the typed value to survive navigating away and back, got: ${valueAfterNavigatingBack}`)}
+    })
+
+    // Each step pushes the new slide in and leaves the old one going, inert and hidden from assistive
+    // technology. The next step finishes the last at once, so one slide is ever leaving - three times
+    // over, and a quick step back leaves the returning slide showing, not hidden.
+    itWrap("carousel pushes each new slide in and finishes the last push at the next step", "carousel", "#default-carousel", async (_selection: ElementHandle) => {
+        const steps = await page.evaluate(`(() => {
+            const carousel = document.querySelector("#showcase-theme-light #default-carousel")
+            const next = carousel.querySelector(".vtd-carousel-nav-next")
+            const prev = carousel.querySelector(".vtd-carousel-nav-prev")
+            const read = () => {
+                const slides = [...carousel.querySelectorAll(".vtd-carousel-slide")]
+                const active = slides.filter(s => s.classList.contains("vtd-carousel-slide-active"))
+                const leaving = slides.filter(s => s.hasAttribute("data-vtd-leaving"))
+                return {
+                    active: active.map(s => s.textContent),
+                    pushedIn: active.every(s => s.getAnimations().some(a => a.id === "vtd-push-in")),
+                    leaving: leaving.length,
+                    leavingInert: leaving.every(s => s.inert && s.getAttribute("aria-hidden") === "true"),
+                    shown: slides.filter(s => !s.hasAttribute("hidden")).length
+                }
+            }
+            const out = []
+            for (let i = 0; i < 3; i++) {next.click(); out.push(read())}
+            prev.click()
+            out.push(read())
+            return JSON.stringify(out)
+        })()`)
+        const result = JSON.parse(steps as string)
+        for (const step of result.slice(0, 3)) {
+            assertEquals({pushedIn: step.pushedIn, leaving: step.leaving, leavingInert: step.leavingInert, shown: step.shown}, {pushedIn: true, leaving: 1, leavingInert: true, shown: 2})
+        }
+        assertEquals(result.map((r: {active: string[]}) => r.active[0]), ["Slide 2", "Slide 3", result[2].active[0], "Slide 3"])
+        assertEquals(result[3].shown, 2)
     })
 
     itWrap("command palette filters by search and selects the highlighted item on Enter", "command", "#open-command-btn", async (selection: ElementHandle) => {
@@ -3395,7 +3434,7 @@ describe('basic component rendering', () => {
             const carousel = document.querySelector("#default-carousel")
             const prev = carousel.querySelector(".vtd-carousel-nav-prev")
             const next = carousel.querySelector(".vtd-carousel-nav-next")
-            const slide = carousel.querySelector(".vtd-carousel-slide:not([hidden])")
+            const slide = carousel.querySelector(".vtd-carousel-slide-active")
             const box = (el) => { const b = el.getBoundingClientRect(); return {left: b.left, right: b.right, top: b.top, bottom: b.bottom} }
             return JSON.stringify({
                 position: getComputedStyle(prev).position,
