@@ -23,9 +23,11 @@ export type UploadAttrsType = {
 let areUploadStylesMounted = false
 
 /**
- * A themed drop-zone wrapping a visually-hidden native `<input type="file"/>` - clicking
- * or dragging a file onto it opens/fills the browser's native file picker, same trade-off
- * as `Checkbox`/`Toggle` wrapping a hidden native input for their visual box
+ * A themed drop-zone wrapping a visually-hidden native `<input type="file"/>` - clicking it
+ * opens the browser's native file picker, same trade-off as `Checkbox`/`Toggle` wrapping a
+ * hidden native input for their visual box. Files dropped on it fill that input and fire its
+ * `change`, so `onChange` sees a drop exactly as it sees a pick (one file unless `multiple`);
+ * while files are dragged over it, it shows the hover state (`vtd-upload-over`).
  */
 export const Upload: FunctionComponent<UploadAttrsType> = function(attrs: UploadAttrsType, children: RenderableElements[]): HTMLLabelElement {
     if (!areUploadStylesMounted) {
@@ -46,7 +48,7 @@ cursor:pointer;
 text-align:center;
 transition:background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
 }
-.vtd-upload:hover{background-color:var(--background-1);border-color:var(--primary-6);}
+.vtd-upload:hover,.vtd-upload-over{background-color:var(--background-1);border-color:var(--primary-6);}
 .vtd-upload-input{position:absolute;opacity:0;height:0;width:0;margin:0;}
 .vtd-upload-disabled{cursor:not-allowed;opacity:0.6;}
 .vtd-upload-disabled:hover{background-color:transparent;border-color:var(--background-5);}
@@ -54,15 +56,39 @@ transition:background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
 `, "vtd/Upload")
     }
 
-    return passthroughAttrsToElement<HTMLLabelElement>(<label class={`vtd-upload${attrs.disabled?" vtd-upload-disabled":""}`}>
-        <input
-            type="file"
-            class="vtd-upload-input"
-            name={attrs.name}
-            accept={attrs.accept}
-            multiple={attrs.multiple}
-            disabled={attrs.disabled}
-            onChange={attrs.onChange}/>
+    const input = <input
+        type="file"
+        class="vtd-upload-input"
+        name={attrs.name}
+        accept={attrs.accept}
+        multiple={attrs.multiple}
+        disabled={attrs.disabled}
+        onChange={attrs.onChange}/> as HTMLInputElement
+    const zone = <label class={`vtd-upload${attrs.disabled?" vtd-upload-disabled":""}`}>
+        {input}
         {children}
-    </label>, attrs)
+    </label> as HTMLLabelElement
+    // A drag that carries files: taken here rather than by the browser, which would open the file
+    const carriesFiles = (event: DragEvent) => !input.disabled && !!event.dataTransfer?.types.includes("Files")
+    zone.addEventListener("dragover", (event: DragEvent) => {
+        if (!carriesFiles(event)) {return}
+        event.preventDefault()
+        event.dataTransfer!.dropEffect = "copy"
+        zone.classList.add("vtd-upload-over")
+    })
+    zone.addEventListener("dragleave", (event: DragEvent) => {
+        if (!zone.contains(event.relatedTarget as Node | null)) {zone.classList.remove("vtd-upload-over")}
+    })
+    zone.addEventListener("drop", (event: DragEvent) => {
+        zone.classList.remove("vtd-upload-over")
+        if (!carriesFiles(event)) {return}
+        event.preventDefault()
+        const dropped = [...event.dataTransfer!.files]
+        if (dropped.length === 0) {return}
+        const files = new DataTransfer()
+        for (const file of attrs.multiple ? dropped : dropped.slice(0, 1)) {files.items.add(file)}
+        input.files = files.files
+        input.dispatchEvent(new Event("change", {bubbles: true}))
+    })
+    return passthroughAttrsToElement<HTMLLabelElement>(zone, attrs)
 }
