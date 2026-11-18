@@ -1033,6 +1033,30 @@ describe('basic component rendering', () => {
         assertEquals(result[3].shown, 2)
     })
 
+    // A file dropped on the zone fills its input and fires change, as picking one does; a drop of
+    // two on a single-file zone keeps the first, and the drag shows the hover state until it leaves.
+    itWrap("upload takes a dropped file into its input and fires change", "upload", "#default-upload", async (_selection: ElementHandle) => {
+        const out = await page.evaluate(`(() => {
+            const zone = document.querySelector("#showcase-theme-light #default-upload .vtd-upload")
+            const input = zone.querySelector("input")
+            const names = []
+            input.addEventListener("change", () => names.push([...input.files].map(f => f.name).join(",")))
+            const files = new DataTransfer()
+            files.items.add(new File(["a"], "one.png", {type: "image/png"}))
+            files.items.add(new File(["b"], "two.png", {type: "image/png"}))
+            const fire = type => {
+                const e = new DragEvent(type, {bubbles: true, cancelable: true, dataTransfer: files})
+                zone.dispatchEvent(e)
+                return e.defaultPrevented
+            }
+            const overTaken = fire("dragover")
+            const shownOver = zone.classList.contains("vtd-upload-over")
+            const dropTaken = fire("drop")
+            return JSON.stringify({overTaken, shownOver, dropTaken, names, after: zone.classList.contains("vtd-upload-over")})
+        })()`)
+        assertEquals(JSON.parse(out as string), {overTaken: true, shownOver: true, dropTaken: true, names: ["one.png"], after: false})
+    })
+
     itWrap("command palette filters by search and selects the highlighted item on Enter", "command", "#open-command-btn", async (selection: ElementHandle) => {
         await selection.click()
 
