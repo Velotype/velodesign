@@ -298,7 +298,7 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
         if (slide && leaving) {
             // A grid day is one seventh of a row, so it starts a row away; a list row or the empty note, its own width
             pushView(this.#frameEl, leaving, this.#monthEl.querySelectorAll(".vtd-event-calendar-day, .vtd-event-calendar-list-day, .vtd-event-calendar-empty"), slide,
-                {distance: element => element.classList.contains("vtd-event-calendar-day") ? "700%" : "100%"})
+                {distance: element => element.classList.contains("vtd-event-calendar-day") ? "700%" : "100%", settle: element => this.removeChild(element)})
             slideIn([this.#titleEl], slide)
         }
     }

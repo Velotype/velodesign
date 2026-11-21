@@ -1,5 +1,3 @@
-import { removeElementRoot } from "./velotype.ts"
-
 /**
  * How the library moves: every open, close, slide and fade runs for the same time on the same
  * curve, so a drawer, a modal, a toast, an accordion and a switch all feel like one thing.
@@ -47,8 +45,12 @@ export type PushViewOptions = {
      * day and its list row are both on the page, one of them hidden by a container query
      */
     distance?: string | ((element: Element) => string)
-    /** What becomes of `leaving` once it has gone (default: removed through velotype, which unmounts the Components in it) - a carousel hides its slide again */
-    settle?: (leaving: HTMLElement) => void
+    /**
+     * What becomes of `leaving` once it has gone - a calendar removes it through its own
+     * `removeChild()`, which unmounts the Components in it, and a carousel hides its slide again.
+     * Always given: `leaving` is in `frame` by then, so it's in the Component's render.
+     */
+    settle: (leaving: HTMLElement) => void
 }
 
 /** The push still moving in each frame, so the next one can finish it first */
@@ -67,9 +69,11 @@ const pushes = new WeakMap<HTMLElement, () => void>()
  * rest. A push while another is still moving finishes that one first, there and then - a quick
  * step back must not hide the slide that's just returning. With reduced motion, it settles at once.
  */
-export function pushView(frame: HTMLElement, leaving: HTMLElement, arriving: Iterable<Element>, from: -1 | 1, options: PushViewOptions = {}): void {
+export function pushView(frame: HTMLElement, leaving: HTMLElement, arriving: Iterable<Element>, from: -1 | 1, options: PushViewOptions): void {
     pushes.get(frame)?.()
-    const settle = options.settle ?? removeElementRoot
+    const settle = options.settle
+    // In the frame before anything else, so settle() always finds it in the Component's render
+    if (leaving.parentElement !== frame) {frame.append(leaving)}
     if (motionReduced()) {
         settle(leaving)
         return
@@ -78,7 +82,6 @@ export function pushView(frame: HTMLElement, leaving: HTMLElement, arriving: Ite
     leaving.setAttribute("aria-hidden", "true")
     leaving.inert = true
     leaving.style.cssText = "position:absolute;inset:0;pointer-events:none;"
-    if (leaving.parentElement !== frame) {frame.append(leaving)}
     frame.style.overflow = "hidden"
     const timing = {duration: MOTION_MS, easing: MOTION_EASE}
     const distance = options.distance ?? "100%"
