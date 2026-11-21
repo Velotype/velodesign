@@ -1107,7 +1107,7 @@ describe('basic component rendering', () => {
             input.dispatchEvent(new Event("input", {bubbles: true}))
         })
 
-        const filteredCount = await page.evaluate(() => document.querySelectorAll(".vtd-command-item").length)
+        const filteredCount = await page.evaluate(() => document.querySelectorAll(".vtd-command-item:not([hidden])").length)
         if (filteredCount != 1) {fail(`ERROR: expected search for "settings" to filter to 1 item, got: ${filteredCount}`)}
 
         await page.evaluate(() => {
@@ -1443,6 +1443,75 @@ describe('basic component rendering', () => {
             return {left: extra() - baseline}
         })
         assertEquals(state, {left: 0})
+    })
+
+    itWrap("components mount what they put on the page and unmount what they take off, and a one-page table hides what a search leaves out", "mount-aware", "#mount-aware", async (_selection: ElementHandle) => {
+        // Every component here swaps consumer content in and out after it is on the page. Each
+        // Probe counts itself while mounted, so after every step the Probes mounted must be the
+        // Probes on the page, and no Component may be left mounted off it. Each step is a short
+        // synchronous evaluate, with the waiting done here: a long in-page promise trips
+        // Astral's evaluate deadline once the suite's tab is throttled.
+        const sleep = (ms = 60) => new Promise(resolve => setTimeout(resolve, ms))
+        const act = (js: string) => page.evaluate(`(() => {
+            const click = selector => document.querySelector(selector).click()
+            const type = (input, value) => { input.value = value; input.dispatchEvent(new Event("input", {bubbles: true})) }
+            ${js}
+        })()`)
+        const check = async (step: string) => {
+            const counts = await page.evaluate(`({...globalThis.__probes(), offPage: globalThis.__mountedOffPage()})`) as {mounted: number, onPage: number, offPage: number}
+            assertEquals(counts.mounted, counts.onPage, `${step}: every Probe on the page is mounted, and no other`)
+            assertEquals(counts.offPage, 0, `${step}: nothing is left mounted off the page`)
+        }
+        await check("start")
+        for (const index of [1, 2, 3]) {
+            await act(`document.querySelectorAll("#probe-select [role=option]")[${index}].click()`)
+            await sleep()
+        }
+        await check("select menu")
+        await act(`const input = document.querySelector("#probe-combobox input"); input.focus(); input.dispatchEvent(new Event("focus"))`)
+        for (const value of ["a", "an", "zz", ""]) {
+            await act(`type(document.querySelector("#probe-combobox input"), ${JSON.stringify(value)})`)
+            await sleep()
+        }
+        await check("combobox")
+        await act(`click("#open-command")`)
+        await sleep()
+        for (const value of ["e", "el", "zz", ""]) {
+            await act(`type(document.querySelector(".vtd-command-input"), ${JSON.stringify(value)})`)
+            await sleep()
+        }
+        await act(`document.querySelector(".vtd-command").close()`)
+        await check("command")
+        for (let i = 0; i < 2; i++) {await act(`click("#progress-status")`); await sleep()}
+        await check("progress")
+        for (let i = 0; i < 2; i++) {await act(`click("#sidebar-items")`); await sleep()}
+        await check("sidebar")
+        await act(`click("#probe-alert .vtd-alert-dismiss"); click("#probe-tag .vtd-tag-remove")`)
+        await sleep()
+        await check("alert and tag")
+        for (let i = 0; i < 2; i++) {await act(`click("#toast")`); await sleep()}
+        await check("toasts shown")
+        await act(`for (const dismiss of document.querySelectorAll(".vtd-toast-dismiss")) {dismiss.click()}`)
+        for (let i = 0; i < 60 && await page.evaluate(`!!document.querySelector(".vtd-toast")`); i++) {await sleep(50)}
+        await check("toasts gone")
+        await act(`globalThis.__tableRowsBefore = [...document.querySelectorAll("#probe-table .vtd-data-table-rows tr")]`)
+        const shown: number[] = []
+        for (const value of ["a", "ap", "zz", ""]) {
+            await act(`type(document.querySelector("#probe-table input"), ${JSON.stringify(value)})`)
+            const expected = {"a": 3, "ap": 1, "zz": 0, "": 5}[value] as number
+            let count = -1
+            // The search waits for a pause in typing: wait for it, up to 3s
+            for (let tries = 0; tries < 60; tries++) {
+                count = await page.evaluate(`[...document.querySelectorAll("#probe-table .vtd-data-table-rows tr")].filter(row => !row.hidden && !row.querySelector(".vtd-data-table-empty")).length`) as number
+                if (count === expected) {break}
+                await sleep(50)
+            }
+            shown.push(count)
+        }
+        await check("table search")
+        assertEquals(shown, [3, 1, 0, 5], "the search hides the rows that don't match, and shows them again")
+        const same = await page.evaluate(`(() => { const rows = [...document.querySelectorAll("#probe-table .vtd-data-table-rows tr")]; return globalThis.__tableRowsBefore.every((row, index) => rows[index] === row) })()`)
+        assertEquals(same, true, "a one-page table keeps its row elements through a search")
     })
 
     itWrap("async-data-table mounts what its rows render, so a popover in a cell closes on an outside click", "async-data-table", "#popover-async-table", async (_selection: ElementHandle) => {
@@ -2865,7 +2934,7 @@ describe('basic component rendering', () => {
             input.value = ${JSON.stringify(text)}
             input.dispatchEvent(new Event("input", {bubbles: true}))
             const panel = scope.querySelector(".vtd-combobox-panel")
-            return {open: panel.classList.contains("vtd-combobox-panel-open"), empty: !!scope.querySelector(".vtd-combobox-empty")}
+            return {open: panel.classList.contains("vtd-combobox-panel-open"), empty: !!scope.querySelector(".vtd-combobox-empty:not([hidden])")}
         })()`) as Promise<{open: boolean, empty: boolean}>
         // Three times over, so a state left behind by one keystroke shows in the next
         for (let i = 0; i < 3; i++) {

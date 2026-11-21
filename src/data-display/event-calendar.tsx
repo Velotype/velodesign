@@ -3,6 +3,7 @@
 import { h } from "../core/jsx.ts"
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
+import { replaceChildrenThrough } from "../core/children.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { Button } from "../form/button.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
@@ -292,8 +293,8 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
             stand.append(...this.#monthEl.childNodes)
             leaving = stand
         }
-        this.#monthEl.replaceChildren(grid, list,
-            listed.length === 0 ? <div class="vtd-event-calendar-empty">{this.#attrs.emptyMessage ? this.#attrs.emptyMessage() : <CommonThemeOptions.emptySymbol/>}</div> : "")
+        replaceChildrenThrough(this, this.#monthEl, [grid, list,
+            listed.length === 0 ? <div class="vtd-event-calendar-empty">{this.#attrs.emptyMessage ? this.#attrs.emptyMessage() : <CommonThemeOptions.emptySymbol/>}</div> : ""])
         if (slide && leaving) {
             // A grid day is one seventh of a row, so it starts a row away; a list row or the empty note, its own width
             pushView(this.#frameEl, leaving, this.#monthEl.querySelectorAll(".vtd-event-calendar-day, .vtd-event-calendar-list-day, .vtd-event-calendar-empty"), slide,

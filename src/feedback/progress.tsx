@@ -3,6 +3,7 @@
 import { h } from "../core/jsx.ts"
 import { Component, passthroughAttrsToElement } from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
+import { replaceChildrenThrough } from "../core/children.ts"
 import { createElementNSHelper, setAttributeHelper, svgNamespace } from "../core/utilities.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 
@@ -208,7 +209,7 @@ background-position:0 0;
             if (typeof status === "string") {
                 this.#status.textContent = status
             } else {
-                this.#status.replaceChildren(...(Array.isArray(status) ? status : [status]) as (Node | string)[])
+                replaceChildrenThrough(this, this.#status, (Array.isArray(status) ? status : [status]) as (HTMLElement | string)[])
             }
         }
         this.#show(value, true)

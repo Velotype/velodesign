@@ -3,6 +3,7 @@
 import { h } from "../core/jsx.ts"
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
+import { replaceChildrenThrough } from "../core/children.ts"
 import type { RenderableElements, IdAttr, StylePassthroughAttrs } from "../core/velotype.ts"
 import { highlightMatch, searchHighlightCss } from "../core/search-highlight.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
@@ -39,6 +40,9 @@ export type CommandAttrsType = {
 } & IdAttr & StylePassthroughAttrs
 
 let areCommandStylesMounted = false
+
+/** An item's row: its element, the span a string label is highlighted in, and the query that's highlighted there */
+type CommandRow = {item: CommandItemType, element: HTMLLIElement, text: HTMLSpanElement | undefined, query: string}
 
 /**
  * A searchable command palette overlay: a text input filters a list of items, with
@@ -91,29 +95,58 @@ export class Command extends Component<CommandAttrsType> {
         }
     }
 
-    /** Rebuilds the visible item list to match the current query/highlight, without a full `refresh()` */
+    /**
+     * Each item's row, built on first use and kept: a search hides and shows rows in place. An
+     * item's `label` is the consumer's own element, handed over once, so a row that left the page
+     * would take it along and unmount it - and it could never be put back.
+     */
+    #rows: CommandRow[] | undefined
+    /** The no-match row, kept for the same reason - `noMatchMessage` is handed over once too */
+    #emptyEl: HTMLLIElement | undefined
+
+    /** Shows the items matching the current query, and the highlight, without a full `refresh()` */
     #renderList() {
         const items = this.#filteredItems()
         if (this.#highlightedIndex >= items.length) {
             this.#highlightedIndex = Math.max(0, items.length - 1)
         }
-        if (items.length == 0) {
-            this.#list.replaceChildren(<li class="vtd-command-empty">{this.#attrs.noMatchMessage ?? <CommonThemeOptions.emptySymbol/>}</li>)
-            return
-        }
+        const rows = this.#rows ?? this.#buildRows()
         const query = this.#query.trim()
-        this.#list.replaceChildren(...items.map((item, index) => <li
-            class={`vtd-command-item${index == this.#highlightedIndex ? " vtd-command-item-highlighted" : ""}`}
-            role="option"
-            aria-selected={index == this.#highlightedIndex}
-            onClick={() => { this.#highlightedIndex = index; this.#selectHighlighted() }}>
-            {typeof item.label == "string" && query ? highlightMatch(item.label, query) : item.label}
-        </li>))
+        const shown = new Set(items)
+        const highlighted = items[this.#highlightedIndex]
+        for (const row of rows) {
+            const visible = shown.has(row.item)
+            if (row.element.hidden === visible) {row.element.hidden = !visible}
+            row.element.classList.toggle("vtd-command-item-highlighted", row.item === highlighted)
+            row.element.setAttribute("aria-selected", String(row.item === highlighted))
+            if (visible && row.text && row.query !== query && typeof row.item.label == "string") {
+                replaceChildrenThrough(this, row.text, (query ? highlightMatch(row.item.label, query) : [row.item.label]) as (HTMLElement | string)[])
+                row.query = query
+            }
+        }
+        const empty = this.#emptyEl as HTMLLIElement
+        if (empty.hidden !== items.length > 0) {empty.hidden = items.length > 0}
         // The list scrolls, so moving the highlight has to bring it with you - without this,
         // arrowing past the sixteenth result moves a highlight nobody can see and the palette
         // looks like it has stopped responding. `nearest` so a highlight already on screen does
         // not yank the list around.
-        this.#list.children[this.#highlightedIndex]?.scrollIntoView({block: "nearest"})
+        rows.find(row => row.item === highlighted)?.element.scrollIntoView({block: "nearest"})
+    }
+
+    #buildRows(): CommandRow[] {
+        const rows = this.#attrs.items.map(item => {
+            const text: HTMLSpanElement | undefined = typeof item.label == "string" ? <span>{item.label}</span> : undefined
+            const element: HTMLLIElement = <li class="vtd-command-item" role="option" aria-selected={false}
+                onClick={() => { this.#highlightedIndex = this.#filteredItems().indexOf(item); this.#selectHighlighted() }}>
+                {text ?? item.label}
+            </li>
+            return {item, element, text, query: ""}
+        })
+        const empty: HTMLLIElement = <li class="vtd-command-empty" hidden>{this.#attrs.noMatchMessage ?? <CommonThemeOptions.emptySymbol/>}</li>
+        this.#emptyEl = empty
+        replaceChildrenThrough(this, this.#list, [...rows.map(row => row.element), empty])
+        this.#rows = rows
+        return rows
     }
 
     /** Create a new `<Command/>` Component */

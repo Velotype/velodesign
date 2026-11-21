@@ -1,7 +1,7 @@
 /** @jsxRuntime classic */
 /** @jsx h */
 import { h } from "../core/jsx.ts"
-import {passthroughAttrsToElement} from "../core/velotype.ts"
+import {passthroughAttrsToElement, removeElementRoot} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
@@ -126,7 +126,7 @@ height:100%;
         {children}
         {attrs.onRemove && <button type="button" class="vtd-tag-remove" aria-label={attrs.removeLabel} onClick={() => {
             attrs.onRemove?.()
-            tagElement.remove()
+            removeElementRoot(tagElement)
         }}><TagThemeOptions.closeSymbol/></button>}
     </span>
     return passthroughAttrsToElement<HTMLSpanElement>(tagElement, attrs)

@@ -199,14 +199,17 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
         this.#renderTable()
     }
 
-    /** Applies search filtering then sorting (in that order) to `this.#attrs.rows` */
-    #processRows(): RowType[] {
+    /** The rows of `this.#attrs.rows` that match the search */
+    #matchingRows(): RowType[] {
         const attrs = this.#attrs
-        let rows = attrs.rows
         const query = this.#searchQuery.trim().toLowerCase()
-        if (query) {
-            rows = rows.filter(row => attrs.columns.some(column => column.filterValue && column.filterValue(row).toLowerCase().includes(query)))
-        }
+        if (!query) {return attrs.rows}
+        return attrs.rows.filter(row => attrs.columns.some(column => column.filterValue && column.filterValue(row).toLowerCase().includes(query)))
+    }
+
+    /** `rows`, sorted by the sort column */
+    #sortRows(rows: RowType[]): RowType[] {
+        const attrs = this.#attrs
         const sortColumn = attrs.columns.find(column => column.key == this.#sortKey)
         if (sortColumn?.sortValue) {
             const sortValue = sortColumn.sortValue
@@ -231,8 +234,12 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
         const attrs = this.#attrs
         const visibleColumns = attrs.columns.filter(column => !this.#hiddenColumns.has(column.key))
 
-        const allRows = this.#processRows()
         const pageSize = this.#currentPageSize
+        const matching = this.#matchingRows()
+        // On one page, every row is drawn anyway: the ones that don't match are hidden in place,
+        // so clearing a search draws nothing. Paged, only the page is drawn.
+        const onePage = pageSize <= 0
+        const allRows = this.#sortRows(onePage ? this.#attrs.rows : matching)
         const totalPages = pageSize > 0 ? Math.max(1, Math.ceil(allRows.length / pageSize)) : 1
         const currentPage = Math.min(this.#currentPage, totalPages)
         const pageRows = pageSize > 0 ? allRows.slice((currentPage - 1) * pageSize, currentPage * pageSize) : allRows
@@ -260,7 +267,8 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
             const columnsChanged = visibleColumns.length !== this.#bodyColumns.length || visibleColumns.some((c, i) => c !== this.#bodyColumns[i])
             this.#body.show(pageRows, this.#searchQuery, columnsChanged
                 ? {columns: visibleColumns, rowHref: attrs.rowHref, rowHrefSpa: attrs.rowHrefSpa, onRowSelect: attrs.onRowSelect}
-                : undefined)
+                : undefined, onePage && matching !== attrs.rows ? new Set(matching) : undefined)
+            if (matching.length == 0) {this.#body.addStatus(visibleColumns.length, attrs.emptyMessage)}
         }
         this.#bodyColumns = visibleColumns
 

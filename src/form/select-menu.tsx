@@ -3,6 +3,7 @@
 import { h } from "../core/jsx.ts"
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
+import { replaceChildrenThrough } from "../core/children.ts"
 import { Glyphs, glyphElement } from "../core/glyphs.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { keepPlaced, placeInView } from "../core/placement.ts"
@@ -175,11 +176,11 @@ export class SelectMenu<OptionType> extends Component<SelectMenuAttrsType<Option
     #renderTriggerValue() {
         const selected = this.#attrs.options.find(option => this.#attrs.getValue(option) == this.#selectedValue)
         if (!selected) {
-            this.#valueEl.replaceChildren(<span class="vtd-select-menu-placeholder" style={{display: "contents"}}>{this.#attrs.placeholder}</span>)
+            replaceChildrenThrough(this, this.#valueEl, [<span class="vtd-select-menu-placeholder" style={{display: "contents"}}>{this.#attrs.placeholder}</span>])
             return
         }
         const renderValue = this.#attrs.renderValue || this.#attrs.renderOption
-        this.#valueEl.replaceChildren(<span style={{display: "contents"}}>{renderValue(selected)}</span>)
+        replaceChildrenThrough(this, this.#valueEl, [<span style={{display: "contents"}}>{renderValue(selected)}</span>])
     }
 
     #handleTriggerKeyDown = (event: KeyboardEvent) => {
