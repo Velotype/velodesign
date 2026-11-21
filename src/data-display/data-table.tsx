@@ -1,14 +1,13 @@
 /** @jsxRuntime classic */
 /** @jsx h */
 import { h } from "../core/jsx.ts"
-import { replaceMountedChildren } from "../core/mounting.ts"
 import { Component, getComponent, passthroughAttrsToElement } from "../core/velotype.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { Pagination } from "../navigation/pagination.tsx"
 import { Select } from "../form/select.tsx"
 import { TextBox } from "../form/text-box.tsx"
 import {
-    buildBodyRows, buildColGroup, buildHeaderCells, buildStatusRow, ColumnMenu,
+    buildColGroup, buildHeaderCells, ColumnMenu, DataTableBody,
     DataTableThemeOptions, mountDataTableStyles, startColumnResize
 } from "./data-table-view.tsx"
 import type { DataTableColumnBase, SortDirection } from "./data-table-view.tsx"
@@ -138,7 +137,28 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
     #root: HTMLDivElement
     #colgroupEl: HTMLTableColElement = <colgroup/>
     #theadRowEl: HTMLTableRowElement = <tr/>
-    #tbodyEl: HTMLTableSectionElement = <tbody/>
+    #tableEl: HTMLTableElement
+    #body: DataTableBody<RowType>
+    /** The columns the body was last drawn with - other columns draw every row again */
+    #bodyColumns: DataTableColumnBase<RowType>[] = []
+    /** On the page: the header and footer are then refilled through replaceChildrenOfChild (#fill) */
+    #mounted = false
+
+    override mount() {
+        this.#mounted = true
+    }
+    override unmount() {
+        this.#mounted = false
+    }
+
+    /**
+     * Fills `element` with `children`: through `replaceChildrenOfChild` once on the page, which
+     * mounts what arrives and unmounts what leaves; before that, directly, since everything in the
+     * table mounts with it.
+     */
+    #fill(element: HTMLElement, children: HTMLElement[]) {
+        if (this.#mounted) {this.replaceChildrenOfChild(element, children)} else {element.replaceChildren(...children)}
+    }
     #footerEl: HTMLDivElement = <div class="vtd-data-table-footer"/>
 
     /** Called by `DataTable`'s persistent search input on every keystroke */
@@ -220,7 +240,7 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
         const {colElements, cols} = buildColGroup(visibleColumns, this.#columnWidths)
         this.#colgroupEl.replaceChildren(...cols)
 
-        this.#theadRowEl.replaceChildren(...buildHeaderCells({
+        this.#fill(this.#theadRowEl, buildHeaderCells({
             columns: visibleColumns,
             isSortable: (column) => !!(column as DataTableColumnType<RowType>).sortValue,
             sortKey: this.#sortKey,
@@ -233,19 +253,16 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
             )
         }))
 
-        const bodyRows = buildBodyRows({
-            rows: pageRows,
-            columns: visibleColumns,
-            searchQuery: this.#searchQuery,
-            rowHref: attrs.rowHref,
-            rowHrefSpa: attrs.rowHrefSpa,
-            onRowSelect: attrs.onRowSelect
-        })
-        replaceMountedChildren(this.#tbodyEl, ...(allRows.length == 0
-            ? [buildStatusRow(visibleColumns.length, attrs.emptyMessage)]
-            : bodyRows))
-        this.#tbodyEl.classList.toggle("vtd-data-table-zebra", attrs.zebra)
-        this.#tbodyEl.classList.toggle("vtd-data-table-hoverable", attrs.highlightOnHover)
+        // The rows already shown move into their new order; only new rows are drawn (DataTableBody)
+        if (allRows.length == 0) {
+            this.#body.showStatus(visibleColumns.length, attrs.emptyMessage)
+        } else {
+            const columnsChanged = visibleColumns.length !== this.#bodyColumns.length || visibleColumns.some((c, i) => c !== this.#bodyColumns[i])
+            this.#body.show(pageRows, this.#searchQuery, columnsChanged
+                ? {columns: visibleColumns, rowHref: attrs.rowHref, rowHrefSpa: attrs.rowHrefSpa, onRowSelect: attrs.onRowSelect}
+                : undefined)
+        }
+        this.#bodyColumns = visibleColumns
 
         const footerChildren: HTMLDivElement[] = []
         if (pageSize > 0 && (totalPages > 1 || attrs.showPageSizeControl)) {
@@ -266,7 +283,7 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
                 </div>)
             }
         }
-        replaceMountedChildren(this.#footerEl, ...footerChildren)
+        this.#fill(this.#footerEl, footerChildren)
     }
 
     /** Create a new `<DataTableInner/>` Component */
@@ -274,15 +291,16 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
         super(attrs, children)
         this.#attrs = attrs
         this.#currentPageSize = attrs.pageSize
+        const bodyElement = <DataTableBody<RowType> options={{columns: []}}/>
+        this.#body = getComponent<DataTableBody<RowType>>(bodyElement)
 
+        this.#tableEl = <table class={`vtd-data-table-table${attrs.zebra ? " vtd-data-table-zebra" : ""}${attrs.highlightOnHover ? " vtd-data-table-hoverable" : ""}`}>
+            {this.#colgroupEl}
+            <thead>{this.#theadRowEl}</thead>
+            {bodyElement}
+        </table>
         this.#root = <div class="vtd-data-table">
-            <div class="vtd-data-table-scroll">
-                <table class="vtd-data-table-table">
-                    {this.#colgroupEl}
-                    <thead>{this.#theadRowEl}</thead>
-                    {this.#tbodyEl}
-                </table>
-            </div>
+            <div class="vtd-data-table-scroll">{this.#tableEl}</div>
             {this.#footerEl}
         </div>
 

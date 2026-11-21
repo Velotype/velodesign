@@ -1,7 +1,7 @@
 /** @jsxRuntime classic */
 /** @jsx h */
 import { h } from "../core/jsx.ts"
-import {} from "../core/velotype.ts"
+import { Component } from "../core/velotype.ts"
 import { Glyphs, glyphElement } from "../core/glyphs.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { RenderableElements } from "../core/velotype.ts"
@@ -152,9 +152,9 @@ padding:0;
 .vtd-data-table-header-content{display:inline-flex;align-items:center;}
 .vtd-data-table-sort-indicator{margin-inline-start:0.3em;opacity:0.7;}
 .vtd-data-table-table tbody tr{position:relative;}
-.vtd-data-table-hoverable tr:hover{background-color:var(--background-1);}
-.vtd-data-table-zebra tr:nth-child(even){background-color:var(--background-1);}
-.vtd-data-table-zebra.vtd-data-table-hoverable tr:nth-child(even):hover{background-color:var(--background-2);}
+.vtd-data-table-hoverable .vtd-data-table-rows tr:hover{background-color:var(--background-1);}
+.vtd-data-table-zebra .vtd-data-table-rows tr:nth-child(even){background-color:var(--background-1);}
+.vtd-data-table-zebra.vtd-data-table-hoverable .vtd-data-table-rows tr:nth-child(even):hover{background-color:var(--background-2);}
 .vtd-data-table-align-center{text-align:center;}
 .vtd-data-table-align-end{text-align:end;}
 ` +
@@ -197,11 +197,11 @@ touch-action:none;
  * the stale rows are still the best answer available until the new ones land.
  */
 `
-.vtd-data-table-body-reloading{opacity:0.45;transition:opacity 120ms ease-out;}
+.vtd-data-table-body-reloading .vtd-data-table-rows{opacity:0.45;transition:opacity 120ms ease-out;}
 .vtd-data-table-status{display:flex;align-items:center;gap:0.5em;justify-content:center;padding:2em;opacity:0.7;}
 .vtd-data-table-truncated{font-size:0.85em;color:var(--warning-8);}
 @media (prefers-reduced-motion: reduce){
-.vtd-data-table-body-reloading{transition:none;}
+.vtd-data-table-body-reloading .vtd-data-table-rows{transition:none;}
 }
 ${searchHighlightCss}
 `, "vtd/DataTable", "composite")
@@ -262,32 +262,148 @@ export function buildHeaderCells<RowType>(options: DataTableHeaderOptions<RowTyp
     })
 }
 
+/** How a table's body rows are drawn - everything but the rows themselves */
 export type DataTableBodyOptions<RowType> = {
-    rows: RowType[]
     columns: DataTableColumnBase<RowType>[]
-    /** The active search text, used only to highlight matches in plain-text cells */
-    searchQuery: string
     rowHref?: (row: RowType) => string | undefined
     rowHrefSpa?: boolean
     onRowSelect?: (row: RowType) => void
 }
 
-/** Builds the `<tr>` rows for the body */
-export function buildBodyRows<RowType>(options: DataTableBodyOptions<RowType>): HTMLTableRowElement[] {
-    const searchQuery = options.searchQuery.trim()
-    return options.rows.map(row => {
+/**
+ * One row in the body: the row it's drawn from, the search it highlights, its plain-text cells
+ * lower-cased (so a later search knows whether its highlighting changes without drawing it again),
+ * and its element.
+ */
+type DataTableBodyRow<RowType> = {row: RowType, query: string, texts: string[], element: HTMLTableRowElement}
+
+/**
+ * A table's body (`<tbody>`): the rows shown, or a status row (empty, loading, an error) when
+ * there are none.
+ *
+ * `show()` keeps the rows already shown and moves them into their new order - a move within the
+ * body, so they stay mounted and are never drawn again - draws only the rows new to the page, and
+ * takes out the rows that left with `removeChild`, which unmounts and releases them, and the
+ * Components in them with their listeners. A row already shown is drawn again only when what it
+ * shows changes: its search highlighting, or the columns.
+ *
+ * New rows are drawn before the leaving ones are taken out. A column's render function may hand
+ * back the same element on every call (a cached cell); drawing the new row moves that element out
+ * of the old one, so it isn't among what's released - a released element never mounts again.
+ * One whose row leaves the page (paged away, or searched out) is released with it, so a column
+ * should hand back a new element for a row that comes back.
+ *
+ * Plain row elements rather than a `RenderObjectArray`: a RenderObject a row cost up to 75% more
+ * for a table of plain text (500 rows drawn in 28ms against 16ms), for the same moves.
+ */
+export class DataTableBody<RowType> extends Component<{options: DataTableBodyOptions<RowType>}> {
+    #options: DataTableBodyOptions<RowType>
+    #shown: DataTableBodyRow<RowType>[] = []
+    #status: HTMLTableRowElement | undefined
+    readonly #element: HTMLTableSectionElement = <tbody class="vtd-data-table-rows"/>
+    /** On the page: rows then go in and out through appendToChild and removeChild, which mount and unmount */
+    #mounted = false
+
+    constructor(attrs: {options: DataTableBodyOptions<RowType>}, children: RenderableElements[]) {
+        super(attrs, children)
+        this.#options = attrs.options
+    }
+
+    override mount() {
+        this.#mounted = true
+    }
+    override unmount() {
+        this.#mounted = false
+    }
+
+    /**
+     * Shows `rows`, in that order, highlighting `query` in plain-text cells. `options` with new
+     * columns draws every row again, since every cell is new.
+     */
+    show(rows: RowType[], query: string, options?: DataTableBodyOptions<RowType>) {
+        this.#clearStatus()
+        if (options) {this.#options = options}
+        const kept = new Map<number, DataTableBodyRow<RowType>>()
+        const leaving: DataTableBodyRow<RowType>[] = []
+        if (options) {
+            leaving.push(...this.#shown)
+        } else {
+            // Each row wanted, by the places it goes - a row may be in the list more than once
+            const wanted = new Map<RowType, number[]>()
+            rows.forEach((row, index) => {
+                const places = wanted.get(row)
+                if (places) {places.push(index)} else {wanted.set(row, [index])}
+            })
+            for (const shown of this.#shown) {
+                const at = wanted.get(shown.row)?.shift()
+                if (at === undefined) {leaving.push(shown)} else {kept.set(at, shown)}
+            }
+        }
+        // New rows first, then highlighting changed: either may move a cached cell out of a row that's leaving
+        const next: DataTableBodyRow<RowType>[] = rows.map((row, index) => kept.get(index) ?? this.#draw(row, query))
+        const redrawn: [HTMLTableRowElement, DataTableBodyRow<RowType>][] = []
+        next.forEach((shown, index) => {
+            if (!kept.has(index) || shown.query === query) {return}
+            if (highlightChanges(shown.texts, shown.query, query)) {
+                const fresh = this.#draw(shown.row, query)
+                redrawn.push([shown.element, fresh])
+                next[index] = fresh
+            } else {
+                shown.query = query
+            }
+        })
+        for (const gone of leaving) {this.#remove(gone.element)}
+        for (const [old] of redrawn) {this.#remove(old)}
+        // The new rows go in at the end, and mount; then every row is put in its place - a move
+        // within the body, so each stays mounted
+        for (const shown of next) {
+            if (shown.element.parentNode !== this.#element) {this.#append(shown.element)}
+        }
+        const children = this.#element.children
+        next.forEach((shown, index) => {
+            if (children[index] !== shown.element) {this.#element.insertBefore(shown.element, children[index])}
+        })
+        this.#shown = next
+    }
+
+    /** No rows, and `content` in their place - the empty, loading and error states */
+    showStatus(colspan: number, content: RenderableElements) {
+        this.show([], "")
+        this.#status = buildStatusRow(colspan, content)
+        this.#append(this.#status)
+    }
+
+    #clearStatus() {
+        if (this.#status) {
+            this.#remove(this.#status)
+            this.#status = undefined
+        }
+    }
+
+    #append(element: HTMLElement) {
+        if (this.#mounted) {this.appendToChild(this.#element, element)} else {this.#element.append(element)}
+    }
+
+    #remove(element: HTMLElement) {
+        if (this.#mounted) {this.removeChild(element)} else {element.remove()}
+    }
+
+    #draw(row: RowType, query: string): DataTableBodyRow<RowType> {
+        const options = this.#options
+        const searchQuery = query.trim()
         const href = options.rowHref?.(row)
         const useButton = !href && !!options.onRowSelect
-        return <tr>
+        const texts: string[] = []
+        const element: HTMLTableRowElement = <tr>
             {options.columns.map((column, colIndex) => {
                 const rawCellContent = column.render(row)
                 // Only a column whose rendered value is plain text can be safely searched
                 // through character-by-character - `column.render` is free to return
                 // arbitrary consumer content (another component, nested markup, ...), which
                 // there's no safe way to splice a <mark> into without knowing its structure.
-                const cellContent = searchQuery && (typeof rawCellContent == "string" || typeof rawCellContent == "number" || typeof rawCellContent == "bigint")
-                    ? highlightMatch(String(rawCellContent), searchQuery)
-                    : rawCellContent
+                const text = typeof rawCellContent == "string" || typeof rawCellContent == "number" || typeof rawCellContent == "bigint"
+                if (text) {texts.push(String(rawCellContent).toLowerCase())}
+                const cellContent = searchQuery && text ? highlightMatch(String(rawCellContent), searchQuery) : rawCellContent
                 const cellClass = column.align ? `vtd-data-table-align-${column.align}` : ""
                 if (colIndex != 0 || (!href && !useButton)) {
                     return <td class={cellClass}>{cellContent}</td>
@@ -310,7 +426,23 @@ export function buildBodyRows<RowType>(options: DataTableBodyOptions<RowType>): 
                 </td>
             })}
         </tr>
-    })
+        return {row, query, texts, element}
+    }
+
+    /** Render this Component */
+    override render(): HTMLTableSectionElement {
+        return this.#element
+    }
+}
+
+/** Whether a row's plain-text cells are highlighted differently for `next` than for `previous` */
+function highlightChanges(texts: string[] | undefined, previous: string, next: string): boolean {
+    if (!texts || texts.length === 0) {return false}
+    const matches = (query: string) => {
+        const q = query.trim().toLowerCase()
+        return q !== "" && texts.some(t => t.includes(q))
+    }
+    return matches(previous) || matches(next)
 }
 
 /** A full-width row spanning every column - the empty, loading and error states all use one */
