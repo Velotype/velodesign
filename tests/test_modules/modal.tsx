@@ -1,4 +1,4 @@
-import {replaceElementWithRoot, Component, RenderBasic} from "@velotype/velotype"
+import {replaceElementWithRoot, Component, RenderBasic, getComponent} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
 import { Button, ButtonModal, I, Modal, Theme } from "../../src/index.ts"
@@ -18,6 +18,9 @@ class ModalGallery extends Component<EmptyAttrs> {
         >
             inner modal content
         </Modal>
+        const reasonModal = <Modal title="Pick first" confirmButtonChildren="add" startConfirmDisabled confirmDisabledReason="Pick someone first">pick someone</Modal>
+        // The test enables its confirm through the Modal's own method
+        ;(globalThis as unknown as {__reasonModal: Modal}).__reasonModal = getComponent<Modal>(reasonModal)
         return <div>
             {modal}
             <Button type="secondary" onClick={()=>{
@@ -39,6 +42,8 @@ class ModalGallery extends Component<EmptyAttrs> {
             <div id="plain-modal"><Modal title="No handler" confirmButtonChildren="confirm">closes</Modal></div>
             {/* Nothing to cancel: the confirm button is the only one in the footer */}
             <div id="no-cancel-modal"><Modal title="Just a message" confirmButtonChildren="close" showCancelButton={false}>read and close</Modal></div>
+            {/* A confirm that starts disabled says why, until it's enabled */}
+            <div id="reason-modal">{reasonModal}</div>
         </div>
     }
 }

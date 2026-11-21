@@ -4,6 +4,7 @@ import { h } from "../core/jsx.ts"
 import {type ChildrenAttr, Component, type RenderableElements, type FunctionComponent, type TargetedMouseEvent, type StylePassthroughAttrs, type IdAttr, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import { Button, type ButtonType } from "../form/button.tsx"
+import { Tooltip } from "../feedback/tooltip.tsx"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 import { animateDialog, MOTION } from "../core/motion.ts"
 
@@ -30,6 +31,13 @@ export type ModalDoneType = (options?: {keepOpen?: boolean}) => void
 export type ModalAttrsType = {
     /** Should the confirm button start as disabled? */
     startConfirmDisabled?: boolean
+    /**
+     * Why the confirm button is disabled, shown while it is - on hover, focus, or a tap - by a
+     * `<Tooltip whenDisabled/>` around it. A disabled control that doesn't say why leaves the reader
+     * guessing what to do. No default: the words are the consumer's (see `startConfirmDisabled` and
+     * `setConfirmDisabled()`).
+     */
+    confirmDisabledReason?: RenderableElements
     /**
      * Callback for when the confirm button is clicked. The button shows a spinner until the
      * callback calls `done()`, which also closes the Modal - `done({keepOpen: true})` leaves it
@@ -155,7 +163,9 @@ padding:0.5em;
                 {attrs.showCancelButton === false ? null : <Button type="text" onClick={()=>{
                     this.close()
                 }}>{attrs.cancelButtonChildren || <ModalThemeOptions.cancelSymbol/>}</Button>}
-                {this.#confirmButton}
+                {attrs.confirmDisabledReason === undefined
+                    ? this.#confirmButton
+                    : <Tooltip whenDisabled placement="top-end" content={attrs.confirmDisabledReason}>{this.#confirmButton}</Tooltip>}
             </div>
         </dialog>
         this.#motion = animateDialog(this.#dialog, "vtd-modal-closing")

@@ -916,6 +916,44 @@ describe('basic component rendering', () => {
         }
     })
 
+    itWrap("a modal's disabled confirm says why, and only while it's disabled", "modal", "#reason-modal", async (_selection: ElementHandle) => {
+        const read = () => page.evaluate(() => {
+            const dialog = document.querySelector("#reason-modal dialog") as HTMLDialogElement
+            const buttons = dialog.querySelectorAll("button")
+            const confirm = buttons[buttons.length - 1] as HTMLButtonElement
+            const wrapper = confirm.closest(".vtd-tooltip-when-disabled")
+            const bubble = wrapper?.querySelector(":scope > .vtd-tooltip") as HTMLElement | null
+            return {
+                wrapped: !!wrapper,
+                reason: bubble?.textContent ?? null,
+                describedBy: bubble !== null && confirm.getAttribute("aria-describedby") === bubble.id,
+                disabled: confirm.disabled,
+                // The bubble shows on the wrapper's focus only while the button inside is disabled
+                shows: (() => {
+                    (wrapper as HTMLElement | null)?.focus()
+                    const style = bubble ? getComputedStyle(bubble) : undefined
+                    const visible = style !== undefined && style.display !== "none" && style.visibility === "visible"
+                    ;(wrapper as HTMLElement | null)?.blur()
+                    return visible
+                })()
+            }
+        })
+        // Transitions never advance in this suite, so they are switched off to read the end state
+        await page.evaluate(() => {
+            const style = document.createElement("style")
+            style.textContent = "*,*::before,*::after{transition:none !important}"
+            document.head.append(style)
+            ;(document.querySelector("#reason-modal dialog") as HTMLDialogElement).showModal()
+        })
+        const disabled = await read()
+        assertEquals(disabled, {wrapped: true, reason: "Pick someone first", describedBy: true, disabled: true, shows: true})
+        // Enabled through the Modal's own method, the reason stays out of the way
+        await page.evaluate(() => (globalThis as unknown as {__reasonModal: {setConfirmDisabled: (d: boolean) => void}}).__reasonModal.setConfirmDisabled(false))
+        const enabled = await read()
+        assertEquals({disabled: enabled.disabled, shows: enabled.shows}, {disabled: false, shows: false})
+        await page.evaluate(() => (document.querySelector("#reason-modal dialog") as HTMLDialogElement).close())
+    })
+
     itWrap("a modal fades out on Escape before it closes, with nothing inside it laid out again", "modal", "#plain-modal", async (_selection: ElementHandle) => {
         await page.evaluate(() => (document.querySelector("#plain-modal dialog") as HTMLDialogElement).showModal())
         const settled = await page.evaluate(async () => {
