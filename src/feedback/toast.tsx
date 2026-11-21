@@ -1,7 +1,8 @@
 /** @jsxRuntime classic */
 /** @jsx h */
 import { h } from "../core/jsx.ts"
-import type { RenderableElements } from "../core/velotype.ts"
+import { Component, getComponent } from "../core/velotype.ts"
+import type { EmptyAttrs, RenderableElements } from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 import { MOTION, playExit } from "../core/motion.ts"
@@ -32,9 +33,20 @@ export type ToastOptions = {
 }
 
 let areToastStylesMounted = false
-let toastContainer: HTMLDivElement | undefined
+/**
+ * The toasts' container. A Component, so a toast goes in through its `appendToChild()`, which
+ * mounts the Components in the message, and leaves through `removeChild()`, which unmounts them
+ */
+class ToastStack extends Component<EmptyAttrs> {
+    readonly element: HTMLDivElement = <div class="vtd-toast-container"/>
+    override render(): HTMLDivElement {
+        return this.element
+    }
+}
 
-function ensureToastContainer(): HTMLDivElement {
+let toastStack: ToastStack | undefined
+
+function ensureToastContainer(): ToastStack {
     if (!areToastStylesMounted) {
         areToastStylesMounted = true
         mountStyles(`
@@ -88,14 +100,13 @@ border-radius:0.25rem;
 .vtd-toast-dismiss:hover{background-color:var(--background-3);}
 `, "vtd/Toast")
     }
-    let container = toastContainer
-    if (!container) {
-        const newContainer: HTMLDivElement = <div class="vtd-toast-container"/>
-        toastContainer = newContainer
-        container = newContainer
+    let stack = toastStack
+    if (!stack) {
+        stack = getComponent<ToastStack>(<ToastStack/>)
+        toastStack = stack
     }
-    placeToastContainer(container)
-    return container
+    placeToastContainer(stack.element)
+    return stack
 }
 
 /** The modal `<dialog>` drawn on top, if one is open - the last one opened is the last in document order more often than not, and nested modals are rare */
@@ -132,7 +143,7 @@ function placeToastContainer(container: HTMLDivElement): void {
  * shows above its backdrop.
  */
 export function showToast(message: RenderableElements, options?: ToastOptions): void {
-    const container = ensureToastContainer()
+    const stack = ensureToastContainer()
     const type = options?.type || "info"
     const duration = options?.duration ?? 4000
 
@@ -143,8 +154,8 @@ export function showToast(message: RenderableElements, options?: ToastOptions): 
         }}><ToastThemeOptions.closeSymbol/></button>
     </div>
     // It fades as it goes, rather than vanishing
-    const leave = () => playExit(toastElement, "vtd-toast-leaving", () => toastElement.remove())
-    container.appendChild(toastElement)
+    const leave = () => playExit(toastElement, "vtd-toast-leaving", () => stack.removeChild(toastElement))
+    stack.appendToChild(stack.element, toastElement)
 
     if (duration > 0) {
         globalThis.setTimeout(leave, duration)

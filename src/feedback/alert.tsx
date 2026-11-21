@@ -1,7 +1,7 @@
 /** @jsxRuntime classic */
 /** @jsx h */
 import { h } from "../core/jsx.ts"
-import {passthroughAttrsToElement} from "../core/velotype.ts"
+import {passthroughAttrsToElement, removeElementRoot} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
@@ -89,7 +89,7 @@ justify-content:center;
         </div>
         {attrs.onDismiss && <button type="button" class="vtd-alert-dismiss" aria-label={attrs.dismissLabel} onClick={() => {
             attrs.onDismiss?.()
-            alertElement.remove()
+            removeElementRoot(alertElement)
         }}><AlertThemeOptions.closeSymbol/></button>}
     </div>
     return passthroughAttrsToElement<HTMLDivElement>(alertElement, attrs)

@@ -1,3 +1,5 @@
+import { removeElementRoot } from "./velotype.ts"
+
 /**
  * How the library moves: every open, close, slide and fade runs for the same time on the same
  * curve, so a drawer, a modal, a toast, an accordion and a switch all feel like one thing.
@@ -45,7 +47,7 @@ export type PushViewOptions = {
      * day and its list row are both on the page, one of them hidden by a container query
      */
     distance?: string | ((element: Element) => string)
-    /** What becomes of `leaving` once it has gone (default: it's removed) - a carousel hides its slide again */
+    /** What becomes of `leaving` once it has gone (default: removed through velotype, which unmounts the Components in it) - a carousel hides its slide again */
     settle?: (leaving: HTMLElement) => void
 }
 
@@ -67,7 +69,7 @@ const pushes = new WeakMap<HTMLElement, () => void>()
  */
 export function pushView(frame: HTMLElement, leaving: HTMLElement, arriving: Iterable<Element>, from: -1 | 1, options: PushViewOptions = {}): void {
     pushes.get(frame)?.()
-    const settle = options.settle ?? (element => element.remove())
+    const settle = options.settle ?? removeElementRoot
     if (motionReduced()) {
         settle(leaving)
         return

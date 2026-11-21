@@ -153,8 +153,8 @@ padding:0;
 .vtd-data-table-sort-indicator{margin-inline-start:0.3em;opacity:0.7;}
 .vtd-data-table-table tbody tr{position:relative;}
 .vtd-data-table-hoverable .vtd-data-table-rows tr:hover{background-color:var(--background-1);}
-.vtd-data-table-zebra .vtd-data-table-rows tr:nth-child(even){background-color:var(--background-1);}
-.vtd-data-table-zebra.vtd-data-table-hoverable .vtd-data-table-rows tr:nth-child(even):hover{background-color:var(--background-2);}
+.vtd-data-table-zebra .vtd-data-table-rows tr:nth-child(even of :not([hidden])){background-color:var(--background-1);}
+.vtd-data-table-zebra.vtd-data-table-hoverable .vtd-data-table-rows tr:nth-child(even of :not([hidden])):hover{background-color:var(--background-2);}
 .vtd-data-table-align-center{text-align:center;}
 .vtd-data-table-align-end{text-align:end;}
 ` +
@@ -319,8 +319,14 @@ export class DataTableBody<RowType> extends Component<{options: DataTableBodyOpt
     /**
      * Shows `rows`, in that order, highlighting `query` in plain-text cells. `options` with new
      * columns draws every row again, since every cell is new.
+     *
+     * With `visible`, only those of `rows` show, and the rest are hidden in place - drawn,
+     * mounted and on the page, so showing one again draws nothing. That is for a table with every
+     * row on one page, which has drawn them all anyway: a search hides what doesn't match rather
+     * than unmounting it and drawing it again when the search clears. A hidden row keeps its
+     * highlighting until it shows again.
      */
-    show(rows: RowType[], query: string, options?: DataTableBodyOptions<RowType>) {
+    show(rows: RowType[], query: string, options?: DataTableBodyOptions<RowType>, visible?: ReadonlySet<RowType>) {
         this.#clearStatus()
         if (options) {this.#options = options}
         const kept = new Map<number, DataTableBodyRow<RowType>>()
@@ -342,8 +348,9 @@ export class DataTableBody<RowType> extends Component<{options: DataTableBodyOpt
         // New rows first, then highlighting changed: either may move a cached cell out of a row that's leaving
         const next: DataTableBodyRow<RowType>[] = rows.map((row, index) => kept.get(index) ?? this.#draw(row, query))
         const redrawn: [HTMLTableRowElement, DataTableBodyRow<RowType>][] = []
+        const hidden = (row: RowType) => visible !== undefined && !visible.has(row)
         next.forEach((shown, index) => {
-            if (!kept.has(index) || shown.query === query) {return}
+            if (!kept.has(index) || shown.query === query || hidden(shown.row)) {return}
             if (highlightChanges(shown.texts, shown.query, query)) {
                 const fresh = this.#draw(shown.row, query)
                 redrawn.push([shown.element, fresh])
@@ -359,16 +366,38 @@ export class DataTableBody<RowType> extends Component<{options: DataTableBodyOpt
         for (const shown of next) {
             if (shown.element.parentNode !== this.#element) {this.#append(shown.element)}
         }
-        const children = this.#element.children
-        next.forEach((shown, index) => {
-            if (children[index] !== shown.element) {this.#element.insertBefore(shown.element, children[index])}
-        })
+        for (const shown of next) {
+            if (shown.element.hidden !== hidden(shown.row)) {shown.element.hidden = hidden(shown.row)}
+        }
+        // Only the rows that show are put in order: a hidden row's place doesn't matter until it
+        // shows again, and then it's put in its place like the rest. A cursor rather than
+        // `children[index]`: that collection is live, and each move makes the next read walk it
+        // from the start, which made a reorder quadratic.
+        let cursor: ChildNode | null = this.#element.firstChild
+        const skipHidden = () => {
+            while (cursor instanceof HTMLElement && cursor.hidden) {cursor = cursor.nextSibling}
+        }
+        for (const shown of next) {
+            if (shown.element.hidden) {continue}
+            skipHidden()
+            if (shown.element === cursor) {
+                cursor = shown.element.nextSibling
+            } else {
+                this.#element.insertBefore(shown.element, cursor)
+            }
+        }
         this.#shown = next
     }
 
     /** No rows, and `content` in their place - the empty, loading and error states */
     showStatus(colspan: number, content: RenderableElements) {
         this.show([], "")
+        this.addStatus(colspan, content)
+    }
+
+    /** `content` below the rows, until the next `show()` - for a one-page table whose rows are all hidden */
+    addStatus(colspan: number, content: RenderableElements) {
+        this.#clearStatus()
         this.#status = buildStatusRow(colspan, content)
         this.#append(this.#status)
     }
