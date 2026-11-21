@@ -1391,10 +1391,63 @@ describe('basic component rendering', () => {
         if (offenders.length > 0) {fail(`ERROR: a stale response overwrote the newest - rows not matching "riley": ${JSON.stringify(offenders)}`)}
     })
 
+    itWrap("data-table sorts by moving its rows, without drawing them again, and a cell handed back again still works", "data-table", "#moving-data-table", async (_selection: ElementHandle) => {
+        const state = await page.evaluate(async () => {
+            const wait = () => new Promise(resolve => setTimeout(resolve, 30))
+            const table = document.querySelector("#showcase-theme-light #moving-data-table") as HTMLElement
+            const rows = () => [...table.querySelectorAll(".vtd-data-table-rows tr")] as HTMLElement[]
+            const before = rows()
+            const names = () => rows().map(r => r.querySelector("td")!.textContent)
+            const order = names()
+            ;(table.querySelector(".vtd-data-table-sort-button") as HTMLElement).click()
+            const after = rows()
+            const moved = {
+                sameRows: after.length === before.length && after.every(r => before.includes(r)),
+                reordered: names().join() !== order.join(),
+                sorted: names().join() === [...order].sort().join()
+            }
+            // Sorted twice more, the cell the column hands back (the same element each time) still opens, and closes on a click outside
+            for (let i = 0; i < 2; i++) {(table.querySelector(".vtd-data-table-sort-button") as HTMLElement).click(); await wait()}
+            const cell = table.querySelector(".cached-cell") as HTMLElement
+            ;(cell.querySelector("button") as HTMLElement).click()
+            await wait()
+            const opened = !!cell.querySelector(".vtd-popconfirm-open")
+            document.body.click()
+            await wait()
+            return {...moved, opened, closedOnOutsideClick: !cell.querySelector(".vtd-popconfirm-open")}
+        })
+        assertEquals(state, {sameRows: true, reordered: true, sorted: true, opened: true, closedOnOutsideClick: true})
+    })
+
+    itWrap("data-table takes a row's listeners with it as it sorts, pages and searches", "data-table", "#popconfirm-data-table", async (_selection: ElementHandle) => {
+        const state = await page.evaluate(async () => {
+            const wait = () => new Promise(resolve => setTimeout(resolve, 30))
+            const table = document.querySelector("#showcase-theme-light #popconfirm-data-table") as HTMLElement
+            // One click listener a Popconfirm: what's on the page, against what's listening
+            const extra = () => (globalThis as unknown as {__documentListeners: () => Record<string, number>}).__documentListeners().click - document.querySelectorAll(".vtd-popconfirm").length
+            const baseline = extra()
+            const sort = () => (table.querySelectorAll(".vtd-data-table-sort-button")[1] as HTMLElement).click()
+            const next = () => {
+                const buttons = table.querySelectorAll(".vtd-pagination button")
+                ;(buttons[buttons.length - 1] as HTMLElement).click()
+            }
+            for (let i = 0; i < 5; i++) {sort(); await wait()}
+            next(); await wait()
+            next(); await wait()
+            const search = table.querySelector("input") as HTMLInputElement
+            for (const query of ["a", "al", "a", ""]) {
+                search.value = query
+                search.dispatchEvent(new Event("input", {bubbles: true}))
+                await wait()
+            }
+            return {left: extra() - baseline}
+        })
+        assertEquals(state, {left: 0})
+    })
+
     itWrap("async-data-table mounts what its rows render, so a popover in a cell closes on an outside click", "async-data-table", "#popover-async-table", async (_selection: ElementHandle) => {
-        // The rows are put in after the table is already on the page. Before replaceMountedChildren
-        // they went in with a plain replaceChildren, so a Popover in a cell was never mounted, never
-        // added its document click listener, and stayed open whatever was clicked.
+        // The rows are put in after the table is already on the page, and are mounted: a Popover in
+        // a cell adds its document click listener, and closes on a click outside it.
         const booted = await waitForCondition(`${dataRowsExpression("popover-async-table")}.length > 0`)
         if (!booted) {fail("ERROR: the popover table never loaded")}
         const openCount = `document.getElementById("popover-async-table").querySelectorAll(".vtd-popover-open").length`
@@ -1437,9 +1490,9 @@ describe('basic component rendering', () => {
             input.value = "boom"
             input.dispatchEvent(new Event("input", {bubbles: true}))
         })
-        const errored = await waitForCondition(`document.getElementById("error-async-table").querySelector("tbody").innerText.includes("Could not load")`)
+        const errored = await waitForCondition(`document.getElementById("error-async-table").querySelector(".vtd-data-table-empty")?.innerText.includes("Could not load")`)
         if (!errored) {
-            const text = await page.evaluate(() => (document.querySelector("#error-async-table tbody") as HTMLElement).innerText)
+            const text = await page.evaluate(() => (document.querySelector("#error-async-table .vtd-data-table-empty") as HTMLElement | null)?.innerText ?? "")
             fail(`ERROR: expected the rendered error state, got: ${JSON.stringify(text)}`)
         }
     })

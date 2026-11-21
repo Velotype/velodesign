@@ -1,7 +1,8 @@
+import "./listener-count.ts"
 import {replaceElementWithRoot, Component} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
-import { Badge, DataTable, setThemeOnSelector, Theme } from "../../src/index.ts"
+import { Badge, Button, DataTable, Popconfirm, setThemeOnSelector, Theme } from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 
 type PersonRow = {
@@ -22,6 +23,22 @@ const rows: PersonRow[] = Array.from({length: 27}, (_, i) => ({
     status: i % 4 == 0 ? "inactive" : "active",
 }))
 
+/**
+ * A column render function that hands back the same element on every render, by row - one cache
+ * a table, since the gallery is drawn twice (light and dark) and an element can be in one place
+ */
+function cachedCells(): (row: PersonRow) => HTMLElement {
+    const cells = new Map<string, HTMLElement>()
+    return row => {
+        let cell = cells.get(row.name)
+        if (!cell) {
+            cell = <span class="cached-cell"><Popconfirm title={`Archive ${row.name}?`} onConfirm={() => {}}><Button type="text">Archive</Button></Popconfirm></span> as HTMLElement
+            cells.set(row.name, cell)
+        }
+        return cell
+    }
+}
+
 class DataTableGallery extends Component<EmptyAttrs> {
     override render() {
         return <div style={{marginTop:"10px", maxWidth: "640px"}}>
@@ -40,6 +57,22 @@ class DataTableGallery extends Component<EmptyAttrs> {
                     {key: "role", header: "Role", render: row => row.role, sortValue: row => row.role, filterValue: row => row.role},
                     {key: "department", header: "Department", render: row => row.department, sortValue: row => row.department, filterValue: row => row.department, hideable: true},
                     {key: "status", header: "Status", render: row => <Badge type={row.status == "active" ? "secondary" : "neutral"}>{row.status}</Badge>, align: "end", width: 120, minWidth: 90, resizable: false},
+                ]}
+                rows={rows}/></div>
+            {/* One page: a sort only moves the rows */}
+            <div id="moving-data-table"><DataTable<PersonRow> searchable={false} showColumnToggle={false} pageSize={25}
+                columns={[
+                    {key: "name", header: "Name", render: row => row.name, sortValue: row => row.name},
+                    {key: "remove", header: "", render: row => <Popconfirm title={`Remove ${row.name}?`} onConfirm={() => {}}><Button type="secondary">Remove</Button></Popconfirm>},
+                    {key: "archive", header: "", render: cachedCells()}
+                ]}
+                rows={rows.slice(0, 8)}/></div>
+            {/* Pages, a search, and a Popconfirm a row */}
+            <div id="popconfirm-data-table"><DataTable<PersonRow> searchable showColumnToggle={false} pageSize={10}
+                columns={[
+                    {key: "name", header: "Name", render: row => row.name, sortValue: row => row.name, filterValue: row => row.name},
+                    {key: "role", header: "Role", render: row => row.role, sortValue: row => row.role},
+                    {key: "remove", header: "", render: row => <Popconfirm title={`Remove ${row.name}?`} onConfirm={() => {}}><Button type="secondary">Remove</Button></Popconfirm>}
                 ]}
                 rows={rows}/></div>
         </div>

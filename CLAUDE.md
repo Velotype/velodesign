@@ -684,11 +684,35 @@ here. The search box's visible label, `.searchSymbol`, defaults to nothing at al
 rendered), since a placeholder-only box is the library's old look and there's no universal word for
 it; an application with words sets it once for every table.
 
-**Rows go in with `replaceMountedChildren`** (`src/core/mounting.ts`), never a bare
-`replaceChildren`: both tables re-fill their body and footer after they're on the page, and content
-put in that way is never mounted, so a `Popover` or `Popconfirm` in a cell never added its
-outside-click listener. The same goes for any component that re-fills its own DOM with content a
-consumer rendered.
+**The body is `DataTableBody`** (`data-table-view.tsx`): a Component over the `<tbody>`, holding the
+rows shown, or a status row (empty, loading, an error) when there are none. `show()` keeps the rows
+already shown and moves them into their new order - a move within the body, so they stay mounted
+and are never drawn again - draws only the rows new to the page (in through `appendToChild`, which
+mounts them), and takes out the rows that left with `removeChild`, which unmounts and releases them
+with their listeners. A table that fits on a page sorts by moving rows alone. A row is drawn again
+only when what it shows changes: its search highlighting, or the columns.
+
+Before this, the body was replaced on every sort, search and page without unmounting the old rows,
+and each `Popconfirm` in one left three document listeners behind: 26 click listeners for 25 rows
+became 276 after ten sorts. `tests/test_modules/listener-count.ts` counts them, and "data-table takes
+a row's listeners with it" holds the table to it.
+
+Three choices in it, each measured or load-bearing:
+
+- **New rows are drawn before the leaving ones are taken out.** A column may hand back the same
+  element on every render (a cached cell); drawing the new row moves it out of the old one, so it
+  isn't released with it. ⚠️ **A cached cell whose row leaves the page** - paged away, or searched out
+  - is released with that row, and velotype never mounts a released element again: shown later it
+  is there, but its Components don't respond. Velotype's unmount always releases; until an unmount
+  can be undone, a column should hand back a new element for a row that comes back.
+- **A row that leaves is unmounted, not parked.** velotype's `RenderObjectArray.filter()` keeps hidden
+  rows mounted, so every row on another page would keep its listeners.
+- **Plain row elements, not a `RenderObjectArray`.** A RenderObject a row was tried first and cost up
+  to 75% more for a table of plain text (500 rows drawn in 28ms against 16ms) for the same moves.
+
+The header and footer are refilled with `Component`'s own `replaceChildrenOfChild` once the table
+is on the page, which mounts what arrives and unmounts what leaves; before that, directly, since
+everything in the table mounts with it. Never a bare `replaceChildren` with consumer content.
 
 ## `Lightbox` zooms by scrolling, and centres with auto margins
 
