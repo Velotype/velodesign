@@ -1,9 +1,9 @@
 /** @jsxRuntime classic */
 /** @jsx h */
 import { h } from "../core/jsx.ts"
-import {passthroughAttrsToElement, removeElementRoot} from "../core/velotype.ts"
+import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
+import type { ChildrenAttr, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
 /**
@@ -35,10 +35,8 @@ export type AlertAttrsType = {
 
 let areAlertStylesMounted = false
 
-/**
- * An inline message box used to draw attention to important information
- */
-export const Alert: FunctionComponent<AlertAttrsType> = function(attrs: AlertAttrsType, children: RenderableElements[]): HTMLDivElement {
+/** Draws the Alert; `remove` takes it off the page when it's dismissed */
+function buildAlert(attrs: AlertAttrsType, children: RenderableElements[], remove: (element: HTMLDivElement) => void): HTMLDivElement {
     if (!areAlertStylesMounted) {
         areAlertStylesMounted = true
         mountStyles(`
@@ -89,8 +87,29 @@ justify-content:center;
         </div>
         {attrs.onDismiss && <button type="button" class="vtd-alert-dismiss" aria-label={attrs.dismissLabel} onClick={() => {
             attrs.onDismiss?.()
-            removeElementRoot(alertElement)
+            remove(alertElement)
         }}><AlertThemeOptions.closeSymbol/></button>}
     </div>
     return passthroughAttrsToElement<HTMLDivElement>(alertElement, attrs)
+}
+
+/**
+ * An inline message box used to draw attention to important information
+ *
+ * A Component, so that dismissing it takes it off the page through its own `removeChild()`, which
+ * unmounts the Components in what it holds
+ */
+export class Alert extends Component<AlertAttrsType> {
+    readonly #element: HTMLDivElement
+
+    /** Create a new `<Alert/>` Component */
+    constructor(attrs: AlertAttrsType, children: RenderableElements[]) {
+        super(attrs, children)
+        this.#element = buildAlert(attrs, children, element => this.removeChild(element))
+    }
+
+    /** Render this Component */
+    override render(): HTMLDivElement {
+        return this.#element
+    }
 }

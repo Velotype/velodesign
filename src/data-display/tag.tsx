@@ -1,9 +1,9 @@
 /** @jsxRuntime classic */
 /** @jsx h */
 import { h } from "../core/jsx.ts"
-import {passthroughAttrsToElement, removeElementRoot} from "../core/velotype.ts"
+import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
+import type { ChildrenAttr, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
 /**
@@ -33,11 +33,8 @@ export type TagAttrsType = {
 
 let areTagStylesMounted = false
 
-/**
- * A small inline label, like `Badge`, but optionally removable - for filter chips,
- * multi-select values, etc.
- */
-export const Tag: FunctionComponent<TagAttrsType> = function(attrs: TagAttrsType, children: RenderableElements[]): HTMLSpanElement {
+/** Draws the Tag; `remove` takes it off the page when it's dismissed */
+function buildTag(attrs: TagAttrsType, children: RenderableElements[], remove: (element: HTMLSpanElement) => void): HTMLSpanElement {
     if (!areTagStylesMounted) {
         areTagStylesMounted = true
         mountStyles(
@@ -126,8 +123,30 @@ height:100%;
         {children}
         {attrs.onRemove && <button type="button" class="vtd-tag-remove" aria-label={attrs.removeLabel} onClick={() => {
             attrs.onRemove?.()
-            removeElementRoot(tagElement)
+            remove(tagElement)
         }}><TagThemeOptions.closeSymbol/></button>}
     </span>
     return passthroughAttrsToElement<HTMLSpanElement>(tagElement, attrs)
+}
+
+/**
+ * A small inline label, like `Badge`, but optionally removable - for filter chips,
+ * multi-select values, etc.
+ *
+ * A Component, so that dismissing it takes it off the page through its own `removeChild()`, which
+ * unmounts the Components in what it holds
+ */
+export class Tag extends Component<TagAttrsType> {
+    readonly #element: HTMLSpanElement
+
+    /** Create a new `<Tag/>` Component */
+    constructor(attrs: TagAttrsType, children: RenderableElements[]) {
+        super(attrs, children)
+        this.#element = buildTag(attrs, children, element => this.removeChild(element))
+    }
+
+    /** Render this Component */
+    override render(): HTMLSpanElement {
+        return this.#element
+    }
 }

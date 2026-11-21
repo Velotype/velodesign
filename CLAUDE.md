@@ -82,7 +82,7 @@
 
 ## Component shape: `FunctionComponent` vs `Component` class
 
-`FunctionComponent<AttrsType> = (attrs, children) => RenderableElements` — stateless, no lifecycle. **Default to this.** Used by `Button`, `RadioButton`, `Checkbox`, `Toggle`, `TextBox`, `Textarea`, `Select`, `Link`, `Badge`, `Card`, `Alert`, `Tooltip`, `Spinner`, `Divider`, `Breadcrumbs`, `Pagination`, `Navbar`, `Sidebar`, `TimeAgo`, `Icon`/`I`, `Accordion`, `Avatar`.
+`FunctionComponent<AttrsType> = (attrs, children) => RenderableElements` — stateless, no lifecycle. **Default to this.** Used by `Button`, `RadioButton`, `Checkbox`, `Toggle`, `TextBox`, `Textarea`, `Select`, `Link`, `Badge`, `Card`, `Tooltip`, `Spinner`, `Divider`, `Breadcrumbs`, `Pagination`, `Navbar`, `Sidebar`, `TimeAgo`, `Icon`/`I`, `Accordion`, `Avatar`.
 
 A third, rarer shape: an **imperative function**, not a component at all, for something the consumer never places in their own JSX tree - `showToast()` is the only current example. It lazily creates one shared container appended to `document.body` on first call - a small `ToastStack` Component, so each call adds its toast through `appendToChild()` and takes it out through `removeChild()`, which mount and unmount what the message holds. Reach for this only when "mount me somewhere in your tree" genuinely doesn't fit (a global notification queue, not a piece of UI with a natural position) - it's the exception, not an alternative to reach for casually.
 
@@ -117,7 +117,8 @@ the page by `Combobox`, `Command`, `Progress`, `Sidebar` and `Toast`, 9 never mo
 | To | Use |
 |---|---|
 | Replace, add or remove inside a `Component` | Its child methods - `replaceChildrenThrough(this, element, children)` for "replace the children of" |
-| Remove what a `FunctionComponent` drew (`Alert`'s and `Tag`'s dismiss) | `removeElementRoot(element)` from `core/velotype.ts` |
+| Remove something that removes itself (`Alert`'s and `Tag`'s dismiss) | Make it a `Component` and remove its own root with `this.removeChild()` - a `FunctionComponent` has no child methods. Never `removeElementRoot()`: velotype's Root functions are for an island's or an app's root, placed once |
+| Remove a calendar's leaving month after its slide | `pushView`'s `settle`, given the Component's own `removeChild()` |
 | Add to and remove from something that isn't placed in a tree (`showToast`) | A small `Component` that owns the container (`ToastStack`), and its child methods |
 | Show and hide | `hidden` or a class - the content stays on the page and stays mounted |
 | Move | A plain DOM move: velotype doesn't unmount or mount what moves |
