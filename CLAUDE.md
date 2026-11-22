@@ -90,7 +90,7 @@ A third, rarer shape: an **imperative function**, not a component at all, for so
 - **A persistent, imperatively-controllable DOM handle** the component must reference again later (`Modal` builds its `<dialog>` once in the *constructor* and stores it in a private field so `showModal()`/`close()`/`setConfirmDisabled()` can act on it directly; `Menu` does the same for its `<details>` element). When you need this, build the JSX tree in the constructor and have `render()` just `return this.#element` — don't rebuild it in `render()`.
 - **Global event listeners that must be added/removed with the component's lifecycle** (`mount()`/`unmount()`). `PageSelector` listens for `popstate`/`locationchange` to know when to reselect a page; `NavLink` listens for the same two events to know when to recompute whether it's the active link; `Menu` listens for document `click` to close itself on an outside click. Always add in `mount()`, remove the *same* bound listener reference in `unmount()` (store it as a class field / arrow-function property, not a fresh closure each time, or `removeEventListener` won't match it).
 - **Internal state that changes after construction and must trigger a re-render.** Call `this.refresh()` when it changes. `refresh()` unmounts and deletes the whole subtree and re-runs `render()` from scratch — **this means any `ElementHandle`/DOM reference you held from before the refresh is now stale**; if you're writing an Astral test that clicks something and triggers a refresh, re-query every selector you need *after* the click rather than reusing a handle captured before it (`NavLink`'s test actually failed this way once — reusing a pre-click handle to read a post-click attribute threw; the fix was re-querying with `page.$(...)` after the click).
-- **Changing part of what it rendered without a full refresh.** A `Component` has five child methods for this, each taking an element of its own render: `replaceChild(child, newChild)`, `appendToChild(child, newChild)`, `prependToChild(child, newChild)`, `replaceChildrenOfChild(child, newChildren)` and `removeChild(child)` (velotype's readme, "Changing part of what a Component rendered"). They mount the Components in what goes in and unmount the ones in what comes out. `TextEditableField` swaps its view and edit halves with `replaceChild`; `core/children.ts`'s `replaceChildrenThrough` wraps `replaceChildrenOfChild` for an element that may not be on the page yet. See *Content goes in and out through velotype* below.
+- **Changing part of what it rendered without a full refresh.** A `Component` has five child methods for this, each taking an element of its own render: `replaceChild(child, newChild)`, `appendToChild(child, newChild)`, `prependToChild(child, newChild)`, `replaceChildrenOfChild(child, newChildren)` and `removeChild(child)` (velotype's readme, "Changing part of what a Component rendered"). They mount the Components in what goes in and unmount the ones in what comes out. `TextEditableField` swaps its view and edit halves with `replaceChild`. They need the Component's render, so they throw in its constructor and in `render()`: build the first content into the elements the constructor makes, and use them for what changes after. See *Content goes in and out through velotype* below.
 
 ### Avoid `refresh()` on any component that accepts children — via `children` or via an attrs field typed as `RenderableElements`/`RenderableElements[]`
 
@@ -99,7 +99,7 @@ possible DOM update, so it is the first thing to rule out.
 
 `refresh()` unmounts and rebuilds the *entire* subtree, and that subtree can include consumer-supplied content you don't own — another component with its own state (a `TextBox` mid-edit, a nested `DataTable`, anything holding focus or internal state). Rebuilding it from scratch on every internal state change of *your* component silently discards that state, and the consumer has no way to opt out. If a component's attrs include a bare `RenderableElements`/`RenderableElements[]`/a row-render callback, or it takes `children`, its internal state transitions should **never** call `this.refresh()` — reach for one of these instead, both already proven out in this package:
 
-1. **Build once in the constructor, then targeted-update stored element refs - through the child methods, or with class toggles.** `SelectMenu`'s per-method updates, `Progress`'s `setValue()` and `DataTable`'s `#renderTable()` all do this: persistent fields (`#valueEl`, `#panelEl`, ...) get built once in the constructor, and every state-changing method rebuilds *only* the specific pieces that actually depend on that state, through `replaceChildrenThrough` (never a bare `replaceChildren`, see *Content goes in and out through velotype*), leaving everything else (a search `TextBox`, an unrelated toolbar button) untouched and never remounted. `DataTable` used to call `refresh()` on every sort/search/page/column-visibility change; the toolbar and column-menu panel don't depend on any of that state, so it was refreshing (and risking mid-interaction stale-reference bugs in) parts of the tree that never needed to change at all.
+1. **Build once in the constructor, then targeted-update stored element refs - through the child methods, or with class toggles.** `SelectMenu`'s per-method updates, `Progress`'s `setValue()` and `DataTable`'s `#renderTable()` all do this: persistent fields (`#valueEl`, `#panelEl`, ...) get built once in the constructor, and every state-changing method rebuilds *only* the specific pieces that actually depend on that state, through the child methods (never a bare `replaceChildren`, see *Content goes in and out through velotype*), leaving everything else (a search `TextBox`, an unrelated toolbar button) untouched and never remounted. `DataTable` used to call `refresh()` on every sort/search/page/column-visibility change; the toolbar and column-menu panel don't depend on any of that state, so it was refreshing (and risking mid-interaction stale-reference bugs in) parts of the tree that never needed to change at all.
 2. **Keep every consumer-supplied panel mounted permanently, toggle which one is visible with a CSS class or `hidden`.** `Tabs` and `Carousel` both do this, and so do `Command`'s and `Combobox`'s rows, which a search hides and shows in place: every tab's `content` / every carousel `slide` is built once in the constructor and stays in the DOM the whole time (same trade-off `Accordion` already made for its sections, via native `<details>`), and switching just toggles a `-active` class on the relevant button/panel pair — the previously-visible one is never torn down, so whatever state it held (typed text, scroll position, a mid-flow child component) survives being switched away from and back to. This does mean *all* panels/slides get constructed up front rather than lazily — an accepted trade-off, matching `Accordion`'s.
 
 The only components still calling `refresh()` are `Calendar` (`#changeMonth`) — its attrs (`value: Date`, `onSelectDate`) don't accept any consumer content at all, every rendered cell is self-generated, so there's no external state at risk and a full re-render is the simplest correct option.
@@ -116,7 +116,8 @@ the page by `Combobox`, `Command`, `Progress`, `Sidebar` and `Toast`, 9 never mo
 
 | To | Use |
 |---|---|
-| Replace, add or remove inside a `Component` | Its child methods - `replaceChildrenThrough(this, element, children)` for "replace the children of" |
+| Replace, add or remove inside a `Component` | Its child methods, once it has rendered |
+| Fill what a `Component` shows first | The JSX its constructor builds: a method returns the content, and the constructor puts it in (`SelectMenu`'s `#triggerValue()`, `EventCalendar`'s `#month()`, `DataTable`'s `#draw()`); later updates put the method's new result in through the child methods |
 | Remove something that removes itself (`Alert`'s and `Tag`'s dismiss) | Make it a `Component` and remove its own root with `this.removeChild()` - a `FunctionComponent` has no child methods. Never `removeElementRoot()`: velotype's Root functions are for an island's or an app's root, placed once |
 | Remove a calendar's leaving month after its slide | `pushView`'s `settle`, given the Component's own `removeChild()` |
 | Add to and remove from something that isn't placed in a tree (`showToast`) | A small `Component` that owns the container (`ToastStack`), and its child methods |
@@ -124,9 +125,10 @@ the page by `Combobox`, `Command`, `Progress`, `Sidebar` and `Toast`, 9 never mo
 | Move | A plain DOM move: velotype doesn't unmount or mount what moves |
 
 A plain DOM call is still right for text, for attributes and classes, and for elements with no
-Components in them (`<col>`s, a glyph). The child methods need the Component's element, so they
-can't be used from its constructor; `replaceChildrenThrough` fills directly until the element is
-on the page, since nothing in it is mounted yet.
+Components in them (`<col>`s, a glyph). The child methods need the Component's render to check an
+element against, so they throw in its constructor and in `render()` (velotype 0.3.4 says so in the
+error): a component builds its first content into the JSX it makes, and never fills its own
+elements before it has rendered.
 
 ⚠️ **velotype's unmount also releases, and a released Component never mounts again.** So what a
 consumer hands over *once* - `Combobox`'s `leading` and `detail`, `Command`'s `label`, a
@@ -754,9 +756,12 @@ Four choices in it, each measured or load-bearing:
 - **Plain row elements, not a `RenderObjectArray`.** A RenderObject a row was tried first and cost up
   to 75% more for a table of plain text (500 rows drawn in 28ms against 16ms) for the same moves.
 
-The header and footer are refilled with `Component`'s own `replaceChildrenOfChild` once the table
-is on the page, which mounts what arrives and unmounts what leaves; before that, directly, since
-everything in the table mounts with it. Never a bare `replaceChildren` with consumer content.
+The constructor builds the first header and footer from `#draw()` (`#headerCells()` and
+`#footerChildren()` in `AsyncDataTable`), and later changes put the new ones in with
+`replaceChildrenOfChild`, which mounts what arrives and unmounts what leaves. `DataTableBody` adds
+and removes rows with its own `appendToChild` and `removeChild` - it has rendered by the time it
+shows anything, so those work whether or not it's on the page. No table keeps a flag of its own for whether it's mounted: `DataTable` had one that was
+never set, because a second `mount()` further down the class replaced the one that set it.
 
 ## `Lightbox` zooms by scrolling, and centres with auto margins
 

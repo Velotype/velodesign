@@ -301,19 +301,10 @@ export class DataTableBody<RowType> extends Component<{options: DataTableBodyOpt
     #shown: DataTableBodyRow<RowType>[] = []
     #status: HTMLTableRowElement | undefined
     readonly #element: HTMLTableSectionElement = <tbody class="vtd-data-table-rows"/>
-    /** On the page: rows then go in and out through appendToChild and removeChild, which mount and unmount */
-    #mounted = false
 
     constructor(attrs: {options: DataTableBodyOptions<RowType>}, children: RenderableElements[]) {
         super(attrs, children)
         this.#options = attrs.options
-    }
-
-    override mount() {
-        this.#mounted = true
-    }
-    override unmount() {
-        this.#mounted = false
     }
 
     /**
@@ -409,12 +400,16 @@ export class DataTableBody<RowType> extends Component<{options: DataTableBodyOpt
         }
     }
 
+    /**
+     * Rows go in through appendToChild and out through removeChild, which mount and unmount them -
+     * on the page or not, since the body has rendered by the time it shows anything
+     */
     #append(element: HTMLElement) {
-        if (this.#mounted) {this.appendToChild(this.#element, element)} else {this.#element.append(element)}
+        this.appendToChild(this.#element, element)
     }
 
     #remove(element: HTMLElement) {
-        if (this.#mounted) {this.removeChild(element)} else {element.remove()}
+        this.removeChild(element)
     }
 
     #draw(row: RowType, query: string): DataTableBodyRow<RowType> {

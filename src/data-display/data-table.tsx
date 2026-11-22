@@ -136,30 +136,12 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
 
     #root: HTMLDivElement
     #colgroupEl: HTMLTableColElement = <colgroup/>
-    #theadRowEl: HTMLTableRowElement = <tr/>
+    #theadRowEl: HTMLTableRowElement
     #tableEl: HTMLTableElement
     #body: DataTableBody<RowType>
     /** The columns the body was last drawn with - other columns draw every row again */
     #bodyColumns: DataTableColumnBase<RowType>[] = []
-    /** On the page: the header and footer are then refilled through replaceChildrenOfChild (#fill) */
-    #mounted = false
-
-    override mount() {
-        this.#mounted = true
-    }
-    override unmount() {
-        this.#mounted = false
-    }
-
-    /**
-     * Fills `element` with `children`: through `replaceChildrenOfChild` once on the page, which
-     * mounts what arrives and unmounts what leaves; before that, directly, since everything in the
-     * table mounts with it.
-     */
-    #fill(element: HTMLElement, children: HTMLElement[]) {
-        if (this.#mounted) {this.replaceChildrenOfChild(element, children)} else {element.replaceChildren(...children)}
-    }
-    #footerEl: HTMLDivElement = <div class="vtd-data-table-footer"/>
+    #footerEl: HTMLDivElement
 
     /** Called by `DataTable`'s persistent search input on every keystroke */
     setSearchQuery(query: string) {
@@ -231,6 +213,17 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
      * which don't depend on any of this state.
      */
     #renderTable() {
+        const {headerCells, footerChildren} = this.#draw()
+        this.replaceChildrenOfChild(this.#theadRowEl, headerCells)
+        this.replaceChildrenOfChild(this.#footerEl, footerChildren)
+    }
+
+    /**
+     * Draws the `<colgroup>` and the body for the current state, and returns the header's cells and
+     * the footer's contents - which the constructor builds into the elements it makes, and
+     * `#renderTable()` puts in place of the last ones
+     */
+    #draw(): {headerCells: HTMLTableCellElement[], footerChildren: HTMLDivElement[]} {
         const attrs = this.#attrs
         const visibleColumns = attrs.columns.filter(column => !this.#hiddenColumns.has(column.key))
 
@@ -247,7 +240,7 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
         const {colElements, cols} = buildColGroup(visibleColumns, this.#columnWidths)
         this.#colgroupEl.replaceChildren(...cols)
 
-        this.#fill(this.#theadRowEl, buildHeaderCells({
+        const headerCells = buildHeaderCells({
             columns: visibleColumns,
             isSortable: (column) => !!(column as DataTableColumnType<RowType>).sortValue,
             sortKey: this.#sortKey,
@@ -258,7 +251,7 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
                 column, colElements[column.key], thElement, event,
                 (width) => { this.#columnWidths[column.key] = width }
             )
-        }))
+        })
 
         // The rows already shown move into their new order; only new rows are drawn (DataTableBody)
         if (allRows.length == 0) {
@@ -291,7 +284,7 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
                 </div>)
             }
         }
-        this.#fill(this.#footerEl, footerChildren)
+        return {headerCells, footerChildren}
     }
 
     /** Create a new `<DataTableInner/>` Component */
@@ -301,6 +294,9 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
         this.#currentPageSize = attrs.pageSize
         const bodyElement = <DataTableBody<RowType> options={{columns: []}}/>
         this.#body = getComponent<DataTableBody<RowType>>(bodyElement)
+        const {headerCells, footerChildren} = this.#draw()
+        this.#theadRowEl = <tr>{headerCells}</tr>
+        this.#footerEl = <div class="vtd-data-table-footer">{footerChildren}</div>
 
         this.#tableEl = <table class={`vtd-data-table-table${attrs.zebra ? " vtd-data-table-zebra" : ""}${attrs.highlightOnHover ? " vtd-data-table-hoverable" : ""}`}>
             {this.#colgroupEl}
@@ -311,8 +307,6 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
             <div class="vtd-data-table-scroll">{this.#tableEl}</div>
             {this.#footerEl}
         </div>
-
-        this.#renderTable()
     }
 
     /** Render this Component */
