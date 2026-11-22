@@ -1235,6 +1235,19 @@ describe('basic component rendering', () => {
         if (updatedRowCount != 10) {fail(`ERROR: expected choosing a page size of 10 to show 10 rows, got ${updatedRowCount}`)}
     })
 
+    itWrap("data-table shows its page-size control only with more rows than the smallest page", "data-table", "#short-data-table", async (_selection: ElementHandle) => {
+        const controls = await page.evaluate(() => ({
+            short: document.querySelectorAll("#short-data-table .vtd-data-table-page-size select").length,
+            shortFooter: document.querySelector("#short-data-table .vtd-data-table-footer")?.childElementCount,
+            long: document.querySelectorAll("#default-data-table .vtd-data-table-page-size select").length
+        }))
+        if (controls.short != 0) {fail("ERROR: expected no page-size control on a table with fewer rows than the smallest page")}
+        if (controls.shortFooter != 0) {fail(`ERROR: expected an empty footer on a one-page table, got ${controls.shortFooter} children`)}
+        if (controls.long == 0) {fail("ERROR: expected the page-size control on a table with more rows than the smallest page")}
+        const gap = await page.evaluate(() => getComputedStyle(document.querySelector("#default-data-table .vtd-data-table-footer")!).marginTop)
+        if (gap == "0px") {fail("ERROR: expected a gap between the table and its footer")}
+    })
+
     itWrap("select-menu opens on trigger click, selects a rich option by click, and closes", "select-menu", "#default-select-menu .vtd-select-menu-trigger", async (selection: ElementHandle) => {
         await selection.click()
         const isOpen = await page.evaluate(() => document.querySelector("#default-select-menu .vtd-select-menu-panel")?.classList.contains("vtd-select-menu-panel-open"))

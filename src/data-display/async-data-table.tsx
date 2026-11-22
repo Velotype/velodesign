@@ -79,7 +79,10 @@ export type AsyncDataTableAttrsType<RowType> = {
     pageSize?: number
     /** Options offered by the page-size control, when shown (default: `[10, 25, 50, 100]`) */
     pageSizeOptions?: number[]
-    /** Shows a control letting the user change how many rows are requested per page (default: `false`) */
+    /**
+     * Shows a control letting the user change how many rows are requested per page (default: `false`) -
+     * only while there may be more rows than the smallest option, since with fewer every choice shows the same rows
+     */
     showPageSizeControl?: boolean
     /** Whether columns can be resized by dragging their trailing edge (default: `true`) */
     resizableColumns?: boolean
@@ -358,7 +361,12 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
         const attrs = this.#attrs
         const children: HTMLElement[] = []
 
-        if (attrs.showPageSizeControl) {
+        const smallest = Math.min(...(attrs.pageSizeOptions ?? [10, 25, 50, 100]))
+        // With a total, whether it's more than the smallest page; without one, whether a further page may exist
+        const more = this.#total !== undefined
+            ? this.#total > smallest
+            : this.#page > 1 || this.#rows.length > smallest || this.#rows.length >= this.#pageSize
+        if (attrs.showPageSizeControl && more) {
             children.push(<div class="vtd-data-table-page-size">
                 <label class="vtd-data-table-page-size-label">
                     {attrs.pageSizeLabel ?? null}
