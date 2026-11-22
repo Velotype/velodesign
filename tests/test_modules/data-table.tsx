@@ -59,6 +59,11 @@ class DataTableGallery extends Component<EmptyAttrs> {
                     {key: "status", header: "Status", render: row => <Badge type={row.status == "active" ? "secondary" : "neutral"}>{row.status}</Badge>, align: "end", width: 120, minWidth: 90, resizable: false},
                 ]}
                 rows={rows}/></div>
+            {/* Fewer rows than the smallest page: no page-size control, though asked for */}
+            <div id="short-data-table"><DataTable<PersonRow> searchable={false} showColumnToggle={false} pageSize={25}
+                showPageSizeControl pageSizeLabel="Rows per page:"
+                columns={[{key: "name", header: "Name", render: row => row.name}]}
+                rows={rows.slice(0, 3)}/></div>
             {/* One page: a sort only moves the rows */}
             <div id="moving-data-table"><DataTable<PersonRow> searchable={false} showColumnToggle={false} pageSize={25}
                 columns={[

@@ -188,6 +188,7 @@ touch-action:none;
 `
 .vtd-data-table-empty-icon{font-size:2em;line-height:1;display:inline-block;}
 .vtd-data-table-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1em;}
+.vtd-data-table-footer:not(:empty){margin-top:0.75em;}
 .vtd-data-table-page-size-label{display:flex;align-items:center;gap:0.5em;}
 .vtd-data-table-pagination{display:flex;justify-content:center;flex-grow:1;}
 ` +
