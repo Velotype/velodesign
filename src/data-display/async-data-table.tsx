@@ -1,6 +1,5 @@
 /** @jsxRuntime classic */
 /** @jsx h */
-import { replaceChildrenThrough } from "../core/children.ts"
 import { h } from "../core/jsx.ts"
 import { Component, getComponent, passthroughAttrsToElement } from "../core/velotype.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
@@ -166,12 +165,12 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
     #columnMenu: ColumnMenu | undefined
 
     #colgroupEl: HTMLTableColElement = <colgroup/>
-    #theadRowEl: HTMLTableRowElement = <tr/>
+    #theadRowEl: HTMLTableRowElement
     #tableEl: HTMLTableElement
     #body: DataTableBody<RowType>
     /** The columns the body was last drawn with - other columns draw every row again */
     #bodyColumns: DataTableColumnBase<RowType>[] = []
-    #footerEl: HTMLDivElement = <div class="vtd-data-table-footer"/>
+    #footerEl: HTMLDivElement
 
     #search = ""
     #sortKey: string | undefined
@@ -212,12 +211,17 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
 
     /** Issues a fresh request for the current query, discarding whatever is already in flight */
     #run() {
-        const seq = ++this.#seq
         // A reload keeps the existing rows on screen (faded by `#renderBody`) rather than blanking
         // the table; only the very first load has nothing better to show than a spinner.
         this.#state = "loading"
         this.#renderBody()
         this.#renderFooter()
+        this.#load()
+    }
+
+    /** Asks `load` for the current query, and shows the answer if it's still the newest asked */
+    #load() {
+        const seq = ++this.#seq
         const query: AsyncDataTableQuery = {
             search: this.#search.trim(),
             sortKey: this.#sortKey,
@@ -291,10 +295,15 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
     }
 
     #renderHead() {
+        this.replaceChildrenOfChild(this.#theadRowEl, this.#headerCells())
+    }
+
+    /** Draws the `<colgroup>`, and returns the header's cells for the columns shown */
+    #headerCells(): HTMLTableCellElement[] {
         const visibleColumns = this.#visibleColumns()
         const {colElements, cols} = buildColGroup(visibleColumns, this.#columnWidths)
         this.#colgroupEl.replaceChildren(...cols)
-        replaceChildrenThrough(this, this.#theadRowEl, buildHeaderCells({
+        return buildHeaderCells({
             columns: visibleColumns,
             isSortable: (column) => !!(column as AsyncDataTableColumnType<RowType>).sortable,
             sortKey: this.#sortKey,
@@ -305,7 +314,7 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
                 column, colElements[column.key], thElement, event,
                 (width) => { this.#columnWidths[column.key] = width }
             )
-        }))
+        })
     }
 
     #renderBody() {
@@ -341,6 +350,11 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
     }
 
     #renderFooter() {
+        this.replaceChildrenOfChild(this.#footerEl, this.#footerChildren())
+    }
+
+    /** The footer's contents: page size, a truncation note, and paging */
+    #footerChildren(): HTMLElement[] {
         const attrs = this.#attrs
         const children: HTMLElement[] = []
 
@@ -389,7 +403,7 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
             </div>)
         }
 
-        replaceChildrenThrough(this, this.#footerEl, children)
+        return children
     }
 
     constructor(attrs: AsyncDataTableAttrsType<RowType>, children: RenderableElements[]) {
@@ -399,6 +413,9 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
         this.#pageSize = attrs.pageSize ?? 25
         const bodyElement = <DataTableBody<RowType> options={{columns: []}}/>
         this.#body = getComponent<DataTableBody<RowType>>(bodyElement)
+        // Drawn loading: the first load starts as the constructor ends
+        this.#theadRowEl = <tr>{this.#headerCells()}</tr>
+        this.#footerEl = <div class="vtd-data-table-footer">{this.#footerChildren()}</div>
         this.#tableEl = <table class={`vtd-data-table-table${attrs.zebra ?? false ? " vtd-data-table-zebra" : ""}${attrs.highlightOnHover ?? true ? " vtd-data-table-hoverable" : ""}`}>
             {this.#colgroupEl}
             <thead>{this.#theadRowEl}</thead>
@@ -446,9 +463,8 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
             </div>
         </div>
 
-        this.#renderHead()
         this.#renderBody()
-        this.#run()
+        this.#load()
 
         passthroughAttrsToElement<HTMLDivElement>(this.#root, attrs)
     }

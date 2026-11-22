@@ -3,7 +3,6 @@
 import { h } from "../core/jsx.ts"
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import { replaceChildrenThrough } from "../core/children.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs, TargetedEvent, TargetedInputEvent } from "../core/velotype.ts"
 import { highlightMatch, searchHighlightCss } from "../core/search-highlight.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
@@ -237,7 +236,7 @@ export class Combobox extends Component<ComboboxAttrsType> {
             if (row.element.hidden === visible) {row.element.hidden = !visible}
             if (visible && row.query !== query) {
                 const label = option.label || option.value
-                replaceChildrenThrough(this, row.text, (query ? highlightMatch(label, query) : [label]) as (HTMLElement | string)[])
+                this.replaceChildrenOfChild(row.text, query ? highlightMatch(label, query) : [label])
                 row.query = query
             }
         })
@@ -301,7 +300,7 @@ export class Combobox extends Component<ComboboxAttrsType> {
         }
         const empty: HTMLLIElement = this.#emptyEl ?? <li class="vtd-combobox-empty" hidden>{this.#attrs.noMatchMessage ?? <CommonThemeOptions.emptySymbol/>}</li>
         this.#emptyEl = empty
-        replaceChildrenThrough(this, this.#panelEl, [...items, empty])
+        this.replaceChildrenOfChild(this.#panelEl, [...items, empty])
         this.#rows = rows
         this.#rowsFor = options
     }

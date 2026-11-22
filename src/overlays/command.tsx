@@ -3,7 +3,6 @@
 import { h } from "../core/jsx.ts"
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import { replaceChildrenThrough } from "../core/children.ts"
 import type { RenderableElements, IdAttr, StylePassthroughAttrs } from "../core/velotype.ts"
 import { highlightMatch, searchHighlightCss } from "../core/search-highlight.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
@@ -120,7 +119,7 @@ export class Command extends Component<CommandAttrsType> {
             row.element.classList.toggle("vtd-command-item-highlighted", row.item === highlighted)
             row.element.setAttribute("aria-selected", String(row.item === highlighted))
             if (visible && row.text && row.query !== query && typeof row.item.label == "string") {
-                replaceChildrenThrough(this, row.text, (query ? highlightMatch(row.item.label, query) : [row.item.label]) as (HTMLElement | string)[])
+                this.replaceChildrenOfChild(row.text, query ? highlightMatch(row.item.label, query) : [row.item.label])
                 row.query = query
             }
         }
@@ -144,7 +143,7 @@ export class Command extends Component<CommandAttrsType> {
         })
         const empty: HTMLLIElement = <li class="vtd-command-empty" hidden>{this.#attrs.noMatchMessage ?? <CommonThemeOptions.emptySymbol/>}</li>
         this.#emptyEl = empty
-        replaceChildrenThrough(this, this.#list, [...rows.map(row => row.element), empty])
+        this.replaceChildrenOfChild(this.#list, [...rows.map(row => row.element), empty])
         this.#rows = rows
         return rows
     }

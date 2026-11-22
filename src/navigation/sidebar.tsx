@@ -4,7 +4,6 @@ import { h } from "../core/jsx.ts"
 import {Component, getComponent, passthroughAttrsToElement} from "../core/velotype.ts"
 import { Glyphs, glyphElement } from "../core/glyphs.ts"
 import { mountStyles } from "../core/styles.ts"
-import { replaceChildrenThrough } from "../core/children.ts"
 import type { IdAttr, RenderableElements, RenderObject, StylePassthroughAttrs } from "../core/velotype.ts"
 import { NavLink } from "./nav-link.tsx"
 import { Menu } from "./menu.tsx"
@@ -535,7 +534,7 @@ export class Sidebar extends Component<SidebarAttrsType> {
             nodes={this.#toNodes(items)}
             onToggle={this.#handleToggle}/>
         this.#tree = getComponent<Tree>(tree)
-        replaceChildrenThrough(this, body, [tree])
+        this.replaceChildrenOfChild(body, [tree])
         this.#groups = [...this.#root.querySelectorAll(".vtd-tree-node")] as HTMLElement[]
         this.#syncActiveGroup()
     }

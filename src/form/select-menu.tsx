@@ -3,7 +3,6 @@
 import { h } from "../core/jsx.ts"
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import { replaceChildrenThrough } from "../core/children.ts"
 import { Glyphs, glyphElement } from "../core/glyphs.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { keepPlaced, placeInView } from "../core/placement.ts"
@@ -172,15 +171,19 @@ export class SelectMenu<OptionType> extends Component<SelectMenuAttrsType<Option
         })
     }
 
-    /** Rewrites just the trigger's display content - never the trigger button itself, so it never loses focus */
-    #renderTriggerValue() {
+    /** What the trigger shows: the selected option, or the placeholder */
+    #triggerValue(): HTMLSpanElement {
         const selected = this.#attrs.options.find(option => this.#attrs.getValue(option) == this.#selectedValue)
         if (!selected) {
-            replaceChildrenThrough(this, this.#valueEl, [<span class="vtd-select-menu-placeholder" style={{display: "contents"}}>{this.#attrs.placeholder}</span>])
-            return
+            return <span class="vtd-select-menu-placeholder" style={{display: "contents"}}>{this.#attrs.placeholder}</span>
         }
         const renderValue = this.#attrs.renderValue || this.#attrs.renderOption
-        replaceChildrenThrough(this, this.#valueEl, [<span style={{display: "contents"}}>{renderValue(selected)}</span>])
+        return <span style={{display: "contents"}}>{renderValue(selected)}</span>
+    }
+
+    /** Rewrites just the trigger's display content - never the trigger button itself, so it never loses focus */
+    #renderTriggerValue() {
+        this.replaceChildrenOfChild(this.#valueEl, [this.#triggerValue()])
     }
 
     #handleTriggerKeyDown = (event: KeyboardEvent) => {
@@ -284,7 +287,7 @@ display:none;
             return el
         })
 
-        this.#valueEl = <span class="vtd-select-menu-value"/>
+        this.#valueEl = <span class="vtd-select-menu-value">{this.#triggerValue()}</span>
         // tabindex=-1 because a scrolling listbox is otherwise a dead tab stop. Chrome makes any
         // scrollable element focusable when it has no focusable children, which is right for a
         // region a reader has to scroll themselves and wrong here: the arrow keys already move the
@@ -312,7 +315,6 @@ display:none;
         </div>
 
         this.#updateSelectedClasses()
-        this.#renderTriggerValue()
 
         passthroughAttrsToElement<HTMLDivElement>(this.#root, attrs)
     }

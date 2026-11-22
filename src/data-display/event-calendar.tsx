@@ -3,7 +3,6 @@
 import { h } from "../core/jsx.ts"
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
-import { replaceChildrenThrough } from "../core/children.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
 import { Button } from "../form/button.tsx"
 import { CommonThemeOptions } from "../core/theme-options.ts"
@@ -111,9 +110,9 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
     #root: HTMLDivElement
     #titleText: Text = document.createTextNode("")
     #titleEl: HTMLSpanElement = <span class="vtd-event-calendar-title" aria-live="polite">{this.#titleText}</span>
-    #monthEl: HTMLDivElement = <div class="vtd-event-calendar-month"/>
+    #monthEl: HTMLDivElement
     /** Holds the month, and the month leaving it while a step slides (`pushView`) */
-    #frameEl: HTMLDivElement = <div class="vtd-event-calendar-frame">{this.#monthEl}</div>
+    #frameEl: HTMLDivElement
 
     /** Create a new `<EventCalendar/>` Component */
     constructor(attrs: EventCalendarAttrsType, children: RenderableElements[]) {
@@ -174,6 +173,8 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
 `, "vtd/EventCalendar")
         }
 
+        this.#monthEl = <div class="vtd-event-calendar-month">{this.#month()}</div>
+        this.#frameEl = <div class="vtd-event-calendar-frame">{this.#monthEl}</div>
         this.#root = passthroughAttrsToElement<HTMLDivElement>(<div class={`vtd-event-calendar vtd-event-calendar-layout-${attrs.layout ?? "auto"}`}>
             <div class="vtd-event-calendar-header">
                 <Button type="text" ariaLabel={attrs.prevLabel} onClick={() => this.#changeView(-1)}><CommonThemeOptions.prevSymbol/></Button>
@@ -182,8 +183,6 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
             </div>
             {this.#frameEl}
         </div>, attrs)
-
-        this.#renderMonth()
     }
 
     /** The weekday a week starts on, 0-6 */
@@ -226,8 +225,29 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
         </li>
     }
 
-    /** Rebuilds the title and both layouts for `#viewDate` - the only DOM a month change touches - pushing the new month in from `slide`'s side when it stepped */
+    /**
+     * Rebuilds the title and both layouts for `#viewDate` - the only DOM a month change touches -
+     * pushing the new month in from `slide`'s side when it stepped
+     */
     #renderMonth(slide?: -1 | 1) {
+        // The month on screen moves into a stand-in that slides away as the new one slides in
+        let leaving: HTMLDivElement | undefined
+        if (slide) {
+            const stand: HTMLDivElement = <div class="vtd-event-calendar-month vtd-event-calendar-leaving"/>
+            stand.append(...this.#monthEl.childNodes)
+            leaving = stand
+        }
+        this.replaceChildrenOfChild(this.#monthEl, this.#month())
+        if (slide && leaving) {
+            // A grid day is one seventh of a row, so it starts a row away; a list row or the empty note, its own width
+            pushView(this.#frameEl, leaving, this.#monthEl.querySelectorAll(".vtd-event-calendar-day, .vtd-event-calendar-list-day, .vtd-event-calendar-empty"), slide,
+                {distance: element => element.classList.contains("vtd-event-calendar-day") ? "700%" : "100%", settle: element => this.removeChild(element)})
+            slideIn([this.#titleEl], slide)
+        }
+    }
+
+    /** The month for `#viewDate`, in both layouts, and its title written */
+    #month(): (HTMLElement | string)[] {
         const year = this.#viewDate.getFullYear()
         const month = this.#viewDate.getMonth()
         const weekStart = this.#weekStart()
@@ -286,21 +306,8 @@ export class EventCalendar extends Component<EventCalendarAttrsType> {
             </li>)}
         </ol>
 
-        // The month on screen moves into a stand-in that slides away as the new one slides in
-        let leaving: HTMLDivElement | undefined
-        if (slide) {
-            const stand: HTMLDivElement = <div class="vtd-event-calendar-month vtd-event-calendar-leaving"/>
-            stand.append(...this.#monthEl.childNodes)
-            leaving = stand
-        }
-        replaceChildrenThrough(this, this.#monthEl, [grid, list,
-            listed.length === 0 ? <div class="vtd-event-calendar-empty">{this.#attrs.emptyMessage ? this.#attrs.emptyMessage() : <CommonThemeOptions.emptySymbol/>}</div> : ""])
-        if (slide && leaving) {
-            // A grid day is one seventh of a row, so it starts a row away; a list row or the empty note, its own width
-            pushView(this.#frameEl, leaving, this.#monthEl.querySelectorAll(".vtd-event-calendar-day, .vtd-event-calendar-list-day, .vtd-event-calendar-empty"), slide,
-                {distance: element => element.classList.contains("vtd-event-calendar-day") ? "700%" : "100%", settle: element => this.removeChild(element)})
-            slideIn([this.#titleEl], slide)
-        }
+        return [grid, list,
+            listed.length === 0 ? <div class="vtd-event-calendar-empty">{this.#attrs.emptyMessage ? this.#attrs.emptyMessage() : <CommonThemeOptions.emptySymbol/>}</div> : ""]
     }
 
     /** Replaces the events, redrawing the month on screen */
