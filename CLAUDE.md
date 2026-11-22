@@ -754,9 +754,11 @@ Four choices in it, each measured or load-bearing:
 - **Plain row elements, not a `RenderObjectArray`.** A RenderObject a row was tried first and cost up
   to 75% more for a table of plain text (500 rows drawn in 28ms against 16ms) for the same moves.
 
-The header and footer are refilled with `Component`'s own `replaceChildrenOfChild` once the table
-is on the page, which mounts what arrives and unmounts what leaves; before that, directly, since
-everything in the table mounts with it. Never a bare `replaceChildren` with consumer content.
+The header and footer are refilled with `replaceChildrenThrough`, which mounts what arrives and
+unmounts what leaves, and `DataTableBody` adds and removes rows with its own `appendToChild` and
+`removeChild` - it has rendered by the time it shows anything, so those work whether or not it's on
+the page. No table keeps a flag of its own for whether it's mounted: `DataTable` had one that was
+never set, because a second `mount()` further down the class replaced the one that set it.
 
 ## `Lightbox` zooms by scrolling, and centres with auto margins
 

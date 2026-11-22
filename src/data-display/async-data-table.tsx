@@ -1,5 +1,6 @@
 /** @jsxRuntime classic */
 /** @jsx h */
+import { replaceChildrenThrough } from "../core/children.ts"
 import { h } from "../core/jsx.ts"
 import { Component, getComponent, passthroughAttrsToElement } from "../core/velotype.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
@@ -170,8 +171,6 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
     #body: DataTableBody<RowType>
     /** The columns the body was last drawn with - other columns draw every row again */
     #bodyColumns: DataTableColumnBase<RowType>[] = []
-    /** On the page: the header and footer are then refilled through replaceChildrenOfChild (#fill) */
-    #mounted = false
     #footerEl: HTMLDivElement = <div class="vtd-data-table-footer"/>
 
     #search = ""
@@ -200,12 +199,10 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
     #live = true
 
     override mount() {
-        this.#mounted = true
         this.#columnMenu?.attach()
     }
 
     override unmount() {
-        this.#mounted = false
         this.#live = false
         this.#columnMenu?.detach()
         if (this.#debounceTimer !== undefined) {
@@ -293,20 +290,11 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
         return this.#attrs.columns.filter(column => !this.#hiddenColumns.has(column.key))
     }
 
-    /**
-     * Fills `element` with `children`: through `replaceChildrenOfChild` once on the page, which
-     * mounts what arrives and unmounts what leaves; before that, directly, since everything in the
-     * table mounts with it.
-     */
-    #fill(element: HTMLElement, children: HTMLElement[]) {
-        if (this.#mounted) {this.replaceChildrenOfChild(element, children)} else {element.replaceChildren(...children)}
-    }
-
     #renderHead() {
         const visibleColumns = this.#visibleColumns()
         const {colElements, cols} = buildColGroup(visibleColumns, this.#columnWidths)
         this.#colgroupEl.replaceChildren(...cols)
-        this.#fill(this.#theadRowEl, buildHeaderCells({
+        replaceChildrenThrough(this, this.#theadRowEl, buildHeaderCells({
             columns: visibleColumns,
             isSortable: (column) => !!(column as AsyncDataTableColumnType<RowType>).sortable,
             sortKey: this.#sortKey,
@@ -401,7 +389,7 @@ export class AsyncDataTable<RowType> extends Component<AsyncDataTableAttrsType<R
             </div>)
         }
 
-        this.#fill(this.#footerEl, children)
+        replaceChildrenThrough(this, this.#footerEl, children)
     }
 
     constructor(attrs: AsyncDataTableAttrsType<RowType>, children: RenderableElements[]) {
