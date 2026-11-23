@@ -3195,6 +3195,9 @@ describe('basic component rendering', () => {
      * click handler, fails all three.
      */
     itWrap("a keepOpen entry acts without closing the menu around it", "menu", "#nested-menu", async (_selection: ElementHandle) => {
+        // The plain entry clicked last is a link: wait for the page it opens, so that navigation
+        // is over before the next test loads its own page
+        const leaving = page.waitForNavigation()
         const result = await page.evaluate(`(() => {
             const menu = document.getElementById("showcase-theme-light").querySelector("#nested-menu")
             menu.querySelector(".vtd-menu-trigger").click()
@@ -3215,6 +3218,7 @@ describe('basic component rendering', () => {
             navigator.click()
             return {...kept, closedAfterPlainItem: !menu.open}
         })()`) as {open: boolean, submenuOpen: boolean, moved: number, counted: boolean, closedAfterPlainItem: boolean}
+        await leaving
 
         if (!result.counted) {fail("ERROR: a keepOpen entry did not run its onClick")}
         if (!result.open) {fail("ERROR: a keepOpen entry closed the menu")}
