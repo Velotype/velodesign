@@ -142,8 +142,12 @@ released. That is the design, not a gap - unmounting releases, and nothing unmou
 **Test it with `tests/test_modules/mount-aware.tsx`.** Each component there holds a `Probe` that
 counts itself while mounted, so "components mount what they put on the page and unmount what they
 take off" checks after every step that the Probes mounted are the Probes on the page, and that
-nothing is left mounted off it (`mounted-off-page.ts`, which reads velotype's devtools hook). A
-component that swaps consumer content goes on that page.
+nothing is left mounted off it. A component that swaps consumer content goes on that page.
+
+**Every test also checks for leaks.** Each gallery page loads `tests/leaks.ts`, and after every test
+the suite asks velotype's `findLeaks()` (velotype's devtools) what it still holds that the page no
+longer shows: a Component left mounted off the page or never placed, a RenderObject drawn nowhere.
+A test that leaves any fails, naming them.
 
 ## Typography and layout are the package's primitives
 

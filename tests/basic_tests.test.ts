@@ -17,6 +17,7 @@ describe('basic component rendering', () => {
     let server: Server<ServerContextMetadata>
     let browser: Browser
     let page: Page
+    let pageErrors: string[] = []
 
     /**
      * Closes the browser if the run is cut short, so an interrupted run does not orphan a headless
@@ -51,6 +52,9 @@ describe('basic component rendering', () => {
             ]
         })
         page = await browser.newPage()
+        // What the page threw, printed when a test fails: a module that throws while rendering
+        // otherwise shows only as a selector that never appears
+        page.addEventListener("pageerror", e => pageErrors.push(String(e.detail)))
         await page.setViewportSize({ width: 400, height: 200 })
     })
     afterAll(async () => {
@@ -126,6 +130,7 @@ describe('basic component rendering', () => {
             // plainly what it did not cover rather than looking like a full green run
             ignore: selectedModules !== undefined && !selectedModules.has(module),
             fn: async () => {
+                pageErrors = []
                 try {
                     // `load`, not `networkidle2`. networkidle2 waits out a fixed idle window after
                     // the last request - measured at ~550ms per navigation against load's ~60ms,
@@ -137,11 +142,18 @@ describe('basic component rendering', () => {
                     const selection = await page.waitForSelector(selector)
                     if (selection) {
                         await testFn(selection)
+                        // Nothing the test took out may stay held (leaks.ts) - unless the test left the
+                        // module's page, as one following a link does
+                        const leaks = await page.evaluate(`location.pathname === "/${module}" ? globalThis.__leaks() : null`)
+                        if (leaks !== null) {
+                            assertEquals(leaks, {mountedOffPage: [], neverPlaced: [], heldOffPage: 0}, `${module}: velotype holds what the page no longer shows`)
+                        }
                     } else {
                         fail(`ERROR: Selector not found`)
                     }
                 } catch (e) {
                     console.log("Exception",e)
+                    if (pageErrors.length > 0) {console.log("The page threw:", pageErrors)}
                     fail("ERROR: Thrown exception")
                 }
             }
@@ -1471,7 +1483,7 @@ describe('basic component rendering', () => {
             ${js}
         })()`)
         const check = async (step: string) => {
-            const counts = await page.evaluate(`({...globalThis.__probes(), offPage: globalThis.__mountedOffPage()})`) as {mounted: number, onPage: number, offPage: number}
+            const counts = await page.evaluate(`({...globalThis.__probes(), offPage: globalThis.__leaks().mountedOffPage.length})`) as {mounted: number, onPage: number, offPage: number}
             assertEquals(counts.mounted, counts.onPage, `${step}: every Probe on the page is mounted, and no other`)
             assertEquals(counts.offPage, 0, `${step}: nothing is left mounted off the page`)
         }
@@ -3183,6 +3195,9 @@ describe('basic component rendering', () => {
      * click handler, fails all three.
      */
     itWrap("a keepOpen entry acts without closing the menu around it", "menu", "#nested-menu", async (_selection: ElementHandle) => {
+        // The plain entry clicked last is a link: wait for the page it opens, so that navigation
+        // is over before the next test loads its own page
+        const leaving = page.waitForNavigation()
         const result = await page.evaluate(`(() => {
             const menu = document.getElementById("showcase-theme-light").querySelector("#nested-menu")
             menu.querySelector(".vtd-menu-trigger").click()
@@ -3203,6 +3218,7 @@ describe('basic component rendering', () => {
             navigator.click()
             return {...kept, closedAfterPlainItem: !menu.open}
         })()`) as {open: boolean, submenuOpen: boolean, moved: number, counted: boolean, closedAfterPlainItem: boolean}
+        await leaving
 
         if (!result.counted) {fail("ERROR: a keepOpen entry did not run its onClick")}
         if (!result.open) {fail("ERROR: a keepOpen entry closed the menu")}

@@ -1,4 +1,3 @@
-import "./mounted-off-page.ts"
 import {replaceElementWithRoot, Component, getComponent} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
