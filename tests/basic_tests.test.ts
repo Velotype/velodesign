@@ -137,6 +137,12 @@ describe('basic component rendering', () => {
                     const selection = await page.waitForSelector(selector)
                     if (selection) {
                         await testFn(selection)
+                        // Nothing the test took out may stay held (leaks.ts) - unless the test left the
+                        // module's page, as one following a link does
+                        const leaks = await page.evaluate(`location.pathname === "/${module}" ? globalThis.__leaks() : null`)
+                        if (leaks !== null) {
+                            assertEquals(leaks, {mountedOffPage: [], neverPlaced: [], heldOffPage: 0}, `${module}: velotype holds what the page no longer shows`)
+                        }
                     } else {
                         fail(`ERROR: Selector not found`)
                     }
@@ -1471,7 +1477,7 @@ describe('basic component rendering', () => {
             ${js}
         })()`)
         const check = async (step: string) => {
-            const counts = await page.evaluate(`({...globalThis.__probes(), offPage: globalThis.__mountedOffPage()})`) as {mounted: number, onPage: number, offPage: number}
+            const counts = await page.evaluate(`({...globalThis.__probes(), offPage: globalThis.__leaks().mountedOffPage.length})`) as {mounted: number, onPage: number, offPage: number}
             assertEquals(counts.mounted, counts.onPage, `${step}: every Probe on the page is mounted, and no other`)
             assertEquals(counts.offPage, 0, `${step}: nothing is left mounted off the page`)
         }

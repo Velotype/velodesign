@@ -5,7 +5,6 @@ import { setThemeOnSelector, TextBox, Theme } from "../../src/index.ts"
 import { TestModulePage } from "./module-page.tsx"
 
 class TextBoxGallery extends Component<EmptyAttrs> {
-    buttonClicked = new RenderBasic<boolean>(false)
     inputs = new RenderBasic<string>("(nothing yet)")
     override render() {
         return <div>

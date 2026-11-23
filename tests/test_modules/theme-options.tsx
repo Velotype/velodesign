@@ -17,6 +17,8 @@ import { TestModulePage } from "./module-page.tsx"
  * out as the one thing that legitimately has to do it repeatedly.
  */
 class SymbolGallery extends Component<EmptyAttrs> {
+    // A public field, so velotype releases it with the gallery each time the page rebuilds it
+    editable = new RenderBasic<string>("editable")
     override render() {
         return <div style={{display:"flex", flexDirection:"column", gap:"10px"}}>
             <div id="symbols-close" style={{display:"flex", gap:"8px", alignItems:"center"}}>
@@ -33,7 +35,7 @@ class SymbolGallery extends Component<EmptyAttrs> {
                 <Popconfirm title="sure?" onConfirm={()=>{}}><span>trigger</span></Popconfirm>
             </div>
             <div id="symbols-edit">
-                <TextEditableField field={new RenderBasic<string>("editable")}/>
+                <TextEditableField field={this.editable}/>
             </div>
             <div id="symbols-collapse">
                 <Breadcrumbs maxItems={3} items={[

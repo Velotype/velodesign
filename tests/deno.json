@@ -1,4 +1,5 @@
 {
+    "minimumDependencyAge": {"age": "P1D", "exclude": ["jsr:@velotype/*"]},
     "tasks": {
         "build": "deno run -A ./bundle.ts",
         "bundle-time-ago": "deno bundle ./test_modules/time-ago.tsx --output ./build/time-ago.js --sourcemap=linked",
@@ -88,7 +89,8 @@
         "@std/testing": "jsr:@std/testing@^1.0.16",
         "@velotype/veloserver": "jsr:@velotype/veloserver@^0.2.0",
         "@velotype/velodesign": "../src/index.ts",
-        "@velotype/velotype": "jsr:@velotype/velotype@^0.3.4"
+        "@velotype/velotype/devtools": "jsr:@velotype/velotype@^0.3.6/devtools",
+        "@velotype/velotype": "jsr:@velotype/velotype@^0.3.6"
     },
     "lint": {
         "rules": {

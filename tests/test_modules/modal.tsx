@@ -1,4 +1,4 @@
-import {replaceElementWithRoot, Component, RenderBasic, getComponent} from "@velotype/velotype"
+import {replaceElementWithRoot, Component, getComponent} from "@velotype/velotype"
 import type {EmptyAttrs} from "@velotype/velotype"
 
 import { Button, ButtonModal, I, Modal, Theme } from "../../src/index.ts"
@@ -9,7 +9,6 @@ import { TestModulePage } from "./module-page.tsx"
 registerExampleIcons()
 
 class ModalGallery extends Component<EmptyAttrs> {
-    buttonClicked = new RenderBasic<boolean>(false)
     override render() {
         const modal = <Modal
             title="Test base modal"

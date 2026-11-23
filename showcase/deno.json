@@ -1,4 +1,5 @@
 {
+    "minimumDependencyAge": {"age": "P1D", "exclude": ["jsr:@velotype/*"]},
     "tasks": {
         // Three modules, the way a consumer loads them: the framework, the library, and the app.
         // Each is minified, and velodesign is bundled with the *root* config so its own
@@ -20,8 +21,8 @@
     "imports": {
         "@velotype/veloserver": "jsr:@velotype/veloserver@^0.2.0",
         "@velotype/velodesign": "../src/index.ts",
-        "@velotype/velotype/jsx-runtime": "jsr:@velotype/velotype@^0.3.4",
-        "@velotype/velotype": "jsr:@velotype/velotype@^0.3.4"
+        "@velotype/velotype/jsx-runtime": "jsr:@velotype/velotype@^0.3.6",
+        "@velotype/velotype": "jsr:@velotype/velotype@^0.3.6"
     },
     "lint": {
         "rules": {
