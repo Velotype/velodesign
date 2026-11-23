@@ -17,6 +17,7 @@ describe('basic component rendering', () => {
     let server: Server<ServerContextMetadata>
     let browser: Browser
     let page: Page
+    let pageErrors: string[] = []
 
     /**
      * Closes the browser if the run is cut short, so an interrupted run does not orphan a headless
@@ -51,6 +52,9 @@ describe('basic component rendering', () => {
             ]
         })
         page = await browser.newPage()
+        // What the page threw, printed when a test fails: a module that throws while rendering
+        // otherwise shows only as a selector that never appears
+        page.addEventListener("pageerror", e => pageErrors.push(String(e.detail)))
         await page.setViewportSize({ width: 400, height: 200 })
     })
     afterAll(async () => {
@@ -126,6 +130,7 @@ describe('basic component rendering', () => {
             // plainly what it did not cover rather than looking like a full green run
             ignore: selectedModules !== undefined && !selectedModules.has(module),
             fn: async () => {
+                pageErrors = []
                 try {
                     // `load`, not `networkidle2`. networkidle2 waits out a fixed idle window after
                     // the last request - measured at ~550ms per navigation against load's ~60ms,
@@ -148,6 +153,7 @@ describe('basic component rendering', () => {
                     }
                 } catch (e) {
                     console.log("Exception",e)
+                    if (pageErrors.length > 0) {console.log("The page threw:", pageErrors)}
                     fail("ERROR: Thrown exception")
                 }
             }
