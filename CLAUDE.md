@@ -1536,7 +1536,7 @@ Three pieces make the framework module work, and each one matters:
 
 - `showcase/src/velotype-module.ts` is a one-line `export *` that exists only to be a bundle
   entrypoint. `deno bundle` resolves an entrypoint as a **file path rather than through the import
-  map**, so bundling velotype directly means writing `jsr:@velotype/velotype@0.3.1` into a task and
+  map**, so bundling velotype directly means writing `jsr:@velotype/velotype@0.3.4` into a task and
   keeping that in step with the `imports` entry by hand. A local module is resolved the ordinary way
   instead, so the version stays declared once.
 - `main.tsx` is bundled with `--external` for velodesign *and* both velotype specifiers, so it ships

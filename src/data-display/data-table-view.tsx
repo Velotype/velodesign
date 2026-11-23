@@ -353,29 +353,33 @@ export class DataTableBody<RowType> extends Component<{options: DataTableBodyOpt
         })
         for (const gone of leaving) {this.#remove(gone.element)}
         for (const [old] of redrawn) {this.#remove(old)}
-        // The new rows go in at the end, and mount; then every row is put in its place - a move
-        // within the body, so each stays mounted
-        for (const shown of next) {
-            if (shown.element.parentNode !== this.#element) {this.#append(shown.element)}
-        }
         for (const shown of next) {
             if (shown.element.hidden !== hidden(shown.row)) {shown.element.hidden = hidden(shown.row)}
         }
-        // Only the rows that show are put in order: a hidden row's place doesn't matter until it
-        // shows again, and then it's put in its place like the rest. A cursor rather than
-        // `children[index]`: that collection is live, and each move makes the next read walk it
-        // from the start, which made a reorder quadratic.
+        // Each row that shows is put in its place: one already in the body moves there and stays
+        // mounted, and a new one goes in there through insertBeforeChild, which mounts it. A
+        // hidden row's place doesn't matter until it shows again, so a new one goes in at the end.
+        // A cursor rather than `children[index]`: that collection is live, and each move makes the
+        // next read walk it from the start, which made a reorder quadratic.
         let cursor: ChildNode | null = this.#element.firstChild
         const skipHidden = () => {
             while (cursor instanceof HTMLElement && cursor.hidden) {cursor = cursor.nextSibling}
         }
-        for (const shown of next) {
-            if (shown.element.hidden) {continue}
+        for (const {element} of next) {
+            const isNew = element.parentNode !== this.#element
+            if (element.hidden) {
+                if (isNew) {this.#append(element)}
+                continue
+            }
             skipHidden()
-            if (shown.element === cursor) {
-                cursor = shown.element.nextSibling
+            if (element === cursor) {
+                cursor = element.nextSibling
+            } else if (!isNew) {
+                this.#element.insertBefore(element, cursor)
+            } else if (cursor) {
+                this.insertBeforeChild(cursor as HTMLElement, element)
             } else {
-                this.#element.insertBefore(shown.element, cursor)
+                this.#append(element)
             }
         }
         this.#shown = next
