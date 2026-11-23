@@ -1404,7 +1404,7 @@ describe('basic component rendering', () => {
         if (offenders.length > 0) {fail(`ERROR: a stale response overwrote the newest - rows not matching "riley": ${JSON.stringify(offenders)}`)}
     })
 
-    itWrap("data-table sorts by moving its rows, without drawing them again, and a cell handed back again still works", "data-table", "#moving-data-table", async (_selection: ElementHandle) => {
+    itWrap("data-table sorts by moving its rows, without drawing them again, and their Popconfirms still work", "data-table", "#moving-data-table", async (_selection: ElementHandle) => {
         const state = await page.evaluate(async () => {
             const wait = () => new Promise(resolve => setTimeout(resolve, 30))
             const table = document.querySelector("#showcase-theme-light #moving-data-table") as HTMLElement
@@ -1419,9 +1419,9 @@ describe('basic component rendering', () => {
                 reordered: names().join() !== order.join(),
                 sorted: names().join() === [...order].sort().join()
             }
-            // Sorted twice more, the cell the column hands back (the same element each time) still opens, and closes on a click outside
+            // Sorted twice more, a moved row's Popconfirm still opens, and closes on a click outside
             for (let i = 0; i < 2; i++) {(table.querySelector(".vtd-data-table-sort-button") as HTMLElement).click(); await wait()}
-            const cell = table.querySelector(".cached-cell") as HTMLElement
+            const cell = rows()[0].querySelectorAll("td")[1] as HTMLElement
             ;(cell.querySelector("button") as HTMLElement).click()
             await wait()
             const opened = !!cell.querySelector(".vtd-popconfirm-open")

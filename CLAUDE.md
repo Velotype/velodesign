@@ -135,8 +135,9 @@ consumer hands over *once* - `Combobox`'s `leading` and `detail`, `Command`'s `l
 `noMatchMessage` - must never leave the page while it may come back: taken out, it is released,
 and shown again it is there but its Components don't respond. Those components build each row
 once and hide what a search leaves out. Content made fresh for each draw (`renderOption`, a
-column's `render`, `emptyMessage()`) can leave and be drawn again. Until velotype's unmount can be
-undone, this is the one rule that makes the difference between a leak and a dead control.
+column's `render`, `emptyMessage()`) can leave and be drawn again, and must be new each time: a
+function that hands back an element it returned before is handing back one that may already be
+released. That is the design, not a gap - unmounting releases, and nothing unmounted comes back.
 
 **Test it with `tests/test_modules/mount-aware.tsx`.** Each component there holds a `Probe` that
 counts itself while mounted, so "components mount what they put on the page and unmount what they
@@ -739,12 +740,11 @@ a row's listeners with it" holds the table to it.
 
 Four choices in it, each measured or load-bearing:
 
-- **New rows are drawn before the leaving ones are taken out.** A column may hand back the same
-  element on every render (a cached cell); drawing the new row moves it out of the old one, so it
-  isn't released with it. ⚠️ **A cached cell whose row leaves the page** - paged away, or searched out
-  - is released with that row, and velotype never mounts a released element again: shown later it
-  is there, but its Components don't respond. Velotype's unmount always releases; until an unmount
-  can be undone, a column should hand back a new element for a row that comes back.
+- **A column's `render` returns new elements every time.** A row that leaves the page - paged away,
+  or searched out of a paged table - is unmounted and released with its cells, and velotype never
+  mounts a released element again. So a column that caches a cell and hands it back would show it
+  dead: there, but its Components don't respond. Caching cells is not supported, and its type's
+  doc comment says so.
 - **A row that leaves is unmounted, not parked.** velotype's `RenderObjectArray.filter()` keeps hidden
   rows mounted, so every row on another page would keep its listeners.
 - **A table on one page hides the rows a search leaves out** (`pageSize` 0), where a paged one
