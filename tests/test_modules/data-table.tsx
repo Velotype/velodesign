@@ -23,21 +23,6 @@ const rows: PersonRow[] = Array.from({length: 27}, (_, i) => ({
     status: i % 4 == 0 ? "inactive" : "active",
 }))
 
-/**
- * A column render function that hands back the same element on every render, by row - one cache
- * a table, since the gallery is drawn twice (light and dark) and an element can be in one place
- */
-function cachedCells(): (row: PersonRow) => HTMLElement {
-    const cells = new Map<string, HTMLElement>()
-    return row => {
-        let cell = cells.get(row.name)
-        if (!cell) {
-            cell = <span class="cached-cell"><Popconfirm title={`Archive ${row.name}?`} onConfirm={() => {}}><Button type="text">Archive</Button></Popconfirm></span> as HTMLElement
-            cells.set(row.name, cell)
-        }
-        return cell
-    }
-}
 
 class DataTableGallery extends Component<EmptyAttrs> {
     override render() {
@@ -68,8 +53,7 @@ class DataTableGallery extends Component<EmptyAttrs> {
             <div id="moving-data-table"><DataTable<PersonRow> searchable={false} showColumnToggle={false} pageSize={25}
                 columns={[
                     {key: "name", header: "Name", render: row => row.name, sortValue: row => row.name},
-                    {key: "remove", header: "", render: row => <Popconfirm title={`Remove ${row.name}?`} onConfirm={() => {}}><Button type="secondary">Remove</Button></Popconfirm>},
-                    {key: "archive", header: "", render: cachedCells()}
+                    {key: "remove", header: "", render: row => <Popconfirm title={`Remove ${row.name}?`} onConfirm={() => {}}><Button type="secondary">Remove</Button></Popconfirm>}
                 ]}
                 rows={rows.slice(0, 8)}/></div>
             {/* Pages, a search, and a Popconfirm a row */}

@@ -30,7 +30,11 @@ export type DataTableColumnBase<RowType> = {
     key: string
     /** Displayed content for the column's header */
     header: RenderableElements
-    /** Renders a row's value for this column */
+    /**
+     * Renders a row's value for this column, as new elements on every call: the table unmounts a
+     * row's cells when the row leaves the page, and velotype never mounts an unmounted Component
+     * again, so an element handed back a second time would come back dead
+     */
     render: (row: RowType) => RenderableElements
     /** Text alignment for this column's cells (default: `"start"`) */
     align?: "start" | "center" | "end"
@@ -288,11 +292,7 @@ type DataTableBodyRow<RowType> = {row: RowType, query: string, texts: string[], 
  * Components in them with their listeners. A row already shown is drawn again only when what it
  * shows changes: its search highlighting, or the columns.
  *
- * New rows are drawn before the leaving ones are taken out. A column's render function may hand
- * back the same element on every call (a cached cell); drawing the new row moves that element out
- * of the old one, so it isn't among what's released - a released element never mounts again.
- * One whose row leaves the page (paged away, or searched out) is released with it, so a column
- * should hand back a new element for a row that comes back.
+ * A column's render function returns new elements on every call (see `DataTableColumnBase.render`).
  *
  * Plain row elements rather than a `RenderObjectArray`: a RenderObject a row cost up to 75% more
  * for a table of plain text (500 rows drawn in 28ms against 16ms), for the same moves.
@@ -337,7 +337,6 @@ export class DataTableBody<RowType> extends Component<{options: DataTableBodyOpt
                 if (at === undefined) {leaving.push(shown)} else {kept.set(at, shown)}
             }
         }
-        // New rows first, then highlighting changed: either may move a cached cell out of a row that's leaving
         const next: DataTableBodyRow<RowType>[] = rows.map((row, index) => kept.get(index) ?? this.#draw(row, query))
         const redrawn: [HTMLTableRowElement, DataTableBodyRow<RowType>][] = []
         const hidden = (row: RowType) => visible !== undefined && !visible.has(row)
