@@ -36,7 +36,7 @@ export type DataTableAttrsType<RowType> = {
     pageSizeOptions?: number[]
     /**
      * Shows a control letting the user change how many rows are displayed per page (default: `false`) -
-     * only while there are more rows than the smallest option, since with fewer every choice shows the same rows
+     * only while the rows don't all fit on the page as it is, since a choice then changes nothing the reader can see
      */
     showPageSizeControl?: boolean
     /** Whether columns can be resized by dragging their trailing edge, unless overridden per-column via `resizable` (default: `true`) */
@@ -270,7 +270,7 @@ class DataTableInner<RowType> extends Component<DataTableInnerAttrsType<RowType>
 
         const footerChildren: HTMLDivElement[] = []
         // Counted over every row, not the search's matches, so the control doesn't come and go while typing
-        const sizeControl = attrs.showPageSizeControl && attrs.rows.length > Math.min(...attrs.pageSizeOptions)
+        const sizeControl = attrs.showPageSizeControl && attrs.rows.length > pageSize
         if (pageSize > 0 && (totalPages > 1 || sizeControl)) {
             footerChildren.push(<div class="vtd-data-table-page-size">
                 {sizeControl ? <label class="vtd-data-table-page-size-label">

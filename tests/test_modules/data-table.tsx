@@ -49,6 +49,11 @@ class DataTableGallery extends Component<EmptyAttrs> {
                 showPageSizeControl pageSizeLabel="Rows per page:"
                 columns={[{key: "name", header: "Name", render: row => row.name}]}
                 rows={rows.slice(0, 3)}/></div>
+            {/* More rows than the smallest option, but all on one page: no page-size control either */}
+            <div id="fits-data-table"><DataTable<PersonRow> searchable={false} showColumnToggle={false} pageSize={25}
+                showPageSizeControl pageSizeLabel="Rows per page:"
+                columns={[{key: "name", header: "Name", render: row => row.name}]}
+                rows={rows.slice(0, 20)}/></div>
             {/* One page: a sort only moves the rows */}
             <div id="moving-data-table"><DataTable<PersonRow> searchable={false} showColumnToggle={false} pageSize={25}
                 columns={[
