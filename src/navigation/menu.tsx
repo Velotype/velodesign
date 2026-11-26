@@ -5,7 +5,7 @@ import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { Glyphs, glyphElement } from "../core/glyphs.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
-import { History } from "../core/history.ts"
+import { History, isPlainClick } from "../core/history.ts"
 import { themeOptions } from "../core/theme-options.ts"
 import type { ThemeSymbol } from "../core/theme-options.ts"
 import { keepPlaced, placeInView } from "../core/placement.ts"
@@ -377,14 +377,15 @@ export class Menu extends Component<MenuAttrsType> {
                 href={item.href ? History.resolveHref(item.href) : "#"}
                 aria-disabled={item.disabled}
                 class={`vtd-menu-item${checkable ? " vtd-menu-item-checkable" : ""}${item.disabled ? " vtd-menu-item-disabled" : ""}`}
-                onClick={(event: Event) => {
+                onClick={(event: MouseEvent) => {
                     if (item.disabled) {
                         event.preventDefault()
                         return
                     }
                     if (!item.href) {
                         event.preventDefault()
-                    } else if (item.spa) {
+                    } else if (item.spa && isPlainClick(event)) {
+                        // A click asking for a new tab or window is the browser's, as on any link
                         event.preventDefault()
                         History.changeLocation(item.href)
                     }

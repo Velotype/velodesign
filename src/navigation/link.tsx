@@ -4,7 +4,7 @@ import { h } from "../core/jsx.ts"
 
 import { passthroughAttrsToElement } from "../core/velotype.ts"
 import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
-import {History} from "../core/history.ts"
+import {History, isPlainClick} from "../core/history.ts"
 
 /**
  * Attrs type for `<Link/>`
@@ -14,7 +14,8 @@ export type LinkAttrsType = {
     /**
      * If `true` (default `false`), clicking intercepts the browser's own navigation and calls
      * `History.changeLocation(to)` instead - a client-side route change with no full page
-     * reload, for an SPA. Left `false` - the default, so `Link` behaves like a plain anchor
+     * reload, for an SPA (a plain click only: a modified or middle click is still the browser's,
+     * so it opens a new tab or window as on any link). Left `false` - the default, so `Link` behaves like a plain anchor
      * unless a consumer opts in - `to` navigates normally: a real page load, for a multi-page
      * site, or for a `to` that's genuinely external and should never be client-side-routed even
      * from inside an SPA. With this off, every native browser behavior (open-in-new-tab via
@@ -45,7 +46,9 @@ export const Link: FunctionComponent<LinkAttrsType> = function(attrs: LinkAttrsT
     return passthroughAttrsToElement<HTMLAnchorElement>(<a
         class="vtd-link"
         href={History.resolveHref(attrs.to)}
-        onClick={spa ? (event: Event) => {
+        onClick={spa ? (event: MouseEvent) => {
+            // A click asking for a new tab or window is the browser's, as on any link
+            if (!isPlainClick(event)) {return}
             event.preventDefault()
             History.changeLocation(attrs.to)
         } : undefined}>

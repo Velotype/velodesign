@@ -306,7 +306,7 @@ const methodDocs: Record<string, MethodDoc[]> = {
     ],
     Lightbox: [
         {name: "openLightbox({src, alt?, closeLabel?, zoomInLabel?, zoomOutLabel?})", description: "A function, not a method: shows a picture in the lightbox from code - for a page whose picture links are already in the document, such as server-rendered markup. Every Lightbox on the page shares one dialog."},
-        {name: "isPlainClick(event)", description: "A function: true for a plain left click, false when the click asks for a new tab or window. A link that calls openLightbox itself should leave the other clicks to the browser."},
+        {name: "isPlainClick(event)", description: "A function: true for a plain left click, false when the click asks for a new tab or window. A link that routes client-side or calls openLightbox itself should leave the other clicks to the browser, as Link, NavLink, Menu and Button do."},
     ],
     Modal: [
         {name: "showModal()", description: "Opens the modal. This is the <dialog>'s own native method, which is why calling it on the JSX value works."},
@@ -775,6 +775,8 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "onClick", type: "(event, doneLoading?) => void", description: "Click handler. One that takes doneLoading is doing work: the button is busy - a spinner, aria-busy, further clicks ignored - until it calls doneLoading(), and for at least minLoadingMs."},
         {name: "loadingOnClick", type: "boolean", defaultValue: "true when onClick takes doneLoading", description: "Busy while onClick works. Set false to opt out, or true to force it."},
         {name: "minLoadingMs", type: "number", defaultValue: "500", description: "The shortest busy time after a click, even if the work finishes sooner - a double click on a quick response still lands on a busy button."},
+        {name: "href", type: "string", description: "Where the button goes, for one that takes the person to another page: it is then a link drawn as a button, so opening it in a new tab and copying its address work as on any link. onClick and the busy state are not used."},
+        {name: "spa", type: "boolean", defaultValue: "false", description: "With href: a plain click is a client-side route change via History.changeLocation; a click asking for a new tab or window is still the browser's."},
     ],
     ButtonGroup: [
         {name: "orientation", type: '"horizontal" | "vertical"', defaultValue: "horizontal", description: "Direction to lay out the buttons."},
@@ -1370,6 +1372,7 @@ const examplesByName: Record<string, ExampleDoc[]> = {
 <Button type="danger">Danger</Button>
 <Button type="text">Text</Button>`},
         {label: "Disabled", node: () => <Button type="primary" disabled>Disabled</Button>, code: `<Button type="primary" disabled>Disabled</Button>`},
+        {label: "A link", node: () => <Button type="secondary" href="/somewhere" spa>Go somewhere</Button>, code: `<Button type="secondary" href="/somewhere" spa>Go somewhere</Button>`},
     ],
     ButtonGroup: [
         {label: "Horizontal", node: () => <ButtonGroup>

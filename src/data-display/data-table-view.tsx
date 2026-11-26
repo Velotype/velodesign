@@ -8,7 +8,7 @@ import type { RenderableElements } from "../core/velotype.ts"
 import { Button } from "../form/button.tsx"
 import { Checkbox } from "../form/checkbox.tsx"
 import { highlightMatch, searchHighlightCss } from "../core/search-highlight.tsx"
-import { History } from "../core/history.ts"
+import { History, isPlainClick } from "../core/history.ts"
 import { CommonThemeOptions, themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 
 /**
@@ -446,7 +446,7 @@ export class DataTableBody<RowType> extends Component<{options: DataTableBodyOpt
                                 // (new tab/window, download, or any non-primary button) is left
                                 // to the browser, which is the whole point of keeping a real
                                 // <a href> here rather than a JS-only handler.
-                                if (event.defaultPrevented || event.button != 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {return}
+                                if (event.defaultPrevented || !isPlainClick(event)) {return}
                                 event.preventDefault()
                                 History.changeLocation(href)
                             } : undefined}>{cellContent}</a>

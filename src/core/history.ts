@@ -3,6 +3,14 @@ import { consoleError } from "./utilities.ts"
 let basePath = ""
 
 /**
+ * A plain left click: no modifier key, the main button. Anything else asks the browser for a new
+ * tab or window, a download or its own menu, so a link that routes client-side leaves it alone
+ */
+export function isPlainClick(event: MouseEvent): boolean {
+    return event.button == 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey
+}
+
+/**
  * A collection of useful functions to manage browser History
  */
 export const History = {
