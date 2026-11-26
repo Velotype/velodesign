@@ -628,6 +628,11 @@ works correctly. So split the assertion:
   only stretch that, never shorten it), and that it holds on *every* cycle rather than the first.
 - **In a standalone script**, assert the visual half by sampling per frame, where rAF does tick -
   the disclosure measured 12-13 distinct heights on every open and close.
+- **Code that does its work in a frame callback, tested in the suite, gets its frames from the
+  test.** Replace `requestAnimationFrame` with a queue and run it by hand: the callback's reads,
+  writes and layouts are the page's own, and nothing waits on the tab. "keepPlaced reads before it
+  writes" waited for eleven real frames over 3,000 rows and ran past `evaluate`'s deadline under
+  load (52s and a thrown exception, where it otherwise took a fraction of a second).
 
 **Beware the assertion that passes for the wrong reason.** "Scrolling produced zero mutations" is
 trivially true when the observer that would have produced them never fires - a green test proving

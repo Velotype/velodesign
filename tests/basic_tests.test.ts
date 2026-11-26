@@ -2152,8 +2152,20 @@ describe('basic component rendering', () => {
     // at all when nothing moved. The page records each layout read and each real change, in order,
     // per frame. `layouts` is how many times a frame's reads came after one of its writes.
     itWrap("keepPlaced reads before it writes, once a frame, and writes nothing when nothing moved", "popover", "#default-popover", async (_selection: ElementHandle) => {
-        const result = await page.evaluate(`(async () => {
-            const frame = () => new Promise(r => requestAnimationFrame(() => r()))
+        const result = await page.evaluate(`(() => {
+            // The test hands out the frames: what keepPlaced asks requestAnimationFrame for waits in a
+            // queue, and frame() runs it. This tab's own frames come slowly or not at all under load,
+            // and eleven of them over a page of 3,000 rows ran past evaluate's deadline. The reads and
+            // writes, and the layouts they cost, are still the page's own.
+            const queued = new Map()
+            let nextId = 0
+            globalThis.requestAnimationFrame = (callback) => { queued.set(++nextId, callback); return nextId }
+            globalThis.cancelAnimationFrame = (id) => { queued.delete(id) }
+            const frame = () => {
+                const run = [...queued.values()]
+                queued.clear()
+                for (const callback of run) {callback(performance.now())}
+            }
             const wrapper = document.querySelector('#showcase-theme-light #default-popover')
             // At the bottom right: the bubble has to flip above and slide left, the case that does the most
             wrapper.style.cssText += ';position:fixed;right:0;bottom:8px'
@@ -2162,7 +2174,7 @@ describe('basic component rendering', () => {
             for (let i = 0; i < 3000; i++) {const d = document.createElement('div'); d.textContent = 'row ' + i; filler.append(d)}
             document.body.append(filler)
             wrapper.querySelector('.vtd-popover-trigger').click()
-            await frame()
+            frame()
             const log = []
             const read = (proto, name) => {
                 const f = proto[name]
@@ -2190,22 +2202,20 @@ describe('basic component rendering', () => {
             DOMTokenList.prototype.toggle = function (t, force) { if ((force ?? !this.contains(t)) !== this.contains(t)) {log.push('W')} return toggle.call(this, t, force) }
             const cn = Object.getOwnPropertyDescriptor(Element.prototype, 'className')
             Object.defineProperty(Element.prototype, 'className', {configurable: true, get() { return cn.get.call(this) }, set(v) { if (cn.get.call(this) !== v) {log.push('W')} cn.set.call(this, v) }})
-            /** One frame of keepPlaced, after a scroll - its reads and writes in order, and how long they took */
-            const oneFrame = async (move) => {
+            /** One frame of keepPlaced, after a scroll - its reads and writes in order */
+            const oneFrame = (move) => {
                 move()
                 log.length = 0
-                const start = performance.now()
                 document.dispatchEvent(new Event('scroll'))
-                await frame()
-                const ms = performance.now() - start
+                frame()
                 const pattern = log.join('')
-                return {pattern, layouts: (pattern.match(/W+R/g) ?? []).length, writes: (pattern.match(/W/g) ?? []).length, ms}
+                return {pattern, layouts: (pattern.match(/W+R/g) ?? []).length, writes: (pattern.match(/W/g) ?? []).length}
             }
             const still = []
-            for (let i = 0; i < 5; i++) {still.push(await oneFrame(() => {}))}
+            for (let i = 0; i < 5; i++) {still.push(oneFrame(() => {}))}
             // Moving each frame, as a resize does
             const moving = []
-            for (let i = 0; i < 5; i++) {moving.push(await oneFrame(() => { wrapper.style.bottom = (8 + i * 3) + 'px' }))}
+            for (let i = 0; i < 5; i++) {moving.push(oneFrame(() => { wrapper.style.bottom = (8 + i * 3) + 'px' }))}
             const bubble = wrapper.querySelector('.vtd-popover-content').getBoundingClientRect()
             return {
                 stillWrites: still.map(f => f.writes),
