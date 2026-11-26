@@ -973,7 +973,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "description", type: "RenderableElements", description: "Smaller supporting text."},
     ],
     Modal: [
-        {name: "title", type: "RenderableElements", required: true, description: "Title content."},
+        {name: "title", type: "RenderableElements", required: true, description: "Title content, drawn as the dialog's heading (an h2) and its accessible name."},
         {name: "confirmButtonChildren", type: "RenderableElements", required: true, description: "Confirm button content."},
         {name: "cancelButtonChildren", type: "RenderableElements", defaultValue: "ModalThemeOptions.cancelSymbol", description: "Cancel button content. A plain \"x\", not English text."},
         {name: "showCancelButton", type: "boolean", defaultValue: "true", description: "Show the footer's cancel button. Turn it off for a Modal with nothing to cancel, where the confirm button (\"Close\") is the way out."},
@@ -983,7 +983,7 @@ const attrTables: Record<string, AttrDoc[]> = {
         {name: "confirmDisabledReason", type: "RenderableElements", description: "Why the confirm button is disabled, shown while it is - on hover, focus or a tap - by a Tooltip with whenDisabled around it."},
     ],
     Drawer: [
-        {name: "title", type: "RenderableElements", description: "Title content."},
+        {name: "title", type: "RenderableElements", description: "Title content, drawn as the drawer's heading (an h2) and its accessible name."},
         {name: "placement", type: '"left" | "right" | "top" | "bottom"', defaultValue: "left", description: "Which edge of the viewport the drawer is anchored to."},
         {name: "enterFrom", type: '"left" | "right" | "top" | "bottom"', defaultValue: "same as placement", description: "Which direction the entrance animation slides in from."},
     ],

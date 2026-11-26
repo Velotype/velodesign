@@ -44,7 +44,7 @@ export type ModalAttrsType = {
      * open. Without a callback, confirming closes the Modal at once.
      */
     confirmButtonOnClick?: (done: ModalDoneType) => void
-    /** Title content (usually a string) */
+    /** Title content (usually a string), drawn as the dialog's heading (an `<h2>`) and its accessible name */
     title: RenderableElements
     /** Confirm button content (usually a string) */
     confirmButtonChildren: RenderableElements
@@ -97,6 +97,8 @@ backdrop-filter: blur(2px);
 .vtd-modal-separator{
 margin:0.5em 0;
 }
+.vtd-modal-title{margin:0;margin-inline-end:auto;font-size:1.25em;font-weight:bold;line-height:1.3;}
+.vtd-modal-footer{display:flex;align-items:center;justify-content:end;gap:0.5em;}
 .vtd-modal-inner{
 padding:0.5em;
 }
@@ -110,6 +112,9 @@ padding:0.5em;
 
     /** Opens and closes the dialog with its motion */
     #motion: {close: () => void, showModal: () => void}
+
+    /** Tells one Modal's title from another's, for `aria-labelledby` */
+    static #titleIds = 0
 
     /** A handle for the confirm button element (used for managing disabled state) */
     #confirmButton: HTMLElement
@@ -151,9 +156,10 @@ padding:0.5em;
                 }
             }}>{attrs.confirmButtonChildren}
         </Button>
-        this.#dialog = <dialog class="vtd-modal" closedby="any">
+        const titleId = `vtd-modal-title-${++Modal.#titleIds}`
+        this.#dialog = <dialog class="vtd-modal" closedby="any" aria-labelledby={titleId}>
             <div style={{display: "flex", alignItems: "center"}}>
-                <span style={{marginRight: "auto"}}>{attrs.title}</span>
+                <h2 class="vtd-modal-title" id={titleId}>{attrs.title}</h2>
                 <Button type="secondary" class="vtd-modal-close" ariaLabel={attrs.closeLabel} onClick={()=>{
                     this.close()
                 }}><ModalThemeOptions.closeSymbol/></Button>
@@ -161,7 +167,7 @@ padding:0.5em;
             <hr class="vtd-modal-separator"/>
             <div class="vtd-modal-inner">{children}</div>
             <hr class="vtd-modal-separator"/>
-            <div style={{display: "flex", alignItems: "center", justifyContent: "end"}}>
+            <div class="vtd-modal-footer">
                 {attrs.showCancelButton === false ? null : <Button type="text" onClick={()=>{
                     this.close()
                 }}>{attrs.cancelButtonChildren || <ModalThemeOptions.cancelSymbol/>}</Button>}

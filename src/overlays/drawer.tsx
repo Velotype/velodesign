@@ -109,6 +109,8 @@ backdrop-filter: blur(2px);
 .vtd-drawer,.vtd-drawer::backdrop,.vtd-drawer.vtd-drawer-closing,.vtd-drawer.vtd-drawer-closing::backdrop{animation:none;}
 }
 .vtd-drawer-separator{margin:0.5em 0;}
+.vtd-drawer-title{margin:0;font-size:1.25em;font-weight:bold;line-height:1.3;}
+.vtd-drawer-title-bar{display:flex;align-items:center;justify-content:space-between;gap:0.5em;}
 .vtd-drawer-inner{padding:0.5em;}
 .vtd-drawer-close .vtd-icon{height:1.6em;margin-block:-0.3em;}
 .vtd-drawer-close .vtd-icon path{stroke-width:1.6;}
@@ -120,6 +122,9 @@ backdrop-filter: blur(2px);
 
     /** Opens and closes the dialog with its motion */
     #motion: {close: () => void, showModal: () => void}
+
+    /** Tells one Drawer's title from another's, for `aria-labelledby` */
+    static #titleIds = 0
 
     /** Close the Drawer */
     close() {
@@ -135,9 +140,11 @@ backdrop-filter: blur(2px);
         super(attrs, children)
         const placement = attrs.placement || "left"
         const enterFrom = attrs.enterFrom || placement
-        this.#dialog = <dialog class={`vtd-drawer vtd-drawer-position-${placement} vtd-drawer-enter-${enterFrom}`} closedby="any">
-            <div style={{display: "flex", alignItems: "center"}}>
-                <span style={{marginRight: "auto"}}>{attrs.title}</span>
+        // A title is the drawer's heading and its accessible name; without one there's neither
+        const titleId = attrs.title === undefined ? undefined : `vtd-drawer-title-${++Drawer.#titleIds}`
+        this.#dialog = <dialog class={`vtd-drawer vtd-drawer-position-${placement} vtd-drawer-enter-${enterFrom}`} closedby="any" aria-labelledby={titleId}>
+            <div class="vtd-drawer-title-bar">
+                {titleId === undefined ? <span/> : <h2 class="vtd-drawer-title" id={titleId}>{attrs.title}</h2>}
                 <Button type="secondary" class="vtd-drawer-close" onClick={()=>{
                     this.close()
                 }}><DrawerThemeOptions.closeSymbol/></Button>
