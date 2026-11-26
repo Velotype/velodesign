@@ -23,6 +23,8 @@ export type ProgressAttrsType = {
     type?: ProgressType
     /** If a `{percent}%` label should be shown next to the bar */
     showLabel?: boolean
+    /** Accessible name for the bar, saying what it measures ("Cupcakes", "Storage used"). No default - the library doesn't assume a language; a progress bar with no name is announced as a bare percentage */
+    label?: string
     /**
      * The bar is counting work being done - a send, an import - rather than measuring how full
      * something is. While the value is short of `max` it shows that the work is going on (a light
@@ -180,7 +182,7 @@ background-position:0 0;
 
         this.#max = attrs.max || 100
         this.#fill = <span class="vtd-progress-fill"/>
-        this.#track = <span class="vtd-progress" role="progressbar" aria-valuemin={0}>{this.#fill}</span>
+        this.#track = <span class="vtd-progress" role="progressbar" aria-valuemin={0} aria-label={attrs.label}>{this.#fill}</span>
         this.#percent = attrs.showLabel ? <span class="vtd-progress-label"/> : undefined
         let statusLine: HTMLElement | undefined
         if (attrs.working) {

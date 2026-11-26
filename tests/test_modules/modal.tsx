@@ -14,6 +14,7 @@ class ModalGallery extends Component<EmptyAttrs> {
             title="Test base modal"
             confirmButtonChildren="confirm"
             cancelButtonChildren="cancel"
+            closeLabel="Close"
         >
             inner modal content
         </Modal>
