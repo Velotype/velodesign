@@ -1006,6 +1006,24 @@ describe('basic component rendering', () => {
         assertEquals(new Set(ids).size, ids.length)
     })
 
+    itWrap("a modal's close button stays at the end when the page gives its headings margins", "modal", "#plain-modal", async (_selection: ElementHandle) => {
+        const r = await page.evaluate(() => {
+            // A page's own rule, outside the library's layer, as a site's stylesheet is
+            const style = document.createElement("style")
+            style.textContent = "h2{margin:1.5em 0 0.75em}"
+            document.head.append(style)
+            const d = document.querySelector("#plain-modal dialog") as HTMLDialogElement
+            d.showModal()
+            const bar = (d.querySelector(".vtd-modal-title-bar") as HTMLElement).getBoundingClientRect()
+            const close = (d.querySelector(".vtd-modal-close") as HTMLElement).getBoundingClientRect()
+            const out = {closeToEnd: Math.round(bar.right - close.right)}
+            d.close()
+            style.remove()
+            return out
+        })
+        assertEquals(r, {closeToEnd: 0})
+    })
+
     itWrap("a drawer's title is its heading and its name", "drawer", "#showcase-theme-light", async (_selection: ElementHandle) => {
         const r = await page.evaluate(() => [...document.querySelectorAll("#showcase-theme-light .vtd-drawer")].map(d => {
             const title = d.querySelector(".vtd-drawer-title")

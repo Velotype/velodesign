@@ -97,7 +97,8 @@ backdrop-filter: blur(2px);
 .vtd-modal-separator{
 margin:0.5em 0;
 }
-.vtd-modal-title{margin:0;margin-inline-end:auto;font-size:1.25em;font-weight:bold;line-height:1.3;}
+.vtd-modal-title{margin:0;font-size:1.25em;font-weight:bold;line-height:1.3;}
+.vtd-modal-title-bar{display:flex;align-items:center;justify-content:space-between;gap:0.5em;}
 .vtd-modal-footer{display:flex;align-items:center;justify-content:end;gap:0.5em;}
 .vtd-modal-inner{
 padding:0.5em;
@@ -158,7 +159,9 @@ padding:0.5em;
         </Button>
         const titleId = `vtd-modal-title-${++Modal.#titleIds}`
         this.#dialog = <dialog class="vtd-modal" closedby="any" aria-labelledby={titleId}>
-            <div style={{display: "flex", alignItems: "center"}}>
+            {/* The bar spaces the title and the close button itself, so a page's own margins on
+                its headings (which win over the library's) can't pull the button in beside the title */}
+            <div class="vtd-modal-title-bar">
                 <h2 class="vtd-modal-title" id={titleId}>{attrs.title}</h2>
                 <Button type="secondary" class="vtd-modal-close" ariaLabel={attrs.closeLabel} onClick={()=>{
                     this.close()
