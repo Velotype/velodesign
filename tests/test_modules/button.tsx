@@ -18,6 +18,8 @@ const renderButton = function(btype: ButtonType) {
                 setTimeout(resolve,1000)
             }
         }}>{btype} button (with loader)</Button>
+        <Button type={btype} href="#button-link-target">{btype} link</Button>
+        <Button type={btype} href="#button-link-target" disabled>{btype} link (disabled)</Button>
     </div>
 }
 /** Buttons doing work that finishes at once: busy by default for a handler taking doneLoading, with the minimum busy time */
@@ -38,6 +40,7 @@ const renderWorkButtons = function() {
             unguarded.value += 1
             done?.()
         }}>unguarded work done {unguarded} times</Button>
+        <Button id="spa-link-button" type="secondary" href="/button?went=1" spa>a link routed in the page</Button>
     </div>
 }
 

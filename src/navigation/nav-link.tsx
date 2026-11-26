@@ -4,7 +4,7 @@ import { h } from "../core/jsx.ts"
 import {Component, passthroughAttrsToElement} from "../core/velotype.ts"
 import { mountStyles } from "../core/styles.ts"
 import type { ChildrenAttr, IdAttr, RenderableElements, StylePassthroughAttrs } from "../core/velotype.ts"
-import { History } from "../core/history.ts"
+import { History, isPlainClick } from "../core/history.ts"
 
 /**
  * Attrs type for `<NavLink/>` Component
@@ -109,7 +109,9 @@ font-weight:bold;
             class={`vtd-nav-link${isActive ? ` ${activeClass}` : ""}`}
             data-label={plainTextLabel}
             aria-current={isActive ? "page" : undefined}
-            onClick={spa ? (event: Event) => {
+            onClick={spa ? (event: MouseEvent) => {
+                // A click asking for a new tab or window is the browser's, as on any link
+                if (!isPlainClick(event)) {return}
                 event.preventDefault()
                 History.changeLocation(attrs.to)
             } : undefined}>

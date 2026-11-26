@@ -6,6 +6,7 @@ import { mountStyles } from "../core/styles.ts"
 import type {IdAttr, RenderableElements, FunctionComponent, StylePassthroughAttrs, TargetedMouseEvent, ChildrenAttr} from "../core/velotype.ts"
 import { Spinner } from "../feedback/spinner.tsx"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
+import { History, isPlainClick } from "../core/history.ts"
 
 /**
  * Options to customize `<Button/>` Component Theme
@@ -63,6 +64,19 @@ export type ButtonAttrsType = {
      * (`DataTable`'s column-visibility button, say) has no name at all without this.
      */
     ariaLabel?: string
+    /**
+     * Where the button goes, for one that takes the person to another page. It is then a link
+     * drawn as a button - an `<a href>` - so opening it in a new tab, copying its address and
+     * the browser's other link behaviours work as on any link. `onClick` and the busy state are
+     * a button's and are not used. Disabled, it has no address, so it goes nowhere
+     */
+    href?: string
+    /**
+     * With `href`: if `true` (default `false`), a plain click routes client-side with
+     * `History.changeLocation`, as `Link`'s `spa` does; a modified or middle click is still the
+     * browser's
+     */
+    spa?: boolean
 } & IdAttr & StylePassthroughAttrs & ChildrenAttr
 
 /**
@@ -71,9 +85,9 @@ export type ButtonAttrsType = {
 let areButtonStylesMounted = false
 
 /**
- * An interactable Button
+ * An interactable Button - or, with `href`, a link drawn as one
  */
-export const Button: FunctionComponent<ButtonAttrsType> = function(attrs: ButtonAttrsType, children: RenderableElements[]): HTMLButtonElement {
+export const Button: FunctionComponent<ButtonAttrsType> = function(attrs: ButtonAttrsType, children: RenderableElements[]): HTMLButtonElement | HTMLAnchorElement {
     if (!areButtonStylesMounted) {
         areButtonStylesMounted = true
         mountStyles(`
@@ -117,7 +131,8 @@ transition:color 0.25s ease-in-out, background-color 0.25s ease-in-out, border 0
 .vtd-button-text:hover{background-color:var(--background-2);}
 .vtd-button-text:active{background-color:var(--background-5);}
 
-.vtd-button:disabled{cursor:not-allowed;opacity:0.5;}
+a.vtd-button{color:inherit;}
+.vtd-button:disabled,a.vtd-button:not([href]){cursor:not-allowed;opacity:0.5;}
 .vtd-button[aria-busy="true"]{cursor:progress;}
 
 .vtd-button-spinner{
@@ -129,6 +144,25 @@ display:inline-block;
 visibility:hidden;
 }
 `, "vtd/Button")
+    }
+
+    if (attrs.href !== undefined) {
+        const to = attrs.href
+        const disabled = attrs.disabled === true
+        return passthroughAttrsToElement<HTMLAnchorElement>(<a
+            class={`vtd-button vtd-button-${attrs.type||"primary"}`}
+            href={disabled ? undefined : History.resolveHref(to)}
+            role={disabled ? "link" : undefined}
+            aria-disabled={disabled ? "true" : undefined}
+            aria-label={attrs.ariaLabel}
+            onClick={attrs.spa && !disabled ? (event: MouseEvent) => {
+                // A click asking for a new tab or window is the browser's, as on any link
+                if (!isPlainClick(event)) {return}
+                event.preventDefault()
+                History.changeLocation(to)
+            } : undefined}>
+            <span>{children}</span>
+        </a>, attrs)
     }
 
     /** If the Button is in loading state */

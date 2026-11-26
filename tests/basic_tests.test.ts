@@ -268,6 +268,37 @@ describe('basic component rendering', () => {
         assertEquals(await page.evaluate(() => document.querySelector("#unguarded-work-button")!.textContent), "unguarded work done 3 times")
     })
 
+    itWrap("a button with an address is a link: a plain click routes in the page, a new-tab click is the browser's", "button", "#spa-link-button", async (_selection: ElementHandle) => {
+        const r = await page.evaluate(() => {
+            const link = document.querySelector("#spa-link-button") as HTMLAnchorElement
+            const disabled = [...document.querySelectorAll<HTMLAnchorElement>("#showcase-theme-light a.vtd-button")].find(a => a.textContent?.includes("(disabled)"))!
+            // What the component did to each click, read after it has had its say; the browser
+            // is then stopped from opening a tab or loading the page
+            const prevented: boolean[] = []
+            const watch = (e: Event) => { prevented.push(e.defaultPrevented); e.preventDefault() }
+            document.addEventListener("click", watch)
+            const start = location.pathname + location.search
+            link.dispatchEvent(new MouseEvent("click", {bubbles: true, cancelable: true, metaKey: true}))
+            link.dispatchEvent(new MouseEvent("click", {bubbles: true, cancelable: true, ctrlKey: true}))
+            link.dispatchEvent(new MouseEvent("click", {bubbles: true, cancelable: true, button: 1}))
+            const afterModified = location.pathname + location.search
+            link.dispatchEvent(new MouseEvent("click", {bubbles: true, cancelable: true}))
+            const afterPlain = location.pathname + location.search
+            document.removeEventListener("click", watch)
+            history.replaceState(null, "", start)
+            return {
+                tag: link.tagName, href: link.getAttribute("href"), prevented,
+                moved: [afterModified === start, afterPlain],
+                disabled: {href: disabled.getAttribute("href"), ariaDisabled: disabled.getAttribute("aria-disabled")}
+            }
+        })
+        assertEquals(r, {
+            tag: "A", href: "/button?went=1", prevented: [false, false, false, true],
+            moved: [true, "/button?went=1"],
+            disabled: {href: null, ariaDisabled: "true"}
+        })
+    })
+
     it({name: "components still mount when storage access throws",
         ignore: selectedModules !== undefined && !selectedModules.has("button"),
         fn: async () => {

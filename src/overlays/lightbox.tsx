@@ -6,6 +6,7 @@ import type { ChildrenAttr, FunctionComponent, IdAttr, RenderableElements, Style
 import { mountStyles } from "../core/styles.ts"
 import { themeOptions, type ThemeSymbol } from "../core/theme-options.ts"
 import { Glyphs, glyphElement } from "../core/glyphs.ts"
+import { isPlainClick } from "../core/history.ts"
 
 /**
  * Options to customize the `<Lightbox/>` Theme
@@ -239,14 +240,6 @@ export function openLightbox(options: LightboxOptionsType): void {
     setLabel(s.close, options.closeLabel)
     setLabel(s.zoom, options.zoomInLabel)
     if (!s.dialog.open) {s.dialog.showModal()}
-}
-
-/**
- * A plain left click opens the picture in the lightbox. A click asking for a new tab or window (a
- * modifier key, the middle button) is left to the browser
- */
-export function isPlainClick(event: MouseEvent): boolean {
-    return event.button == 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey
 }
 
 /**
