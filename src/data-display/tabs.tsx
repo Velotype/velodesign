@@ -120,7 +120,15 @@ box-sizing:border-box;
 .vtd-tabs-list{
 display:flex;
 gap:0.25em;
-border-block-end:1px solid var(--background-4);
+` +
+/*
+ * The strip's baseline is an inset shadow, drawn inside the strip, and the active tab's underline
+ * paints over it. A border here would sit outside, and a tab reaching down over it would stick out
+ * of the strip - which then scrolls up and down by that pixel, since a strip that scrolls sideways
+ * can scroll both ways, and a mouse wheel over the tabs scrolls the strip instead of the page.
+ */
+`
+box-shadow:inset 0 -1px 0 var(--background-4);
 ` +
 /*
  * A tab strip scrolls rather than wrapping. Wrapping puts some tabs on a second line above the
@@ -146,7 +154,6 @@ border-block-end:2px solid transparent;
 color:inherit;
 font:inherit;
 padding:0.5em 1em;
-margin-block-end:-1px;
 }
 ` +
 /*

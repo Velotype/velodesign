@@ -413,6 +413,22 @@ describe('basic component rendering', () => {
         assertEquals(changes, ["a", "b", "c"])
     })
 
+    itWrap("a tab strip never scrolls up and down, so a wheel over it scrolls the page", "tabs", "#default-tabs", async (_selection: ElementHandle) => {
+        // A strip that scrolls sideways is a scroll container on both axes, so a tab reaching past
+        // its bottom edge makes it scroll up and down too, and a wheel over the tabs stops there
+        const r = await page.evaluate(() => [...document.querySelectorAll(".vtd-tabs-list")].map(l => {
+            const active = l.querySelector(".vtd-tabs-tab-active") as HTMLElement
+            return {
+                overflow: l.scrollHeight - l.clientHeight,
+                // The active tab's underline still covers the strip's baseline
+                underlineToEdge: Math.round(l.getBoundingClientRect().bottom - active.getBoundingClientRect().bottom)
+            }
+        }))
+        for (const each of r) {
+            if (each.overflow > 0 || each.underlineToEdge !== 0) {fail(`ERROR: a tab strip scrolls up and down or its underline moved: ${JSON.stringify(r)}`)}
+        }
+    })
+
     itWrap("tabs label text position doesn't shift when a tab becomes active", "tabs", "#default-tabs", async (_pageLoadSelection: ElementHandle) => {
         const firstTabLeftBefore = await page.evaluate(() => document.querySelector("#default-tabs .vtd-tabs-tab:nth-child(1)")!.getBoundingClientRect().left)
 
