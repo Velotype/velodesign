@@ -966,6 +966,38 @@ describe('basic component rendering', () => {
         await page.evaluate(() => (document.querySelector("#reason-modal dialog") as HTMLDialogElement).close())
     })
 
+    itWrap("a modal's title is its heading and its name, and its footer buttons stand apart", "modal", "#plain-modal", async (_selection: ElementHandle) => {
+        const r = await page.evaluate(() => {
+            const d = document.querySelector("#plain-modal dialog") as HTMLDialogElement
+            d.showModal()
+            const title = d.querySelector(".vtd-modal-title") as HTMLElement
+            const [cancel, confirm] = [...d.querySelectorAll(".vtd-modal-footer > *")].map(e => e.getBoundingClientRect())
+            const out = {
+                tag: title.tagName,
+                labelled: title.id !== "" && d.getAttribute("aria-labelledby") === title.id,
+                weight: Number(getComputedStyle(title).fontWeight),
+                scale: parseFloat(getComputedStyle(title).fontSize) / parseFloat(getComputedStyle(d).fontSize),
+                gap: confirm.left - cancel.right
+            }
+            d.close()
+            return out
+        })
+        assertEquals([r.tag, r.labelled], ["H2", true])
+        if (r.weight < 600 || r.scale < 1.2) {fail(`ERROR: the title isn't larger and bold: ${JSON.stringify(r)}`)}
+        if (r.gap < 6) {fail(`ERROR: the footer buttons touch: ${JSON.stringify(r)}`)}
+        // Every modal's title has an id of its own
+        const ids = await page.evaluate(() => [...document.querySelectorAll(".vtd-modal-title")].map(t => t.id))
+        assertEquals(new Set(ids).size, ids.length)
+    })
+
+    itWrap("a drawer's title is its heading and its name", "drawer", "#showcase-theme-light", async (_selection: ElementHandle) => {
+        const r = await page.evaluate(() => [...document.querySelectorAll("#showcase-theme-light .vtd-drawer")].map(d => {
+            const title = d.querySelector(".vtd-drawer-title")
+            return [title?.tagName, !!title && d.getAttribute("aria-labelledby") === title.id]
+        }))
+        assertEquals(r, [["H2", true], ["H2", true]])
+    })
+
     itWrap("a modal's close button is named by its closeLabel, and only then", "modal", "dialog", async (_selection: ElementHandle) => {
         // The first modal on the page is the base one, given closeLabel "Close"; the rest give none, and get no name rather than an English default
         const names = await page.evaluate(() => [...document.querySelectorAll(".vtd-modal-close")].map(b => b.getAttribute("aria-label")))
