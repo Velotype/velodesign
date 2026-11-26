@@ -966,6 +966,20 @@ describe('basic component rendering', () => {
         await page.evaluate(() => (document.querySelector("#reason-modal dialog") as HTMLDialogElement).close())
     })
 
+    itWrap("a modal's close button is named by its closeLabel, and only then", "modal", "dialog", async (_selection: ElementHandle) => {
+        // The first modal on the page is the base one, given closeLabel "Close"; the rest give none, and get no name rather than an English default
+        const names = await page.evaluate(() => [...document.querySelectorAll(".vtd-modal-close")].map(b => b.getAttribute("aria-label")))
+        assertEquals(names[0], "Close")
+        if (names.slice(1).some(n => n !== null)) {fail(`ERROR: a modal without closeLabel named its close button: ${JSON.stringify(names)}`)}
+    })
+
+    itWrap("a progress bar is named by its label, and only then", "progress", "#default-progress", async (_selection: ElementHandle) => {
+        // The light gallery's first bar is given label "Storage used"; the rest give none
+        const names = await page.evaluate(() => [...document.querySelectorAll("#showcase-theme-light .vtd-progress")].map(b => b.getAttribute("aria-label")))
+        assertEquals(names[0], "Storage used")
+        if (names.slice(1).some(n => n !== null)) {fail(`ERROR: a progress bar without label was named: ${JSON.stringify(names)}`)}
+    })
+
     itWrap("a modal fades out on Escape before it closes, with nothing inside it laid out again", "modal", "#plain-modal", async (_selection: ElementHandle) => {
         await page.evaluate(() => (document.querySelector("#plain-modal dialog") as HTMLDialogElement).showModal())
         const settled = await page.evaluate(async () => {

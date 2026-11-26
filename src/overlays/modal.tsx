@@ -58,6 +58,8 @@ export type ModalAttrsType = {
      * second button doing the same thing, and the title bar's close button is a third.
      */
     showCancelButton?: boolean
+    /** Accessible label for the title bar's close button, which shows only a glyph. No default - the library doesn't assume a language; set this (e.g. to "Close") to give screen reader users a name for it */
+    closeLabel?: string
 } & ChildrenAttr
 
 /**
@@ -152,7 +154,7 @@ padding:0.5em;
         this.#dialog = <dialog class="vtd-modal" closedby="any">
             <div style={{display: "flex", alignItems: "center"}}>
                 <span style={{marginRight: "auto"}}>{attrs.title}</span>
-                <Button type="secondary" class="vtd-modal-close" onClick={()=>{
+                <Button type="secondary" class="vtd-modal-close" ariaLabel={attrs.closeLabel} onClick={()=>{
                     this.close()
                 }}><ModalThemeOptions.closeSymbol/></Button>
             </div>

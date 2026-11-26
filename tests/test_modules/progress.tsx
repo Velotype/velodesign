@@ -7,7 +7,7 @@ import { TestModulePage } from "./module-page.tsx"
 class ProgressGallery extends Component<EmptyAttrs> {
     override render() {
         return <div style={{marginTop:"10px", maxWidth: "360px", display:"flex", flexDirection:"column", gap:"14px"}}>
-            <div id="default-progress"><Progress value={40}/></div>
+            <div id="default-progress"><Progress value={40} label="Storage used"/></div>
             <div><Progress value={70} showLabel/></div>
             <div><Progress value={100} type="secondary" showLabel/></div>
             <div><Progress value={55} type="warning" showLabel/></div>
